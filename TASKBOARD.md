@@ -10,7 +10,7 @@ Shared coordination file for build workstreams. Status: `todo` · `claimed` · `
 | **P0 Foundations** | repo, Next.js app, CI, Supabase wired, schema + RLS + types, Auth (email), tenant model | sign in → empty tenant-scoped dashboard | **done ✅** |
 | **P1 Case tracking + calendar** | `CourtDataClient` (mock + eCourtsIndia), add case by CNR, nightly refresh cron, hearings on calendar | add a real CNR → see real next hearing | **done ✅** (live verify of eCourts at deploy — VM is WAF-blocked) |
 | **P2 Cause list + notices + notifications** | daily cause-list pull by bar number, notice escalation timer, reminders via Resend + in-app | bar number's cause list shows + reminder email fires | **done ✅** |
-| **P3 Gmail ingest + parsing** | OAuth connect, incremental fetch, attachment storage, Claude classify, grouped inbox, needs-review queue | connect Gmail → attachment filed under right client/case | todo |
+| **P3 Gmail ingest + parsing** | OAuth connect, incremental fetch, attachment storage, Claude classify, grouped inbox, needs-review queue | connect Gmail → attachment filed under right client/case | **code done ✅ — needs ANTHROPIC_API_KEY to demo auto-classify** |
 | **P4 Polish + demo** | disclaimers/provenance, a11y pass, demo seed, README + 60s script, deploy + smoke | live URL non-empty, smoke passes | todo |
 
 ## Workstreams
@@ -29,7 +29,8 @@ Shared coordination file for build workstreams. Status: `todo` · `claimed` · `
 
 - [x] Supabase project + 3 keys — provisioned (ref johvrsvaspivmxqvpxcg), schema + RLS live
 - [x] eCourtsIndia API token — provided, in .env
-- [ ] Google OAuth client id/secret — **Yash will provide later** (needed at P3; Gmail stubbed until then)
+- [ ] Google OAuth client id/secret — **Yash will provide later** (Gmail connect; mock pipeline works without it)
+- [ ] **ANTHROPIC_API_KEY — empty in .env; needed for live doc classification (P3 auto-filing)**
 - [ ] Vercel account link — deferred to P4
 - [ ] A real Bar Registration Number + a CNR to demo against — needed at P1/P2 checkpoint
 

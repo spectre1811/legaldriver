@@ -809,6 +809,11 @@ export type Database = {
     }
     Functions: {
       current_tenant_id: { Args: never; Returns: string }
+      read_secret: { Args: { secret_id: string }; Returns: string }
+      store_secret: {
+        Args: { secret: string; secret_name: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
