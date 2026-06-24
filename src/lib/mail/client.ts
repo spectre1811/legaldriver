@@ -6,6 +6,9 @@ export interface MailClient {
   // Fetch new messages since the given historyId (incremental). On first run
   // (no historyId) the adapter does a bounded initial backfill.
   fetchNew(sinceHistoryId?: string | null): Promise<FetchResult>;
+  // Fetch up to `maxMessages` of the most recent messages regardless of the sync
+  // point (for "load earlier emails"). Does not advance the incremental cursor.
+  fetchBackfill(maxMessages: number): Promise<FetchResult>;
 }
 
 // The mock takes a seed so tests are deterministic. The Gmail adapter takes an

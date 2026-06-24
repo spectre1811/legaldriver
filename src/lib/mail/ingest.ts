@@ -24,8 +24,13 @@ export async function ingestMail(
   userId: string | null,
   mail: MailClient,
   sinceHistoryId?: string | null,
+  backfillCount?: number,
 ): Promise<IngestSummary> {
-  const { emails, newHistoryId } = await mail.fetchNew(sinceHistoryId);
+  // Backfill mode loads the most recent N messages regardless of the cursor (for
+  // "load earlier emails"); otherwise incremental fetch since the last historyId.
+  const { emails, newHistoryId } = backfillCount
+    ? await mail.fetchBackfill(backfillCount)
+    : await mail.fetchNew(sinceHistoryId);
 
   // Tenant shortlist for classification (bounded).
   const [{ data: clients }, { data: matters }] = await Promise.all([

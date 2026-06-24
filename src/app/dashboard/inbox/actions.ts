@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
-import { getMockMailClient } from "@/lib/mail/client";
+import { getMockMailClient, getGmailClient } from "@/lib/mail/client";
 import { ingestMail } from "@/lib/mail/ingest";
+import { readSecret } from "@/lib/mail/vault";
+import { refreshAccessToken, googleConfigured } from "@/lib/mail/oauth";
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -30,6 +32,45 @@ export async function runMockIngest(): Promise<ActionResult> {
     ok: true,
     message: `Ingested ${summary.fetched} emails → ${summary.filed} filed, ${summary.needsReview} need review (${summary.documents} documents).`,
   };
+}
+
+// Load earlier emails from the connected Gmail (backfill the most recent ~30,
+// beyond the new-only incremental fetch). Dedupes against already-ingested mail.
+export async function loadEarlierEmails(): Promise<ActionResult> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Not signed in." };
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  if (!googleConfigured()) return { ok: false, message: "Gmail not configured." };
+
+  const admin = createAdminClient();
+  const { data: conn } = await admin
+    .from("oauth_connection")
+    .select("id, refresh_token_ref")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", user.id)
+    .eq("provider", "google")
+    .eq("status", "active")
+    .maybeSingle();
+  if (!conn?.refresh_token_ref) return { ok: false, message: "Connect Gmail first." };
+
+  try {
+    const refresh = await readSecret(admin, conn.refresh_token_ref);
+    if (!refresh) return { ok: false, message: "Could not read credential." };
+    const accessToken = await refreshAccessToken(refresh);
+    const mail = getGmailClient(accessToken);
+    const summary = await ingestMail(admin, tenantId, user.id, mail, null, 30);
+    revalidatePath("/dashboard/inbox");
+    return {
+      ok: true,
+      message: `Loaded ${summary.fetched} recent emails (${summary.documents} attachments). New ones added to the queue.`,
+    };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Backfill failed." };
+  }
 }
 
 // Confirm a needs-review email: assign client/matter and mark filed.

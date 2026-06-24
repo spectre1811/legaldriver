@@ -33,7 +33,6 @@ export class GmailClient implements MailClient {
   }
 
   async fetchNew(sinceHistoryId?: string | null): Promise<FetchResult> {
-    // 1) collect candidate message ids
     let ids: string[] = [];
     let newHistoryId = sinceHistoryId ?? undefined;
 
@@ -54,30 +53,41 @@ export class GmailClient implements MailClient {
       if (profile?.historyId) newHistoryId = String(profile.historyId);
     }
 
-    // 2) fetch each message + attachments
+    const emails = await this.fetchMessagesByIds([...new Set(ids)]);
+    return { emails, newHistoryId };
+  }
+
+  // Load up to maxMessages of the most recent messages (for "load earlier emails").
+  // Does NOT return a new historyId, so it won't advance the incremental cursor;
+  // ingest dedupes already-stored messages, netting the older ones.
+  async fetchBackfill(maxMessages: number): Promise<FetchResult> {
+    const cap = Math.min(Math.max(maxMessages, 1), 100);
+    const list = await this.get(`/messages?maxResults=${cap}`);
+    const ids = ((list?.messages as Json[]) ?? []).map((m) => String(m.id));
+    const emails = await this.fetchMessagesByIds([...new Set(ids)]);
+    return { emails };
+  }
+
+  private async fetchMessagesByIds(ids: string[]): Promise<NormalizedEmail[]> {
     const emails: NormalizedEmail[] = [];
-    for (const id of [...new Set(ids)]) {
+    for (const id of ids) {
       const msg = await this.get(`/messages/${id}?format=full`);
       if (!msg) continue;
       const payload = (msg.payload as Json) ?? {};
       const headers = (payload.headers as Json[]) ?? [];
       const { body, attachments } = await this.walkParts(id, payload);
-
       emails.push({
         providerId: id,
         historyId: msg.historyId ? String(msg.historyId) : undefined,
         from: header(headers, "From"),
         subject: header(headers, "Subject"),
-        receivedAt: msg.internalDate
-          ? new Date(Number(msg.internalDate)).toISOString()
-          : new Date().toISOString(),
+        receivedAt: msg.internalDate ? new Date(Number(msg.internalDate)).toISOString() : new Date().toISOString(),
         snippet: String(msg.snippet ?? ""),
         body,
         attachments,
       });
     }
-
-    return { emails, newHistoryId };
+    return emails;
   }
 
   // Recursively collect the plain-text body + attachments from a MIME tree.

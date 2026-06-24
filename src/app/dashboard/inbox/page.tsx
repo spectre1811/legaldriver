@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { googleConfigured } from "@/lib/mail/oauth";
 import { IngestButton } from "./ingest-button";
 import { ReviewItem } from "./review-item";
-import { DisconnectButton } from "./connect-controls";
+import { DisconnectButton, LoadEarlierButton } from "./connect-controls";
 
 export default async function InboxPage({
   searchParams,
@@ -79,7 +79,10 @@ export default async function InboxPage({
         </div>
         <div className="flex items-center gap-2">
           {conn ? (
-            <DisconnectButton />
+            <>
+              <LoadEarlierButton />
+              <DisconnectButton />
+            </>
           ) : (
             <Link
               href="/api/google/connect"

@@ -17,24 +17,16 @@ export async function extractText(buffer: Buffer, mime: string, filename = ""): 
     mime === "message/rfc822";
 
   if (isPdf) {
-    // pdf-parse v2: `new PDFParse({data}).getText()` (no callable default export).
+    // unpdf: serverless-safe PDF text extraction (bundles a Node/worker-free pdfjs
+    // build — no DOMMatrix/canvas deps, unlike pdf-parse which fails on Vercel).
     try {
-      const { PDFParse } = (await import("pdf-parse")) as unknown as {
-        PDFParse: new (opts: { data: Buffer }) => {
-          getText: () => Promise<{ text?: string }>;
-          destroy: () => void;
-        };
-      };
-      const parser = new PDFParse({ data: buffer });
-      try {
-        const result = await parser.getText();
-        const text = (result.text ?? "").trim();
-        // Image-only scans extract ~no text → flag for OCR (not run in MVP).
-        if (text.length < 20) return { text, method: "pdf", needsOcr: true };
-        return { text, method: "pdf" };
-      } finally {
-        parser.destroy();
-      }
+      const { extractText: pdfExtractText, getDocumentProxy } = await import("unpdf");
+      const pdf = await getDocumentProxy(new Uint8Array(buffer));
+      const { text: raw } = await pdfExtractText(pdf, { mergePages: true });
+      const text = (Array.isArray(raw) ? raw.join("\n") : raw ?? "").trim();
+      // Image-only scans extract ~no text → flag for OCR (not run in MVP).
+      if (text.length < 20) return { text, method: "pdf", needsOcr: true };
+      return { text, method: "pdf" };
     } catch (e) {
       return { text: "", method: "none", needsOcr: true, error: e instanceof Error ? e.message : "pdf parse failed" };
     }

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -70,9 +69,14 @@ export default async function DocumentsPage() {
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-400">{fmt(d.created_at)}</td>
                     <td className="px-4 py-3 text-right">
-                      <Link href={`/api/documents/${d.id}/download`} className="text-xs font-medium text-accent hover:underline">
-                        Download
-                      </Link>
+                      <a
+                        href={`/api/documents/${d.id}/download`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-accent hover:underline"
+                      >
+                        Open
+                      </a>
                     </td>
                   </tr>
                 );

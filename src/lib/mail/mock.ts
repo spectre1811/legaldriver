@@ -64,4 +64,9 @@ export class MockMailClient implements MailClient {
 
     return { emails, newHistoryId: "mock-history-1" };
   }
+
+  // Mock backfill returns the same demo set (ingest dedupes on re-run).
+  async fetchBackfill(): Promise<FetchResult> {
+    return this.fetchNew(null);
+  }
 }

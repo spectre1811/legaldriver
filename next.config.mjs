@@ -2,12 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    // pdfjs-dist (via pdf-parse) loads font/cmap data files at runtime; Vercel's
-    // serverless file-tracing drops them by default → empty text extraction.
-    // Force them into the bundles of routes that parse PDFs.
+    // Ensure unpdf's bundled pdfjs build is traced into the serverless functions
+    // that parse PDFs (Gmail ingest cron + the inbox demo-ingest action).
     outputFileTracingIncludes: {
-      "/api/cron/gmail": ["./node_modules/pdf-parse/**", "./node_modules/pdfjs-dist/**"],
-      "/dashboard/inbox": ["./node_modules/pdf-parse/**", "./node_modules/pdfjs-dist/**"],
+      "/api/cron/gmail": ["./node_modules/unpdf/**"],
+      "/dashboard/inbox": ["./node_modules/unpdf/**"],
     },
   },
 };
