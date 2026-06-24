@@ -16,16 +16,24 @@ export async function extractText(buffer: Buffer, mime: string, filename = ""): 
     mime === "message/rfc822";
 
   if (isPdf) {
+    // pdf-parse v2: `new PDFParse({data}).getText()` (no callable default export).
     try {
-      const mod = (await import("pdf-parse")) as unknown as {
-        default?: (b: Buffer) => Promise<{ text: string }>;
+      const { PDFParse } = (await import("pdf-parse")) as unknown as {
+        PDFParse: new (opts: { data: Buffer }) => {
+          getText: () => Promise<{ text?: string }>;
+          destroy: () => void;
+        };
       };
-      const pdf = mod.default ?? (mod as unknown as (b: Buffer) => Promise<{ text: string }>);
-      const result = await pdf(buffer);
-      const text = (result.text ?? "").trim();
-      // Image-only scans extract ~no text → flag for OCR (not run in MVP).
-      if (text.length < 20) return { text, method: "pdf", needsOcr: true };
-      return { text, method: "pdf" };
+      const parser = new PDFParse({ data: buffer });
+      try {
+        const result = await parser.getText();
+        const text = (result.text ?? "").trim();
+        // Image-only scans extract ~no text → flag for OCR (not run in MVP).
+        if (text.length < 20) return { text, method: "pdf", needsOcr: true };
+        return { text, method: "pdf" };
+      } finally {
+        parser.destroy();
+      }
     } catch {
       return { text: "", method: "none", needsOcr: true };
     }
