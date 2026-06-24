@@ -1,13 +1,10 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { completeJson } from "@/lib/ai/complete";
 
 // doc-classify-claude: classify a document/email against the tenant's clients &
-// matters, and extract key fields. Uses the Anthropic Node SDK with structured
-// outputs (output_config.format) so the model returns schema-valid JSON — no
-// brittle prompt-only "return JSON" parsing. Model defaults to Haiku 4.5
-// (cheap, fast, classification-grade; supports structured outputs), overridable.
-
-// Per-doc classification is mechanical → Haiku by the operator's model-routing policy.
-const MODEL = process.env.DOC_CLASSIFY_MODEL ?? "claude-haiku-4-5";
+// matters, and extract key fields. Backend is pluggable (see lib/ai/complete.ts):
+// the Anthropic API with structured outputs when ANTHROPIC_API_KEY is set, else
+// the local Claude Code CLI (OAuth creds, no API key). Falls back to needs-review
+// when neither is available.
 
 export interface ClassifyInput {
   filename?: string;
@@ -49,13 +46,6 @@ const SCHEMA = {
   required: ["doc_type", "client_id", "matter_id", "confidence", "extracted", "summary"],
 } as const;
 
-let client: Anthropic | null = null;
-function getClient(): Anthropic | null {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
-  if (!client) client = new Anthropic();
-  return client;
-}
-
 export async function classifyDocument(input: ClassifyInput): Promise<Classification> {
   const fallback: Classification = {
     doc_type: "other",
@@ -65,9 +55,6 @@ export async function classifyDocument(input: ClassifyInput): Promise<Classifica
     extracted: { parties: [], dates: [], amounts: [], cnrs: [] },
     summary: "Unclassified (no model / low confidence).",
   };
-
-  const anthropic = getClient();
-  if (!anthropic) return fallback;
 
   const clientList = input.clients.map((c) => `- ${c.id}: ${c.name}`).join("\n") || "(none)";
   const matterList =
@@ -86,25 +73,25 @@ DOCUMENT (filename: ${input.filename ?? "n/a"}):
 ${input.docTextOrSnippet.slice(0, 12000)}
 """`;
 
-  try {
-    const res = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 1024,
-      output_config: { format: { type: "json_schema", schema: SCHEMA } },
-      messages: [{ role: "user", content: prompt }],
-    });
-    if (res.stop_reason === "refusal") return fallback;
-    const textBlock = res.content.find((b) => b.type === "text");
-    if (!textBlock || textBlock.type !== "text") return fallback;
-    const parsed = JSON.parse(textBlock.text) as Classification;
+  const result = (await completeJson(prompt, SCHEMA)) as Partial<Classification> | null;
+  if (!result || typeof result !== "object") return fallback;
 
-    // Guard: ids must be from the provided lists (model can still hallucinate).
-    const clientIds = new Set(input.clients.map((c) => c.id));
-    const matterIds = new Set(input.matters.map((m) => m.id));
-    if (parsed.client_id && !clientIds.has(parsed.client_id)) parsed.client_id = null;
-    if (parsed.matter_id && !matterIds.has(parsed.matter_id)) parsed.matter_id = null;
-    return parsed;
-  } catch {
-    return fallback;
-  }
+  // Normalize + guard. ids must be from the provided lists (model can hallucinate).
+  const clientIds = new Set(input.clients.map((c) => c.id));
+  const matterIds = new Set(input.matters.map((m) => m.id));
+  const ex = (result.extracted ?? {}) as Partial<Classification["extracted"]>;
+  const parsed: Classification = {
+    doc_type: result.doc_type ?? "other",
+    client_id: result.client_id && clientIds.has(result.client_id) ? result.client_id : null,
+    matter_id: result.matter_id && matterIds.has(result.matter_id) ? result.matter_id : null,
+    confidence: typeof result.confidence === "number" ? Math.max(0, Math.min(1, result.confidence)) : 0,
+    extracted: {
+      parties: Array.isArray(ex.parties) ? ex.parties : [],
+      dates: Array.isArray(ex.dates) ? ex.dates : [],
+      amounts: Array.isArray(ex.amounts) ? ex.amounts : [],
+      cnrs: Array.isArray(ex.cnrs) ? ex.cnrs : [],
+    },
+    summary: result.summary ?? "",
+  };
+  return parsed;
 }
