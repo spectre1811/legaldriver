@@ -1,0 +1,35 @@
+# deps
+node_modules/
+.pnp
+.pnp.js
+
+# env / secrets — never commit
+.env
+.env.local
+.env*.local
+*.pem
+
+# next / build
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+
+# vercel / supabase
+.vercel
+.supabase/
+supabase/.branches
+supabase/.temp
+
+# test / coverage
+coverage/
+.nyc_output/
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
+.idea/
+.vscode/*
+!.vscode/extensions.json
