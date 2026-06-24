@@ -11,7 +11,7 @@ Shared coordination file for build workstreams. Status: `todo` · `claimed` · `
 | **P1 Case tracking + calendar** | `CourtDataClient` (mock + eCourtsIndia), add case by CNR, nightly refresh cron, hearings on calendar | add a real CNR → see real next hearing | **done ✅** (live verify of eCourts at deploy — VM is WAF-blocked) |
 | **P2 Cause list + notices + notifications** | daily cause-list pull by bar number, notice escalation timer, reminders via Resend + in-app | bar number's cause list shows + reminder email fires | **done ✅** |
 | **P3 Gmail ingest + parsing** | OAuth connect, incremental fetch, attachment storage, Claude classify, grouped inbox, needs-review queue | connect Gmail → attachment filed under right client/case | **done ✅** (auto-files via local Claude Code CLI, no API key) |
-| **P4 Polish + demo** | disclaimers/provenance, a11y pass, demo seed, README + 60s script, deploy + smoke | live URL non-empty, smoke passes | todo |
+| **P4 Polish + demo** | disclaimers/provenance, a11y pass, demo seed, README + 60s script, deploy + smoke | live URL non-empty, smoke passes | **done ✅** — live at legaldriver.vercel.app |
 
 ## Workstreams
 
@@ -31,7 +31,7 @@ Shared coordination file for build workstreams. Status: `todo` · `claimed` · `
 - [x] eCourtsIndia API token — provided, in .env
 - [x] Google OAuth client id/secret — provided, in .env (live Gmail connect is interactive — Yash clicks through)
 - [x] ANTHROPIC_API_KEY — not needed: classification uses the local Claude Code CLI backend (OAuth creds). Set a key only for prod/scale speed.
-- [ ] Vercel account link — deferred to P4
+- [x] Vercel — deployed & live at https://legaldriver.vercel.app (env vars set via API; Supabase Auth Site URL pointed at prod)
 - [ ] A real Bar Registration Number + a CNR to demo against — needed at P1/P2 checkpoint
 
 ## Notes
