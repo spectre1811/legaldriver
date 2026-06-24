@@ -1,20 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { PageHeader, Card, Badge, EmptyState, Disclaimer, fmtDate, fmtAgo } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { AddCaseForm } from "./add-case-form";
-
-function fmtDate(d: string | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
-function fmtAgo(ts: string | null) {
-  if (!ts) return "never";
-  const mins = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.round(hrs / 24)}d ago`;
-}
 
 export default async function CasesPage() {
   const supabase = createClient();
@@ -24,61 +12,49 @@ export default async function CasesPage() {
     .order("next_hearing_date", { ascending: true, nullsFirst: false });
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold text-ink">Cases</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Add a case by CNR; we fetch its details and keep it fresh on a nightly sync.
-        </p>
-      </header>
+    <div className="space-y-7">
+      <PageHeader title="Cases" subtitle="Add a case by CNR; we fetch its details and keep it fresh on a nightly sync." />
 
-      <section className="rounded-lg border border-slate-200 bg-white p-5">
+      <Card className="p-5">
         <AddCaseForm />
-      </section>
+      </Card>
 
-      <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        {matters && matters.length > 0 ? (
+      {matters && matters.length > 0 ? (
+        <Card className="overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Case</th>
-                <th className="px-4 py-3">CNR</th>
-                <th className="px-4 py-3">Court</th>
-                <th className="px-4 py-3">Stage</th>
-                <th className="px-4 py-3">Next hearing</th>
-                <th className="px-4 py-3">Source</th>
+            <thead>
+              <tr className="border-b border-line text-left">
+                <th className="px-5 py-3 label">Case</th>
+                <th className="px-5 py-3 label">CNR</th>
+                <th className="hidden px-5 py-3 label md:table-cell">Court</th>
+                <th className="hidden px-5 py-3 label sm:table-cell">Stage</th>
+                <th className="px-5 py-3 label">Next hearing</th>
+                <th className="hidden px-5 py-3 label lg:table-cell">Source</th>
               </tr>
             </thead>
             <tbody>
               {matters.map((m) => (
-                <tr key={m.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-ink">
-                    <Link href={`/dashboard/cases/${m.id}`} className="hover:underline">
+                <tr key={m.id} className="group border-b border-line last:border-0 transition hover:bg-paper">
+                  <td className="px-5 py-3.5">
+                    <Link href={`/dashboard/cases/${m.id}`} className="font-medium text-ink group-hover:text-brand-600">
                       {m.title}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500">{m.cnr ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">{m.court ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">{m.stage ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-600">{fmtDate(m.next_hearing_date)}</td>
-                  <td className="px-4 py-3 text-xs text-slate-400">
-                    {m.source ?? "—"} · {fmtAgo(m.last_synced_at)}
-                  </td>
+                  <td className="px-5 py-3.5 font-mono text-xs text-ink-faint">{m.cnr ?? "—"}</td>
+                  <td className="hidden px-5 py-3.5 text-ink-muted md:table-cell">{m.court ?? "—"}</td>
+                  <td className="hidden px-5 py-3.5 sm:table-cell">{m.stage ? <Badge>{m.stage}</Badge> : <span className="text-ink-faint">—</span>}</td>
+                  <td className="px-5 py-3.5 text-ink-soft">{fmtDate(m.next_hearing_date)}</td>
+                  <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{m.source ?? "—"} · {fmtAgo(m.last_synced_at)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        ) : (
-          <div className="p-8 text-center text-sm text-slate-500">
-            No cases yet. Add one by CNR above.
-          </div>
-        )}
-      </section>
+        </Card>
+      ) : (
+        <EmptyState icon="cases" title="No cases yet" body="Add your first case by CNR above — its hearings, parties and orders will sync automatically." />
+      )}
 
-      <p className="text-xs text-slate-400">
-        Not legal advice. Court data is sourced from a licensed court-data API and is
-        informational only — verify against the official record.
-      </p>
+      <Disclaimer />
     </div>
   );
 }

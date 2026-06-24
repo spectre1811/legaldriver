@@ -11,7 +11,7 @@ export function RespondButton({ noticeId }: { noticeId: string }) {
     <button
       onClick={() => start(async () => { await markResponded(noticeId); router.refresh(); })}
       disabled={pending}
-      className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-60"
+      className="btn-secondary px-2.5 py-1.5 text-xs"
     >
       {pending ? "…" : "Mark responded"}
     </button>

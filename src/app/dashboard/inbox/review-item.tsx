@@ -21,34 +21,29 @@ export function ReviewItem({
   const router = useRouter();
 
   return (
-    <li className="space-y-2 px-4 py-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-ink">{email.subject || "(no subject)"}</p>
-          <p className="text-xs text-slate-500">{email.from}</p>
+    <li className="space-y-2.5 px-5 py-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-ink">{email.subject || "(no subject)"}</p>
+          <p className="truncate text-xs text-ink-faint">{email.from}</p>
         </div>
-        <span className="text-xs text-amber-700">
-          {email.confidence != null ? `${Math.round(email.confidence * 100)}% confidence` : "low confidence"}
+        <span className="shrink-0 text-xs text-amber-700">
+          {email.confidence != null ? `${Math.round(email.confidence * 100)}%` : "low"}
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <select value={clientId} onChange={(e) => setClientId(e.target.value)}
-          className="rounded-md border border-slate-300 px-2 py-1 text-xs" aria-label="Assign client">
+        <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="input max-w-[11rem] py-1.5 text-xs" aria-label="Assign client">
           <option value="">— client —</option>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
         </select>
-        <select value={matterId} onChange={(e) => setMatterId(e.target.value)}
-          className="rounded-md border border-slate-300 px-2 py-1 text-xs" aria-label="Assign matter">
-          <option value="">— matter —</option>
+        <select value={matterId} onChange={(e) => setMatterId(e.target.value)} className="input max-w-[11rem] py-1.5 text-xs" aria-label="Assign case">
+          <option value="">— case —</option>
           {matters.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
         </select>
         <button
-          onClick={() => start(async () => {
-            await confirmEmail(email.id, clientId || null, matterId || null);
-            router.refresh();
-          })}
+          onClick={() => start(async () => { await confirmEmail(email.id, clientId || null, matterId || null); router.refresh(); })}
           disabled={pending || (!clientId && !matterId)}
-          className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-white hover:bg-blue-800 disabled:opacity-50"
+          className="btn-primary px-3 py-1.5 text-xs"
         >
           {pending ? "Filing…" : "Confirm & file"}
         </button>

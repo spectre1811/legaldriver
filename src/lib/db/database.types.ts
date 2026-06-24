@@ -531,6 +531,7 @@ export type Database = {
       }
       matter: {
         Row: {
+          ai_summary: Json | null
           case_type: string | null
           client_id: string | null
           cnr: string | null
@@ -547,6 +548,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          ai_summary?: Json | null
           case_type?: string | null
           client_id?: string | null
           cnr?: string | null
@@ -563,6 +565,7 @@ export type Database = {
           title: string
         }
         Update: {
+          ai_summary?: Json | null
           case_type?: string | null
           client_id?: string | null
           cnr?: string | null

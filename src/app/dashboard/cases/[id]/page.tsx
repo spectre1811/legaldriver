@@ -1,123 +1,192 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { RefreshButton } from "./refresh-button";
-
-function fmtDate(d: string | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
+import { Card, Badge, Disclaimer, fmtDate, fmtAgo } from "@/components/ui";
+import { Icon } from "@/components/icons";
+import type { CaseSummary } from "@/lib/docs/case-summary";
+import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm } from "./case-actions";
 
 type Party = { name?: string; side?: string; advocate?: string };
 
+const STATUS_TONE: Record<string, "green" | "amber" | "neutral"> = { active: "green", disposed: "neutral" };
+
 export default async function CaseDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
-  const { data: matter } = await supabase
-    .from("matter")
-    .select("*")
-    .eq("id", params.id)
-    .maybeSingle();
+  const { data: matter } = await supabase.from("matter").select("*").eq("id", params.id).maybeSingle();
   if (!matter) notFound();
 
-  const { data: hearings } = await supabase
-    .from("hearing")
-    .select("id, date, purpose, court_no, judge")
-    .eq("matter_id", matter.id)
-    .order("date", { ascending: false });
+  const [{ data: hearings }, { data: docs }, { data: client }] = await Promise.all([
+    supabase.from("hearing").select("id, date, purpose, court_no, judge").eq("matter_id", matter.id).order("date", { ascending: false }),
+    supabase.from("document").select("id, filename, doc_type, source, created_at, parsed_text").eq("matter_id", matter.id).order("created_at", { ascending: false }),
+    matter.client_id ? supabase.from("client").select("name").eq("id", matter.client_id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
 
   const parties = (Array.isArray(matter.parties) ? matter.parties : []) as Party[];
+  const ai = matter.ai_summary as unknown as CaseSummary | null;
+
+  const info: [string, string | null][] = [
+    ["Court", matter.court],
+    ["Case type", matter.case_type],
+    ["Stage", matter.stage],
+    ["Client", client?.name ?? null],
+    ["Next hearing", fmtDate(matter.next_hearing_date)],
+    ["Judge", hearings?.find((h) => h.judge)?.judge ?? null],
+  ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/dashboard/cases" className="text-sm text-accent hover:underline">
-          ← Cases
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold text-ink">{matter.title}</h1>
-        <p className="mt-1 font-mono text-xs text-slate-500">{matter.cnr}</p>
-      </div>
+    <div className="space-y-7">
+      <Link href="/dashboard/cases" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline">
+        <Icon name="back" className="h-4 w-4" /> Cases
+      </Link>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Info label="Court" value={matter.court} />
-        <Info label="Case type" value={matter.case_type} />
-        <Info label="Stage" value={matter.stage} />
-        <Info label="Status" value={matter.status} />
-        <Info label="Next hearing" value={fmtDate(matter.next_hearing_date)} />
-        <Info label="Judge" value={(matter.parties as unknown as { judge?: string })?.judge ?? "—"} />
-      </div>
-
-      <section className="rounded-lg border border-slate-200 bg-white p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-medium text-ink">Provenance</h2>
-          <RefreshButton matterId={matter.id} />
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[1.7rem] font-semibold leading-tight">{matter.title}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {matter.cnr && <Badge tone="brand"><Icon name="cases" className="h-3 w-3" /> {matter.cnr}</Badge>}
+            <Badge tone={STATUS_TONE[matter.status] ?? "neutral"}>{matter.status}</Badge>
+            {matter.source && <span className="text-xs text-ink-faint">via {matter.source}</span>}
+          </div>
         </div>
-        <p className="text-sm text-slate-500">
-          Source: <span className="font-medium text-slate-700">{matter.source ?? "manual"}</span> ·
-          last refreshed {matter.last_synced_at ? new Date(matter.last_synced_at).toLocaleString("en-IN") : "never"}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <EditCaseForm
+            matterId={matter.id}
+            initial={{
+              title: matter.title, court: matter.court ?? "", case_type: matter.case_type ?? "",
+              stage: matter.stage ?? "", status: matter.status ?? "active", next_hearing_date: matter.next_hearing_date ?? "",
+            }}
+          />
+          {matter.cnr && <RefreshButton matterId={matter.id} />}
+        </div>
+      </header>
+
+      {/* AI summary */}
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between border-b border-line bg-brand-50/40 px-5 py-3.5">
+          <div className="flex items-center gap-2">
+            <Icon name="sparkles" className="h-4 w-4 text-brand-600" />
+            <h2 className="text-base font-medium">AI briefing</h2>
+            {ai?.generated_at && <span className="text-xs text-ink-faint">· {fmtAgo(ai.generated_at)}</span>}
+          </div>
+          <GenerateSummaryButton matterId={matter.id} has={!!ai} />
+        </div>
+        <div className="px-5 py-5">
+          {ai ? (
+            <div className="space-y-5">
+              <p className="text-[0.95rem] leading-relaxed text-ink-soft">{ai.summary}</p>
+              {ai.next_steps.length > 0 && (
+                <div>
+                  <p className="label mb-2">Suggested next steps</p>
+                  <ul className="space-y-1.5">
+                    {ai.next_steps.map((s, i) => (
+                      <li key={i} className="flex gap-2.5 text-sm text-ink-soft">
+                        <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" /> {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {ai.risk_flags.length > 0 && (
+                <div className="rounded-xl bg-amber-50 px-4 py-3">
+                  <p className="label mb-1.5 text-amber-700">Watch</p>
+                  <ul className="space-y-1">
+                    {ai.risk_flags.map((s, i) => (
+                      <li key={i} className="flex gap-2 text-sm text-amber-800">
+                        <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="text-xs text-ink-faint">AI-generated from this case record — informational, not legal advice.</p>
+            </div>
+          ) : (
+            <p className="text-sm text-ink-muted">
+              Generate a plain-language briefing with suggested next steps and risk flags from everything on this case.
+            </p>
+          )}
+        </div>
+      </Card>
+
+      {/* Info grid */}
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {info.map(([label, value]) => (
+          <div key={label} className="card p-4">
+            <p className="label">{label}</p>
+            <p className="mt-1.5 text-sm text-ink">{value ?? "—"}</p>
+          </div>
+        ))}
       </section>
 
-      <section>
-        <h2 className="mb-2 font-medium text-ink">Parties</h2>
-        <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm">
+      <Card className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+        <p className="text-sm text-ink-muted">
+          Source <span className="font-medium text-ink-soft">{matter.source ?? "manual"}</span> · last refreshed{" "}
+          {matter.last_synced_at ? new Date(matter.last_synced_at).toLocaleString("en-IN") : "never"}
+        </p>
+      </Card>
+
+      {/* Parties + hearings */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card>
+          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Parties</h2></div>
           {parties.length ? (
-            <ul className="space-y-1">
+            <ul className="divide-y divide-line">
               {parties.map((p, i) => (
-                <li key={i} className="text-slate-700">
-                  <span className="font-medium">{p.name}</span>
-                  {p.side ? <span className="text-slate-400"> · {p.side}</span> : null}
-                  {p.advocate ? <span className="text-slate-400"> · {p.advocate}</span> : null}
+                <li key={i} className="flex items-center justify-between px-5 py-3 text-sm">
+                  <span className="font-medium text-ink">{p.name}</span>
+                  <span className="text-xs text-ink-faint">{[p.side, p.advocate].filter(Boolean).join(" · ") || "—"}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-slate-400">No party details.</p>
+            <p className="px-5 py-8 text-center text-sm text-ink-faint">No party details on record.</p>
           )}
-        </div>
-      </section>
+        </Card>
 
-      <section>
-        <h2 className="mb-2 font-medium text-ink">Hearing history</h2>
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <Card>
+          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Hearing history</h2></div>
           {hearings && hearings.length ? (
-            <table className="w-full text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="px-4 py-2">Date</th>
-                  <th className="px-4 py-2">Purpose</th>
-                  <th className="px-4 py-2">Court</th>
-                  <th className="px-4 py-2">Judge</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hearings.map((h) => (
-                  <tr key={h.id} className="border-b border-slate-100 last:border-0">
-                    <td className="px-4 py-2 text-slate-700">{fmtDate(h.date)}</td>
-                    <td className="px-4 py-2 text-slate-600">{h.purpose ?? "—"}</td>
-                    <td className="px-4 py-2 text-slate-600">{h.court_no ?? "—"}</td>
-                    <td className="px-4 py-2 text-slate-600">{h.judge ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ul className="divide-y divide-line">
+              {hearings.map((h) => (
+                <li key={h.id} className="flex items-center gap-3 px-5 py-3 text-sm">
+                  <span className="w-20 shrink-0 text-ink-muted">{fmtDate(h.date)}</span>
+                  <span className="flex-1 text-ink">{h.purpose ?? "Hearing"}</span>
+                  <span className="text-xs text-ink-faint">{h.judge ?? ""}</span>
+                </li>
+              ))}
+            </ul>
           ) : (
-            <p className="p-4 text-sm text-slate-400">No hearings recorded.</p>
+            <p className="px-5 py-8 text-center text-sm text-ink-faint">No hearings on record yet.</p>
           )}
+        </Card>
+      </div>
+
+      {/* Documents linked to this case */}
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+          <h2 className="text-base font-medium">Documents <span className="text-ink-faint">({docs?.length ?? 0})</span></h2>
+          <AddDocumentForm matterId={matter.id} />
         </div>
-      </section>
+        {docs && docs.length ? (
+          <ul className="divide-y divide-line">
+            {docs.map((d) => (
+              <li key={d.id} className="flex items-center gap-3 px-5 py-3 text-sm">
+                <Icon name="documents" className="h-4 w-4 shrink-0 text-ink-faint" />
+                <span className="min-w-0 flex-1 truncate font-medium text-ink">{d.filename}</span>
+                <Badge>{d.doc_type ?? d.source}</Badge>
+                {(d.parsed_text?.length ?? 0) > 0 && <span className="hidden text-xs text-ink-faint sm:inline">{d.parsed_text!.length.toLocaleString("en-IN")} chars</span>}
+                <a href={`/api/documents/${d.id}/download`} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:text-brand-700" title="Open">
+                  <Icon name="external" className="h-4 w-4" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="px-5 py-8 text-center text-sm text-ink-faint">No documents yet — upload one above, or they&apos;ll arrive auto-filed from Gmail.</p>
+        )}
+      </Card>
 
-      <p className="text-xs text-slate-400">
-        Not legal advice. Verify against the official record.
-      </p>
-    </div>
-  );
-}
-
-function Info({ label, value }: { label: string; value: string | null }) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
-      <p className="text-xs uppercase text-slate-400">{label}</p>
-      <p className="mt-1 text-sm text-slate-700">{value ?? "—"}</p>
+      <Disclaimer />
     </div>
   );
 }
