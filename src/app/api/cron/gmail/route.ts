@@ -27,14 +27,19 @@ export async function GET(request: NextRequest) {
     .eq("status", "active");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  const found = conns?.length ?? 0;
   let processed = 0;
   let filed = 0;
   let needsReview = 0;
+  const errors: { id: string; error: string }[] = [];
   for (const c of conns ?? []) {
-    if (!c.refresh_token_ref) continue;
+    if (!c.refresh_token_ref) {
+      errors.push({ id: c.id, error: "no refresh_token_ref" });
+      continue;
+    }
     try {
       const refresh = await readSecret(admin, c.refresh_token_ref);
-      if (!refresh) continue;
+      if (!refresh) throw new Error("could not read refresh token from vault");
       const accessToken = await refreshAccessToken(refresh);
       const mail = getGmailClient(accessToken);
       const summary = await ingestMail(admin, c.tenant_id, c.user_id, mail, c.gmail_last_history_id);
@@ -47,11 +52,11 @@ export async function GET(request: NextRequest) {
           .update({ gmail_last_history_id: summary.newHistoryId })
           .eq("id", c.id);
       }
-    } catch {
-      // skip a failing connection; never throw the whole job
-      continue;
+    } catch (e) {
+      // never throw the whole job; surface a redacted reason for diagnosis
+      errors.push({ id: c.id, error: e instanceof Error ? e.message : "ingest failed" });
     }
   }
 
-  return NextResponse.json({ ok: true, connections: processed, filed, needsReview });
+  return NextResponse.json({ ok: true, found, processed, filed, needsReview, errors });
 }
