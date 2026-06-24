@@ -24,10 +24,13 @@ export default function LoginPage({
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
             <Icon name="scale" className="h-5 w-5 text-brass-400" />
           </span>
-          <span className="font-serif text-xl font-medium">LexDriver</span>
+          <span className="font-serif text-xl font-medium">
+            <span lang="gu" className="text-brass-400">કાનૂની</span>driver
+          </span>
         </div>
 
         <div className="relative max-w-md">
+          <p lang="gu" className="mb-3 font-serif text-6xl font-medium leading-none text-white/10">કાનૂની</p>
           <h1 className="font-serif text-4xl font-medium leading-[1.15] text-white">
             Your practice, on a single daily driver.
           </h1>
@@ -60,7 +63,7 @@ export default function LoginPage({
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
                 <Icon name="scale" className="h-5 w-5" />
               </span>
-              <span className="font-serif text-xl font-medium">LexDriver</span>
+              <span className="font-serif text-xl font-medium">Legaldriver</span>
             </div>
           </div>
 

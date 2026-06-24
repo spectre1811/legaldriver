@@ -3,7 +3,7 @@
 **Date:** 2026-06-24 · **Status:** in place
 
 ## Problem
-Vercel **Hobby** plan only runs cron jobs on a **daily** cadence. LexDriver needs higher
+Vercel **Hobby** plan only runs cron jobs on a **daily** cadence. Legaldriver needs higher
 frequency: reminders (notify) ~every 15 min, notice escalation hourly, Gmail ingest ~30 min.
 Sub-daily schedules in `vercel.json` are rejected at deploy with `cron_jobs_limits_reached`.
 

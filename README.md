@@ -1,4 +1,4 @@
-# LexDriver
+# Legaldriver
 
 A legal "daily driver" for advocates and firms: track court cases by CNR, see hearings +
 jurisdiction-aware deadlines + your advocate cause list on one calendar, run legal-notice

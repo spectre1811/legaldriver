@@ -11,7 +11,7 @@ const serif = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "LexDriver — your legal daily driver",
+  title: "Legaldriver — your legal daily driver",
   description: "Cases, hearings, deadlines, notices and inbox for advocates — one daily driver.",
 };
 

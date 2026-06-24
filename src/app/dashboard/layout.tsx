@@ -22,7 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Icon name="scale" className="h-5 w-5" />
           </span>
           <div className="leading-tight">
-            <p className="font-serif text-lg font-medium">LexDriver</p>
+            <p className="font-serif text-lg font-medium">Legaldriver</p>
             <p className="truncate text-xs text-ink-faint" title={tenantName}>{tenantName}</p>
           </div>
         </div>

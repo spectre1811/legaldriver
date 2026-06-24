@@ -96,6 +96,57 @@ export type Database = {
           },
         ]
       }
+      calendar_event: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          event_date: string
+          id: string
+          kind: string
+          matter_id: string | null
+          notes: string | null
+          tenant_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          event_date: string
+          id?: string
+          kind?: string
+          matter_id?: string | null
+          notes?: string | null
+          tenant_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          event_date?: string
+          id?: string
+          kind?: string
+          matter_id?: string | null
+          notes?: string | null
+          tenant_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cause_list_entry: {
         Row: {
           advocate_id: string

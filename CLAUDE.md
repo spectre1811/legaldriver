@@ -1,4 +1,4 @@
-# LexDriver — Project Context
+# Legaldriver — Project Context
 
 A legal "daily driver" for advocates/firms: track court cases by CNR, see hearings +
 jurisdiction-aware deadlines + the advocate cause list on one calendar, run legal-notice
