@@ -7,7 +7,9 @@ const NAV = [
   { href: "/dashboard/cases", label: "Cases" },
   { href: "/dashboard/calendar", label: "Calendar" },
   { href: "/dashboard/notices", label: "Notices" },
+  { href: "/dashboard/notifications", label: "Notifications" },
   { href: "/dashboard/inbox", label: "Inbox" },
+  { href: "/dashboard/settings", label: "Settings" },
 ];
 
 export default async function DashboardLayout({

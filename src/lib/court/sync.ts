@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
 import type { NormalizedCase } from "./types";
+import { scheduleReminders } from "@/lib/notify/schedule";
 
 type DB = SupabaseClient<Database>;
 
@@ -72,6 +73,25 @@ export async function upsertCase(
         raw: (h.raw ?? {}) as Database["public"]["Tables"]["hearing"]["Insert"]["raw"],
       }));
     if (rows.length) await supabase.from("hearing").insert(rows);
+  }
+
+  // Schedule reminders for the next hearing. Replace-on-change: clear pending
+  // reminders for this matter, then (re)schedule for the current next date.
+  const ref = `matter:${matterId}`;
+  await supabase
+    .from("notification")
+    .delete()
+    .eq("tenant_id", tenantId)
+    .eq("kind", "hearing_reminder")
+    .eq("status", "pending")
+    .contains("payload", { ref });
+  if (c.nextHearingDate) {
+    await scheduleReminders(supabase, tenantId, {
+      kind: "hearing_reminder",
+      eventDate: c.nextHearingDate,
+      ref,
+      title: c.title,
+    });
   }
 
   return { matterId, isNew: !existing, hearingCount: c.hearings.length };

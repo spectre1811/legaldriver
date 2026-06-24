@@ -10,6 +10,9 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // supabase-js uses fetch internally; opt out of Next's default fetch cache
+      // so reads in Server Components/Actions are never served stale.
+      global: { fetch: (url, opts) => fetch(url, { ...opts, cache: "no-store" }) },
       cookies: {
         getAll() {
           return cookieStore.getAll();

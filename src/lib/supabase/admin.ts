@@ -8,6 +8,11 @@ export function createAdminClient() {
   return createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      // Next.js caches fetch() by default; supabase-js uses fetch internally, so
+      // without this every query could be served stale from the Data Cache.
+      global: { fetch: (url, opts) => fetch(url, { ...opts, cache: "no-store" }) },
+    },
   );
 }

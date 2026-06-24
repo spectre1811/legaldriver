@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
-type CalEvent = { date: string; title: string; kind: "hearing"; href: string; meta?: string };
+type CalEvent = { date: string; title: string; kind: "hearing" | "causelist"; href: string; meta?: string };
 
 function monthBounds(month: string): { start: string; end: string; label: string; prev: string; next: string } {
   const [y, m] = month.split("-").map(Number);
@@ -32,16 +32,32 @@ export default async function CalendarPage({ searchParams }: { searchParams: { m
     .lte("date", end)
     .order("date", { ascending: true });
 
-  const events: CalEvent[] = (hearings ?? []).map((h) => {
-    const m = h.matter as unknown as { id: string; title: string } | null;
-    return {
-      date: h.date,
-      title: m?.title ?? "Hearing",
-      kind: "hearing",
-      href: m ? `/dashboard/cases/${m.id}` : "#",
-      meta: h.purpose ?? undefined,
-    };
-  });
+  const { data: causeList } = await supabase
+    .from("cause_list_entry")
+    .select("id, list_date, court, item_no, cnr, matter_id")
+    .gte("list_date", start)
+    .lte("list_date", end)
+    .order("list_date", { ascending: true });
+
+  const events: CalEvent[] = [
+    ...(hearings ?? []).map((h): CalEvent => {
+      const m = h.matter as unknown as { id: string; title: string } | null;
+      return {
+        date: h.date,
+        title: m?.title ?? "Hearing",
+        kind: "hearing",
+        href: m ? `/dashboard/cases/${m.id}` : "#",
+        meta: h.purpose ?? undefined,
+      };
+    }),
+    ...(causeList ?? []).map((c): CalEvent => ({
+      date: c.list_date,
+      title: `Cause list${c.item_no ? ` #${c.item_no}` : ""}: ${c.cnr ?? "case"}`,
+      kind: "causelist",
+      href: c.matter_id ? `/dashboard/cases/${c.matter_id}` : "/dashboard/cases",
+      meta: c.matter_id ? "tracked" : "not tracked — add?",
+    })),
+  ].sort((a, b) => a.date.localeCompare(b.date));
 
   const byDay = new Map<string, CalEvent[]>();
   for (const e of events) (byDay.get(e.date) ?? byDay.set(e.date, []).get(e.date)!).push(e);
@@ -62,7 +78,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: { m
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-ink">Calendar</h1>
-          <p className="mt-1 text-sm text-slate-500">Hearings this month. Cause list + deadlines arrive in P2.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            <span className="inline-block h-2 w-2 rounded-sm bg-blue-400 align-middle" /> hearings
+            <span className="ml-2 inline-block h-2 w-2 rounded-sm bg-amber-400 align-middle" /> cause list
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Link href={`/dashboard/calendar?month=${prev}`} className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-100">←</Link>
@@ -87,7 +106,11 @@ export default async function CalendarPage({ searchParams }: { searchParams: { m
               <div className="space-y-1">
                 {dayEvents.slice(0, 3).map((e, i) => (
                   <Link key={i} href={e.href} title={`${e.title}${e.meta ? " · " + e.meta : ""}`}
-                    className="block truncate rounded bg-blue-50 px-1 py-0.5 text-xs text-accent hover:bg-blue-100">
+                    className={`block truncate rounded px-1 py-0.5 text-xs ${
+                      e.kind === "causelist"
+                        ? "bg-amber-50 text-amber-800 hover:bg-amber-100"
+                        : "bg-blue-50 text-accent hover:bg-blue-100"
+                    }`}>
                     {e.title}
                   </Link>
                 ))}
