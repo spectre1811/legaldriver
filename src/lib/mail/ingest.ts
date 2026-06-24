@@ -76,7 +76,7 @@ export async function ingestMail(
         upsert: true,
       });
 
-      const { text, needsOcr } = await extractText(att.data, att.mime, att.filename);
+      const { text, needsOcr, error: extractError } = await extractText(att.data, att.mime, att.filename);
       const cls = await classifyDocument({
         filename: att.filename,
         docTextOrSnippet: text || `${email.subject}\n${email.snippet}`,
@@ -95,7 +95,7 @@ export async function ingestMail(
         doc_type: cls.doc_type,
         client_id: cls.client_id,
         matter_id: cls.matter_id,
-        extracted: { ...cls.extracted, summary: cls.summary, needsOcr: needsOcr ?? false } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],
+        extracted: { ...cls.extracted, summary: cls.summary, needsOcr: needsOcr ?? false, ...(extractError ? { extractError } : {}) } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],
         email_message_id: emailId,
       });
       documents++;

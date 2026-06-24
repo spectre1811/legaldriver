@@ -6,6 +6,7 @@ export interface ExtractResult {
   text: string;
   method: "pdf" | "text" | "none";
   needsOcr?: boolean;
+  error?: string; // diagnostic when PDF extraction throws (e.g. serverless bundling)
 }
 
 export async function extractText(buffer: Buffer, mime: string, filename = ""): Promise<ExtractResult> {
@@ -34,8 +35,8 @@ export async function extractText(buffer: Buffer, mime: string, filename = ""): 
       } finally {
         parser.destroy();
       }
-    } catch {
-      return { text: "", method: "none", needsOcr: true };
+    } catch (e) {
+      return { text: "", method: "none", needsOcr: true, error: e instanceof Error ? e.message : "pdf parse failed" };
     }
   }
 
