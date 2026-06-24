@@ -7,7 +7,7 @@ Shared coordination file for build workstreams. Status: `todo` · `claimed` · `
 
 | Phase | Scope | Done when | Status |
 |---|---|---|---|
-| **P0 Foundations** | repo, Next.js app, CI, Vercel + Supabase wired, schema + RLS + types, Auth (email + Google), tenant model, seed | sign in → empty tenant-scoped dashboard | claimed |
+| **P0 Foundations** | repo, Next.js app, CI, Supabase wired, schema + RLS + types, Auth (email), tenant model | sign in → empty tenant-scoped dashboard | **done ✅** |
 | **P1 Case tracking + calendar** | `CourtDataClient`, add case by CNR, advocate search, nightly refresh, hearings on calendar | add a real CNR → see real next hearing | todo |
 | **P2 Cause list + notices + notifications** | daily cause-list pull by bar number, notice escalation timer, reminders via Resend + in-app | bar number's cause list shows + reminder email fires | todo |
 | **P3 Gmail ingest + parsing** | OAuth connect, incremental fetch, attachment storage, Claude classify, grouped inbox, needs-review queue | connect Gmail → attachment filed under right client/case | todo |
@@ -27,8 +27,13 @@ Shared coordination file for build workstreams. Status: `todo` · `claimed` · `
 
 ## Blockers / waiting on Yash
 
-- [ ] Supabase project + 3 keys
-- [ ] eCourtsIndia API token
-- [ ] Google OAuth client id/secret (consent screen in Testing, Yash added as test user)
-- [ ] Vercel account link (or decide: deploy later)
-- [ ] A real Bar Registration Number + a CNR to demo against
+- [x] Supabase project + 3 keys — provisioned (ref johvrsvaspivmxqvpxcg), schema + RLS live
+- [x] eCourtsIndia API token — provided, in .env
+- [ ] Google OAuth client id/secret — **Yash will provide later** (needed at P3; Gmail stubbed until then)
+- [ ] Vercel account link — deferred to P4
+- [ ] A real Bar Registration Number + a CNR to demo against — needed at P1/P2 checkpoint
+
+## Notes
+
+- Court-data strategy (licensed API now, own datastore over time): `docs/decisions/2026-06-24-court-data-strategy.md`
+- P0 verified: new-user trigger → isolated tenant+profile; middleware guards /dashboard; typecheck+build+lint clean.

@@ -22,6 +22,9 @@ next-env.d.ts
 supabase/.branches
 supabase/.temp
 
+# typescript build info
+*.tsbuildinfo
+
 # test / coverage
 coverage/
 .nyc_output/

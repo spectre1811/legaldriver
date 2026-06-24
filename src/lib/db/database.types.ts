@@ -1,0 +1,944 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
+  public: {
+    Tables: {
+      advocate: {
+        Row: {
+          bar_registration_number: string | null
+          courts: string[]
+          created_at: string
+          id: string
+          name: string
+          state_code: string | null
+          tenant_id: string
+        }
+        Insert: {
+          bar_registration_number?: string | null
+          courts?: string[]
+          created_at?: string
+          id?: string
+          name: string
+          state_code?: string | null
+          tenant_id: string
+        }
+        Update: {
+          bar_registration_number?: string | null
+          courts?: string[]
+          created_at?: string
+          id?: string
+          name?: string
+          state_code?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advocate_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_event: {
+        Row: {
+          action: string
+          actor_id: string | null
+          after: Json | null
+          before: Json | null
+          created_at: string
+          entity: string | null
+          entity_id: string | null
+          id: string
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          after?: Json | null
+          before?: Json | null
+          created_at?: string
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_event_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cause_list_entry: {
+        Row: {
+          advocate_id: string
+          cnr: string | null
+          court: string | null
+          created_at: string
+          id: string
+          item_no: string | null
+          list_date: string
+          matter_id: string | null
+          raw: Json
+          tenant_id: string
+        }
+        Insert: {
+          advocate_id: string
+          cnr?: string | null
+          court?: string | null
+          created_at?: string
+          id?: string
+          item_no?: string | null
+          list_date: string
+          matter_id?: string | null
+          raw?: Json
+          tenant_id: string
+        }
+        Update: {
+          advocate_id?: string
+          cnr?: string | null
+          court?: string | null
+          created_at?: string
+          id?: string
+          item_no?: string | null
+          list_date?: string
+          matter_id?: string | null
+          raw?: Json
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cause_list_entry_advocate_id_fkey"
+            columns: ["advocate_id"]
+            isOneToOne: false
+            referencedRelation: "advocate"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cause_list_entry_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cause_list_entry_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client: {
+        Row: {
+          created_at: string
+          custom: Json
+          emails: string[]
+          id: string
+          name: string
+          phones: string[]
+          tenant_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          custom?: Json
+          emails?: string[]
+          id?: string
+          name: string
+          phones?: string[]
+          tenant_id: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          custom?: Json
+          emails?: string[]
+          id?: string
+          name?: string
+          phones?: string[]
+          tenant_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      court_sync_job: {
+        Row: {
+          cnr: string
+          created_at: string
+          error: string | null
+          id: string
+          last_run_at: string | null
+          next_run_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          cnr: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          cnr?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_sync_job_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deadline: {
+        Row: {
+          created_at: string
+          due_date: string
+          id: string
+          jurisdiction_rule: string | null
+          kind: string
+          matter_id: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          due_date: string
+          id?: string
+          jurisdiction_rule?: string | null
+          kind: string
+          matter_id: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          due_date?: string
+          id?: string
+          jurisdiction_rule?: string | null
+          kind?: string
+          matter_id?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deadline_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deadline_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deadline_rule: {
+        Row: {
+          created_at: string
+          days: number
+          description: string | null
+          id: string
+          jurisdiction: string
+          kind: string
+          tenant_id: string | null
+          trigger: string
+        }
+        Insert: {
+          created_at?: string
+          days: number
+          description?: string | null
+          id?: string
+          jurisdiction: string
+          kind: string
+          tenant_id?: string | null
+          trigger: string
+        }
+        Update: {
+          created_at?: string
+          days?: number
+          description?: string | null
+          id?: string
+          jurisdiction?: string
+          kind?: string
+          tenant_id?: string | null
+          trigger?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deadline_rule_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          doc_type: string | null
+          email_message_id: string | null
+          extracted: Json
+          filename: string | null
+          id: string
+          matter_id: string | null
+          mime: string | null
+          parsed_text: string | null
+          source: string
+          storage_path: string | null
+          tenant_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          doc_type?: string | null
+          email_message_id?: string | null
+          extracted?: Json
+          filename?: string | null
+          id?: string
+          matter_id?: string | null
+          mime?: string | null
+          parsed_text?: string | null
+          source: string
+          storage_path?: string | null
+          tenant_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          doc_type?: string | null
+          email_message_id?: string | null
+          extracted?: Json
+          filename?: string | null
+          id?: string
+          matter_id?: string | null
+          mime?: string | null
+          parsed_text?: string | null
+          source?: string
+          storage_path?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_email_message_id_fkey"
+            columns: ["email_message_id"]
+            isOneToOne: false
+            referencedRelation: "email_message"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_message: {
+        Row: {
+          classified_client_id: string | null
+          classified_matter_id: string | null
+          confidence: number | null
+          created_at: string
+          from_addr: string | null
+          gmail_history_id: string | null
+          gmail_id: string
+          id: string
+          received_at: string | null
+          snippet: string | null
+          status: string
+          subject: string | null
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          classified_client_id?: string | null
+          classified_matter_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          from_addr?: string | null
+          gmail_history_id?: string | null
+          gmail_id: string
+          id?: string
+          received_at?: string | null
+          snippet?: string | null
+          status?: string
+          subject?: string | null
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          classified_client_id?: string | null
+          classified_matter_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          from_addr?: string | null
+          gmail_history_id?: string | null
+          gmail_id?: string
+          id?: string
+          received_at?: string | null
+          snippet?: string | null
+          status?: string
+          subject?: string | null
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_message_classified_client_id_fkey"
+            columns: ["classified_client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_message_classified_matter_id_fkey"
+            columns: ["classified_matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_message_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hearing: {
+        Row: {
+          court_no: string | null
+          created_at: string
+          date: string
+          id: string
+          judge: string | null
+          matter_id: string
+          purpose: string | null
+          raw: Json
+          tenant_id: string
+        }
+        Insert: {
+          court_no?: string | null
+          created_at?: string
+          date: string
+          id?: string
+          judge?: string | null
+          matter_id: string
+          purpose?: string | null
+          raw?: Json
+          tenant_id: string
+        }
+        Update: {
+          court_no?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          judge?: string | null
+          matter_id?: string
+          purpose?: string | null
+          raw?: Json
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hearing_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hearing_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      matter: {
+        Row: {
+          case_type: string | null
+          client_id: string | null
+          cnr: string | null
+          court: string | null
+          created_at: string
+          id: string
+          last_synced_at: string | null
+          next_hearing_date: string | null
+          parties: Json
+          source: string | null
+          stage: string | null
+          status: string
+          tenant_id: string
+          title: string
+        }
+        Insert: {
+          case_type?: string | null
+          client_id?: string | null
+          cnr?: string | null
+          court?: string | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          next_hearing_date?: string | null
+          parties?: Json
+          source?: string | null
+          stage?: string | null
+          status?: string
+          tenant_id: string
+          title: string
+        }
+        Update: {
+          case_type?: string | null
+          client_id?: string | null
+          cnr?: string | null
+          court?: string | null
+          created_at?: string
+          id?: string
+          last_synced_at?: string | null
+          next_hearing_date?: string | null
+          parties?: Json
+          source?: string | null
+          stage?: string | null
+          status?: string
+          tenant_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "matter_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matter_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notice: {
+        Row: {
+          body_ref: string | null
+          client_id: string | null
+          created_at: string
+          escalation_state: string
+          id: string
+          matter_id: string | null
+          next_escalation_at: string | null
+          response_due: string | null
+          sent_at: string | null
+          tenant_id: string
+          type: string
+        }
+        Insert: {
+          body_ref?: string | null
+          client_id?: string | null
+          created_at?: string
+          escalation_state?: string
+          id?: string
+          matter_id?: string | null
+          next_escalation_at?: string | null
+          response_due?: string | null
+          sent_at?: string | null
+          tenant_id: string
+          type: string
+        }
+        Update: {
+          body_ref?: string | null
+          client_id?: string | null
+          created_at?: string
+          escalation_state?: string
+          id?: string
+          matter_id?: string | null
+          next_escalation_at?: string | null
+          response_due?: string | null
+          sent_at?: string | null
+          tenant_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notice_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notice_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notice_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          kind: string
+          payload: Json
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          id?: string
+          kind: string
+          payload?: Json
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          payload?: Json
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oauth_connection: {
+        Row: {
+          created_at: string
+          gmail_last_history_id: string | null
+          id: string
+          provider: string
+          refresh_token_ref: string | null
+          scopes: string[]
+          status: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gmail_last_history_id?: string | null
+          id?: string
+          provider?: string
+          refresh_token_ref?: string | null
+          scopes?: string[]
+          status?: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gmail_last_history_id?: string | null
+          id?: string
+          provider?: string
+          refresh_token_ref?: string | null
+          scopes?: string[]
+          status?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth_connection_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          role: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          role?: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          role?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          plan: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          plan?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          plan?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      current_tenant_id: { Args: never; Returns: string }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
+
