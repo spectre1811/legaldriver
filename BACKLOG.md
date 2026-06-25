@@ -20,8 +20,8 @@ P5 matter depth · P6 time+expense · P7/P8 client portal (RLS-isolated) · P10 
 | ~~Knowledge spine (statutes/limitation/deadline rules)~~ ✅ **DONE** | Seeded `deadline_rule` (70 rows, NI-138/CPC/Limitation/Arbitration/Consumer/BNSS) + expanded `legal_reference` to 38; case page applies jurisdiction-aware deadlines → calendar. Powers the deadline engine + grounds the agent. |
 | **External full-text corpora** (deferred from spine) | Still keyless but needs more work: **India Code** bare-act text (no REST API → HTML parser needed), **DevDataLab** 81M historical district records (large ODbL bulk download + import), **NJDG/data.gov.in** court+judge lists (dataset-specific). **e-SCR is unreachable from our host (000)** — revisit host/proxy. See `docs/decisions/2026-06-25-court-data-sourcing.md`. |
 | HITL court-refresh: parse pasted payload | The Settings HITL form stores the pasted official-portal payload; add the deterministic parser → write into `court_cache` + `matter`. Closes the compliant live-data loop. |
-| Analytics & reports | Postgres views: receivables, client/matter ledger, aging, time/expense, per-employee + a reports page. |
-| Invoice assembly + GST | Assemble from unbilled time/expense, GST (CGST/SGST vs IGST, HSN/SAC), FY numbering, PDF, email. (Razorpay collection is 🔴.) |
+| ~~Analytics dashboard~~ ✅ **DONE** | `/dashboard/analytics` (analytics_summary RPC): caseload, time+billing, clients/docs, and a "Your data — ingested & stored" panel. Per-employee/client ledger + aging still to add. |
+| Invoice assembly + GST | Assemble from unbilled time/expense, GST (CGST/SGST vs IGST, HSN/SAC), FY numbering, PDF, email. (Razorpay collection is 🔴.) **← suggested next** |
 | Document versioning + approval + templates | `document_version` + draft→approved workflow; merge-token templates. |
 | Outbound email logging → Communications | Log Resend sends (notices/reminders) so the comms timeline shows two-way email. |
 | Suggested-reply → composer prefill | One-click load the AI draft into the WhatsApp composer (today: copy-to-clipboard). |
