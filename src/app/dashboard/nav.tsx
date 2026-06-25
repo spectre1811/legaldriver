@@ -18,11 +18,17 @@ const SECTIONS: { heading: string; items: { href: string; label: string; icon: I
     heading: "Workflow",
     items: [
       { href: "/dashboard/notices", label: "Notices", icon: "notices" },
-      { href: "/dashboard/inbox", label: "Inbox", icon: "inbox" },
+      { href: "/dashboard/inbox", label: "Inbox", icon: "gmail" },
+      { href: "/dashboard/messages", label: "Messages", icon: "inbox" },
+      { href: "/dashboard/voice", label: "Voice", icon: "clip" },
       { href: "/dashboard/documents", label: "Documents", icon: "documents" },
       { href: "/dashboard/ip", label: "IP assets", icon: "scale" },
       { href: "/dashboard/notifications", label: "Notifications", icon: "bell" },
     ],
+  },
+  {
+    heading: "Assistant",
+    items: [{ href: "/dashboard/copilot", label: "Copilot", icon: "sparkles" }],
   },
   {
     heading: "Account",

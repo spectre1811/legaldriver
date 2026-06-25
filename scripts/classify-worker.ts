@@ -30,7 +30,36 @@ async function main() {
   const { buildClassifyPrompt, CLASSIFY_SCHEMA, normalizeClassification } = await import("../src/lib/docs/classify-core");
   const { resolveFiling } = await import("../src/lib/docs/autofile");
   const { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } = await import("../src/lib/docs/case-summary");
+  const { synthesize } = await import("../src/lib/services/agent/agent");
   const admin = createAdminClient();
+
+  // Answer Lawyer-Agent turns queued by the app (keyless prod has no synchronous
+  // backend). The pending turn carries the question + retrieved hits in meta.
+  async function answerPending(): Promise<number> {
+    const { data: turns } = await admin
+      .from("agent_turn")
+      .select("id, meta")
+      .eq("role", "assistant")
+      .contains("meta", { pending: true })
+      .limit(BATCH);
+    if (!turns?.length) return 0;
+    let done = 0;
+    for (const t of turns) {
+      const meta = (t.meta ?? {}) as { question?: string; hits?: unknown[] };
+      if (!meta.question || !Array.isArray(meta.hits)) continue;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ans = await synthesize(meta.question, meta.hits as any);
+      if (!ans) continue; // no answer this tick — retry next loop
+      await admin
+        .from("agent_turn")
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update({ content: ans.answer, citations: ans.citations as any, meta: { done: true, abstained: ans.abstained } as any })
+        .eq("id", t.id);
+      done++;
+      console.log(`  [agent] answered turn ${t.id.slice(0, 8)} (${ans.citations.length} cites)`);
+    }
+    return done;
+  }
 
   // Generate AI briefings for cases that don't have one yet (background; uses our
   // Claude Code, so prod gets summaries without an API key / synchronous bridge).
@@ -134,6 +163,8 @@ async function main() {
     await pass();
     const s = await summarize();
     if (s) console.log(`summaries generated: ${s}`);
+    const a = await answerPending();
+    if (a) console.log(`agent answers: ${a}`);
   }
 
   if (process.argv.includes("--loop")) {

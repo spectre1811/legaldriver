@@ -18,12 +18,13 @@ function getSdk(): Anthropic {
 }
 
 type Schema = Record<string, unknown>;
+export type CompleteOpts = { model?: string; maxTokens?: number };
 
-async function apiCompleteJson(prompt: string, schema: Schema): Promise<unknown | null> {
+async function apiCompleteJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
   try {
     const res = await getSdk().messages.create({
-      model: MODEL,
-      max_tokens: 1024,
+      model: opts?.model ?? MODEL,
+      max_tokens: opts?.maxTokens ?? 1024,
       // structured outputs → schema-valid JSON
       output_config: { format: { type: "json_schema", schema } },
       messages: [{ role: "user", content: prompt }],
@@ -37,9 +38,9 @@ async function apiCompleteJson(prompt: string, schema: Schema): Promise<unknown 
   }
 }
 
-async function cliCompleteJson(prompt: string, schema: Schema): Promise<unknown | null> {
+async function cliCompleteJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
   const augmented = `${prompt}\n\nReturn ONLY a JSON object conforming to this JSON Schema (no markdown, no prose):\n${JSON.stringify(schema)}`;
-  const raw = await claudeCliJson(augmented, { model: MODEL });
+  const raw = await claudeCliJson(augmented, { model: opts?.model ?? MODEL });
   if (!raw) return null;
   try {
     return JSON.parse(raw);
@@ -58,9 +59,9 @@ export function classifierBackend(): "api" | "cli" | "off" {
   return claudeCliEnabled() ? "cli" : "off";
 }
 
-export async function completeJson(prompt: string, schema: Schema): Promise<unknown | null> {
+export async function completeJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
   const backend = classifierBackend();
   if (backend === "off") return null;
-  if (backend === "api") return apiCompleteJson(prompt, schema);
-  return cliCompleteJson(prompt, schema);
+  if (backend === "api") return apiCompleteJson(prompt, schema, opts);
+  return cliCompleteJson(prompt, schema, opts);
 }

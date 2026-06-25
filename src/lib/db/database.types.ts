@@ -139,6 +139,106 @@ export type Database = {
           },
         ]
       }
+      agent_thread: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          id: string
+          matter_id: string | null
+          tenant_id: string
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          matter_id?: string | null
+          tenant_id: string
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          matter_id?: string | null
+          tenant_id?: string
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_thread_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_thread_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_thread_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_turn: {
+        Row: {
+          citations: Json
+          content: string
+          created_at: string
+          id: string
+          meta: Json | null
+          role: string
+          tenant_id: string
+          thread_id: string
+        }
+        Insert: {
+          citations?: Json
+          content: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          role: string
+          tenant_id: string
+          thread_id: string
+        }
+        Update: {
+          citations?: Json
+          content?: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          role?: string
+          tenant_id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_turn_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_turn_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "agent_thread"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_event: {
         Row: {
           action: string
@@ -768,6 +868,71 @@ export type Database = {
           },
         ]
       }
+      document_chunk: {
+        Row: {
+          chunk_index: number
+          client_id: string | null
+          content: string
+          created_at: string
+          document_id: string | null
+          fts: unknown
+          id: string
+          matter_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          chunk_index?: number
+          client_id?: string | null
+          content: string
+          created_at?: string
+          document_id?: string | null
+          fts?: unknown
+          id?: string
+          matter_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          chunk_index?: number
+          client_id?: string | null
+          content?: string
+          created_at?: string
+          document_id?: string | null
+          fts?: unknown
+          id?: string
+          matter_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_chunk_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_chunk_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_chunk_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_chunk_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_message: {
         Row: {
           classified_client_id: string | null
@@ -1016,6 +1181,45 @@ export type Database = {
           },
         ]
       }
+      legal_reference: {
+        Row: {
+          id: string
+          kind: string
+          new_ref: string | null
+          old_ref: string | null
+          source: string | null
+          summary: string | null
+          tags: string[]
+          title: string | null
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          kind: string
+          new_ref?: string | null
+          old_ref?: string | null
+          source?: string | null
+          summary?: string | null
+          tags?: string[]
+          title?: string | null
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          kind?: string
+          new_ref?: string | null
+          old_ref?: string | null
+          source?: string | null
+          summary?: string | null
+          tags?: string[]
+          title?: string | null
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       matter: {
         Row: {
           act_names: string[]
@@ -1106,6 +1310,88 @@ export type Database = {
           },
           {
             foreignKeyName: "matter_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      msg_message: {
+        Row: {
+          body: string | null
+          channel: string
+          classified: Json | null
+          client_id: string | null
+          confidence: number | null
+          created_at: string
+          direction: string
+          external_id: string | null
+          from_addr: string | null
+          id: string
+          matter_id: string | null
+          media: Json
+          provider: string | null
+          status: string
+          tenant_id: string
+          thread_key: string | null
+          to_addr: string | null
+        }
+        Insert: {
+          body?: string | null
+          channel: string
+          classified?: Json | null
+          client_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          direction: string
+          external_id?: string | null
+          from_addr?: string | null
+          id?: string
+          matter_id?: string | null
+          media?: Json
+          provider?: string | null
+          status?: string
+          tenant_id: string
+          thread_key?: string | null
+          to_addr?: string | null
+        }
+        Update: {
+          body?: string | null
+          channel?: string
+          classified?: Json | null
+          client_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          direction?: string
+          external_id?: string | null
+          from_addr?: string | null
+          id?: string
+          matter_id?: string | null
+          media?: Json
+          provider?: string | null
+          status?: string
+          tenant_id?: string
+          thread_key?: string | null
+          to_addr?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msg_message_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "msg_message_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "msg_message_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenant"
@@ -1535,6 +1821,88 @@ export type Database = {
           },
           {
             foreignKeyName: "time_entry_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_recording: {
+        Row: {
+          client_id: string | null
+          consent_disclosed: boolean
+          created_at: string
+          duration_sec: number | null
+          external_id: string | null
+          from_number: string | null
+          id: string
+          language: string | null
+          matter_id: string | null
+          provider: string | null
+          source: string
+          status: string
+          storage_path: string | null
+          summary: Json | null
+          tenant_id: string
+          to_number: string | null
+          transcript: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          consent_disclosed?: boolean
+          created_at?: string
+          duration_sec?: number | null
+          external_id?: string | null
+          from_number?: string | null
+          id?: string
+          language?: string | null
+          matter_id?: string | null
+          provider?: string | null
+          source: string
+          status?: string
+          storage_path?: string | null
+          summary?: Json | null
+          tenant_id: string
+          to_number?: string | null
+          transcript?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          consent_disclosed?: boolean
+          created_at?: string
+          duration_sec?: number | null
+          external_id?: string | null
+          from_number?: string | null
+          id?: string
+          language?: string | null
+          matter_id?: string | null
+          provider?: string | null
+          source?: string
+          status?: string
+          storage_path?: string | null
+          summary?: Json | null
+          tenant_id?: string
+          to_number?: string | null
+          transcript?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_recording_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_recording_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_recording_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenant"
