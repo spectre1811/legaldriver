@@ -15,6 +15,7 @@ export function DocActions({
   matters,
   clients,
   shared = false,
+  docType = null,
 }: {
   documentId: string;
   matterId: string | null;
@@ -22,11 +23,13 @@ export function DocActions({
   matters: Opt[];
   clients: Opt[];
   shared?: boolean;
+  docType?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"menu" | "refile" | "delete">("menu");
   const [m, setM] = useState(matterId ?? "");
   const [c, setC] = useState(clientId ?? "");
+  const [dt, setDt] = useState(docType ?? "");
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const [pending, start] = useTransition();
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -61,7 +64,7 @@ export function DocActions({
             {mode === "menu" && (
               <div className="flex flex-col">
                 <button onClick={() => setMode("refile")} className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-soft hover:bg-paper">
-                  <Icon name="cases" className="h-4 w-4" /> Re-file
+                  <Icon name="cases" className="h-4 w-4" /> {matterId ? "Edit filing" : "Tag to a case / edit"}
                 </button>
                 <button onClick={() => start(async () => { await toggleDocShare(documentId, !shared); close(); router.refresh(); })} className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-soft hover:bg-paper">
                   <Icon name={shared ? "check" : "inbox"} className="h-4 w-4" /> {shared ? "Unshare from client" : "Share with client"}
@@ -73,17 +76,20 @@ export function DocActions({
             )}
             {mode === "refile" && (
               <div className="space-y-2 p-1">
-                <p className="label">File under</p>
-                <select value={m} onChange={(e) => setM(e.target.value)} className="input py-1.5 text-xs" aria-label="Case">
-                  <option value="">— case —</option>
-                  {matters.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
+                <p className="label">Client</p>
                 <select value={c} onChange={(e) => setC(e.target.value)} className="input py-1.5 text-xs" aria-label="Client">
                   <option value="">— client —</option>
                   {clients.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
+                <p className="label">Case <span className="font-normal normal-case text-ink-faint">(optional)</span></p>
+                <select value={m} onChange={(e) => setM(e.target.value)} className="input py-1.5 text-xs" aria-label="Case">
+                  <option value="">— no case —</option>
+                  {matters.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+                <p className="label">Type</p>
+                <input value={dt} onChange={(e) => setDt(e.target.value)} placeholder="e.g. notice, agreement, order" className="input py-1.5 text-xs" aria-label="Document type" />
                 <div className="flex gap-2">
-                  <button disabled={pending} onClick={() => start(async () => { await relinkDocument(documentId, m || null, c || null); close(); router.refresh(); })} className="btn-primary px-3 py-1.5 text-xs">{pending ? "…" : "Apply"}</button>
+                  <button disabled={pending} onClick={() => start(async () => { await relinkDocument(documentId, m || null, c || null, dt); close(); router.refresh(); })} className="btn-primary px-3 py-1.5 text-xs">{pending ? "…" : "Apply"}</button>
                   <button onClick={() => setMode("menu")} className="btn-ghost px-2 py-1.5 text-xs">Back</button>
                 </div>
               </div>

@@ -76,8 +76,10 @@ export async function ingestInbound(
       : null;
     const cls = raw ? normalizeClassification(raw, input) : FALLBACK;
 
-    // Route to a client/case (match or auto-create when clearly legal).
-    const filing = await resolveFiling(admin, tenantId, cls);
+    // Route to a client/case. Client-first: match a known client by the sender's
+    // phone number (msg.from), so a message from a saved client files to them even
+    // with no case and an empty/media-only body.
+    const filing = await resolveFiling(admin, tenantId, cls, { phone: msg.from });
     if (filing.createdClient && cls.suggested_client_name) clientList.push({ id: filing.clientId!, name: cls.suggested_client_name });
     if (filing.createdMatter) matterList.push({ id: filing.matterId!, title: cls.suggested_matter_title ?? "Case", cnr: cls.extracted.cnrs?.[0] ?? null });
 

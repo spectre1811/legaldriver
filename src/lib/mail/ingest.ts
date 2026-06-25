@@ -101,8 +101,9 @@ export async function ingestMail(
     });
     const best = [emailCls, ...pending.map((p) => p.cls)].sort((a, b) => b.confidence - a.confidence)[0];
 
-    // Match an existing client/case OR auto-create one from the parsed content.
-    const filing = await resolveFiling(supabase, tenantId, best);
+    // Client-first: pass the sender address so a known client is matched
+    // deterministically — the document files to that client even with no case.
+    const filing = await resolveFiling(supabase, tenantId, best, { email: email.from });
     if (filing.createdClient || filing.createdMatter) {
       // Refresh the shortlist so later emails in this run can match the new entities.
       if (filing.createdClient && best.suggested_client_name) clientList.push({ id: filing.clientId!, name: best.suggested_client_name });
@@ -110,7 +111,9 @@ export async function ingestMail(
     }
 
     const fileable = Boolean(filing.clientId || filing.matterId);
-    const confident = best.confidence >= THRESHOLD || filing.createdClient || filing.createdMatter;
+    // A known-client contact match is itself high-confidence filing, even if the
+    // text classifier was unsure and even when there's no case to attach.
+    const confident = best.confidence >= THRESHOLD || filing.createdClient || filing.createdMatter || filing.matchedClientByContact;
     const status: "filed" | "needs_review" = fileable && confident ? "filed" : "needs_review";
     if (status === "filed") filed++;
     else needsReview++;
@@ -127,7 +130,7 @@ export async function ingestMail(
         .limit(1)
         .maybeSingle();
       if (dupe) continue;
-      await supabase.from("document").insert({
+      const { error: docErr } = await supabase.from("document").insert({
         tenant_id: tenantId,
         source: "gmail",
         storage_path: p.path,
@@ -142,6 +145,7 @@ export async function ingestMail(
         extracted: { ...p.cls.extracted, summary: p.cls.summary, needsOcr: p.needsOcr ?? false, ...(p.extractError ? { extractError: p.extractError } : {}) } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],
         email_message_id: emailId,
       });
+      if (docErr) continue; // skip this attachment, don't miscount; never throw the run
       documents++;
     }
 

@@ -39,6 +39,8 @@ async function main() {
 
   // 2) matter with a CNR (so refresh cron can schedule reminders)
   const cnr = "MHPU0P2SMOKE00001";
+  // Pre-clean any leftover from a prior failed run (the unique CNR would else 409).
+  await sb.from("matter").delete().eq("tenant_id", tenantId).eq("cnr", cnr);
   const { data: matter } = await sb.from("matter").insert({
     tenant_id: tenantId, cnr, title: "P2 Smoke Matter", source: "manual",
   }).select("id").single();

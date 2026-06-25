@@ -12,7 +12,7 @@ export const maxDuration = 60;
 // token, fetch new mail incrementally, and run the file-and-parse pipeline.
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (secret && request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   if (!googleConfigured()) {

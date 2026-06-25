@@ -98,7 +98,7 @@ async function main() {
     // Only rows never touched by a model (confidence = 0, the "off"-backend default).
     const { data: emails } = await admin
       .from("email_message")
-      .select("id, tenant_id, subject, snippet")
+      .select("id, tenant_id, subject, snippet, from_addr")
       .eq("status", "needs_review")
       .eq("confidence", 0)
       .limit(BATCH);
@@ -132,12 +132,12 @@ async function main() {
 
       const raw = await completeJson(buildClassifyPrompt(input), CLASSIFY_SCHEMA as unknown as Record<string, unknown>);
       const cls = normalizeClassification(raw, input);
-      const filing = await resolveFiling(admin, em.tenant_id, cls);
+      const filing = await resolveFiling(admin, em.tenant_id, cls, { email: em.from_addr });
       if (filing.createdClient && cls.suggested_client_name) { sl.clients.push({ id: filing.clientId!, name: cls.suggested_client_name }); created++; }
       if (filing.createdMatter) { sl.matters.push({ id: filing.matterId!, title: cls.suggested_matter_title ?? "Case", cnr: cls.extracted.cnrs?.[0] ?? null }); created++; }
 
       const fileable = Boolean(filing.clientId || filing.matterId);
-      const confident = cls.confidence >= THRESHOLD || filing.createdClient || filing.createdMatter;
+      const confident = cls.confidence >= THRESHOLD || filing.createdClient || filing.createdMatter || filing.matchedClientByContact;
       const status = fileable && confident ? "filed" : "needs_review";
       if (status === "filed") filed++;
 

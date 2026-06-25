@@ -1,9 +1,22 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMessagingClient, messagingConfigured } from "@/lib/services/messaging/client";
 import { ingestInbound } from "@/lib/services/messaging/ingest";
 
 export const dynamic = "force-dynamic";
+
+// Verify Meta's X-Hub-Signature-256 over the raw body. Active only when
+// WHATSAPP_APP_SECRET is set (so dev/mock stays open); fail-closed once configured.
+function verifySignature(rawBody: string, header: string | null): boolean {
+  const secret = process.env.WHATSAPP_APP_SECRET;
+  if (!secret) return true; // not configured → skip (gated provider / dev)
+  if (!header?.startsWith("sha256=")) return false;
+  const expected = "sha256=" + createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
+  const a = Buffer.from(header);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 // WhatsApp BSP webhook. GET = Meta verification handshake (echo hub.challenge).
 // POST = inbound messages: normalize → classify-to-matter → persist (idempotent).
@@ -35,9 +48,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, skipped: "messaging_not_configured" });
   }
 
+  // Read the raw body once so we can both verify the HMAC and parse it.
+  const rawBody = await request.text();
+  if (!verifySignature(rawBody, request.headers.get("x-hub-signature-256"))) {
+    return NextResponse.json({ error: "bad_signature" }, { status: 401 });
+  }
   let payload: unknown;
   try {
-    payload = await request.json();
+    payload = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ ok: true, skipped: "bad_payload" });
   }

@@ -35,7 +35,9 @@ function seed(s: string): number {
   return h;
 }
 function pick<T>(arr: T[], n: number): T {
-  return arr[n % arr.length];
+  // Guard against negative indices: signed shifts on a large hash can go negative,
+  // and arr[negative] is undefined → downstream .split() crashes. Always wrap.
+  return arr[((Math.trunc(n) % arr.length) + arr.length) % arr.length];
 }
 function isoDate(base: Date, addDays: number): string {
   const d = new Date(base);
@@ -49,11 +51,11 @@ function buildCase(cnr: string, now: Date): NormalizedCase {
   const caseNo = (h % 9000) + 1000;
   const year = 2018 + (h % 7);
   const pet = pick(PETITIONERS, h);
-  const res = pick(RESPONDENTS, h >> 2);
+  const res = pick(RESPONDENTS, h >>> 2);
   const petAdv = pick(ADVOCATES, h);
-  const resAdv = pick(ADVOCATES, h >> 3);
+  const resAdv = pick(ADVOCATES, h >>> 3);
   const judge = pick(JUDGES, h);
-  const acts = [pick(ACTS, h), pick(ACTS, h >> 4)].filter((v, i, a) => a.indexOf(v) === i);
+  const acts = [pick(ACTS, h), pick(ACTS, h >>> 4)].filter((v, i, a) => a.indexOf(v) === i);
   const title = `${pet.split(" ")[0]} v. ${res.split(" ")[0]} (${caseNo}/${year})`;
 
   // A few past hearings + one upcoming next date.
