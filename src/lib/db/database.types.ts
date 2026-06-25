@@ -727,6 +727,73 @@ export type Database = {
           },
         ]
       }
+      ip_asset: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          id: string
+          jurisdiction: string | null
+          matter_id: string | null
+          notes: string | null
+          registration_no: string | null
+          renewal_date: string | null
+          status: string
+          tenant_id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction?: string | null
+          matter_id?: string | null
+          notes?: string | null
+          registration_no?: string | null
+          renewal_date?: string | null
+          status?: string
+          tenant_id: string
+          title: string
+          type?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction?: string | null
+          matter_id?: string | null
+          notes?: string | null
+          registration_no?: string | null
+          renewal_date?: string | null
+          status?: string
+          tenant_id?: string
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ip_asset_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ip_asset_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ip_asset_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matter: {
         Row: {
           ai_summary: Json | null

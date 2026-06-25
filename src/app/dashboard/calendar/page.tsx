@@ -34,11 +34,12 @@ export default async function CalendarPage({ searchParams }: { searchParams: { m
   const { start, end, label, prev, next } = monthBounds(month);
 
   const supabase = createClient();
-  const [{ data: hearings }, { data: causeList }, { data: deadlines }, { data: events }, { data: matters }] = await Promise.all([
+  const [{ data: hearings }, { data: causeList }, { data: deadlines }, { data: events }, { data: ip }, { data: matters }] = await Promise.all([
     supabase.from("hearing").select("id, date, purpose, matter:matter_id (id, title)").gte("date", start).lte("date", end),
     supabase.from("cause_list_entry").select("id, list_date, item_no, cnr, matter_id").gte("list_date", start).lte("list_date", end),
     supabase.from("deadline").select("id, due_date, kind, matter_id").gte("due_date", start).lte("due_date", end),
     supabase.from("calendar_event").select("id, event_date, title, kind, matter_id").gte("event_date", start).lte("event_date", end),
+    supabase.from("ip_asset").select("id, title, type, renewal_date").gte("renewal_date", start).lte("renewal_date", end),
     supabase.from("matter").select("id, title").order("title"),
   ]);
 
@@ -50,6 +51,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: { m
     ...(causeList ?? []).map((c): CalEvent => ({ date: c.list_date, title: `Cause list: ${c.cnr ?? "case"}`, kind: "causelist", href: c.matter_id ? `/dashboard/cases/${c.matter_id}` : "/dashboard/cases" })),
     ...(deadlines ?? []).map((d): CalEvent => ({ date: d.due_date, title: d.kind, kind: "deadline", href: d.matter_id ? `/dashboard/cases/${d.matter_id}` : "#" })),
     ...(events ?? []).map((e): CalEvent => ({ date: e.event_date, title: e.title, kind: "event", href: e.matter_id ? `/dashboard/cases/${e.matter_id}` : "#", meta: e.kind })),
+    ...(ip ?? []).filter((a) => a.renewal_date).map((a): CalEvent => ({ date: a.renewal_date as string, title: `IP renewal: ${a.title}`, kind: "deadline", href: "/dashboard/ip", meta: a.type })),
   ].sort((a, b) => a.date.localeCompare(b.date));
 
   const byDay = new Map<string, CalEvent[]>();

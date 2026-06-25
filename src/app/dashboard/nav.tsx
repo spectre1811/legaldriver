@@ -20,6 +20,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string; icon: I
       { href: "/dashboard/notices", label: "Notices", icon: "notices" },
       { href: "/dashboard/inbox", label: "Inbox", icon: "inbox" },
       { href: "/dashboard/documents", label: "Documents", icon: "documents" },
+      { href: "/dashboard/ip", label: "IP assets", icon: "scale" },
       { href: "/dashboard/notifications", label: "Notifications", icon: "bell" },
     ],
   },
