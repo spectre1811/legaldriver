@@ -4,7 +4,7 @@ import { useState, useRef, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
-import { relinkDocument, deleteDocument } from "@/app/dashboard/documents/actions";
+import { relinkDocument, deleteDocument, toggleDocShare } from "@/app/dashboard/documents/actions";
 
 type Opt = { id: string; label: string };
 
@@ -14,12 +14,14 @@ export function DocActions({
   clientId,
   matters,
   clients,
+  shared = false,
 }: {
   documentId: string;
   matterId: string | null;
   clientId: string | null;
   matters: Opt[];
   clients: Opt[];
+  shared?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"menu" | "refile" | "delete">("menu");
@@ -60,6 +62,9 @@ export function DocActions({
               <div className="flex flex-col">
                 <button onClick={() => setMode("refile")} className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-soft hover:bg-paper">
                   <Icon name="cases" className="h-4 w-4" /> Re-file
+                </button>
+                <button onClick={() => start(async () => { await toggleDocShare(documentId, !shared); close(); router.refresh(); })} className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-soft hover:bg-paper">
+                  <Icon name={shared ? "check" : "inbox"} className="h-4 w-4" /> {shared ? "Unshare from client" : "Share with client"}
                 </button>
                 <button onClick={() => setMode("delete")} className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
                   <Icon name="alert" className="h-4 w-4" /> Delete

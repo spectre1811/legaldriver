@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
 import { ClientIntake } from "./client-intake";
@@ -35,7 +36,7 @@ export default async function ClientsPage() {
             <tbody>
               {clients.map((c) => (
                 <tr key={c.id} className="border-b border-line last:border-0 hover:bg-paper">
-                  <td className="px-5 py-3.5 font-medium text-ink">{c.name}</td>
+                  <td className="px-5 py-3.5"><Link href={`/dashboard/clients/${c.id}`} className="font-medium text-ink hover:text-brand-600">{c.name}</Link></td>
                   <td className="hidden px-5 py-3.5 sm:table-cell"><Badge>{c.type}</Badge></td>
                   <td className="hidden px-5 py-3.5 text-ink-muted md:table-cell">{c.emails?.[0] ?? c.phones?.[0] ?? "—"}</td>
                   <td className="px-5 py-3.5 text-ink-soft">{caseCount.get(c.id) ?? 0}</td>

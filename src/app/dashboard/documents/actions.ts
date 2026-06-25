@@ -24,6 +24,18 @@ export async function relinkDocument(documentId: string, matterId: string | null
   return { ok: true, message: "Re-filed." };
 }
 
+// Toggle whether a document is shared with the client portal.
+export async function toggleDocShare(documentId: string, shared: boolean): Promise<DocResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const { error } = await supabase.from("document").update({ portal_shared: shared }).eq("id", documentId);
+  if (error) return { ok: false, message: error.message };
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: shared ? "document.share" : "document.unshare", entity: "document", entity_id: documentId });
+  revalidatePath("/dashboard/documents");
+  return { ok: true, message: shared ? "Shared with client." : "Unshared." };
+}
+
 // Delete a document — removes the storage object then the row (tenant-scoped).
 export async function deleteDocument(documentId: string): Promise<DocResult> {
   const supabase = createClient();

@@ -16,7 +16,7 @@ export default async function DocumentsPage({
 
   let query = supabase
     .from("document")
-    .select("id, filename, doc_type, source, client_id, matter_id, size_bytes, parsed_text, created_at")
+    .select("id, filename, doc_type, source, client_id, matter_id, size_bytes, parsed_text, portal_shared, created_at")
     .order("created_at", { ascending: false })
     .limit(300);
   if (q) query = query.textSearch("fts", q, { type: "websearch" });
@@ -78,7 +78,7 @@ export default async function DocumentsPage({
                     <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtSize(d.size_bytes)}</td>
                     <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtDate(d.created_at)}</td>
                     <td className="px-5 py-3.5 text-right">
-                      <DocActions documentId={d.id} matterId={d.matter_id} clientId={d.client_id} matters={matterOpts} clients={clientOpts} />
+                      <DocActions documentId={d.id} matterId={d.matter_id} clientId={d.client_id} matters={matterOpts} clients={clientOpts} shared={d.portal_shared} />
                     </td>
                   </tr>
                 );

@@ -533,6 +533,7 @@ export type Database = {
           matter_id: string | null
           mime: string | null
           parsed_text: string | null
+          portal_shared: boolean
           size_bytes: number | null
           source: string
           storage_path: string | null
@@ -550,6 +551,7 @@ export type Database = {
           matter_id?: string | null
           mime?: string | null
           parsed_text?: string | null
+          portal_shared?: boolean
           size_bytes?: number | null
           source: string
           storage_path?: string | null
@@ -567,6 +569,7 @@ export type Database = {
           matter_id?: string | null
           mime?: string | null
           parsed_text?: string | null
+          portal_shared?: boolean
           size_bytes?: number | null
           source?: string
           storage_path?: string | null
@@ -1088,6 +1091,97 @@ export type Database = {
           },
         ]
       }
+      portal_message: {
+        Row: {
+          body: string
+          client_id: string
+          created_at: string
+          id: string
+          matter_id: string | null
+          sender: string
+          sender_user_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          body: string
+          client_id: string
+          created_at?: string
+          id?: string
+          matter_id?: string | null
+          sender: string
+          sender_user_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          body?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          matter_id?: string | null
+          sender?: string
+          sender_user_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_message_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_message_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_message_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_user: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          tenant_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id: string
+          tenant_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_user_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_user_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       practice_area: {
         Row: {
           created_at: string
@@ -1239,6 +1333,8 @@ export type Database = {
     }
     Functions: {
       current_tenant_id: { Args: never; Returns: string }
+      portal_client_id: { Args: never; Returns: string }
+      portal_tenant_id: { Args: never; Returns: string }
       read_secret: { Args: { secret_id: string }; Returns: string }
       store_secret: {
         Args: { secret: string; secret_name: string }

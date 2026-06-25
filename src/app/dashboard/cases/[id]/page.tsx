@@ -19,7 +19,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
 
   const [{ data: hearings }, { data: docs }, { data: client }, { data: activity }, { data: allMatters }, { data: allClients }] = await Promise.all([
     supabase.from("hearing").select("id, date, purpose, court_no, judge").eq("matter_id", matter.id).order("date", { ascending: false }),
-    supabase.from("document").select("id, filename, doc_type, source, size_bytes, created_at, parsed_text, matter_id, client_id").eq("matter_id", matter.id).order("created_at", { ascending: false }),
+    supabase.from("document").select("id, filename, doc_type, source, size_bytes, created_at, parsed_text, matter_id, client_id, portal_shared").eq("matter_id", matter.id).order("created_at", { ascending: false }),
     matter.client_id ? supabase.from("client").select("name").eq("id", matter.client_id).maybeSingle() : Promise.resolve({ data: null }),
     supabase.from("activity_event").select("id, type, summary, created_at").eq("matter_id", matter.id).order("created_at", { ascending: false }).limit(30),
     supabase.from("matter").select("id, title").order("title"),
@@ -209,7 +209,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 <span className="min-w-0 flex-1 truncate font-medium text-ink">{d.filename}</span>
                 <Badge>{d.doc_type ?? d.source}</Badge>
                 <span className="hidden text-xs text-ink-faint sm:inline">{fmtSize(d.size_bytes)}</span>
-                <DocActions documentId={d.id} matterId={d.matter_id} clientId={d.client_id} matters={matterOpts} clients={clientOpts} />
+                <DocActions documentId={d.id} matterId={d.matter_id} clientId={d.client_id} matters={matterOpts} clients={clientOpts} shared={d.portal_shared} />
               </li>
             ))}
           </ul>
