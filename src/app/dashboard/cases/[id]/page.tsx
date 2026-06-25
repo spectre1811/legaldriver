@@ -80,6 +80,24 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           {ai ? (
             <div className="space-y-5">
               <p className="text-[0.95rem] leading-relaxed text-ink-soft">{ai.summary}</p>
+              {ai.posture && (
+                <div className="rounded-xl bg-paper px-4 py-3">
+                  <p className="label mb-1">Procedural posture</p>
+                  <p className="text-sm text-ink-soft">{ai.posture}</p>
+                </div>
+              )}
+              {ai.key_points && ai.key_points.length > 0 && (
+                <div>
+                  <p className="label mb-2">Key points</p>
+                  <ul className="space-y-1.5">
+                    {ai.key_points.map((s, i) => (
+                      <li key={i} className="flex gap-2.5 text-sm text-ink-soft">
+                        <Icon name="dot" className="mt-1 h-2 w-2 shrink-0 text-ink-faint" /> {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {ai.next_steps.length > 0 && (
                 <div>
                   <p className="label mb-2">Suggested next steps</p>
