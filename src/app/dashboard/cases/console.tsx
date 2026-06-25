@@ -6,7 +6,7 @@ import { Icon } from "@/components/icons";
 import { saveView, deleteView } from "./view-actions";
 
 // Query keys the console owns. Used to (re)build the URL and to snapshot a saved view.
-const KEYS = ["q", "court", "case_type", "stage", "status", "next", "sort"] as const;
+const KEYS = ["q", "court", "case_type", "stage", "status", "advocate", "act", "next", "sort"] as const;
 
 export type SavedView = { id: string; name: string; query: Record<string, string> };
 
@@ -14,11 +14,15 @@ export function Console({
   courts,
   caseTypes,
   stages,
+  advocates,
+  acts,
   views,
 }: {
   courts: string[];
   caseTypes: string[];
   stages: string[];
+  advocates: string[];
+  acts: string[];
   views: SavedView[];
 }) {
   const router = useRouter();
@@ -109,6 +113,16 @@ export function Console({
           <option value="">All statuses</option>
           <option value="open">Open</option>
           <option value="disposed">Disposed</option>
+        </select>
+
+        <select value={sp.get("advocate") ?? ""} onChange={(e) => setParam("advocate", e.target.value)} className="input max-w-[12rem]" aria-label="Advocate">
+          <option value="">All advocates</option>
+          {advocates.map((a) => <option key={a} value={a}>{a}</option>)}
+        </select>
+
+        <select value={sp.get("act") ?? ""} onChange={(e) => setParam("act", e.target.value)} className="input max-w-[12rem]" aria-label="Act / Section">
+          <option value="">All acts / sections</option>
+          {acts.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
 
         <select value={sp.get("next") ?? ""} onChange={(e) => setParam("next", e.target.value)} className="input max-w-[11rem]" aria-label="Next hearing">

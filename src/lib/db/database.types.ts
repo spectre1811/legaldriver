@@ -1336,6 +1336,7 @@ export type Database = {
           media: Json
           provider: string | null
           status: string
+          suggested_reply: string | null
           tenant_id: string
           thread_key: string | null
           to_addr: string | null
@@ -1355,6 +1356,7 @@ export type Database = {
           media?: Json
           provider?: string | null
           status?: string
+          suggested_reply?: string | null
           tenant_id: string
           thread_key?: string | null
           to_addr?: string | null
@@ -1374,6 +1376,7 @@ export type Database = {
           media?: Json
           provider?: string | null
           status?: string
+          suggested_reply?: string | null
           tenant_id?: string
           thread_key?: string | null
           to_addr?: string | null
@@ -1915,7 +1918,22 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      communication_log: {
+        Row: {
+          channel: string | null
+          client_id: string | null
+          counterparty: string | null
+          direction: string | null
+          id: string | null
+          matter_id: string | null
+          occurred_at: string | null
+          preview: string | null
+          status: string | null
+          subject: string | null
+          tenant_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       current_tenant_id: { Args: never; Returns: string }

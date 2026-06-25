@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, EmptyState, fmtAgo } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { Composer } from "./composer";
+import { SuggestedReply } from "./suggested-reply";
 
 const CHANNELS = [
   { key: "", label: "All" },
@@ -22,7 +23,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
 
   let query = supabase
     .from("msg_message")
-    .select("id, channel, direction, provider, from_addr, to_addr, body, status, thread_key, client_id, matter_id, confidence, created_at")
+    .select("id, channel, direction, provider, from_addr, to_addr, body, status, thread_key, client_id, matter_id, confidence, suggested_reply, created_at")
     .order("created_at", { ascending: false })
     .limit(300);
   if (channel) query = query.eq("channel", channel);
@@ -114,6 +115,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
                         <span className="text-xs text-ink-faint">{fmtAgo(m.created_at)}</span>
                       </div>
                       <p className="mt-1 text-ink">{m.body ? truncate(m.body) : <span className="text-ink-faint">(media / no text)</span>}</p>
+                      {m.direction === "in" && m.suggested_reply && <SuggestedReply text={m.suggested_reply} />}
                     </li>
                   ))}
                 </ul>

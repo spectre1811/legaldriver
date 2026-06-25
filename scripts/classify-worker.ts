@@ -31,6 +31,7 @@ async function main() {
   const { resolveFiling } = await import("../src/lib/docs/autofile");
   const { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } = await import("../src/lib/docs/case-summary");
   const { synthesize } = await import("../src/lib/services/agent/agent");
+  const { suggestReply } = await import("../src/lib/services/agent/reply");
   const embeddingsOn = process.env.EMBEDDINGS_DISABLED !== "1";
   const emb = embeddingsOn ? await import("../src/lib/services/agent/embed") : null;
   const admin = createAdminClient();
@@ -207,6 +208,33 @@ async function main() {
     return processed;
   }
 
+  // Draft suggested replies for inbound client messages filed to a client/case.
+  // The AI never auto-sends — this only fills msg_message.suggested_reply for the
+  // advocate to review and send. Gated by WHATSAPP_SUGGEST_REPLIES (default on).
+  async function suggestReplies(): Promise<number> {
+    if (process.env.WHATSAPP_SUGGEST_REPLIES === "off") return 0;
+    const { data: msgs } = await admin
+      .from("msg_message")
+      .select("id, tenant_id, client_id, matter_id, body")
+      .eq("direction", "in")
+      .is("suggested_reply", null)
+      .not("body", "is", null)
+      .or("client_id.not.is.null,matter_id.not.is.null")
+      .limit(10);
+    if (!msgs?.length) return 0;
+    let done = 0;
+    for (const m of msgs) {
+      if (!m.body) continue;
+      const reply = await suggestReply(admin, { tenantId: m.tenant_id, question: m.body, clientId: m.client_id, matterId: m.matter_id });
+      if (reply) {
+        await admin.from("msg_message").update({ suggested_reply: reply }).eq("id", m.id);
+        done++;
+      }
+    }
+    if (done) console.log(`  [reply] drafted ${done} suggested replies`);
+    return done;
+  }
+
   async function tick() {
     await pass();
     const s = await summarize();
@@ -214,6 +242,7 @@ async function main() {
     await embedDocuments();
     const a = await answerPending();
     if (a) console.log(`agent answers: ${a}`);
+    await suggestReplies();
   }
 
   if (process.argv.includes("--loop")) {

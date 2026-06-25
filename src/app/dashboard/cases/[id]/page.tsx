@@ -8,6 +8,7 @@ import { LogTimeExpense } from "./time-expense";
 import type { CaseSummary } from "@/lib/docs/case-summary";
 import { findSimilarCases } from "@/lib/court/similar";
 import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm } from "./case-actions";
+import { Communications } from "@/components/communications";
 
 type Party = { name?: string; side?: string; advocate?: string };
 
@@ -377,6 +378,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           </ul>
         )}
       </Card>
+
+      {/* Communications timeline (email + WhatsApp/SMS) */}
+      <Communications matterId={matter.id} />
 
       {/* Activity timeline */}
       <Card>

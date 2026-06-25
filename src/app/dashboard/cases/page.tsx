@@ -11,6 +11,8 @@ type Search = {
   case_type?: string;
   stage?: string;
   status?: string;
+  advocate?: string;
+  act?: string;
   next?: string;
   sort?: string;
 };
@@ -22,7 +24,7 @@ function isoDay(d: Date) {
 
 export default async function CasesPage({ searchParams }: { searchParams: Search }) {
   const supabase = createClient();
-  const { q, court, case_type, stage, status, next, sort } = searchParams;
+  const { q, court, case_type, stage, status, advocate, act, next, sort } = searchParams;
   const today = isoDay(new Date());
 
   let query = supabase
@@ -44,6 +46,8 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   if (case_type) query = query.eq("case_type", case_type);
   if (stage) query = query.eq("stage", stage);
   if (status) query = query.eq("status", status);
+  if (advocate) query = query.contains("advocate_names", [advocate]);
+  if (act) query = query.contains("act_names", [act]);
 
   if (next === "overdue") query = query.lt("next_hearing_date", today);
   else if (next === "none") query = query.is("next_hearing_date", null);
@@ -64,7 +68,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   // Distinct dropdown values come from the full (unfiltered) matter set, plus saved views.
   const [{ data: matters }, { data: facetRows }, { data: viewRows }] = await Promise.all([
     query,
-    supabase.from("matter").select("court, case_type, stage").limit(1000),
+    supabase.from("matter").select("court, case_type, stage, advocate_names, act_names").limit(1000),
     supabase
       .from("saved_view")
       .select("id, name, query")
@@ -78,6 +82,11 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const caseTypes = distinct("case_type");
   const stages = distinct("stage");
 
+  const distinctArray = (key: "advocate_names" | "act_names") =>
+    [...new Set((facetRows ?? []).flatMap((r) => (r[key] ?? []) as string[]).filter(Boolean))].sort();
+  const advocates = distinctArray("advocate_names");
+  const acts = distinctArray("act_names");
+
   const views: SavedView[] = (viewRows ?? []).map((v) => ({
     id: v.id,
     name: v.name,
@@ -86,7 +95,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
       : {}),
   }));
 
-  const activeFilters = Boolean(q || court || case_type || stage || status || next || sort);
+  const activeFilters = Boolean(q || court || case_type || stage || status || advocate || act || next || sort);
 
   return (
     <div className="space-y-7">
@@ -96,7 +105,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
         <AddCaseForm />
       </Card>
 
-      <Console courts={courts} caseTypes={caseTypes} stages={stages} views={views} />
+      <Console courts={courts} caseTypes={caseTypes} stages={stages} advocates={advocates} acts={acts} views={views} />
 
       {matters && matters.length > 0 ? (
         <Card className="overflow-hidden">

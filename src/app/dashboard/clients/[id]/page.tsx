@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
 import { PortalInvite, FirmComposer } from "./portal-controls";
 import { ClientDocUpload } from "./client-docs";
+import { Communications } from "@/components/communications";
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -120,6 +121,9 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           </table>
         ) : <p className="px-5 py-8 text-center text-sm text-ink-faint">No documents for this client yet. Upload files above, or they’ll appear here as email is filed.</p>}
       </Card>
+
+      {/* Communications timeline (email + WhatsApp/SMS filed to this client) */}
+      <Communications clientId={client.id} />
 
       {/* Secure messaging (same thread the client sees in the portal) */}
       <Card className="overflow-hidden">
