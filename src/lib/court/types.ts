@@ -34,6 +34,10 @@ export interface NormalizedCase {
   nextHearingDate?: string | null; // ISO date
   hearings: NormalizedHearing[];
   orders: NormalizedOrderRef[];
+  // Phase 3 (E4): richer detail for the case page + similar-case discovery.
+  acts?: string[]; // acts & sections, e.g. "NI Act 138"
+  judges?: string[]; // normalized coram list
+  detail?: Record<string, unknown>; // registration/filing metadata kept verbatim-normalized
   // Provenance — always set by the adapter.
   source: string; // e.g. "ecourtsindia" | "mock"
   fetchedAt: string; // ISO timestamp

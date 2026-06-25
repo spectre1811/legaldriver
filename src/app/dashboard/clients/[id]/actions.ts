@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
 import { logActivity } from "@/lib/activity";
+import { extractText } from "@/lib/docs/extract";
+import { sha256Hex } from "@/lib/docs/hash";
+import type { Database } from "@/lib/db/database.types";
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -53,6 +56,79 @@ export async function revokePortal(portalUserId: string, clientId: string): Prom
   await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "portal.revoke", entity: "client", entity_id: clientId });
   revalidatePath(`/dashboard/clients/${clientId}`);
   return { ok: true, message: "Portal access revoked." };
+}
+
+// Bulk-upload one or more files directly to a client (client_id set, no case).
+// Each file is content-hashed; an exact duplicate (same tenant + content_hash)
+// already in the library is skipped rather than re-stored.
+export async function uploadClientDocuments(clientId: string, formData: FormData): Promise<ActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const { data: client } = await supabase.from("client").select("id, name").eq("id", clientId).maybeSingle();
+  if (!client) return { ok: false, message: "Client not found." };
+
+  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  if (!files.length) return { ok: false, message: "Choose at least one file to upload." };
+
+  const admin = createAdminClient();
+  let uploaded = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const file of files) {
+    if (file.size > 25 * 1024 * 1024) { failed++; continue; }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const contentHash = await sha256Hex(buffer);
+
+    // App-level dedup: skip if an identical file already exists for this tenant.
+    const { data: dupe } = await supabase
+      .from("document")
+      .select("id")
+      .eq("content_hash", contentHash)
+      .limit(1)
+      .maybeSingle();
+    if (dupe) { skipped++; continue; }
+
+    const path = `${tenantId}/client/${clientId}/${Date.now()}_${crypto.randomUUID().slice(0, 8)}_${file.name}`;
+    const { error: upErr } = await admin.storage
+      .from("documents")
+      .upload(path, buffer, { contentType: file.type || "application/octet-stream", upsert: true });
+    if (upErr) { failed++; continue; }
+
+    const { text, needsOcr } = await extractText(buffer, file.type || "", file.name);
+    const { error: insErr } = await admin.from("document").insert({
+      tenant_id: tenantId,
+      source: "upload",
+      storage_path: path,
+      filename: file.name,
+      mime: file.type || "application/octet-stream",
+      size_bytes: buffer.length,
+      parsed_text: text || null,
+      client_id: clientId,
+      matter_id: null,
+      content_hash: contentHash,
+      extracted: { needsOcr: needsOcr ?? false } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],
+    });
+    if (insErr) {
+      await admin.storage.from("documents").remove([path]); // don't orphan the object
+      failed++;
+      continue;
+    }
+    uploaded++;
+  }
+
+  if (uploaded) {
+    await logActivity(supabase, tenantId, { type: "document.uploaded", summary: `${uploaded} document(s) uploaded to ${client.name}` });
+    await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "document.upload", entity: "client", entity_id: clientId, after: { uploaded, skipped, failed } });
+  }
+  revalidatePath(`/dashboard/clients/${clientId}`);
+
+  const parts = [`${uploaded} uploaded`];
+  if (skipped) parts.push(`${skipped} skipped (duplicate)`);
+  if (failed) parts.push(`${failed} failed`);
+  return { ok: uploaded > 0 || skipped > 0, message: parts.join(" · ") + "." };
 }
 
 export async function sendFirmMessage(clientId: string, formData: FormData): Promise<ActionResult> {

@@ -107,6 +107,30 @@ export class ECourtsIndiaClient implements CourtDataClient {
     const reg = str(d, "registrationNumber");
     const title = pet0 && res0 ? `${pet0} v. ${res0}` : reg ? `${str(d, "caseType") ?? "Case"} ${reg}` : cnr;
 
+    // Acts & sections come either as a list of {act, section} objects or as a
+    // flat string array — handle both, fall back to the flat list.
+    const actObjs = arr(d, "actsAndSections", "acts");
+    let acts = actObjs
+      .map((a) => [str(a, "act", "actName", "name"), str(a, "section", "sections")].filter(Boolean).join(" ").trim())
+      .filter(Boolean);
+    if (!acts.length) acts = strArr(d, "acts");
+    acts = [...new Set(acts.map((a) => titleCase(a)))];
+
+    const judges = [...new Set(strArr(d, "judges").concat(str(d, "judge", "coram") ? [str(d, "judge", "coram")!] : []).map(titleCase))].filter(Boolean);
+
+    const detail = {
+      registrationNumber: reg,
+      filingNumber: str(d, "filingNumber"),
+      registrationDate: str(d, "registrationDate"),
+      filingDate: str(d, "filingDate"),
+      cnr,
+      caseTypeRaw: str(d, "caseTypeRaw", "caseType"),
+      district: str(d, "district", "districtName"),
+      state: str(d, "state", "stateName"),
+      petitionerAdvocates: petAdv,
+      respondentAdvocates: resAdv,
+    };
+
     return {
       cnr,
       title,
@@ -115,10 +139,13 @@ export class ECourtsIndiaClient implements CourtDataClient {
       stage: str(d, "stageOfCaseRaw", "stageOfCase", "stage"),
       status: str(d, "caseStatus", "status"),
       parties,
-      judge: strArr(d, "judges").join(", ") || str(d, "judge") || undefined,
+      judge: judges.join(", ") || undefined,
       nextHearingDate: nextHearing,
       hearings,
       orders,
+      acts,
+      judges,
+      detail,
       source: this.source,
       fetchedAt: new Date().toISOString(),
     };

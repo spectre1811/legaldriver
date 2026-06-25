@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCourtDataClient } from "@/lib/court/client";
+import { refreshCasesCached } from "@/lib/court/gateway";
 import { upsertCase } from "@/lib/court/sync";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
       const batch = list.slice(i, i + 50).map((m) => m.cnr);
       let cases;
       try {
-        cases = await court.refreshCases(batch);
+        cases = await refreshCasesCached(batch); // through the gateway: writes cache + health
       } catch {
         continue; // skip a failing batch; never throw the whole job
       }

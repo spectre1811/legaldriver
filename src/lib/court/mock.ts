@@ -20,6 +20,13 @@ const COURTS = [
 ];
 const PURPOSES = ["Appearance", "Evidence", "Arguments", "Framing of Issues", "Final Hearing", "Orders"];
 const STAGES = ["Pending", "Evidence", "Arguments", "Reserved for Orders"];
+// Small pools so cases share parties / advocates / judges / acts — this is what
+// makes similar-case discovery demonstrable on mock data.
+const PETITIONERS = ["Rajesh Sharma", "Anita Deshmukh", "Mehta Industries Pvt Ltd", "Vikram Nair", "Sunita Rao"];
+const RESPONDENTS = ["Suresh Patel", "State of Maharashtra", "Global Logistics Ltd", "Kiran Shah", "Deepak Verma"];
+const ADVOCATES = ["Adv. M. Joshi", "Adv. K. Iyer", "Adv. S. Bhosale", "Adv. P. Menon", "Adv. R. Gupta"];
+const JUDGES = ["Hon'ble Smt. R. Desai", "Hon'ble Shri A. Kulkarni", "Hon'ble Shri V. Rao", "Hon'ble Smt. N. Pillai"];
+const ACTS = ["NI Act 138", "CPC Order 39", "IPC 420", "BNS 318", "Specific Relief Act 38", "Arbitration Act 9"];
 
 // Simple deterministic hash so output depends only on the CNR.
 function seed(s: string): number {
@@ -41,7 +48,13 @@ function buildCase(cnr: string, now: Date): NormalizedCase {
   const court = pick(COURTS, h);
   const caseNo = (h % 9000) + 1000;
   const year = 2018 + (h % 7);
-  const title = `Sharma v. Patel (${caseNo}/${year})`;
+  const pet = pick(PETITIONERS, h);
+  const res = pick(RESPONDENTS, h >> 2);
+  const petAdv = pick(ADVOCATES, h);
+  const resAdv = pick(ADVOCATES, h >> 3);
+  const judge = pick(JUDGES, h);
+  const acts = [pick(ACTS, h), pick(ACTS, h >> 4)].filter((v, i, a) => a.indexOf(v) === i);
+  const title = `${pet.split(" ")[0]} v. ${res.split(" ")[0]} (${caseNo}/${year})`;
 
   // A few past hearings + one upcoming next date.
   const hearings = [];
@@ -50,7 +63,7 @@ function buildCase(cnr: string, now: Date): NormalizedCase {
       date: isoDate(now, -(i * 28 + (h % 10))),
       purpose: pick(PURPOSES, h + i),
       courtNo: String((h % 6) + 1),
-      judge: pick(["Hon'ble Smt. R. Desai", "Hon'ble Shri A. Kulkarni", "Hon'ble Shri V. Rao"], h + i),
+      judge,
     });
   }
   const nextHearingDate = isoDate(now, (h % 21) + 3); // 3–23 days out
@@ -58,7 +71,7 @@ function buildCase(cnr: string, now: Date): NormalizedCase {
     date: nextHearingDate,
     purpose: pick(PURPOSES, h),
     courtNo: String((h % 6) + 1),
-    judge: pick(["Hon'ble Smt. R. Desai", "Hon'ble Shri A. Kulkarni"], h),
+    judge,
   });
 
   return {
@@ -69,15 +82,18 @@ function buildCase(cnr: string, now: Date): NormalizedCase {
     stage: pick(STAGES, h),
     status: "Pending",
     parties: [
-      { name: "Rajesh Sharma", side: "petitioner", advocate: "Adv. M. Joshi" },
-      { name: "Suresh Patel", side: "respondent", advocate: "Adv. K. Iyer" },
+      { name: pet, side: "petitioner", advocate: petAdv },
+      { name: res, side: "respondent", advocate: resAdv },
     ],
-    judge: pick(["Hon'ble Smt. R. Desai", "Hon'ble Shri A. Kulkarni"], h),
+    judge,
     nextHearingDate,
     hearings,
     orders: [
       { id: `${cnr}-ORD-1`, date: hearings[0].date, title: "Order on interim application" },
     ],
+    acts,
+    judges: [judge],
+    detail: { registrationNumber: `${caseNo}/${year}`, court, petitionerAdvocates: [petAdv], respondentAdvocates: [resAdv] },
     source: "mock",
     fetchedAt: now.toISOString(),
   };
@@ -97,7 +113,7 @@ export class MockCourtDataClient implements CourtDataClient {
     return Array.from({ length: 4 }, (_, i) => {
       const cnr = `MHPU${String((base + i * 7919) % 1_000_000).padStart(12, "0")}`;
       const c = buildCase(cnr, new Date());
-      return { cnr, title: c.title, court: c.court, parties: "Sharma v. Patel" };
+      return { cnr, title: c.title, court: c.court, parties: c.title };
     });
   }
 

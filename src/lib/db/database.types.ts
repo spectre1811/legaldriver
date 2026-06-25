@@ -336,6 +336,165 @@ export type Database = {
           },
         ]
       }
+      court_cache: {
+        Row: {
+          cache_key: string
+          fetched_at: string
+          id: string
+          kind: string
+          normalized: Json | null
+          provider: string
+          raw: Json | null
+        }
+        Insert: {
+          cache_key: string
+          fetched_at?: string
+          id?: string
+          kind: string
+          normalized?: Json | null
+          provider: string
+          raw?: Json | null
+        }
+        Update: {
+          cache_key?: string
+          fetched_at?: string
+          id?: string
+          kind?: string
+          normalized?: Json | null
+          provider?: string
+          raw?: Json | null
+        }
+        Relationships: []
+      }
+      court_order: {
+        Row: {
+          created_at: string
+          id: string
+          matter_id: string
+          order_date: string | null
+          raw: Json | null
+          tenant_id: string
+          text_ref: string | null
+          title: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          matter_id: string
+          order_date?: string | null
+          raw?: Json | null
+          tenant_id: string
+          text_ref?: string | null
+          title?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          matter_id?: string
+          order_date?: string | null
+          raw?: Json | null
+          tenant_id?: string
+          text_ref?: string | null
+          title?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_order_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "court_order_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      court_provider_health: {
+        Row: {
+          last_error: string | null
+          last_ok_at: string | null
+          ok: boolean
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          last_error?: string | null
+          last_ok_at?: string | null
+          ok?: boolean
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          last_error?: string | null
+          last_ok_at?: string | null
+          ok?: boolean
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      court_refresh_request: {
+        Row: {
+          cnr: string
+          created_at: string
+          fulfilled_at: string | null
+          id: string
+          matter_id: string | null
+          note: string | null
+          pasted_payload: Json | null
+          requested_by: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          cnr: string
+          created_at?: string
+          fulfilled_at?: string | null
+          id?: string
+          matter_id?: string | null
+          note?: string | null
+          pasted_payload?: Json | null
+          requested_by?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          cnr?: string
+          created_at?: string
+          fulfilled_at?: string | null
+          id?: string
+          matter_id?: string | null
+          note?: string | null
+          pasted_payload?: Json | null
+          requested_by?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "court_refresh_request_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "court_refresh_request_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       court_sync_job: {
         Row: {
           cnr: string
@@ -523,6 +682,7 @@ export type Database = {
       document: {
         Row: {
           client_id: string | null
+          content_hash: string | null
           created_at: string
           doc_type: string | null
           email_message_id: string | null
@@ -541,6 +701,7 @@ export type Database = {
         }
         Insert: {
           client_id?: string | null
+          content_hash?: string | null
           created_at?: string
           doc_type?: string | null
           email_message_id?: string | null
@@ -559,6 +720,7 @@ export type Database = {
         }
         Update: {
           client_id?: string | null
+          content_hash?: string | null
           created_at?: string
           doc_type?: string | null
           email_message_id?: string | null
@@ -856,16 +1018,21 @@ export type Database = {
       }
       matter: {
         Row: {
+          act_names: string[]
+          advocate_names: string[]
           ai_summary: Json | null
           case_type: string | null
           client_id: string | null
           cnr: string | null
           court: string | null
           created_at: string
+          detail: Json | null
           id: string
+          judge_names: string[]
           last_synced_at: string | null
           next_hearing_date: string | null
           parties: Json
+          party_names: string[]
           practice_area_id: string | null
           rate_minor: number | null
           source: string | null
@@ -875,16 +1042,21 @@ export type Database = {
           title: string
         }
         Insert: {
+          act_names?: string[]
+          advocate_names?: string[]
           ai_summary?: Json | null
           case_type?: string | null
           client_id?: string | null
           cnr?: string | null
           court?: string | null
           created_at?: string
+          detail?: Json | null
           id?: string
+          judge_names?: string[]
           last_synced_at?: string | null
           next_hearing_date?: string | null
           parties?: Json
+          party_names?: string[]
           practice_area_id?: string | null
           rate_minor?: number | null
           source?: string | null
@@ -894,16 +1066,21 @@ export type Database = {
           title: string
         }
         Update: {
+          act_names?: string[]
+          advocate_names?: string[]
           ai_summary?: Json | null
           case_type?: string | null
           client_id?: string | null
           cnr?: string | null
           court?: string | null
           created_at?: string
+          detail?: Json | null
           id?: string
+          judge_names?: string[]
           last_synced_at?: string | null
           next_hearing_date?: string | null
           parties?: Json
+          party_names?: string[]
           practice_area_id?: string | null
           rate_minor?: number | null
           source?: string | null
@@ -1239,6 +1416,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "profile_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_view: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          query: Json
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: string
+          name: string
+          query?: Json
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          query?: Json
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_view_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenant"

@@ -4,6 +4,7 @@ import type { MailClient } from "./client";
 import { extractText } from "@/lib/docs/extract";
 import { classifyDocument, type Classification } from "@/lib/docs/classify";
 import { resolveFiling } from "@/lib/docs/autofile";
+import { sha256Hex } from "@/lib/docs/hash";
 
 type DB = SupabaseClient<Database>;
 const THRESHOLD = Number(process.env.CONFIDENCE_THRESHOLD ?? "0.7");
@@ -75,11 +76,12 @@ export async function ingestMail(
 
     // Extract + upload + classify each attachment (defer the document insert until
     // we know the resolved filing, so the doc rows get the matched/created ids).
-    type Pending = { att: (typeof email.attachments)[number]; path: string; text: string; needsOcr?: boolean; extractError?: string; cls: Classification };
+    type Pending = { att: (typeof email.attachments)[number]; path: string; text: string; needsOcr?: boolean; extractError?: string; cls: Classification; contentHash: string };
     const pending: Pending[] = [];
     for (const att of email.attachments) {
       const path = `${tenantId}/${emailId}/${att.filename}`;
       await supabase.storage.from(BUCKET).upload(path, att.data, { contentType: att.mime, upsert: true });
+      const contentHash = await sha256Hex(att.data);
       const { text, needsOcr, error: extractError } = await extractText(att.data, att.mime, att.filename);
       const cls = await classifyDocument({
         filename: att.filename,
@@ -87,7 +89,7 @@ export async function ingestMail(
         clients: clientList,
         matters: matterList,
       });
-      pending.push({ att, path, text, needsOcr, extractError, cls });
+      pending.push({ att, path, text, needsOcr, extractError, cls, contentHash });
     }
 
     // Email-level classification, then pick the highest-confidence signal overall.
@@ -114,7 +116,17 @@ export async function ingestMail(
     else needsReview++;
 
     // Now insert the documents, filed under the resolved ids when we're confident.
+    // Skip exact dupes (same tenant + content_hash) so re-ingested attachments don't
+    // pile up duplicate document rows; the email_message itself is still recorded.
     for (const p of pending) {
+      const { data: dupe } = await supabase
+        .from("document")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("content_hash", p.contentHash)
+        .limit(1)
+        .maybeSingle();
+      if (dupe) continue;
       await supabase.from("document").insert({
         tenant_id: tenantId,
         source: "gmail",
@@ -126,6 +138,7 @@ export async function ingestMail(
         doc_type: p.cls.doc_type,
         client_id: status === "filed" ? filing.clientId : p.cls.client_id,
         matter_id: status === "filed" ? filing.matterId : p.cls.matter_id,
+        content_hash: p.contentHash,
         extracted: { ...p.cls.extracted, summary: p.cls.summary, needsOcr: p.needsOcr ?? false, ...(p.extractError ? { extractError: p.extractError } : {}) } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],
         email_message_id: emailId,
       });

@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCourtDataClient } from "@/lib/court/client";
+import { getCaseCached } from "@/lib/court/gateway";
 import { getTenantId, upsertCase } from "@/lib/court/sync";
 import { extractText } from "@/lib/docs/extract";
+import { sha256Hex } from "@/lib/docs/hash";
 import { completeJson } from "@/lib/ai/complete";
 import { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } from "@/lib/docs/case-summary";
 import { logActivity } from "@/lib/activity";
@@ -70,6 +71,12 @@ export async function addCaseDocument(matterId: string, formData: FormData): Pro
   if (file.size > 25 * 1024 * 1024) return { ok: false, message: "File too large (max 25 MB)." };
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  const contentHash = await sha256Hex(buffer);
+
+  // Skip exact dupes (same tenant + content_hash) already in the library.
+  const { data: dupe } = await supabase.from("document").select("id").eq("content_hash", contentHash).limit(1).maybeSingle();
+  if (dupe) return { ok: true, message: `“${file.name}” is already on file — skipped as a duplicate.` };
+
   const admin = createAdminClient();
   const path = `${tenantId}/cases/${matterId}/${Date.now()}_${file.name}`;
   const { error: upErr } = await admin.storage.from("documents").upload(path, buffer, { contentType: file.type || "application/octet-stream", upsert: true });
@@ -85,6 +92,7 @@ export async function addCaseDocument(matterId: string, formData: FormData): Pro
     size_bytes: buffer.length,
     parsed_text: text || null,
     matter_id: matterId,
+    content_hash: contentHash,
     extracted: { needsOcr: needsOcr ?? false } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],
   });
   await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "document.upload", entity: "matter", entity_id: matterId, after: { filename: file.name } });
@@ -176,17 +184,13 @@ export async function addCaseByCnr(_prev: ActionResult, formData: FormData): Pro
   const tenantId = await getTenantId(supabase);
   if (!tenantId) return { ok: false, message: "No tenant — please sign in again." };
 
-  const court = getCourtDataClient();
-  let normalized;
-  try {
-    normalized = await court.getCaseByCNR(cnr);
-  } catch {
-    return { ok: false, message: "Court-data provider error. Try again shortly." };
-  }
+  // Through the Court Data Gateway: cache-first, provider on miss, stale on error.
+  const fetched = await getCaseCached(cnr);
+  const normalized = fetched.case;
   if (!normalized) {
     return {
       ok: false,
-      message: `No case found for ${cnr} via ${court.source}. You can add it manually instead.`,
+      message: `No case found for ${cnr} via ${fetched.source}. You can add it manually instead.`,
     };
   }
 
@@ -220,8 +224,7 @@ export async function refreshCase(matterId: string): Promise<ActionResult> {
   const { data: matter } = await supabase.from("matter").select("cnr").eq("id", matterId).single();
   if (!matter?.cnr) return { ok: false, message: "Matter has no CNR to refresh." };
 
-  const court = getCourtDataClient();
-  const [normalized] = await court.refreshCases([matter.cnr]);
+  const normalized = (await getCaseCached(matter.cnr, { force: true })).case;
   if (!normalized) return { ok: false, message: "Refresh returned nothing." };
 
   await upsertCase(supabase, tenantId, normalized);

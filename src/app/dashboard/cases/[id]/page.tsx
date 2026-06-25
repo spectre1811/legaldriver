@@ -1,16 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Badge, Disclaimer, fmtDate, fmtAgo, fmtSize, fmtMoney, fmtHours } from "@/components/ui";
+import { Card, Badge, EmptyState, Disclaimer, fmtDate, fmtAgo, fmtSize, fmtMoney, fmtHours } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
 import { LogTimeExpense } from "./time-expense";
 import type { CaseSummary } from "@/lib/docs/case-summary";
+import { findSimilarCases } from "@/lib/court/similar";
 import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm } from "./case-actions";
 
 type Party = { name?: string; side?: string; advocate?: string };
 
 const STATUS_TONE: Record<string, "green" | "amber" | "neutral"> = { active: "green", disposed: "neutral" };
+
+const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+const truncate = (s: string, n = 32) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 
 export default async function CaseDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -37,8 +41,30 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const billableExp = (expenses ?? []).filter((e) => e.billable).reduce((s, e) => s + e.amount_minor, 0);
   const wip = billableTime + billableExp;
 
+  const [{ data: orders }, similar] = await Promise.all([
+    supabase.from("court_order").select("id, order_date, title, url").eq("matter_id", matter.id).order("order_date", { ascending: false, nullsFirst: false }),
+    findSimilarCases(supabase, {
+      id: matter.id,
+      party_names: matter.party_names ?? [],
+      advocate_names: matter.advocate_names ?? [],
+      judge_names: matter.judge_names ?? [],
+      act_names: matter.act_names ?? [],
+    }, 6),
+  ]);
+
   const parties = (Array.isArray(matter.parties) ? matter.parties : []) as Party[];
   const ai = matter.ai_summary as unknown as CaseSummary | null;
+  const acts = (matter.act_names ?? []) as string[];
+  const detail = (matter.detail ?? {}) as Record<string, unknown>;
+
+  const caseDetails: [string, string | null][] = [
+    ["Registration no.", str(detail.registrationNumber)],
+    ["Filing no.", str(detail.filingNumber)],
+    ["Registration date", detail.registrationDate ? fmtDate(str(detail.registrationDate)) : null],
+    ["Filing date", detail.filingDate ? fmtDate(str(detail.filingDate)) : null],
+    ["District", str(detail.district)],
+    ["State", str(detail.state)],
+  ].filter(([, v]) => v) as [string, string | null][];
 
   const info: [string, string | null][] = [
     ["Court", matter.court],
@@ -159,6 +185,33 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         </p>
       </Card>
 
+      {/* Case details */}
+      {caseDetails.length > 0 && (
+        <Card>
+          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Case details</h2></div>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-5 py-5 sm:grid-cols-3">
+            {caseDetails.map(([label, value]) => (
+              <div key={label}>
+                <dt className="label">{label}</dt>
+                <dd className="mt-1 text-sm text-ink">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+      )}
+
+      {/* Acts & Sections */}
+      {acts.length > 0 && (
+        <Card>
+          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Acts &amp; Sections</h2></div>
+          <div className="flex flex-wrap gap-2 px-5 py-5">
+            {acts.map((a, i) => (
+              <Badge key={i} tone="brand">{a}</Badge>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Parties + hearings */}
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
@@ -194,6 +247,78 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           )}
         </Card>
       </div>
+
+      {/* Similar cases */}
+      <Card>
+        <div className="border-b border-line px-5 py-4">
+          <h2 className="text-base font-medium">Similar cases</h2>
+          <p className="mt-1 text-xs text-ink-faint">Matches by shared parties, advocates, judges, or acts — verify relevance.</p>
+        </div>
+        {similar.length ? (
+          <ul className="divide-y divide-line">
+            {similar.map((s) => {
+              const reasons: { tone: "brand" | "green" | "amber" | "neutral"; label: string }[] = [
+                ...s.shared.parties.map((v) => ({ tone: "brand" as const, label: `party · ${truncate(v)}` })),
+                ...s.shared.advocates.map((v) => ({ tone: "green" as const, label: `advocate · ${truncate(v)}` })),
+                ...s.shared.judges.map((v) => ({ tone: "neutral" as const, label: `judge · ${truncate(v)}` })),
+                ...s.shared.acts.map((v) => ({ tone: "amber" as const, label: `act · ${truncate(v)}` })),
+              ];
+              return (
+                <li key={s.id} className="px-5 py-3.5">
+                  <Link href={`/dashboard/cases/${s.id}`} className="group block">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink group-hover:text-brand-700">
+                        {s.title}
+                        {s.cnr && <span className="ml-2 text-xs font-normal text-ink-faint">{s.cnr}</span>}
+                      </span>
+                      <span className="shrink-0 text-xs text-ink-faint">{s.court ?? "—"}</span>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      {s.next_hearing_date && (
+                        <span className="mr-1 text-xs text-ink-muted">Next {fmtDate(s.next_hearing_date)}</span>
+                      )}
+                      {reasons.map((r, i) => (
+                        <Badge key={i} tone={r.tone}>{r.label}</Badge>
+                      ))}
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <EmptyState
+            icon="cases"
+            title="No related cases yet"
+            body="Similarity grows as you track more matters."
+          />
+        )}
+      </Card>
+
+      {/* Orders & Judgments */}
+      {orders && orders.length > 0 && (
+        <Card>
+          <div className="border-b border-line px-5 py-4">
+            <h2 className="text-base font-medium">Orders &amp; Judgments <span className="text-ink-faint">({orders.length})</span></h2>
+          </div>
+          <ul className="divide-y divide-line">
+            {orders.map((o) => (
+              <li key={o.id} className="flex items-center gap-3 px-5 py-3 text-sm">
+                <Icon name="notices" className="h-4 w-4 shrink-0 text-ink-faint" />
+                <span className="w-24 shrink-0 text-ink-muted">{fmtDate(o.order_date)}</span>
+                {o.url ? (
+                  <a href={o.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-brand-600 hover:underline">
+                    <span className="truncate">{o.title}</span>
+                    <Icon name="external" className="h-3.5 w-3.5 shrink-0" />
+                  </a>
+                ) : (
+                  <span className="min-w-0 flex-1 truncate font-medium text-ink">{o.title}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {/* Documents linked to this case */}
       <Card>

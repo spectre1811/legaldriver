@@ -29,6 +29,12 @@ export async function upsertCase(
     .eq("cnr", c.cnr)
     .maybeSingle();
 
+  // Denormalized arrays power similar-case discovery (GIN-indexed) and console filters.
+  const partyNames = [...new Set(c.parties.map((p) => p.name).filter(Boolean))];
+  const advocateNames = [...new Set(c.parties.map((p) => p.advocate).filter((a): a is string => Boolean(a)))];
+  const judgeNames = c.judges?.length ? c.judges : c.judge ? c.judge.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const actNames = c.acts ?? [];
+
   const matterRow = {
     tenant_id: tenantId,
     client_id: clientId ?? null,
@@ -42,6 +48,11 @@ export async function upsertCase(
     next_hearing_date: c.nextHearingDate ?? null,
     last_synced_at: c.fetchedAt,
     source: c.source,
+    detail: (c.detail ?? null) as Database["public"]["Tables"]["matter"]["Insert"]["detail"],
+    party_names: partyNames,
+    advocate_names: advocateNames,
+    judge_names: judgeNames,
+    act_names: actNames,
   };
 
   let matterId: string;
@@ -73,6 +84,18 @@ export async function upsertCase(
         raw: (h.raw ?? {}) as Database["public"]["Tables"]["hearing"]["Insert"]["raw"],
       }));
     if (rows.length) await supabase.from("hearing").insert(rows);
+  }
+
+  // Replace court orders for the matter (idempotent re-sync).
+  await supabase.from("court_order").delete().eq("matter_id", matterId);
+  if (c.orders?.length) {
+    const orderRows = c.orders.map((o) => ({
+      tenant_id: tenantId,
+      matter_id: matterId,
+      order_date: o.date && /^\d{4}-\d{2}-\d{2}/.test(o.date) ? o.date.slice(0, 10) : null,
+      title: o.title ?? null,
+    }));
+    await supabase.from("court_order").insert(orderRows);
   }
 
   // Schedule reminders for the next hearing. Replace-on-change: clear pending
