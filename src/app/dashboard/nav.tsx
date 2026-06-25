@@ -9,6 +9,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string; icon: I
     heading: "Practice",
     items: [
       { href: "/dashboard", label: "Overview", icon: "overview" },
+      { href: "/dashboard/clients", label: "Clients", icon: "overview" },
       { href: "/dashboard/cases", label: "Cases", icon: "cases" },
       { href: "/dashboard/calendar", label: "Calendar", icon: "calendar" },
     ],

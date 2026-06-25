@@ -14,6 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_event: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          id: string
+          matter_id: string | null
+          meta: Json
+          summary: string
+          tenant_id: string
+          type: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          matter_id?: string | null
+          meta?: Json
+          summary: string
+          tenant_id: string
+          type: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          matter_id?: string | null
+          meta?: Json
+          summary?: string
+          tenant_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_event_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_event_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      adverse_party: {
+        Row: {
+          created_at: string
+          id: string
+          matter_id: string | null
+          name: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          matter_id?: string | null
+          name: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          matter_id?: string | null
+          name?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adverse_party_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "adverse_party_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       advocate: {
         Row: {
           bar_registration_number: string | null
@@ -283,6 +370,60 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "court_sync_job_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_field_def: {
+        Row: {
+          created_at: string
+          entity: string
+          field_type: string
+          id: string
+          key: string
+          label: string
+          options: Json
+          practice_area_id: string | null
+          sort: number
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity: string
+          field_type?: string
+          id?: string
+          key: string
+          label: string
+          options?: Json
+          practice_area_id?: string | null
+          sort?: number
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          entity?: string
+          field_type?: string
+          id?: string
+          key?: string
+          label?: string
+          options?: Json
+          practice_area_id?: string | null
+          sort?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_field_def_practice_area_id_fkey"
+            columns: ["practice_area_id"]
+            isOneToOne: false
+            referencedRelation: "practice_area"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_field_def_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenant"
@@ -592,6 +733,7 @@ export type Database = {
           last_synced_at: string | null
           next_hearing_date: string | null
           parties: Json
+          practice_area_id: string | null
           source: string | null
           stage: string | null
           status: string
@@ -609,6 +751,7 @@ export type Database = {
           last_synced_at?: string | null
           next_hearing_date?: string | null
           parties?: Json
+          practice_area_id?: string | null
           source?: string | null
           stage?: string | null
           status?: string
@@ -626,6 +769,7 @@ export type Database = {
           last_synced_at?: string | null
           next_hearing_date?: string | null
           parties?: Json
+          practice_area_id?: string | null
           source?: string | null
           stage?: string | null
           status?: string
@@ -638,6 +782,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matter_practice_area_id_fkey"
+            columns: ["practice_area_id"]
+            isOneToOne: false
+            referencedRelation: "practice_area"
             referencedColumns: ["id"]
           },
           {
@@ -797,6 +948,35 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "oauth_connection_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_area: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_area_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenant"

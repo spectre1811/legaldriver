@@ -15,10 +15,11 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const { data: matter } = await supabase.from("matter").select("*").eq("id", params.id).maybeSingle();
   if (!matter) notFound();
 
-  const [{ data: hearings }, { data: docs }, { data: client }] = await Promise.all([
+  const [{ data: hearings }, { data: docs }, { data: client }, { data: activity }] = await Promise.all([
     supabase.from("hearing").select("id, date, purpose, court_no, judge").eq("matter_id", matter.id).order("date", { ascending: false }),
     supabase.from("document").select("id, filename, doc_type, source, created_at, parsed_text").eq("matter_id", matter.id).order("created_at", { ascending: false }),
     matter.client_id ? supabase.from("client").select("name").eq("id", matter.client_id).maybeSingle() : Promise.resolve({ data: null }),
+    supabase.from("activity_event").select("id, type, summary, created_at").eq("matter_id", matter.id).order("created_at", { ascending: false }).limit(30),
   ]);
 
   const parties = (Array.isArray(matter.parties) ? matter.parties : []) as Party[];
@@ -183,6 +184,24 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           </ul>
         ) : (
           <p className="px-5 py-8 text-center text-sm text-ink-faint">No documents yet — upload one above, or they&apos;ll arrive auto-filed from Gmail.</p>
+        )}
+      </Card>
+
+      {/* Activity timeline */}
+      <Card>
+        <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Activity</h2></div>
+        {activity && activity.length ? (
+          <ul className="px-5 py-2">
+            {activity.map((a) => (
+              <li key={a.id} className="flex gap-3 py-2.5 text-sm">
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-300" />
+                <span className="flex-1 text-ink-soft">{a.summary}</span>
+                <span className="shrink-0 text-xs text-ink-faint">{fmtAgo(a.created_at)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="px-5 py-8 text-center text-sm text-ink-faint">No activity yet.</p>
         )}
       </Card>
 

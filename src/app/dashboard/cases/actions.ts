@@ -8,6 +8,7 @@ import { getTenantId, upsertCase } from "@/lib/court/sync";
 import { extractText } from "@/lib/docs/extract";
 import { completeJson } from "@/lib/ai/complete";
 import { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } from "@/lib/docs/case-summary";
+import { logActivity } from "@/lib/activity";
 import type { Database } from "@/lib/db/database.types";
 
 export type ActionResult = { ok: boolean; message: string };
@@ -82,6 +83,7 @@ export async function addCaseDocument(matterId: string, formData: FormData): Pro
     extracted: { needsOcr: needsOcr ?? false } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],
   });
   await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "document.upload", entity: "matter", entity_id: matterId, after: { filename: file.name } });
+  await logActivity(supabase, tenantId, { matterId, type: "document.uploaded", summary: `Document “${file.name}” uploaded` });
   revalidatePath(`/dashboard/cases/${matterId}`);
   return { ok: true, message: `Added “${file.name}” to the case.` };
 }
@@ -138,6 +140,7 @@ export async function addCaseByCnr(_prev: ActionResult, formData: FormData): Pro
     entity_id: matterId,
     after: { cnr, source: normalized.source, hearings: hearingCount },
   });
+  await logActivity(supabase, tenantId, { matterId, type: isNew ? "case.added" : "case.resynced", summary: isNew ? `Case added by CNR ${cnr}` : `Case re-synced from ${normalized.source}` });
 
   revalidatePath("/dashboard/cases");
   revalidatePath("/dashboard/calendar");
