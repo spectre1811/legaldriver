@@ -11,6 +11,7 @@ import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm } f
 import { Communications } from "@/components/communications";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deleteMatter } from "../actions";
+import { DeadlineRuleForm } from "./deadline-rules";
 
 type Party = { name?: string; side?: string; advocate?: string };
 
@@ -44,7 +45,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const billableExp = (expenses ?? []).filter((e) => e.billable).reduce((s, e) => s + e.amount_minor, 0);
   const wip = billableTime + billableExp;
 
-  const [{ data: orders }, similar] = await Promise.all([
+  const [{ data: orders }, similar, { data: deadlines }, { data: deadlineRules }] = await Promise.all([
     supabase.from("court_order").select("id, order_date, title, url").eq("matter_id", matter.id).order("order_date", { ascending: false, nullsFirst: false }),
     findSimilarCases(supabase, {
       id: matter.id,
@@ -53,6 +54,8 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       judge_names: matter.judge_names ?? [],
       act_names: matter.act_names ?? [],
     }, 6),
+    supabase.from("deadline").select("id, kind, due_date, jurisdiction_rule, status").eq("matter_id", matter.id).order("due_date", { ascending: true }),
+    supabase.from("deadline_rule").select("id, kind, days, jurisdiction, description").order("jurisdiction"),
   ]);
 
   const parties = (Array.isArray(matter.parties) ? matter.parties : []) as Party[];
@@ -215,6 +218,32 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           </div>
         </Card>
       )}
+
+      {/* Statutory deadlines (jurisdiction-aware, from the seeded rules) */}
+      <Card>
+        <div className="border-b border-line px-5 py-4">
+          <h2 className="text-base font-medium">Statutory deadlines</h2>
+          <p className="mt-0.5 text-xs text-ink-faint">Apply a limitation/procedural rule from a base date — it computes the due date and adds it to your calendar. Assistive; verify against the bare act.</p>
+        </div>
+        <div className="space-y-4 px-5 py-5">
+          {deadlines && deadlines.length > 0 ? (
+            <ul className="space-y-1.5 text-sm">
+              {deadlines.map((d) => {
+                const overdue = d.status === "open" && d.due_date < new Date().toISOString().slice(0, 10);
+                return (
+                  <li key={d.id} className="flex items-center justify-between gap-2">
+                    <span className="text-ink">{d.kind.replace(/_/g, " ")}{d.jurisdiction_rule ? <span className="text-ink-faint"> — {d.jurisdiction_rule}</span> : null}</span>
+                    <span className={`shrink-0 text-xs ${overdue ? "font-medium text-amber-700" : "text-ink-faint"}`}>{fmtDate(d.due_date)}{d.status !== "open" ? ` · ${d.status}` : overdue ? " · overdue" : ""}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm text-ink-faint">No deadlines yet. Apply a statutory rule below.</p>
+          )}
+          <DeadlineRuleForm matterId={matter.id} rules={deadlineRules ?? []} />
+        </div>
+      </Card>
 
       {/* Parties + hearings */}
       <div className="grid gap-5 lg:grid-cols-2">

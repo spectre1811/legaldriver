@@ -216,6 +216,31 @@ export async function addCaseByCnr(_prev: ActionResult, formData: FormData): Pro
   };
 }
 
+// Apply a statutory deadline rule to a case: due_date = base date + rule.days.
+// Creates a (human-confirmed) deadline that shows on the calendar. The seeded
+// deadline_rule set is jurisdiction-aware (NI-138, CPC, Limitation Act, etc.).
+export async function applyDeadlineRule(matterId: string, ruleId: string, baseDate: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  if (!baseDate) return { ok: false, message: "Pick the date the clock starts from." };
+  const { data: rule } = await supabase.from("deadline_rule").select("kind, days, description, jurisdiction").eq("id", ruleId).maybeSingle();
+  if (!rule) return { ok: false, message: "Rule not found." };
+  const d = new Date(`${baseDate}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return { ok: false, message: "Invalid date." };
+  d.setUTCDate(d.getUTCDate() + (rule.days ?? 0));
+  const due = d.toISOString().slice(0, 10);
+  const { error } = await supabase.from("deadline").insert({
+    tenant_id: tenantId, matter_id: matterId, kind: rule.kind, due_date: due,
+    jurisdiction_rule: `${rule.jurisdiction}: ${rule.description}`, status: "open",
+  });
+  if (error) return { ok: false, message: error.message };
+  await logActivity(supabase, tenantId, { matterId, type: "deadline.added", summary: `Deadline "${rule.kind}" set for ${due} (${rule.jurisdiction})` });
+  revalidatePath(`/dashboard/cases/${matterId}`);
+  revalidatePath("/dashboard/calendar");
+  return { ok: true, message: `Deadline set: ${rule.kind.replace(/_/g, " ")} due ${due} (${rule.jurisdiction}). Verify against the bare act.` };
+}
+
 // Delete a case. The DB FKs do the right thing: hearings, deadlines, time, expenses,
 // orders, activity CASCADE (gone with the case); documents/notices/messages/calendar
 // SET NULL — they SURVIVE, unlinked (a document belongs to the client, not the case).
