@@ -26,13 +26,13 @@ export function GenerateSummaryButton({ matterId, has }: { matterId: string; has
   return (
     <div className="flex items-center gap-3">
       <button
-        onClick={() => start(async () => { const r = await generateCaseSummary(matterId); setMsg(r.ok ? "" : r.message); router.refresh(); })}
+        onClick={() => start(async () => { const r = await generateCaseSummary(matterId); setMsg(r.message); router.refresh(); })}
         disabled={pending}
         className="btn-primary"
       >
         <Icon name="sparkles" className="h-4 w-4" /> {pending ? "Analysing…" : has ? "Regenerate" : "Generate AI summary"}
       </button>
-      {msg && <span className="text-xs text-amber-700">{msg}</span>}
+      {msg && <span className="max-w-xs text-xs text-ink-muted">{msg}</span>}
     </div>
   );
 }

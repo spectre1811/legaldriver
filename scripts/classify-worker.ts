@@ -29,7 +29,39 @@ async function main() {
   const { completeJson } = await import("../src/lib/ai/complete");
   const { buildClassifyPrompt, CLASSIFY_SCHEMA, normalizeClassification } = await import("../src/lib/docs/classify-core");
   const { resolveFiling } = await import("../src/lib/docs/autofile");
+  const { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } = await import("../src/lib/docs/case-summary");
   const admin = createAdminClient();
+
+  // Generate AI briefings for cases that don't have one yet (background; uses our
+  // Claude Code, so prod gets summaries without an API key / synchronous bridge).
+  async function summarize(): Promise<number> {
+    const { data: cases } = await admin
+      .from("matter")
+      .select("id, tenant_id, title, cnr, court, case_type, stage, status, next_hearing_date, parties")
+      .is("ai_summary", null)
+      .limit(BATCH);
+    if (!cases?.length) return 0;
+    let done = 0;
+    for (const mt of cases) {
+      const [{ data: hearings }, { data: docs }] = await Promise.all([
+        admin.from("hearing").select("date, purpose, judge").eq("matter_id", mt.id).order("date", { ascending: false }),
+        admin.from("document").select("filename, doc_type, parsed_text").eq("matter_id", mt.id),
+      ]);
+      const parties = (Array.isArray(mt.parties) ? mt.parties : []) as { name?: string; side?: string; advocate?: string }[];
+      const prompt = buildCaseSummaryPrompt({
+        title: mt.title, cnr: mt.cnr, court: mt.court, caseType: mt.case_type, stage: mt.stage,
+        status: mt.status, nextHearingDate: mt.next_hearing_date, parties, hearings: hearings ?? [], documents: docs ?? [],
+      });
+      const summary = normalizeCaseSummary(await completeJson(prompt, CASE_SUMMARY_SCHEMA as unknown as Record<string, unknown>));
+      if (summary) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await admin.from("matter").update({ ai_summary: summary as any }).eq("id", mt.id);
+        done++;
+        console.log(`  [summary] ${mt.title.slice(0, 48)}`);
+      }
+    }
+    return done;
+  }
 
   type Shortlist = { clients: { id: string; name: string }[]; matters: { id: string; title: string; cnr?: string | null }[] };
 
@@ -98,15 +130,21 @@ async function main() {
     return processed;
   }
 
+  async function tick() {
+    await pass();
+    const s = await summarize();
+    if (s) console.log(`summaries generated: ${s}`);
+  }
+
   if (process.argv.includes("--loop")) {
     console.log(`worker loop started (batch ${BATCH}, every ${INTERVAL_MS}ms)`);
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      await pass();
+      await tick();
       await new Promise((r) => setTimeout(r, INTERVAL_MS));
     }
   } else {
-    await pass();
+    await tick();
   }
 }
 

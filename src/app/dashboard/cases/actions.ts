@@ -44,7 +44,11 @@ export async function generateCaseSummary(matterId: string): Promise<ActionResul
   const raw = await completeJson(prompt, CASE_SUMMARY_SCHEMA as unknown as Record<string, unknown>);
   const summary = normalizeCaseSummary(raw);
   if (!summary) {
-    return { ok: false, message: "Couldn't generate a summary — the AI backend isn't available in this environment." };
+    // No synchronous AI backend here (e.g. Vercel) — hand off to the background
+    // worker (our Claude Code). Clearing ai_summary makes the worker pick it up.
+    await supabase.from("matter").update({ ai_summary: null }).eq("id", matterId);
+    await logActivity(supabase, tenantId, { matterId, type: "case.ai_queued", summary: "AI briefing queued for generation" });
+    return { ok: true, message: "Queued — our AI is preparing this briefing in the background. Refresh in a minute." };
   }
 
   await supabase.from("matter").update({ ai_summary: summary as unknown as Database["public"]["Tables"]["matter"]["Update"]["ai_summary"] }).eq("id", matterId);

@@ -33,12 +33,18 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = path.startsWith("/login") || path.startsWith("/auth");
   const isProtected = path.startsWith("/dashboard");
 
-  if (!user && isProtected) {
+  // Treat only email-CONFIRMED users as authenticated for app access. This blocks
+  // unverified sign-ups from using the product even if a session exists, cutting
+  // fake registrations (defense-in-depth on top of Supabase's confirmation flow).
+  const confirmed = Boolean(user && (user.email_confirmed_at || user.confirmed_at));
+
+  if (isProtected && !confirmed) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    if (user && !confirmed) url.searchParams.set("message", "Please confirm your email — check your inbox — before signing in.");
     return NextResponse.redirect(url);
   }
-  if (user && path === "/login") {
+  if (path === "/login" && confirmed) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

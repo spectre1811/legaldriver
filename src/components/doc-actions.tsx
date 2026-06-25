@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useRef, useTransition, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { relinkDocument, deleteDocument } from "@/app/dashboard/documents/actions";
@@ -24,22 +25,37 @@ export function DocActions({
   const [mode, setMode] = useState<"menu" | "refile" | "delete">("menu");
   const [m, setM] = useState(matterId ?? "");
   const [c, setC] = useState(clientId ?? "");
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const [pending, start] = useTransition();
+  const btnRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
   const close = () => { setOpen(false); setMode("menu"); };
 
+  // Anchor the portal menu to the button; reposition on open/scroll/resize.
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = btnRef.current?.getBoundingClientRect();
+      if (r) setPos({ top: r.bottom + 6, left: Math.max(8, r.right - 240) });
+    };
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => { window.removeEventListener("scroll", place, true); window.removeEventListener("resize", place); };
+  }, [open]);
+
   return (
-    <div className="relative inline-flex items-center gap-2">
+    <div className="inline-flex items-center gap-2">
       <a href={`/api/documents/${documentId}/download`} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:text-brand-700" title="Open">
         <Icon name="external" className="h-4 w-4" />
       </a>
-      <button onClick={() => setOpen((v) => !v)} className="rounded-md px-1.5 text-ink-faint hover:bg-paper hover:text-ink" aria-label="More" aria-haspopup="true">⋯</button>
+      <button ref={btnRef} onClick={() => setOpen((v) => !v)} className="rounded-md px-1.5 text-ink-faint hover:bg-paper hover:text-ink" aria-label="More" aria-haspopup="true">⋯</button>
 
-      {open && (
+      {open && pos && typeof document !== "undefined" && createPortal(
         <>
-          <div className="fixed inset-0 z-10" onClick={close} />
-          <div className="absolute right-0 top-7 z-20 w-60 rounded-xl border border-line bg-surface p-2 shadow-lift">
+          <div className="fixed inset-0 z-40" onClick={close} />
+          <div className="fixed z-50 w-60 rounded-xl border border-line bg-surface p-2 shadow-lift" style={{ top: pos.top, left: pos.left }}>
             {mode === "menu" && (
               <div className="flex flex-col">
                 <button onClick={() => setMode("refile")} className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-soft hover:bg-paper">
@@ -77,7 +93,8 @@ export function DocActions({
               </div>
             )}
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   );

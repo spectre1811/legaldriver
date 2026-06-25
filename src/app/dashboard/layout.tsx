@@ -9,6 +9,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  if (!user.email_confirmed_at && !user.confirmed_at) {
+    redirect("/login?message=Please confirm your email — check your inbox — before signing in.");
+  }
 
   const { data: tenant } = await supabase.from("tenant").select("name").single();
   const tenantName = tenant?.name ?? "Workspace";
