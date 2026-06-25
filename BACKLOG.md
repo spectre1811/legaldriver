@@ -19,7 +19,7 @@ P5 matter depth · P6 time+expense · P7/P8 client portal (RLS-isolated) · P10 
 |---|---|
 | ~~Knowledge spine (statutes/limitation/deadline rules)~~ ✅ **DONE** | Seeded `deadline_rule` (70 rows, NI-138/CPC/Limitation/Arbitration/Consumer/BNSS) + expanded `legal_reference` to 38; case page applies jurisdiction-aware deadlines → calendar. Powers the deadline engine + grounds the agent. |
 | **External full-text corpora** (deferred from spine) | Still keyless but needs more work: **India Code** bare-act text (no REST API → HTML parser needed), **DevDataLab** 81M historical district records (large ODbL bulk download + import), **NJDG/data.gov.in** court+judge lists (dataset-specific). **e-SCR is unreachable from our host (000)** — revisit host/proxy. See `docs/decisions/2026-06-25-court-data-sourcing.md`. |
-| HITL court-refresh: parse pasted payload | The Settings HITL form stores the pasted official-portal payload; add the deterministic parser → write into `court_cache` + `matter`. Closes the compliant live-data loop. |
+| ~~HITL capture + cause-list ingester~~ ✅ **DONE** | **HITL bookmarklet** (Settings): you solve the CAPTCHA on eCourts, click → `/api/court/capture` parses the page → `court_cache` + matter (e2e-verified on prod). **Cause-list upload** (`/dashboard/cause-list`): upload the court PDF → match CNRs → update next-hearing dates. Both compliant, keyless. Next: auto-fetch published cause-list PDFs from known court URLs (per-court catalog). |
 | ~~Analytics dashboard~~ ✅ **DONE** | `/dashboard/analytics` (analytics_summary RPC): caseload, time+billing, clients/docs, and a "Your data — ingested & stored" panel. Per-employee/client ledger + aging still to add. |
 | Invoice assembly + GST | Assemble from unbilled time/expense, GST (CGST/SGST vs IGST, HSN/SAC), FY numbering, PDF, email. (Razorpay collection is 🔴.) **← suggested next** |
 | Document versioning + approval + templates | `document_version` + draft→approved workflow; merge-token templates. |
@@ -48,7 +48,7 @@ P5 matter depth · P6 time+expense · P7/P8 client portal (RLS-isolated) · P10 
 ---
 
 ## ⛔ Blocked — no free/compliant path today
-- **Fully-automated free live case-status + cause-list refresh.** The official eCourts portals gate every query behind a CAPTCHA and forbid automated access; NJDG's Open API is restricted to government/institutional users, not a private SaaS. Every commercial provider obtains this via CAPTCHA-handling fetch — **our hard line forbids that**. *Compliant paths we DO have:* (1) **HITL refresh** (you solve the CAPTCHA, we parse the result), (2) a **licensed API as opt-in fallback** (eCourtsIndia/Vakeel360). Revisit if NJDG opens to non-institutional access. Full analysis: `docs/decisions/2026-06-25-court-data-sourcing.md`.
+- **Fully-automated (no-human) free live case-status refresh.** eCourts gates every query behind a CAPTCHA and forbids automated access; NJDG's Open API is restricted to government/institutional users. We will NOT use CAPTCHA-solving / Bright-Data-style bypass (ToS + IT Act + reputational risk for a legal product). **Mitigated** — we now have two compliant fresh-data paths live: **HITL capture** (human solves CAPTCHA → we parse) and **cause-list upload**; plus a **licensed API as opt-in cached fallback**. The only thing still blocked is *unattended* automation. Revisit if NJDG opens or we get authorized access. Analysis: `docs/decisions/2026-06-25-court-data-sourcing.md`.
 
 ---
 
