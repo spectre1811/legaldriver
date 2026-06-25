@@ -9,10 +9,15 @@ const SOURCE: Record<string, string> = { gmail: "Gmail", upload: "Upload", court
 export default async function DocumentsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; source?: string; type?: string; filed?: string };
+  searchParams: { q?: string; source?: string; type?: string; filed?: string; client?: string };
 }) {
   const supabase = createClient();
-  const { q, source, type, filed } = searchParams;
+  const { q, source, type, filed, client } = searchParams;
+
+  // Matters carry client_id so we can resolve a document's client even when it's
+  // only tagged to a case. Fetch this first — the client filter needs the map.
+  const { data: matters } = await supabase.from("matter").select("id, title, client_id");
+  const matterClient = new Map((matters ?? []).map((m) => [m.id, m.client_id]));
 
   let query = supabase
     .from("document")
@@ -24,11 +29,18 @@ export default async function DocumentsPage({
   if (type) query = query.eq("doc_type", type);
   if (filed === "filed") query = query.or("matter_id.not.is.null,client_id.not.is.null");
   if (filed === "unfiled") query = query.is("matter_id", null).is("client_id", null);
+  if (client) {
+    // A doc belongs to a client directly (client_id) or via a tagged case
+    // whose matter belongs to that client.
+    const matterIds = (matters ?? []).filter((m) => m.client_id === client).map((m) => m.id);
+    query = matterIds.length
+      ? query.or(`client_id.eq.${client},matter_id.in.(${matterIds.join(",")})`)
+      : query.eq("client_id", client);
+  }
 
-  const [{ data: docs }, { data: clients }, { data: matters }, { data: typeRows }] = await Promise.all([
+  const [{ data: docs }, { data: clients }, { data: typeRows }] = await Promise.all([
     query,
     supabase.from("client").select("id, name"),
-    supabase.from("matter").select("id, title"),
     supabase.from("document").select("doc_type").not("doc_type", "is", null).limit(1000),
   ]);
 
@@ -38,13 +50,13 @@ export default async function DocumentsPage({
   const matterOpts = (matters ?? []).map((m) => ({ id: m.id, label: m.title }));
   const types = [...new Set((typeRows ?? []).map((t) => t.doc_type).filter(Boolean) as string[])].sort();
 
-  const activeFilters = Boolean(q || source || type || filed);
+  const activeFilters = Boolean(q || source || type || filed || client);
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Documents" subtitle="Search across every document — filename and full text — from Gmail, uploads, and court orders." />
+      <PageHeader title="Documents" subtitle="Every document, organised by client. A case is an optional tag — file by client first, link to a case when it matters." />
 
-      <FilterBar types={types} />
+      <FilterBar types={types} clients={clientOpts} />
 
       {docs && docs.length ? (
         <Card className="overflow-hidden">
@@ -63,7 +75,12 @@ export default async function DocumentsPage({
             </thead>
             <tbody>
               {docs.map((d) => {
-                const filedName = d.matter_id ? matterName.get(d.matter_id) : d.client_id ? clientName.get(d.client_id) : null;
+                // Client-first: resolve directly, else via the tagged case's client.
+                const resolvedClientId = d.client_id ?? (d.matter_id ? matterClient.get(d.matter_id) ?? null : null);
+                const clientLabel = resolvedClientId ? clientName.get(resolvedClientId) ?? null : null;
+                const caseLabel = d.matter_id ? matterName.get(d.matter_id) ?? null : null;
+                const primary = clientLabel ?? caseLabel;
+                const secondary = clientLabel ? caseLabel : null;
                 return (
                   <tr key={d.id} className="border-b border-line last:border-0 hover:bg-paper">
                     <td className="px-5 py-3.5">
@@ -73,7 +90,16 @@ export default async function DocumentsPage({
                       </span>
                     </td>
                     <td className="hidden px-5 py-3.5 sm:table-cell">{d.doc_type ? <Badge>{d.doc_type}</Badge> : <span className="text-ink-faint">—</span>}</td>
-                    <td className="px-5 py-3.5 text-ink-muted">{filedName ?? <span className="text-amber-600">unfiled</span>}</td>
+                    <td className="px-5 py-3.5 text-ink-muted">
+                      {primary ? (
+                        <span className="flex flex-col leading-tight">
+                          <span className="font-medium text-ink">{primary}</span>
+                          {secondary && <span className="mt-0.5 text-xs text-ink-faint">{secondary}</span>}
+                        </span>
+                      ) : (
+                        <span className="text-amber-600">unfiled</span>
+                      )}
+                    </td>
                     <td className="hidden px-5 py-3.5 text-xs text-ink-faint md:table-cell">{SOURCE[d.source] ?? d.source}</td>
                     <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtSize(d.size_bytes)}</td>
                     <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtDate(d.created_at)}</td>

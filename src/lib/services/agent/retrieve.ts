@@ -37,14 +37,25 @@ function scoreRef(row: { old_ref: string | null; new_ref: string | null; topic: 
   return terms.reduce((n, t) => n + (hay.includes(t) ? 1 : 0), 0);
 }
 
-// One safe ilike token for PostgREST .or() (no commas/parens/percent).
-function safeToken(q: string): string | null {
-  const t = q
-    .replace(/[%,()*]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w.length > 3)
-    .sort((a, b) => b.length - a.length)[0];
-  return t ? t.replace(/[^a-zA-Z0-9]/g, "") || null : null;
+const STOPWORDS = new Set([
+  "what", "whats", "next", "step", "steps", "this", "that", "case", "matter", "the", "and",
+  "with", "from", "about", "should", "would", "could", "have", "need", "want", "tell", "give",
+  "please", "client", "court", "hearing", "order", "details", "detail", "properly", "status",
+]);
+
+// Content words for ilike matching (drop stopwords + short tokens; handle apostrophes).
+function contentWords(q: string): string[] {
+  const words = q
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 3 && !STOPWORDS.has(w));
+  return [...new Set(words)].slice(0, 5);
+}
+
+// A CNR-like token (eCourts CNRs are 16 alphanumerics, e.g. GJAH220924142026).
+function detectCnr(q: string): string | null {
+  const m = q.toUpperCase().match(/\b[A-Z]{2,4}[A-Z0-9]{10,14}\b/);
+  return m ? m[0] : null;
 }
 
 export async function retrieve(
@@ -82,12 +93,32 @@ export async function retrieve(
     }
   }
 
-  // 2) Tenant matter corpus.
-  if (input.matterId) {
+  // 2) Tenant matter corpus. All queries are explicitly tenant-scoped so this is
+  // safe under both the RLS client (interactive) and the admin client (worker).
+  // If no matter is pinned, try to RESOLVE one from a CNR / matching words first,
+  // so a free-text question like "next step on Nirav's matter" still grounds.
+  let focusMatterId = input.matterId ?? null;
+  if (!focusMatterId) {
+    const cnr = detectCnr(q);
+    const words = contentWords(q);
+    if (cnr || words.length) {
+      const ors: string[] = [];
+      if (cnr) ors.push(`cnr.ilike.%${cnr}%`);
+      for (const w of words) ors.push(`title.ilike.%${w}%`);
+      let mq = sb.from("matter").select("id").eq("tenant_id", input.tenantId);
+      if (input.clientId) mq = mq.eq("client_id", input.clientId);
+      const { data: matched } = await (ors.length ? mq.or(ors.join(",")) : mq).limit(2);
+      // Only auto-focus when the match is unambiguous (exactly one matter).
+      if (matched && matched.length === 1) focusMatterId = matched[0].id;
+    }
+  }
+
+  if (focusMatterId) {
     const { data: m } = await sb
       .from("matter")
       .select("id, cnr, title, court, stage, status, next_hearing_date, act_names, party_names, judge_names")
-      .eq("id", input.matterId)
+      .eq("tenant_id", input.tenantId)
+      .eq("id", focusMatterId)
       .maybeSingle();
     if (m) {
       const url = `/dashboard/cases/${m.id}`;
@@ -100,9 +131,9 @@ export async function retrieve(
         snippet: `Court: ${m.court ?? "—"}. Stage: ${m.stage ?? "—"}. Status: ${m.status ?? "—"}. Next hearing: ${m.next_hearing_date ?? "—"}. Acts: ${(m.act_names ?? []).join(", ") || "—"}. Parties: ${(m.party_names ?? []).join(" v. ") || "—"}.`,
       });
       const [{ data: hs }, { data: ds }, { data: os }] = await Promise.all([
-        sb.from("hearing").select("date, purpose, judge").eq("matter_id", m.id).order("date", { ascending: false }).limit(6),
-        sb.from("document").select("filename, doc_type, parsed_text").eq("matter_id", m.id).limit(5),
-        sb.from("court_order").select("order_date, title").eq("matter_id", m.id).order("order_date", { ascending: false }).limit(5),
+        sb.from("hearing").select("date, purpose, judge").eq("tenant_id", input.tenantId).eq("matter_id", m.id).order("date", { ascending: false }).limit(6),
+        sb.from("document").select("filename, doc_type, parsed_text").eq("tenant_id", input.tenantId).eq("matter_id", m.id).limit(5),
+        sb.from("court_order").select("order_date, title").eq("tenant_id", input.tenantId).eq("matter_id", m.id).order("order_date", { ascending: false }).limit(5),
       ]);
       if (hs?.length) {
         hits.push({
@@ -123,15 +154,16 @@ export async function retrieve(
       }
     }
   } else {
-    // Corpus-wide: documents via FTS + matters via ilike (optionally client-scoped).
-    const token = safeToken(q);
+    // Corpus-wide: documents via FTS + matters via multi-word ilike (tenant-scoped).
+    const words = contentWords(q);
+    const cnr = detectCnr(q);
+    const ors = [...(cnr ? [`cnr.ilike.%${cnr}%`] : []), ...words.map((w) => `title.ilike.%${w}%`)];
+    let mq = sb.from("matter").select("id, cnr, title, court, act_names").eq("tenant_id", input.tenantId);
+    if (input.clientId) mq = mq.eq("client_id", input.clientId);
+    else if (ors.length) mq = mq.or(ors.join(","));
     const [docs, matters] = await Promise.all([
-      sb.from("document").select("filename, parsed_text, matter_id").textSearch("fts", q, { type: "websearch" }).limit(4),
-      token
-        ? (input.clientId
-            ? sb.from("matter").select("id, cnr, title, court, act_names").eq("client_id", input.clientId).limit(4)
-            : sb.from("matter").select("id, cnr, title, court, act_names").or(`title.ilike.%${token}%,cnr.ilike.%${token}%`).limit(4))
-        : Promise.resolve({ data: [] as never[] }),
+      sb.from("document").select("filename, parsed_text, matter_id").eq("tenant_id", input.tenantId).textSearch("fts", q, { type: "websearch" }).limit(4),
+      input.clientId || ors.length ? mq.limit(4) : Promise.resolve({ data: [] as never[] }),
     ]);
     for (const d of docs.data ?? []) {
       if (!d.parsed_text) continue;

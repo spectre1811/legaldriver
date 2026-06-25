@@ -51,6 +51,8 @@ export async function synthesize(
 // either answers now or queues a pending assistant turn for the worker.
 export async function askAgent(sb: DB, input: AskInput): Promise<{ threadId: string; answer: AgentAnswer }> {
   let threadId = input.threadId ?? null;
+  let boundMatterId = input.matterId ?? null;
+  let boundClientId = input.clientId ?? null;
   if (!threadId) {
     const { data, error } = await sb
       .from("agent_thread")
@@ -65,6 +67,11 @@ export async function askAgent(sb: DB, input: AskInput): Promise<{ threadId: str
       .single();
     if (error || !data) throw new Error(`askAgent: thread insert failed: ${error?.message}`);
     threadId = data.id;
+  } else {
+    // Carry the thread's pinned case/client into this turn so follow-ups stay grounded.
+    const { data: th } = await sb.from("agent_thread").select("matter_id, client_id").eq("id", threadId).maybeSingle();
+    boundMatterId = boundMatterId ?? th?.matter_id ?? null;
+    boundClientId = boundClientId ?? th?.client_id ?? null;
   }
 
   await sb.from("agent_turn").insert({ thread_id: threadId, tenant_id: input.tenantId, role: "user", content: input.question });
@@ -76,7 +83,15 @@ export async function askAgent(sb: DB, input: AskInput): Promise<{ threadId: str
     .order("created_at", { ascending: true })
     .limit(12);
 
-  const hits = await retrieve(sb, input);
+  const effective = { ...input, matterId: boundMatterId, clientId: boundClientId };
+  const hits = await retrieve(sb, effective);
+
+  // If the thread isn't pinned to a case yet but this turn resolved exactly one,
+  // pin it so later follow-ups ("what's the next step?") keep the context.
+  if (!boundMatterId) {
+    const matterIds = [...new Set(hits.map((h) => h.matterId).filter(Boolean))] as string[];
+    if (matterIds.length === 1) await sb.from("agent_thread").update({ matter_id: matterIds[0] }).eq("id", threadId);
+  }
   const ans = await synthesize(input.question, hits, (hist ?? []).map((h) => ({ role: h.role, content: h.content })));
 
   if (ans) {

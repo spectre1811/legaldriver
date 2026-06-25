@@ -98,3 +98,23 @@ export async function getProviderHealth() {
   const { data } = await admin.from("court_provider_health").select("*").order("provider");
   return data ?? [];
 }
+
+// Read-only cache stats for the settings surface. The cache is shared across
+// tenants and reachable only via the admin client, so this is exposed as an
+// aggregate (no per-tenant rows leak). Returns the cached-case count and the
+// most-recent fetch timestamp.
+export async function getCacheStats(): Promise<{ cases: number; lastFetchedAt: string | null }> {
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("court_cache")
+    .select("*", { count: "exact", head: true })
+    .eq("kind", "case");
+  const { data: latest } = await admin
+    .from("court_cache")
+    .select("fetched_at")
+    .eq("kind", "case")
+    .order("fetched_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return { cases: count ?? 0, lastFetchedAt: latest?.fetched_at ?? null };
+}

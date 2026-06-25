@@ -875,6 +875,7 @@ export type Database = {
           content: string
           created_at: string
           document_id: string | null
+          embedding: string | null
           fts: unknown
           id: string
           matter_id: string | null
@@ -886,6 +887,7 @@ export type Database = {
           content: string
           created_at?: string
           document_id?: string | null
+          embedding?: string | null
           fts?: unknown
           id?: string
           matter_id?: string | null
@@ -897,6 +899,7 @@ export type Database = {
           content?: string
           created_at?: string
           document_id?: string | null
+          embedding?: string | null
           fts?: unknown
           id?: string
           matter_id?: string | null
@@ -1916,6 +1919,15 @@ export type Database = {
     }
     Functions: {
       current_tenant_id: { Args: never; Returns: string }
+      match_document_chunks: {
+        Args: { p_embedding: string; p_k?: number; p_tenant: string }
+        Returns: {
+          content: string
+          document_id: string
+          matter_id: string
+          similarity: number
+        }[]
+      }
       portal_client_id: { Args: never; Returns: string }
       portal_tenant_id: { Args: never; Returns: string }
       read_secret: { Args: { secret_id: string }; Returns: string }

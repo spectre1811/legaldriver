@@ -4,7 +4,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "@/components/icons";
 
-export function FilterBar({ types }: { types: string[] }) {
+type Opt = { id: string; label: string };
+
+export function FilterBar({ types, clients }: { types: string[]; clients: Opt[] }) {
   const router = useRouter();
   const sp = useSearchParams();
   const [q, setQ] = useState(sp.get("q") ?? "");
@@ -24,6 +26,10 @@ export function FilterBar({ types }: { types: string[] }) {
         <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search documents (filename + contents)…" className="input pl-9" aria-label="Search documents" />
       </form>
+      <select value={sp.get("client") ?? ""} onChange={(e) => setParam("client", e.target.value)} className="input max-w-[12rem]" aria-label="Client">
+        <option value="">All clients</option>
+        {clients.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+      </select>
       <select value={sp.get("source") ?? ""} onChange={(e) => setParam("source", e.target.value)} className="input max-w-[10rem]" aria-label="Source">
         <option value="">All sources</option>
         <option value="gmail">Gmail</option>

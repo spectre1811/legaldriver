@@ -31,14 +31,47 @@ async function main() {
   const { resolveFiling } = await import("../src/lib/docs/autofile");
   const { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } = await import("../src/lib/docs/case-summary");
   const { synthesize } = await import("../src/lib/services/agent/agent");
+  const embeddingsOn = process.env.EMBEDDINGS_DISABLED !== "1";
+  const emb = embeddingsOn ? await import("../src/lib/services/agent/embed") : null;
   const admin = createAdminClient();
+
+  // Backfill semantic chunks for documents that have parsed text but no chunks yet.
+  // Local model (bge-small via transformers.js) — keyless. Bounded per tick.
+  async function embedDocuments(): Promise<number> {
+    if (!emb) return 0;
+    const { data: chunked } = await admin.from("document_chunk").select("document_id");
+    const have = new Set((chunked ?? []).map((c) => c.document_id));
+    const { data: docs } = await admin
+      .from("document")
+      .select("id, tenant_id, matter_id, client_id, parsed_text")
+      .not("parsed_text", "is", null)
+      .limit(200);
+    const todo = (docs ?? []).filter((d) => d.parsed_text && !have.has(d.id)).slice(0, 5);
+    if (!todo.length) return 0;
+    let done = 0;
+    for (const d of todo) {
+      const chunks = emb.chunkText(d.parsed_text as string, 1200).slice(0, 20);
+      let i = 0;
+      for (const c of chunks) {
+        try {
+          const v = await emb.embedPassage(c);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await admin.from("document_chunk").insert({ tenant_id: d.tenant_id, document_id: d.id, matter_id: d.matter_id, client_id: d.client_id, chunk_index: i, content: c, embedding: emb.toVectorLiteral(v) as any });
+          done++;
+        } catch { /* skip a bad chunk */ }
+        i++;
+      }
+    }
+    if (done) console.log(`  [embed] ${done} chunks across ${todo.length} docs`);
+    return done;
+  }
 
   // Answer Lawyer-Agent turns queued by the app (keyless prod has no synchronous
   // backend). The pending turn carries the question + retrieved hits in meta.
   async function answerPending(): Promise<number> {
     const { data: turns } = await admin
       .from("agent_turn")
-      .select("id, meta")
+      .select("id, tenant_id, meta")
       .eq("role", "assistant")
       .contains("meta", { pending: true })
       .limit(BATCH);
@@ -48,7 +81,22 @@ async function main() {
       const meta = (t.meta ?? {}) as { question?: string; hits?: unknown[] };
       if (!meta.question || !Array.isArray(meta.hits)) continue;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const ans = await synthesize(meta.question, meta.hits as any);
+      let hits = [...(meta.hits as any[])];
+      // Semantic recall: embed the question, pull nearest matter-doc chunks (tenant-scoped).
+      if (emb) {
+        try {
+          const qv = await emb.embedQuery(meta.question);
+          const { data: matches } = await admin.rpc("match_document_chunks", { p_tenant: t.tenant_id, p_embedding: emb.toVectorLiteral(qv), p_k: 6 });
+          for (const mrow of (matches ?? []) as { document_id: string; matter_id: string | null; content: string }[]) {
+            hits.push({ source: "document", ref: "matter document", title: "Matter document (semantic match)", url: mrow.matter_id ? `/dashboard/cases/${mrow.matter_id}` : undefined, matterId: mrow.matter_id ?? undefined, snippet: (mrow.content || "").slice(0, 400) });
+          }
+        } catch { /* embeddings unavailable this tick → fall back to stored hits */ }
+        const seen = new Set<string>();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        hits = hits.filter((h: any) => { const k = h.snippet || h.ref; if (seen.has(k)) return false; seen.add(k); return true; });
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ans = await synthesize(meta.question, hits as any);
       if (!ans) continue; // no answer this tick — retry next loop
       await admin
         .from("agent_turn")
@@ -163,6 +211,7 @@ async function main() {
     await pass();
     const s = await summarize();
     if (s) console.log(`summaries generated: ${s}`);
+    await embedDocuments();
     const a = await answerPending();
     if (a) console.log(`agent answers: ${a}`);
   }
