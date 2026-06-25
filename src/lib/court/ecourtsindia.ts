@@ -35,6 +35,12 @@ const arr = (o: Json, ...keys: string[]): Json[] => {
   }
   return [];
 };
+const strArr = (o: Json, key: string): string[] =>
+  Array.isArray(o?.[key]) ? (o[key] as unknown[]).map((x) => String(x)) : [];
+// Party strings come as "NAME - PARENTAGE"; keep the party name, drop the suffix.
+const cleanName = (s: string) => s.split(" - ")[0].trim();
+const titleCase = (s: string) =>
+  s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\s+/g, " ").trim();
 
 export class ECourtsIndiaClient implements CourtDataClient {
   readonly source = "ecourtsindia";
@@ -60,35 +66,57 @@ export class ECourtsIndiaClient implements CourtDataClient {
     return (await res.json()) as Json;
   }
 
+  // Maps the real eCourtsIndia shape: body.data.courtCaseData (+ entityInfo).
   private normalizeCase(raw: Json, cnr: string): NormalizedCase {
-    const data = (raw.data as Json) ?? raw;
-    const parties: NormalizedParty[] = arr(data, "parties", "petitioners", "litigants").map((p) => ({
-      name: str(p, "name", "party_name") ?? "",
-      side: (str(p, "side", "type") as NormalizedParty["side"]) ?? "other",
-      advocate: str(p, "advocate", "advocate_name"),
-    }));
-    const hearings: NormalizedHearing[] = arr(data, "hearings", "history", "case_history").map((h) => ({
-      date: (str(h, "date", "hearing_date", "business_date") ?? "").slice(0, 10),
-      purpose: str(h, "purpose", "business", "stage"),
-      courtNo: str(h, "court_no", "court_number"),
-      judge: str(h, "judge", "coram"),
-      raw: h,
-    }));
-    const orders = arr(data, "orders", "judgments").map((o, i) => ({
-      id: str(o, "id", "order_id") ?? `${cnr}-ORD-${i + 1}`,
-      date: str(o, "date", "order_date"),
+    const root = (raw.data as Json) ?? raw;
+    const d = (root.courtCaseData as Json) ?? root;
+    const entity = (root.entityInfo as Json) ?? {};
+
+    const petitioners = strArr(d, "petitioners");
+    const petAdv = strArr(d, "petitionerAdvocates");
+    const respondents = strArr(d, "respondents");
+    const resAdv = strArr(d, "respondentAdvocates");
+    const parties: NormalizedParty[] = [
+      ...petitioners.map((p, i) => ({ name: cleanName(p), side: "petitioner" as const, advocate: petAdv[i] })),
+      ...respondents.map((p, i) => ({ name: cleanName(p), side: "respondent" as const, advocate: resAdv[i] })),
+    ];
+
+    const nextHearing = ((str(d, "nextHearingDate") ?? str(entity, "nextDateOfHearing")) ?? "").slice(0, 10) || null;
+
+    const hearings: NormalizedHearing[] = arr(d, "historyOfCaseHearings", "hearings")
+      .map((h) => ({
+        date: (str(h, "date", "hearingDate", "businessDate", "nextDate") ?? "").slice(0, 10),
+        purpose: str(h, "purpose", "business", "stage"),
+        judge: str(h, "judge", "coram"),
+        raw: h,
+      }))
+      .filter((h) => h.date);
+    // eCourts often returns an empty history but a known next date — surface it.
+    if (!hearings.length && nextHearing) {
+      hearings.push({ date: nextHearing, purpose: str(d, "purpose") ?? "Next hearing" });
+    }
+
+    const orders = [...arr(d, "judgmentOrders"), ...arr(d, "interimOrders")].map((o, i) => ({
+      id: str(o, "id", "orderId") ?? `${cnr}-ORD-${i + 1}`,
+      date: str(o, "date", "orderDate"),
       title: str(o, "title", "subject"),
     }));
+
+    const pet0 = petitioners[0] ? titleCase(cleanName(petitioners[0])) : "";
+    const res0 = respondents[0] ? titleCase(cleanName(respondents[0])) : "";
+    const reg = str(d, "registrationNumber");
+    const title = pet0 && res0 ? `${pet0} v. ${res0}` : reg ? `${str(d, "caseType") ?? "Case"} ${reg}` : cnr;
+
     return {
       cnr,
-      title: str(data, "title", "case_title", "case_name") ?? cnr,
-      court: str(data, "court", "court_name", "establishment"),
-      caseType: str(data, "case_type", "type"),
-      stage: str(data, "stage", "case_stage"),
-      status: str(data, "status", "case_status"),
+      title,
+      court: str(d, "courtName", "court", "establishment"),
+      caseType: str(d, "caseTypeSub", "caseType", "caseTypeRaw"),
+      stage: str(d, "stageOfCaseRaw", "stageOfCase", "stage"),
+      status: str(d, "caseStatus", "status"),
       parties,
-      judge: str(data, "judge", "coram"),
-      nextHearingDate: (str(data, "next_hearing_date", "next_date") ?? null)?.slice(0, 10) ?? null,
+      judge: strArr(d, "judges").join(", ") || str(d, "judge") || undefined,
+      nextHearingDate: nextHearing,
       hearings,
       orders,
       source: this.source,
@@ -143,13 +171,14 @@ export class ECourtsIndiaClient implements CourtDataClient {
   }
 
   async refreshCases(cnrs: string[]): Promise<NormalizedCase[]> {
-    const batch = cnrs.slice(0, 50);
-    const raw = await this.req(`/api/partner/refresh`, {
-      method: "POST",
-      body: JSON.stringify({ cnrs: batch }),
-    });
-    const cases = raw ? arr((raw.data as Json) ?? raw, "cases", "results") : [];
-    return cases.map((c, i) => this.normalizeCase(c, str(c, "cnr", "cnr_number") ?? batch[i]));
+    // Use the verified per-CNR endpoint (the bulk-refresh response shape is not yet
+    // verified). Capped at 50 per call to match the bulk limit.
+    const out: NormalizedCase[] = [];
+    for (const cnr of cnrs.slice(0, 50)) {
+      const c = await this.getCaseByCNR(cnr);
+      if (c) out.push(c);
+    }
+    return out;
   }
 
   async getOrder(cnr: string, orderId: string): Promise<CourtOrder | null> {
