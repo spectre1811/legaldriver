@@ -6,6 +6,9 @@ _Last updated: 2026-06-25 (post Phase-3 hardening). The single source of truth f
 
 ---
 
+## ✅ Shipped — latest
+**Structured documents:** category taxonomy + controlled doc_type vocabulary; Documents & per-client library grouped by category + category filter; **document detail page** (metadata, filed-under, summary, extracted-text, download, actions). **eCourts-app/Kleopatra investigated → NON-COMPLIANT** (same CAPTCHA-gated NJDG data; no public API) — HITL + licensed-fallback remain the only compliant paths.
+
 ## ✅ Shipped (P1–P3)
 P1 case tracking + calendar · P2 cause-list + notices + reminders · P3 Gmail ingest/classify ·
 P5 matter depth · P6 time+expense · P7/P8 client portal (RLS-isolated) · P10 IPR.
