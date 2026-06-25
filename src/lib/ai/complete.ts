@@ -18,7 +18,32 @@ function getSdk(): Anthropic {
 }
 
 type Schema = Record<string, unknown>;
-export type CompleteOpts = { model?: string; maxTokens?: number };
+export type CompleteOpts = { model?: string; maxTokens?: number; backend?: "deepseek" };
+
+// DeepSeek (OpenAI-compatible) — our optional reasoning LLM. Selected per-call via
+// opts.backend = "deepseek" (e.g. the Lawyer Agent when AGENT_BACKEND=deepseek).
+// Uses JSON-object response mode; the schema is given in the prompt. No PII logged.
+async function deepseekCompleteJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
+  const key = process.env.DEEPSEEK_API_KEY;
+  if (!key) return null;
+  const base = process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com";
+  const model = opts?.model ?? process.env.DEEPSEEK_MODEL ?? "deepseek-v4-pro";
+  const augmented = `${prompt}\n\nReturn ONLY a JSON object conforming to this JSON Schema (no markdown, no prose):\n${JSON.stringify(schema)}`;
+  try {
+    const res = await fetch(`${base}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model, messages: [{ role: "user", content: augmented }], response_format: { type: "json_object" }, max_tokens: opts?.maxTokens ?? 1500, stream: false }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (typeof content !== "string") return null;
+    return JSON.parse(content);
+  } catch {
+    return null;
+  }
+}
 
 async function apiCompleteJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
   try {
@@ -60,6 +85,8 @@ export function classifierBackend(): "api" | "cli" | "off" {
 }
 
 export async function completeJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
+  // Explicit per-call backend (e.g. the reasoning LLM) wins over the global router.
+  if (opts?.backend === "deepseek") return deepseekCompleteJson(prompt, schema, opts);
   const backend = classifierBackend();
   if (backend === "off") return null;
   if (backend === "api") return apiCompleteJson(prompt, schema, opts);

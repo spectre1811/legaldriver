@@ -37,10 +37,15 @@ export async function synthesize(
       abstained: true,
     };
   }
-  const raw = await completeJson(buildAgentPrompt(question, hits, history), AGENT_SCHEMA as unknown as Record<string, unknown>, {
-    model: AGENT_MODEL,
-    maxTokens: 1500,
-  });
+  // Reasoning LLM selection: DeepSeek (when AGENT_BACKEND=deepseek + key) answers
+  // synchronously via HTTP — no worker queue needed; otherwise the AI router
+  // (Claude API, or the keyless CLI/worker) handles it.
+  const useDeepseek = process.env.AGENT_BACKEND === "deepseek" && Boolean(process.env.DEEPSEEK_API_KEY);
+  const raw = await completeJson(
+    buildAgentPrompt(question, hits, history),
+    AGENT_SCHEMA as unknown as Record<string, unknown>,
+    useDeepseek ? { backend: "deepseek", maxTokens: 1500 } : { model: AGENT_MODEL, maxTokens: 1500 },
+  );
   if (!raw || typeof raw !== "object") return null;
   const r = raw as { answer?: string; used?: number[]; abstained?: boolean };
   if (typeof r.answer !== "string" || !r.answer.trim()) return null;
