@@ -17,7 +17,8 @@ P5 matter depth · P6 time+expense · P7/P8 client portal (RLS-isolated) · P10 
 
 | Item | Why / scope |
 |---|---|
-| **Own court-data "reference spine"** | The "build our own data" path (see `docs/decisions/2026-06-25-court-data-sourcing.md`). Ingest, all free + compliant: **India Code** bare acts (deadline-rules engine), **e-SCR** Supreme Court judgments (public S3 mirror, CC-BY), **NJDG / data.gov.in** court+judge lists, **DevDataLab** 81M historical district records (ODbL). This is the biggest strategic win and needs **no key**. |
+| ~~Knowledge spine (statutes/limitation/deadline rules)~~ ✅ **DONE** | Seeded `deadline_rule` (70 rows, NI-138/CPC/Limitation/Arbitration/Consumer/BNSS) + expanded `legal_reference` to 38; case page applies jurisdiction-aware deadlines → calendar. Powers the deadline engine + grounds the agent. |
+| **External full-text corpora** (deferred from spine) | Still keyless but needs more work: **India Code** bare-act text (no REST API → HTML parser needed), **DevDataLab** 81M historical district records (large ODbL bulk download + import), **NJDG/data.gov.in** court+judge lists (dataset-specific). **e-SCR is unreachable from our host (000)** — revisit host/proxy. See `docs/decisions/2026-06-25-court-data-sourcing.md`. |
 | HITL court-refresh: parse pasted payload | The Settings HITL form stores the pasted official-portal payload; add the deterministic parser → write into `court_cache` + `matter`. Closes the compliant live-data loop. |
 | Analytics & reports | Postgres views: receivables, client/matter ledger, aging, time/expense, per-employee + a reports page. |
 | Invoice assembly + GST | Assemble from unbilled time/expense, GST (CGST/SGST vs IGST, HSN/SAC), FY numbering, PDF, email. (Razorpay collection is 🔴.) |
