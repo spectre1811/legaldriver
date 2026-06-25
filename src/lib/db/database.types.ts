@@ -1936,6 +1936,7 @@ export type Database = {
       }
     }
     Functions: {
+      analytics_summary: { Args: never; Returns: Json }
       current_tenant_id: { Args: never; Returns: string }
       match_document_chunks: {
         Args: { p_embedding: string; p_k?: number; p_tenant: string }
