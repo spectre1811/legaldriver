@@ -175,8 +175,13 @@ export class ECourtsIndiaClient implements CourtDataClient {
     // verified). Capped at 50 per call to match the bulk limit.
     const out: NormalizedCase[] = [];
     for (const cnr of cnrs.slice(0, 50)) {
-      const c = await this.getCaseByCNR(cnr);
-      if (c) out.push(c);
+      // Per-CNR isolation: a bad/synthetic CNR must not kill the rest of the batch.
+      try {
+        const c = await this.getCaseByCNR(cnr);
+        if (c) out.push(c);
+      } catch {
+        continue;
+      }
     }
     return out;
   }
