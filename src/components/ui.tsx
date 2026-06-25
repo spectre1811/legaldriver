@@ -102,6 +102,14 @@ export function fmtDate(d: string | null | undefined) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
+export function fmtMoney(minor: number | null | undefined) {
+  const v = (minor ?? 0) / 100;
+  return `₹${v.toLocaleString("en-IN", { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
+}
+export function fmtHours(minutes: number | null | undefined) {
+  const m = minutes ?? 0;
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
+}
 export function fmtSize(bytes: number | null | undefined) {
   if (!bytes || bytes <= 0) return "—";
   if (bytes < 1024) return `${bytes} B`;

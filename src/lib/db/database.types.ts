@@ -676,6 +676,63 @@ export type Database = {
           },
         ]
       }
+      expense: {
+        Row: {
+          amount_minor: number
+          billable: boolean
+          category: string
+          created_at: string
+          entry_date: string
+          id: string
+          invoiced_invoice_id: string | null
+          matter_id: string
+          notes: string | null
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          amount_minor: number
+          billable?: boolean
+          category?: string
+          created_at?: string
+          entry_date?: string
+          id?: string
+          invoiced_invoice_id?: string | null
+          matter_id: string
+          notes?: string | null
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          billable?: boolean
+          category?: string
+          created_at?: string
+          entry_date?: string
+          id?: string
+          invoiced_invoice_id?: string | null
+          matter_id?: string
+          notes?: string | null
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hearing: {
         Row: {
           court_no: string | null
@@ -807,6 +864,7 @@ export type Database = {
           next_hearing_date: string | null
           parties: Json
           practice_area_id: string | null
+          rate_minor: number | null
           source: string | null
           stage: string | null
           status: string
@@ -825,6 +883,7 @@ export type Database = {
           next_hearing_date?: string | null
           parties?: Json
           practice_area_id?: string | null
+          rate_minor?: number | null
           source?: string | null
           stage?: string | null
           status?: string
@@ -843,6 +902,7 @@ export type Database = {
           next_hearing_date?: string | null
           parties?: Json
           practice_area_id?: string | null
+          rate_minor?: number | null
           source?: string | null
           stage?: string | null
           status?: string
@@ -1062,6 +1122,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          rate_minor: number | null
           role: string
           tenant_id: string
         }
@@ -1069,6 +1130,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          rate_minor?: number | null
           role?: string
           tenant_id: string
         }
@@ -1076,6 +1138,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          rate_minor?: number | null
           role?: string
           tenant_id?: string
         }
@@ -1092,23 +1155,83 @@ export type Database = {
       tenant: {
         Row: {
           created_at: string
+          default_rate_minor: number | null
           id: string
           name: string
           plan: string
         }
         Insert: {
           created_at?: string
+          default_rate_minor?: number | null
           id?: string
           name: string
           plan?: string
         }
         Update: {
           created_at?: string
+          default_rate_minor?: number | null
           id?: string
           name?: string
           plan?: string
         }
         Relationships: []
+      }
+      time_entry: {
+        Row: {
+          billable: boolean
+          created_at: string
+          entry_date: string
+          id: string
+          invoiced_invoice_id: string | null
+          matter_id: string
+          minutes: number
+          narrative: string | null
+          rate_minor: number
+          tenant_id: string
+          user_id: string | null
+        }
+        Insert: {
+          billable?: boolean
+          created_at?: string
+          entry_date?: string
+          id?: string
+          invoiced_invoice_id?: string | null
+          matter_id: string
+          minutes: number
+          narrative?: string | null
+          rate_minor?: number
+          tenant_id: string
+          user_id?: string | null
+        }
+        Update: {
+          billable?: boolean
+          created_at?: string
+          entry_date?: string
+          id?: string
+          invoiced_invoice_id?: string | null
+          matter_id?: string
+          minutes?: number
+          narrative?: string | null
+          rate_minor?: number
+          tenant_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entry_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entry_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

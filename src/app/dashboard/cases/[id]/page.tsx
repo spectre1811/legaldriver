@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Badge, Disclaimer, fmtDate, fmtAgo, fmtSize } from "@/components/ui";
+import { Card, Badge, Disclaimer, fmtDate, fmtAgo, fmtSize, fmtMoney, fmtHours } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
+import { LogTimeExpense } from "./time-expense";
 import type { CaseSummary } from "@/lib/docs/case-summary";
 import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm } from "./case-actions";
 
@@ -26,6 +27,15 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   ]);
   const matterOpts = (allMatters ?? []).map((m) => ({ id: m.id, label: m.title }));
   const clientOpts = (allClients ?? []).map((c) => ({ id: c.id, label: c.name }));
+
+  const [{ data: timeEntries }, { data: expenses }] = await Promise.all([
+    supabase.from("time_entry").select("id, entry_date, minutes, billable, rate_minor, narrative").eq("matter_id", matter.id).order("entry_date", { ascending: false }),
+    supabase.from("expense").select("id, entry_date, category, amount_minor, billable, notes").eq("matter_id", matter.id).order("entry_date", { ascending: false }),
+  ]);
+  const totalMinutes = (timeEntries ?? []).reduce((s, t) => s + t.minutes, 0);
+  const billableTime = (timeEntries ?? []).filter((t) => t.billable).reduce((s, t) => s + Math.round((t.minutes / 60) * t.rate_minor), 0);
+  const billableExp = (expenses ?? []).filter((e) => e.billable).reduce((s, e) => s + e.amount_minor, 0);
+  const wip = billableTime + billableExp;
 
   const parties = (Array.isArray(matter.parties) ? matter.parties : []) as Party[];
   const ai = matter.ai_summary as unknown as CaseSummary | null;
@@ -205,6 +215,41 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           </ul>
         ) : (
           <p className="px-5 py-8 text-center text-sm text-ink-faint">No documents yet — upload one above, or they&apos;ll arrive auto-filed from Gmail.</p>
+        )}
+      </Card>
+
+      {/* Time & expenses */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
+          <h2 className="text-base font-medium">Time &amp; expenses</h2>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-ink-muted">Time <span className="font-medium text-ink">{fmtHours(totalMinutes)}</span></span>
+            <span className="text-ink-muted">Unbilled <span className="font-medium text-ink">{fmtMoney(wip)}</span></span>
+          </div>
+        </div>
+        <LogTimeExpense matterId={matter.id} />
+        {((timeEntries?.length ?? 0) + (expenses?.length ?? 0)) > 0 && (
+          <ul className="divide-y divide-line border-t border-line">
+            {(timeEntries ?? []).map((t) => (
+              <li key={t.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
+                <Icon name="clock" className="h-4 w-4 shrink-0 text-ink-faint" />
+                <span className="w-20 shrink-0 text-ink-muted">{fmtDate(t.entry_date)}</span>
+                <span className="flex-1 truncate text-ink-soft">{t.narrative ?? "Time entry"}</span>
+                {!t.billable && <Badge>non-billable</Badge>}
+                <span className="text-ink-muted">{fmtHours(t.minutes)}</span>
+                <span className="w-20 text-right font-medium text-ink">{fmtMoney(Math.round((t.minutes / 60) * t.rate_minor))}</span>
+              </li>
+            ))}
+            {(expenses ?? []).map((e) => (
+              <li key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
+                <Icon name="notices" className="h-4 w-4 shrink-0 text-ink-faint" />
+                <span className="w-20 shrink-0 text-ink-muted">{fmtDate(e.entry_date)}</span>
+                <span className="flex-1 truncate text-ink-soft">{e.notes ?? e.category} <span className="text-ink-faint">· {e.category}</span></span>
+                {!e.billable && <Badge>non-billable</Badge>}
+                <span className="w-20 text-right font-medium text-ink">{fmtMoney(e.amount_minor)}</span>
+              </li>
+            ))}
+          </ul>
         )}
       </Card>
 

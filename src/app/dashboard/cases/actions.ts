@@ -93,6 +93,60 @@ export async function addCaseDocument(matterId: string, formData: FormData): Pro
   return { ok: true, message: `Added “${file.name}” to the case.` };
 }
 
+// Log a time entry against a case. Rate = matter override → timekeeper → tenant default.
+export async function logTime(matterId: string, formData: FormData): Promise<ActionResult> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId || !user) return { ok: false, message: "Not signed in." };
+
+  const minutes = Math.round(Number(formData.get("minutes") ?? 0));
+  if (!minutes || minutes <= 0) return { ok: false, message: "Enter minutes worked." };
+  const narrative = String(formData.get("narrative") ?? "").trim() || null;
+  const billable = String(formData.get("billable") ?? "on") !== "off";
+  const entryDate = String(formData.get("entry_date") ?? "").trim() || new Date().toISOString().slice(0, 10);
+
+  const [{ data: matter }, { data: profile }, { data: tenant }] = await Promise.all([
+    supabase.from("matter").select("rate_minor").eq("id", matterId).maybeSingle(),
+    supabase.from("profile").select("rate_minor").eq("id", user.id).maybeSingle(),
+    supabase.from("tenant").select("default_rate_minor").single(),
+  ]);
+  const rate = matter?.rate_minor ?? profile?.rate_minor ?? tenant?.default_rate_minor ?? 0;
+
+  const { error } = await supabase.from("time_entry").insert({
+    tenant_id: tenantId, matter_id: matterId, user_id: user.id,
+    entry_date: entryDate, minutes, billable, rate_minor: rate, narrative,
+  });
+  if (error) return { ok: false, message: error.message };
+  await logActivity(supabase, tenantId, { matterId, type: "time.logged", summary: `Logged ${minutes} min${billable ? " (billable)" : ""}` });
+  revalidatePath(`/dashboard/cases/${matterId}`);
+  return { ok: true, message: "Time logged." };
+}
+
+// Log an expense against a case (amount entered in rupees).
+export async function logExpense(matterId: string, formData: FormData): Promise<ActionResult> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId || !user) return { ok: false, message: "Not signed in." };
+
+  const amount = Number(formData.get("amount") ?? 0);
+  if (!amount || amount <= 0) return { ok: false, message: "Enter an amount." };
+  const category = String(formData.get("category") ?? "other").trim() || "other";
+  const billable = String(formData.get("billable") ?? "on") !== "off";
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const entryDate = String(formData.get("entry_date") ?? "").trim() || new Date().toISOString().slice(0, 10);
+
+  const { error } = await supabase.from("expense").insert({
+    tenant_id: tenantId, matter_id: matterId, user_id: user.id,
+    entry_date: entryDate, category, amount_minor: Math.round(amount * 100), billable, notes,
+  });
+  if (error) return { ok: false, message: error.message };
+  await logActivity(supabase, tenantId, { matterId, type: "expense.logged", summary: `Expense ${category}: ₹${amount}` });
+  revalidatePath(`/dashboard/cases/${matterId}`);
+  return { ok: true, message: "Expense logged." };
+}
+
 // Manual edit of core case fields (for cases without provider data, or corrections).
 export async function updateCase(matterId: string, formData: FormData): Promise<ActionResult> {
   const supabase = createClient();
