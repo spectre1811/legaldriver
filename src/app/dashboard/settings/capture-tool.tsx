@@ -9,7 +9,7 @@ import { generateCaptureToken } from "./capture-actions";
 // CAPTCHA as a human) clicks it on a case page; it POSTs the rendered text to our
 // token-authed endpoint. We never touch the CAPTCHA.
 function bookmarklet(token: string, baseUrl: string): string {
-  const code = `(function(){var t='${token}',b='${baseUrl}';fetch(b+'/api/court/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:t,url:location.href,text:document.body.innerText})}).then(function(r){return r.json()}).then(function(d){alert(d.ok?('LexDriver \\u2713 captured '+(d.cnr||'')+(d.nextHearingDate?(' \\u00b7 next '+d.nextHearingDate):'')):('LexDriver: '+(d.error||'failed')))}).catch(function(e){alert('LexDriver: '+e)})})();`;
+  const code = `(function(){var t='${token}',b='${baseUrl}';fetch(b+'/api/court/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:t,url:location.href,text:document.body.innerText})}).then(function(r){return r.json()}).then(function(d){var m=d.ok?(d.kind==='causelist'?('LexDriver \\u2713 cause list: '+d.captured+' listed, '+d.matched+' of your cases'+(d.updated?(' \\u00b7 '+d.updated+' dates updated'):'')):('LexDriver \\u2713 captured '+(d.cnr||'case')+(d.nextHearingDate?(' \\u00b7 next '+d.nextHearingDate):''))):('LexDriver: '+(d.error||'failed'));alert(m)}).catch(function(e){alert('LexDriver: '+e)})})();`;
   return "javascript:" + encodeURIComponent(code);
 }
 
@@ -53,8 +53,9 @@ export function CaptureTool({ token, baseUrl }: { token: string | null; baseUrl:
           </div>
           <ol className="list-decimal space-y-1 pl-5 text-xs text-ink-faint">
             <li>Drag <b>Capture to LexDriver</b> to your browser&apos;s bookmarks bar (once).</li>
-            <li>Open <span className="text-ink-soft">services.ecourts.gov.in</span>, search a case, solve the CAPTCHA, open the case-details page.</li>
-            <li>Click the bookmark — the case (parties, next hearing, acts) is filed into LexDriver.</li>
+            <li>Open <span className="text-ink-soft">services.ecourts.gov.in</span>, solve the CAPTCHA, and view a <b>case-details</b> page <i>or</i> a <b>cause list</b>.</li>
+            <li>Click the bookmark — a case-details page files the case (parties, next hearing, acts); a cause list matches listed cases to yours and updates hearing dates.</li>
+            <li className="text-amber-700">Updated the tool recently? Click <b>Regenerate</b> and re-drag to get the latest.</li>
           </ol>
         </>
       ) : (

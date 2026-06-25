@@ -58,6 +58,69 @@ export interface HitlResult {
   normalized?: NormalizedCase;
 }
 
+// ── Cause-list capture ───────────────────────────────────────────────────────
+// A cause-list page has no CNRs — it lists case NUMBERS (e.g. CC/9744/2007), the
+// parties (X versus Y) and the advocate, all for one hearing date. We parse those
+// rows so the capture can match them to the firm's cases and update hearing dates.
+export interface CauseListEntry {
+  caseNumber: string; // e.g. CC/9744/2007
+  regNo: string;      // e.g. 9744/2007
+  parties: string[];  // non-generic party names (the accused etc.)
+  advocate?: string;
+}
+export interface CauseListResult {
+  listDate: string | null;
+  entries: CauseListEntry[];
+}
+
+const GENERIC_PARTY = /^(the\s+)?(state(\s+of\s+\w+)?|union\s+of\s+india|govt|government|app|public\s+prosecutor|n\/a|versus|vs)\.?$/i;
+const CASE_NO_RE = /\b([A-Z]{1,6})\s*\/\s*(\d{1,7})\s*\/\s*(\d{4})\b/g;
+
+function firstDate(text: string): string | null {
+  // Prefer a date near a "date"/"cause list" label; else the first plausible date.
+  const near = text.match(/(?:cause\s*list|list\s*date|dated?)\D{0,20}(\d{1,2}[-/]\d{1,2}[-/]\d{4}|\d{1,2}(?:st|nd|rd|th)?\s+[A-Za-z]+,?\s+\d{4})/i);
+  const any = text.match(/\b\d{1,2}[-/]\d{1,2}[-/]\d{4}\b/);
+  return toIso(near?.[1] ?? any?.[0] ?? "");
+}
+
+export function parseEcourtsCauseList(text: string): CauseListResult {
+  const clean = (text || "").replace(/\r/g, "");
+  const matches = [...clean.matchAll(CASE_NO_RE)];
+  if (!matches.length) return { listDate: null, entries: [] };
+
+  const entries: CauseListEntry[] = [];
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i];
+    const caseNumber = `${m[1].toUpperCase()}/${m[2]}/${m[3]}`;
+    const regNo = `${m[2]}/${m[3]}`;
+    const start = (m.index ?? 0) + m[0].length;
+    const end = i + 1 < matches.length ? matches[i + 1].index ?? clean.length : Math.min(clean.length, start + 400);
+    // Strip the next row's leading "N  View" cells that bleed into this segment.
+    let segment = clean.slice(start, end).replace(/\s*\d{1,4}\s*\n?\s*view\s*$/i, " ");
+    // Drop obvious noise tokens (View buttons, section columns) before name extraction.
+    segment = segment.replace(/\bview\b/gi, " ").replace(/\b(?:crpc|cr\.?p\.?c|ipc|bns|bnss|bsa)\b[\s.\-]*\d+/gi, " ");
+
+    // Split parties on "versus"/"v/s"/"vs"; pull the most name-like phrase from each side.
+    const vsplit = segment.split(/\bversus\b|\bv\/s\b|\bvs\.?\b/i);
+    const cleanName = (s: string) =>
+      s.split("\n").map((x) => x.trim())
+        .filter((x) => x && !/^\d+$/.test(x) && !GENERIC_PARTY.test(x))
+        .map((x) => x.replace(/[^A-Za-z .&'-]/g, " ").replace(/\s+/g, " ").trim())
+        .filter((x) => x.length > 2)
+        .sort((a, b) => b.length - a.length)[0];
+    const parties: string[] = [];
+    for (const side of vsplit.slice(0, 2)) {
+      const nm = cleanName(side);
+      if (nm && !GENERIC_PARTY.test(nm)) parties.push(titleCase(nm));
+    }
+    entries.push({ caseNumber, regNo, parties: [...new Set(parties)] });
+  }
+  // Dedupe by case number.
+  const seen = new Set<string>();
+  const deduped = entries.filter((e) => (seen.has(e.caseNumber) ? false : (seen.add(e.caseNumber), true)));
+  return { listDate: firstDate(clean), entries: deduped };
+}
+
 export function parseEcourtsCapture(text: string): HitlResult {
   const clean = (text || "").replace(/\r/g, "");
   const lines = clean.split("\n").map((l) => l.trim()).filter(Boolean);

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { parseEcourtsCapture } from "@/lib/court/hitl-parse";
+import { parseEcourtsCapture, parseEcourtsCauseList } from "@/lib/court/hitl-parse";
 import { upsertCase } from "@/lib/court/sync";
 import type { Database } from "@/lib/db/database.types";
 
@@ -39,8 +39,50 @@ export async function POST(request: NextRequest) {
   const tenantId = tok.tenant_id;
 
   const parsed = parseEcourtsCapture(text);
+
+  // No CNR → this is likely a CAUSE-LIST page (case numbers, not CNRs). Parse those
+  // rows and match them to the firm's cases by registration number / party name,
+  // updating next-hearing dates when the list carries a date.
   if (!parsed.ok || !parsed.normalized) {
-    return NextResponse.json({ ok: false, error: parsed.reason ?? "could not parse the page" }, { status: 422, headers: CORS });
+    const cl = parseEcourtsCauseList(text);
+    if (!cl.entries.length) {
+      return NextResponse.json({ ok: false, error: parsed.reason ?? "could not recognise a case-details or cause-list page" }, { status: 422, headers: CORS });
+    }
+    try {
+      const { data: matters } = await admin.from("matter").select("id, title, party_names, detail, next_hearing_date").eq("tenant_id", tenantId);
+      const byParty = new Map<string, string>();
+      const byReg = new Map<string, string>();
+      for (const m of matters ?? []) {
+        for (const p of (m.party_names ?? [])) if (p) byParty.set(p.toLowerCase(), m.id);
+        const reg = (m.detail as { registrationNumber?: string } | null)?.registrationNumber;
+        if (reg) byReg.set(String(reg).toLowerCase(), m.id);
+      }
+      let matched = 0, updated = 0;
+      const matchedTitles: string[] = [];
+      for (const e of cl.entries) {
+        let mid = byReg.get(e.regNo.toLowerCase());
+        // Party match is inclusion-based (the cause-list cell often appends the
+        // advocate/"APP" to the name), so a stored party contained in the cell matches.
+        if (!mid) for (const p of e.parties) {
+          const pl = p.toLowerCase();
+          for (const [stored, id] of byParty) { if (stored.length > 4 && (pl.includes(stored) || stored.includes(pl))) { mid = id; break; } }
+          if (mid) break;
+        }
+        if (!mid) continue;
+        matched++;
+        const mt = (matters ?? []).find((x) => x.id === mid);
+        if (mt) matchedTitles.push(mt.title);
+        if (cl.listDate && mt && mt.next_hearing_date !== cl.listDate) {
+          await admin.from("matter").update({ next_hearing_date: cl.listDate, last_synced_at: new Date().toISOString() }).eq("id", mid);
+          updated++;
+        }
+      }
+      await admin.from("audit_event").insert({ tenant_id: tenantId, action: "court.causelist_capture", entity: "tenant", after: { captured: cl.entries.length, matched, updated, date: cl.listDate } });
+      await admin.from("capture_token").update({ last_used_at: new Date().toISOString() }).eq("token", token);
+      return NextResponse.json({ ok: true, kind: "causelist", captured: cl.entries.length, matched, updated, date: cl.listDate, matchedTitles: matchedTitles.slice(0, 10) }, { headers: CORS });
+    } catch (e) {
+      return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "causelist_ingest_failed" }, { status: 500, headers: CORS });
+    }
   }
   const c = parsed.normalized;
 
