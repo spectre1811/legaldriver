@@ -121,6 +121,7 @@ export async function ingestMail(
         storage_path: p.path,
         filename: p.att.filename,
         mime: p.att.mime,
+        size_bytes: p.att.data.length,
         parsed_text: p.text || null,
         doc_type: p.cls.doc_type,
         client_id: status === "filed" ? filing.clientId : p.cls.client_id,

@@ -102,6 +102,12 @@ export function fmtDate(d: string | null | undefined) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
+export function fmtSize(bytes: number | null | undefined) {
+  if (!bytes || bytes <= 0) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 export function fmtAgo(ts: string | null | undefined) {
   if (!ts) return "never";
   const mins = Math.round((Date.now() - new Date(ts).getTime()) / 60000);

@@ -78,6 +78,7 @@ export async function addCaseDocument(matterId: string, formData: FormData): Pro
     storage_path: path,
     filename: file.name,
     mime: file.type || "application/octet-stream",
+    size_bytes: buffer.length,
     parsed_text: text || null,
     matter_id: matterId,
     extracted: { needsOcr: needsOcr ?? false } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],

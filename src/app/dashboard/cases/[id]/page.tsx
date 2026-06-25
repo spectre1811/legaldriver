@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Badge, Disclaimer, fmtDate, fmtAgo } from "@/components/ui";
+import { Card, Badge, Disclaimer, fmtDate, fmtAgo, fmtSize } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { DocActions } from "@/components/doc-actions";
 import type { CaseSummary } from "@/lib/docs/case-summary";
 import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm } from "./case-actions";
 
@@ -15,12 +16,16 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const { data: matter } = await supabase.from("matter").select("*").eq("id", params.id).maybeSingle();
   if (!matter) notFound();
 
-  const [{ data: hearings }, { data: docs }, { data: client }, { data: activity }] = await Promise.all([
+  const [{ data: hearings }, { data: docs }, { data: client }, { data: activity }, { data: allMatters }, { data: allClients }] = await Promise.all([
     supabase.from("hearing").select("id, date, purpose, court_no, judge").eq("matter_id", matter.id).order("date", { ascending: false }),
-    supabase.from("document").select("id, filename, doc_type, source, created_at, parsed_text").eq("matter_id", matter.id).order("created_at", { ascending: false }),
+    supabase.from("document").select("id, filename, doc_type, source, size_bytes, created_at, parsed_text, matter_id, client_id").eq("matter_id", matter.id).order("created_at", { ascending: false }),
     matter.client_id ? supabase.from("client").select("name").eq("id", matter.client_id).maybeSingle() : Promise.resolve({ data: null }),
     supabase.from("activity_event").select("id, type, summary, created_at").eq("matter_id", matter.id).order("created_at", { ascending: false }).limit(30),
+    supabase.from("matter").select("id, title").order("title"),
+    supabase.from("client").select("id, name").order("name"),
   ]);
+  const matterOpts = (allMatters ?? []).map((m) => ({ id: m.id, label: m.title }));
+  const clientOpts = (allClients ?? []).map((c) => ({ id: c.id, label: c.name }));
 
   const parties = (Array.isArray(matter.parties) ? matter.parties : []) as Party[];
   const ai = matter.ai_summary as unknown as CaseSummary | null;
@@ -175,10 +180,8 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 <Icon name="documents" className="h-4 w-4 shrink-0 text-ink-faint" />
                 <span className="min-w-0 flex-1 truncate font-medium text-ink">{d.filename}</span>
                 <Badge>{d.doc_type ?? d.source}</Badge>
-                {(d.parsed_text?.length ?? 0) > 0 && <span className="hidden text-xs text-ink-faint sm:inline">{d.parsed_text!.length.toLocaleString("en-IN")} chars</span>}
-                <a href={`/api/documents/${d.id}/download`} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:text-brand-700" title="Open">
-                  <Icon name="external" className="h-4 w-4" />
-                </a>
+                <span className="hidden text-xs text-ink-faint sm:inline">{fmtSize(d.size_bytes)}</span>
+                <DocActions documentId={d.id} matterId={d.matter_id} clientId={d.client_id} matters={matterOpts} clients={clientOpts} />
               </li>
             ))}
           </ul>

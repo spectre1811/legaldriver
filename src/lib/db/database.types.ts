@@ -528,10 +528,12 @@ export type Database = {
           email_message_id: string | null
           extracted: Json
           filename: string | null
+          fts: unknown
           id: string
           matter_id: string | null
           mime: string | null
           parsed_text: string | null
+          size_bytes: number | null
           source: string
           storage_path: string | null
           tenant_id: string
@@ -543,10 +545,12 @@ export type Database = {
           email_message_id?: string | null
           extracted?: Json
           filename?: string | null
+          fts?: unknown
           id?: string
           matter_id?: string | null
           mime?: string | null
           parsed_text?: string | null
+          size_bytes?: number | null
           source: string
           storage_path?: string | null
           tenant_id: string
@@ -558,10 +562,12 @@ export type Database = {
           email_message_id?: string | null
           extracted?: Json
           filename?: string | null
+          fts?: unknown
           id?: string
           matter_id?: string | null
           mime?: string | null
           parsed_text?: string | null
+          size_bytes?: number | null
           source?: string
           storage_path?: string | null
           tenant_id?: string
