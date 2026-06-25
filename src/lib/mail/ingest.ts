@@ -139,6 +139,7 @@ export async function ingestMail(
         size_bytes: p.att.data.length,
         parsed_text: p.text || null,
         doc_type: p.cls.doc_type,
+        category: p.cls.category,
         client_id: status === "filed" ? filing.clientId : p.cls.client_id,
         matter_id: status === "filed" ? filing.matterId : p.cls.matter_id,
         content_hash: p.contentHash,

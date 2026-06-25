@@ -819,6 +819,7 @@ export type Database = {
       }
       document: {
         Row: {
+          category: string | null
           client_id: string | null
           content_hash: string | null
           created_at: string
@@ -838,6 +839,7 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          category?: string | null
           client_id?: string | null
           content_hash?: string | null
           created_at?: string
@@ -857,6 +859,7 @@ export type Database = {
           tenant_id: string
         }
         Update: {
+          category?: string | null
           client_id?: string | null
           content_hash?: string | null
           created_at?: string

@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "@/components/icons";
+import { CATEGORIES, CATEGORY_LABEL } from "@/lib/docs/categories";
 
 type Opt = { id: string; label: string };
 
@@ -29,6 +30,10 @@ export function FilterBar({ types, clients }: { types: string[]; clients: Opt[] 
       <select value={sp.get("client") ?? ""} onChange={(e) => setParam("client", e.target.value)} className="input max-w-[12rem]" aria-label="Client">
         <option value="">All clients</option>
         {clients.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+      </select>
+      <select value={sp.get("category") ?? ""} onChange={(e) => setParam("category", e.target.value)} className="input max-w-[12rem]" aria-label="Category">
+        <option value="">All categories</option>
+        {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{CATEGORY_LABEL[c.key]}</option>)}
       </select>
       <select value={sp.get("source") ?? ""} onChange={(e) => setParam("source", e.target.value)} className="input max-w-[10rem]" aria-label="Source">
         <option value="">All sources</option>

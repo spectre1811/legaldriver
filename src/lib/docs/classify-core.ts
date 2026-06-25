@@ -10,8 +10,11 @@ export interface ClassifyInput {
   matters: { id: string; title: string; cnr?: string | null }[];
 }
 
+import { categoryOf, DOC_TYPES } from "./categories";
+
 export interface Classification {
   doc_type: string;
+  category: string; // derived canonical category (categoryOf(doc_type))
   client_id: string | null;
   matter_id: string | null;
   confidence: number;
@@ -25,6 +28,7 @@ export interface Classification {
 
 export const FALLBACK: Classification = {
   doc_type: "other",
+  category: "other",
   client_id: null,
   matter_id: null,
   confidence: 0,
@@ -39,7 +43,7 @@ export const CLASSIFY_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
-    doc_type: { type: "string", description: "e.g. court_order, notice, agreement, invoice, correspondence, other" },
+    doc_type: { type: "string", enum: DOC_TYPES as unknown as string[], description: "the single best document type from the controlled list" },
     client_id: { type: ["string", "null"], description: "best-match client id from the provided list, or null" },
     matter_id: { type: ["string", "null"], description: "best-match matter id from the provided list, or null" },
     confidence: { type: "number", description: "0..1 confidence in the client/matter match" },
@@ -68,6 +72,8 @@ export function buildClassifyPrompt(input: ClassifyInput): string {
     input.matters.map((m) => `- ${m.id}: ${m.title}${m.cnr ? ` [CNR ${m.cnr}]` : ""}`).join("\n") || "(none)";
   return `You are a legal document classifier for an advocate's practice. Classify the document and extract key fields. Match it to at most one client and one matter from the lists; if no good match, set the id to null. Do not invent ids — only use ids from the lists.
 
+Pick doc_type as the SINGLE best fit from this controlled list (use "other" only if none fit): ${DOC_TYPES.join(", ")}.
+
 Set is_legal=true ONLY for genuine legal/court/client matters (court orders, notices, pleadings, agreements, case correspondence, invoices to/from clients). Set is_legal=false for newsletters, marketing, OTPs, security alerts, social, and personal mail.
 When is_legal=true AND no existing client matches, put the client/party name in suggested_client_name (else null). When is_legal=true AND no existing matter matches, put a short case title in suggested_matter_title (else null). Always list any CNR numbers found in extracted.cnrs.
 
@@ -90,8 +96,10 @@ export function normalizeClassification(result: unknown, input: ClassifyInput): 
   const clientIds = new Set(input.clients.map((c) => c.id));
   const matterIds = new Set(input.matters.map((m) => m.id));
   const ex = (r.extracted ?? {}) as Partial<Classification["extracted"]>;
+  const docType = r.doc_type ?? "other";
   return {
-    doc_type: r.doc_type ?? "other",
+    doc_type: docType,
+    category: categoryOf(docType, input.filename),
     client_id: r.client_id && clientIds.has(r.client_id) ? r.client_id : null,
     matter_id: r.matter_id && matterIds.has(r.matter_id) ? r.matter_id : null,
     confidence: typeof r.confidence === "number" ? Math.max(0, Math.min(1, r.confidence)) : 0,

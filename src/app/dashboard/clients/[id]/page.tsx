@@ -8,6 +8,7 @@ import { PortalInvite, FirmComposer } from "./portal-controls";
 import { ClientDocUpload } from "./client-docs";
 import { Communications } from "@/components/communications";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/docs/categories";
 import { deleteClient } from "./actions";
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
@@ -30,7 +31,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
     : `client_id.eq.${client.id}`;
   const { data: docs } = await supabase
     .from("document")
-    .select("id, filename, doc_type, source, client_id, matter_id, size_bytes, portal_shared, created_at")
+    .select("id, filename, doc_type, category, source, client_id, matter_id, size_bytes, portal_shared, created_at")
     .or(orFilter)
     .order("created_at", { ascending: false })
     .limit(300);
@@ -38,6 +39,19 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   const matterName = new Map((matters ?? []).map((m) => [m.id, m.title]));
   const clientOpts = (allClients ?? []).map((c) => ({ id: c.id, label: c.name }));
   const matterOpts = (allMatters ?? []).map((m) => ({ id: m.id, label: m.title }));
+
+  // Group documents by canonical category, preserving the created_at ordering within
+  // each group and presenting groups in CATEGORY_ORDER. Unknown categories fall back
+  // to "other" so nothing is dropped.
+  const docList = docs ?? [];
+  const byCategory = new Map<string, typeof docList>();
+  for (const d of docList) {
+    const key = d.category && CATEGORY_LABEL[d.category] ? d.category : "other";
+    (byCategory.get(key) ?? byCategory.set(key, []).get(key)!).push(d);
+  }
+  const docGroups = CATEGORY_ORDER
+    .map((key) => ({ key, docs: byCategory.get(key) ?? [] }))
+    .filter((g) => g.docs.length > 0);
 
   return (
     <div className="space-y-7">
@@ -87,41 +101,51 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           <h2 className="text-base font-medium">Documents <span className="text-ink-faint">({docs?.length ?? 0})</span></h2>
           <ClientDocUpload clientId={client.id} />
         </div>
-        {docs && docs.length ? (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-line text-left">
-                <th className="px-5 py-3 label">File</th>
-                <th className="hidden px-5 py-3 label sm:table-cell">Type</th>
-                <th className="px-5 py-3 label">Filed under</th>
-                <th className="hidden px-5 py-3 label lg:table-cell">Size</th>
-                <th className="hidden px-5 py-3 label lg:table-cell">Added</th>
-                <th className="px-5 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {docs.map((d) => {
-                const filedName = d.matter_id ? matterName.get(d.matter_id) ?? "case" : "client";
-                return (
-                  <tr key={d.id} className="border-b border-line last:border-0 hover:bg-paper">
-                    <td className="px-5 py-3.5">
-                      <span className="flex items-center gap-2.5">
-                        <Icon name="documents" className="h-4 w-4 shrink-0 text-ink-faint" />
-                        <span className="font-medium text-ink">{d.filename ?? "—"}</span>
-                      </span>
-                    </td>
-                    <td className="hidden px-5 py-3.5 sm:table-cell">{d.doc_type ? <Badge>{d.doc_type}</Badge> : <span className="text-ink-faint">—</span>}</td>
-                    <td className="px-5 py-3.5 text-ink-muted">{filedName}</td>
-                    <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtSize(d.size_bytes)}</td>
-                    <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtDate(d.created_at)}</td>
-                    <td className="px-5 py-3.5 text-right">
-                      <DocActions documentId={d.id} matterId={d.matter_id} clientId={d.client_id} matters={matterOpts} clients={clientOpts} shared={d.portal_shared} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {docGroups.length ? (
+          <div className="divide-y divide-line">
+            {docGroups.map((g) => (
+              <section key={g.key}>
+                <div className="flex items-center gap-2 bg-paper px-5 py-2.5">
+                  <h3 className="label">{CATEGORY_LABEL[g.key]}</h3>
+                  <span className="text-xs text-ink-faint">({g.docs.length})</span>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-line text-left">
+                      <th className="px-5 py-3 label">File</th>
+                      <th className="hidden px-5 py-3 label sm:table-cell">Type</th>
+                      <th className="px-5 py-3 label">Filed under</th>
+                      <th className="hidden px-5 py-3 label lg:table-cell">Size</th>
+                      <th className="hidden px-5 py-3 label lg:table-cell">Added</th>
+                      <th className="px-5 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {g.docs.map((d) => {
+                      const filedName = d.matter_id ? matterName.get(d.matter_id) ?? "case" : "client";
+                      return (
+                        <tr key={d.id} className="border-b border-line last:border-0 hover:bg-paper">
+                          <td className="px-5 py-3.5">
+                            <Link href={`/dashboard/documents/${d.id}`} className="flex items-center gap-2.5 hover:text-brand-600">
+                              <Icon name="documents" className="h-4 w-4 shrink-0 text-ink-faint" />
+                              <span className="font-medium text-ink">{d.filename ?? "—"}</span>
+                            </Link>
+                          </td>
+                          <td className="hidden px-5 py-3.5 sm:table-cell">{d.doc_type ? <Badge>{d.doc_type}</Badge> : <span className="text-ink-faint">—</span>}</td>
+                          <td className="px-5 py-3.5 text-ink-muted">{filedName}</td>
+                          <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtSize(d.size_bytes)}</td>
+                          <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtDate(d.created_at)}</td>
+                          <td className="px-5 py-3.5 text-right">
+                            <DocActions documentId={d.id} matterId={d.matter_id} clientId={d.client_id} matters={matterOpts} clients={clientOpts} shared={d.portal_shared} docType={d.doc_type} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </section>
+            ))}
+          </div>
         ) : <p className="px-5 py-8 text-center text-sm text-ink-faint">No documents for this client yet. Upload files above, or they’ll appear here as email is filed.</p>}
       </Card>
 

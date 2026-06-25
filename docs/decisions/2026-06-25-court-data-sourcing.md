@@ -285,3 +285,115 @@ optional fallback; everything else is free.
   https://iapp.org/news/a/scraping-public-data-in-india-innovation-enabler-or-privacy-threat- ·
   https://www.meity.gov.in/static/uploads/2024/06/2bf1f0e9f04e6fb4f8fef35e82c42aa5.pdf
 - (Excluded: https://free.law/projects/supreme-court-data/ — US SCOTUS, not India)
+
+---
+
+## Appendix: eCourts mobile app / Kleopatra API
+
+**Question investigated:** Does the official *eCourts Services* Android app (eCommittee, Supreme
+Court of India) expose a backend/API that is *not* CAPTCHA-gated, and would calling it
+programmatically be a compliant path for us — i.e. materially different from scraping the website?
+(Web research only; no probing of any eCourts server was performed.)
+
+### 1. What the app is and what backend it uses
+
+- The *eCourts Services* app (Play Store id `in.gov.ecourts.eCourtsServices`, also iOS) is the
+  official eCommittee app. It surfaces case status, case history, cause lists, court orders and
+  judgments, searchable by CNR, party name, advocate name, FIR number, case type or Act, and
+  reads from the **National Judicial Data Grid (NJDG)** for district/taluka courts.
+  [ecommitteesci.gov.in, india.gov.in]
+- There is **no officially documented app API, OpenAPI spec, developer key, or partner programme**
+  on ecommitteesci.gov.in / ecourts.gov.in. The official pages describe end-user features only —
+  nothing about programmatic access. The only government-published API surface is on
+  `data.gov.in` (OGD), which is static/aggregate judiciary datasets, **not** a live per-case
+  case-status/cause-list API. (Confirms C1 in the main doc: no official live API.)
+- The "Kleopatra"/`eciapi.akshit.me` API and similar third-party services (ecourtsindia.com,
+  Apify "eCourt India scraper", vakeel360) are **unofficial**. Where they state a source, they
+  say they "query the official eCourts portal at **services.ecourts.gov.in**" — i.e. they front
+  the public *website*, not a separate clean app API. eciapi explicitly disclaims:
+  *"This API is in no way shape or form in association with the Government of India or its
+  subsidiaries."* Its internal "Phoenix" component is just a cached court-hierarchy DB, not a
+  data source. [eciapi.akshit.me, apify.com, court-api.kleopatra.io]
+
+### 2. CAPTCHA, tokens, attestation
+
+- **CAPTCHA exists on the case-search flow** of the public eCourts portal/app: every case-status
+  search requires entering a 5-char image CAPTCHA. This is the access control that gates the live
+  data. [services.ecourts.gov.in case-status flow; LawCentral guide]
+- The unofficial APIs deal with CAPTCHA in one of two ways, both disqualifying for us:
+  (a) **auto-solve/bypass** it server-side (the entire value proposition of the "enterprise API"
+  is that *you* don't see the CAPTCHA — something is solving it), or (b) **surface the failure**
+  for manual retry (Apify: *"eCourts occasionally requires CAPTCHA; difficult CNRs are returned
+  with an explanatory error so you can retry"*). Either way the CAPTCHA is real and is being
+  programmatically circumvented or worked around.
+- No evidence of any *additional* hard gate (device attestation / Play Integrity / signed
+  requests / per-app session tokens) on the data endpoints that would make the app API a
+  distinct, sanctioned channel. The CAPTCHA *is* the access control; there is no documented
+  token-issuance or registration step that constitutes "authorised programmatic access."
+
+### 3. eCourts Terms & Conditions
+
+- The official eCourts T&C (ecourts.gov.in/.../terms.php) is thin: it disclaims liability,
+  states data is *"for reference purposes only"* and *"should not be construed as a statement of
+  law,"* but contains **no explicit clause** granting or prohibiting automated/programmatic
+  access or reverse engineering. So there is no contractual *permission* either — the absence of
+  a "you may build on this" term is not a green light.
+- The control that *is* present and unambiguous is the **CAPTCHA**, which is an access-control
+  measure by design (to stop automated/bulk querying). Defeating it is the operative problem,
+  regardless of what the prose T&C says.
+
+### 4. Legal posture in India (app API vs website)
+
+- Under Indian law there is no statute that flatly bans scraping, but **defeating an access
+  control (the CAPTCHA) to query a government system can attract IT Act s.43 / s.66**
+  ("unauthorised access"), and breaching site terms can be breach of contract. [ikigailaw,
+  spiceroutelegal, law.asia, iapp]
+- Reverse-engineering the app *to learn the protocol* sits in a genuine grey zone: Copyright Act
+  s.52(1)(ab)/(ac) permits study/interoperability reverse engineering, and SpicyIP's Aarogya
+  Setu analysis argues a government app's blanket anti-RE term may be unenforceable against
+  fair-dealing research. **But that protects studying the app — not the downstream act of
+  routinely, automatically pulling live case data by defeating the CAPTCHA.** The
+  interoperability defence covers understanding; it does not license bulk automated extraction
+  against an access control.
+- **Net: using the app's undocumented endpoints programmatically is not materially "cleaner"
+  than scraping the website.** It is the same data behind the same CAPTCHA; calling it via the
+  app's JSON endpoints instead of the HTML page changes the wire format, not the legality.
+
+### 5. Has anyone built on it / what happened
+
+- A small ecosystem exists (eciapi/Kleopatra, ecourtsindia.com, Apify actors, vakeel360, the
+  openjustice-in/ecourts scraper on GitHub) — all unofficial, all ultimately fronting
+  services.ecourts.gov.in, all confronting the CAPTCHA. No evidence surfaced of an official
+  blessing; conversely no high-profile prosecution surfaced either — the posture is "tolerated
+  grey market," not "sanctioned." That is exactly the risk profile our hard line exists to avoid.
+
+### Verdict
+
+**Non-compliant for us — same forbidden category as scraping the website.** The app API is not a
+CAPTCHA-free side door: the live case-search data sits behind the *same* image CAPTCHA, and the
+"enterprise" appeal of the unofficial APIs is precisely that they solve/bypass that CAPTCHA
+server-side. Our hard line forbids circumventing access controls and automated access that
+violates ToS; routing through the app's undocumented endpoints does both, just in JSON instead of
+HTML. There is **no officially documented eCourts app API and no partner programme**, so there is
+no sanctioned channel to opt into.
+
+**The one legitimate sliver:** *studying* the app (decompile, observe the protocol) for
+understanding/interoperability is defensible under Copyright Act s.52, and *manually* retrieving a
+single case (a human solving the CAPTCHA for a case the firm is entitled to track) is fine — that
+is our existing HITL paste/upload path. What is off-limits is the step that makes it an API:
+automated, repeated, CAPTCHA-defeating extraction. So this confirms the main doc's plan unchanged:
+HITL manual entry as the keystone, MockCourtDataClient for dev, and a *paid licensed* provider
+only behind an explicit opt-in for a live demo — never the app/Kleopatra endpoints as our backend.
+
+**Sources (appendix):**
+ecommitteesci.gov.in/service/ecourts-services-mobile-application/ ·
+play.google.com/store/apps/details?id=in.gov.ecourts.eCourtsServices ·
+ecourts.gov.in/ecourts_home/static/terms.php ·
+services.ecourts.gov.in/ecourtindia_v6/ (case-status CAPTCHA flow) ·
+eciapi.akshit.me · akshit-me.gitbook.io/e-courts-india-api (+ /phoenix) · court-api.kleopatra.io ·
+apify.com/parseforge/court-records-ecourt-india-scraper · github.com/openjustice-in/ecourts ·
+data.gov.in (OGD judiciary) ·
+spicyip.com/2020/05/reverse-engineering-and-aarogya-setu-app-contracting-out-of-fair-dealing.html ·
+ikigailaw.com/article/263/legality-of-data-scraping-in-india ·
+spiceroutelegal.com/publications/legality-of-data-scraping-under-indian-law/ ·
+law.asia/india-data-scraping-regulation/

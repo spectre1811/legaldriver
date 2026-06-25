@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
 import { logActivity } from "@/lib/activity";
+import { categoryOf } from "@/lib/docs/categories";
 
 export type DocResult = { ok: boolean; message: string };
 
@@ -20,8 +21,12 @@ export async function relinkDocument(
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
   if (!tenantId) return { ok: false, message: "No tenant." };
-  const patch: { matter_id: string | null; client_id: string | null; doc_type?: string | null } = { matter_id: matterId, client_id: clientId };
-  if (docType !== undefined) patch.doc_type = docType?.trim() || null;
+  const patch: { matter_id: string | null; client_id: string | null; doc_type?: string | null; category?: string } = { matter_id: matterId, client_id: clientId };
+  if (docType !== undefined) {
+    const dt = docType?.trim() || null;
+    patch.doc_type = dt;
+    patch.category = categoryOf(dt);
+  }
   const { error } = await supabase.from("document").update(patch).eq("id", documentId); // RLS scopes to tenant
   if (error) return { ok: false, message: error.message };
   if (matterId) await logActivity(supabase, tenantId, { matterId, type: "document.filed", summary: "Document filed to this case" });
