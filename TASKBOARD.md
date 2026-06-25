@@ -13,6 +13,26 @@ Shared coordination file for build workstreams. Status: `todo` · `claimed` · `
 | **P3 Gmail ingest + parsing** | OAuth connect, incremental fetch, attachment storage, Claude classify, grouped inbox, needs-review queue | connect Gmail → attachment filed under right client/case | **done ✅** (auto-files via local Claude Code CLI, no API key) |
 | **P4 Polish + demo** | disclaimers/provenance, a11y pass, demo seed, README + 60s script, deploy + smoke | live URL non-empty, smoke passes | **done ✅** — live at legaldriver.vercel.app |
 
+## Phase 2 (P5–P10) — keyless modules shipped
+
+P5 matter depth · P6 time+expense · P7/P8 client portal (strict RLS isolation) · P10 IPR · documents browser + search · richer AI briefings (worker). Gated: Razorpay, eSign, WhatsApp reminders. See `BACKLOG.md`.
+
+## Phase 3 — platform: gateway + services (modular monolith, contract-first)
+
+Decision: `docs/decisions/2026-06-25-phase3-architecture.md` (services as env-switched modules with mock+live, extractable later — not separate runtimes yet).
+
+| # | Capability | Status |
+|---|---|---|
+| E7 | **Court Data Gateway v1** — read-through `court_cache` (shared) + provider-health + stale-on-error; richer normalization (acts/judges/orders/detail) | **done ✅** keyless. v2 (multi-provider routing + HITL refresh UI) scaffolded (`court_refresh_request`) |
+| E4 | **Rich case detail + similar-case** — acts, orders, detail grid, weighted same-party/advocate/judge/act discovery | **done ✅** keyless |
+| E3 | **Case console** — search/filter/sort + saved views | **done ✅** keyless |
+| E2 | **Client-first documents** — per-client library + bulk upload + content-hash dedup | **done ✅** keyless |
+| E6 | **Lawyer Agent** — grounded retrieval (matter corpus + seeded BNS/BNSS/BSA↔IPC/CrPC/Evidence KB) + cite-or-abstain + Copilot UI; async via worker on keyless prod | **done ✅** keyless. Gated upgrades: pgvector RAG (embeddings key), Indian Kanoon API |
+| E1 | **Messaging Gateway** — `MessagingClient` seam + inbound classify-to-matter + inbox UI | **done ✅** (mock); live WhatsApp BSP gated |
+| E5 | **Voice/Call Service** — consent-gated manual upload + tag-by-client + recordings UI | **done ✅** (manual); telephony + Indic STT gated |
+
+Migrations 0010 (court/docs/console) + 0011 (services). Smoke: gateway PASS, agent PASS (grounded + cited).
+
 ## Workstreams
 
 | Agent | Owns | Status |

@@ -1,8 +1,22 @@
 # Legaldriver — Backlog Dashboard
 
-_Last updated: 2026-06-25. Source of truth for what's **not** yet shipped. Shipped work is in `TASKBOARD.md` / git history._
+_Last updated: 2026-06-25 (post Phase-3). Source of truth for what's **not** yet shipped. Shipped work is in `TASKBOARD.md` / git history._
 
-**Legend:** 🟢 ready (keyless — I can build now) · 🟡 needs a decision · 🔴 blocked on a key/account · 🔵 deferred (Phase 3)
+**Legend:** 🟢 ready (keyless — I can build now) · 🟡 needs a decision · 🔴 blocked on a key/account · 🔵 deferred (later)
+
+## Phase 3 shipped (this round) ✅
+Court Data Gateway v1 (shared cache + provider-health + richer normalization) · client-first
+document library + dedup · case console (search/filter/sort + saved views) · rich case detail +
+similar-case discovery · **Lawyer Agent** (grounded + cited, BNS/BNSS/BSA↔IPC/CrPC/Evidence KB,
+keyless via worker) + Copilot UI · Messaging Gateway (mock; BSP gated) · Voice service (manual
+upload; telephony/STT gated). Architecture: `docs/decisions/2026-06-25-phase3-architecture.md`.
+
+### New Phase-3 follow-ups
+- 🟢 **pgvector RAG**: `document_chunk` table exists (FTS retrieval works); add embeddings when a provider is chosen → semantic recall.
+- 🟢 **WhatsApp/telephony number→tenant map**: webhooks use a single-tenant fallback (`MESSAGING_DEFAULT_TENANT_ID`); add a firm-number→tenant table for true multi-tenant inbound.
+- 🟢 **Court Data Gateway v2**: multi-provider routing/failover + the human-in-the-loop refresh UI (paste official-portal payload → parse to cache; `court_refresh_request` table ready).
+- 🟢 **WhatsApp media download** + **telephony audio import** into storage (currently referenced by id/URL).
+- 🟡 **AGENT_MODEL on prod**: agent synthesis runs on the keyless worker (haiku/sonnet via CLI); set `ANTHROPIC_API_KEY` for synchronous in-request answers.
 
 ---
 
@@ -36,8 +50,12 @@ _Last updated: 2026-06-25. Source of truth for what's **not** yet shipped. Shipp
 | Portal invoice payments | P8 | Razorpay (above) | same |
 | Aadhaar eSign + eStamp | P7 | eSign provider account | Pick **Leegality** or **Digio**; `ESIGN_PROVIDER`, `ESIGN_API_KEY`, `ESIGN_API_SECRET`. (PoA/vakalatnama routed away from Aadhaar eSign by design) |
 | Portal e-sign | P8 | eSign (above) | same |
-| WhatsApp reminders | P10 | Meta-authorized BSP account | Pick a BSP (AiSensy/Wati/Gupshup/Interakt/Twilio) + **your** Meta business verification & approved utility templates; `WHATSAPP_BSP_API_KEY`, `WHATSAPP_BSP_PHONE_NUMBER_ID`, `WHATSAPP_BSP_BASE_URL` |
-| RAG "ask-your-matters" + pgvector | P9 | Embeddings provider | **Anthropic has no embeddings API** — choose Voyage AI or OpenAI (a key), or an OSS embedding model run on the worker box |
+| WhatsApp messaging (live) | E1/P10 | Meta-authorized BSP account | Gateway is built (mock works) — flip live with a BSP (AiSensy/Wati/Gupshup/Interakt/Twilio) + Meta business verification & approved templates: `WHATSAPP_BSP_API_KEY`, `WHATSAPP_BSP_PHONE_NUMBER_ID`, `WHATSAPP_BSP_BASE_URL`, `WHATSAPP_BSP_WEBHOOK_VERIFY_TOKEN` |
+| Voice transcription (live) | E5 | Indic STT provider | Voice upload/tagging is built — flip transcription live with `STT_PROVIDER` (sarvam/ai4bharat/whisper) + `STT_API_KEY` |
+| Cloud-telephony auto-recording | E5 | Telephony account | Auto-tag-by-number path: `TELEPHONY_PROVIDER` (exotel/knowlarity) + `TELEPHONY_API_KEY`/`_API_TOKEN`/`_SUBDOMAIN` |
+| Lawyer Agent: precedents | E6 | Indian Kanoon API | `INDIANKANOON_API_KEY` → cite real case-law + cited-by validity (agent + KB work without it) |
+| RAG semantic recall + pgvector | E6/P9 | Embeddings provider | `document_chunk` + FTS retrieval already live — add `EMBEDDINGS_PROVIDER`/`EMBEDDINGS_API_KEY` (Voyage/OpenAI; Anthropic has none) for semantic recall |
+| Court multi-provider routing | E7 | Secondary court APIs | `VAKEEL360_API_KEY` / `KANOON_DEV_API_KEY` → failover beyond eCourtsIndia (cache + routing seam ready) |
 
 ---
 
@@ -63,7 +81,7 @@ _Last updated: 2026-06-25. Source of truth for what's **not** yet shipped. Shipp
 
 ---
 
-## 5) Deferred — Phase 3 🔵
+## 5) Deferred — later phase 🔵
 
 Native mobile apps · enterprise SSO/SCIM · dedicated analytics warehouse (BigQuery) — Phase-2 reporting runs on Postgres views · multi-region data residency.
 
