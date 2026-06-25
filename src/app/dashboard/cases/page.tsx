@@ -4,6 +4,8 @@ import { PageHeader, Card, Badge, EmptyState, Disclaimer, fmtDate, fmtAgo } from
 import { Icon } from "@/components/icons";
 import { AddCaseForm } from "./add-case-form";
 import { Console, type SavedView } from "./console";
+import { ConfirmDelete } from "@/components/confirm-delete";
+import { deleteMatter } from "./actions";
 
 type Search = {
   q?: string;
@@ -129,6 +131,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
                 <th className="hidden px-5 py-3 label sm:table-cell">Status</th>
                 <th className="px-5 py-3 label">Next hearing</th>
                 <th className="hidden px-5 py-3 label lg:table-cell">Source</th>
+                <th className="px-5 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -151,6 +154,9 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
                       <span className={overdue ? "font-medium text-amber-700" : "text-ink-soft"}>{fmtDate(m.next_hearing_date)}</span>
                     </td>
                     <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{m.source ?? "—"} · {fmtAgo(m.last_synced_at)}</td>
+                    <td className="px-5 py-3.5 text-right">
+                      <ConfirmDelete action={deleteMatter} id={m.id} label="" confirmLabel="Delete case" />
+                    </td>
                   </tr>
                 );
               })}

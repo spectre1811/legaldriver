@@ -9,6 +9,8 @@ import type { CaseSummary } from "@/lib/docs/case-summary";
 import { findSimilarCases } from "@/lib/court/similar";
 import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm } from "./case-actions";
 import { Communications } from "@/components/communications";
+import { ConfirmDelete } from "@/components/confirm-delete";
+import { deleteMatter } from "../actions";
 
 type Party = { name?: string; side?: string; advocate?: string };
 
@@ -100,6 +102,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             }}
           />
           {matter.cnr && <RefreshButton matterId={matter.id} />}
+          <ConfirmDelete action={deleteMatter} id={matter.id} label="Delete" confirmLabel="Delete case" note="Documents stay in the client's library" redirectTo="/dashboard/cases" size="md" />
         </div>
       </header>
 

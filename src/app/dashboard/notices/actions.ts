@@ -64,3 +64,31 @@ export async function markResponded(noticeId: string): Promise<ActionResult> {
   revalidatePath("/dashboard/notices");
   return { ok: true, message: "Marked responded." };
 }
+
+// Delete a notice (tenant-scoped via RLS). Also clears any pending escalation
+// notifications that reference it (payload.ref = "notice:<id>"), then audits.
+export async function deleteNotice(noticeId: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+
+  // Clear pending escalation notifications tied to this notice (best-effort).
+  await supabase
+    .from("notification")
+    .delete()
+    .eq("tenant_id", tenantId)
+    .eq("status", "pending")
+    .contains("payload", { ref: `notice:${noticeId}` });
+
+  const { error } = await supabase.from("notice").delete().eq("id", noticeId); // RLS scopes to tenant
+  if (error) return { ok: false, message: error.message };
+
+  await supabase.from("audit_event").insert({
+    tenant_id: tenantId,
+    action: "notice.delete",
+    entity: "notice",
+    entity_id: noticeId,
+  });
+  revalidatePath("/dashboard/notices");
+  return { ok: true, message: "Deleted." };
+}

@@ -34,3 +34,23 @@ export async function addAdvocate(_prev: ActionResult, formData: FormData): Prom
   revalidatePath("/dashboard/calendar");
   return { ok: true, message: `Added advocate ${name}${bar ? ` (${bar})` : ""}.` };
 }
+
+// Delete an advocate (tenant-scoped via RLS), then audit.
+export async function deleteAdvocate(id: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+
+  const { error } = await supabase.from("advocate").delete().eq("id", id); // RLS scopes to tenant
+  if (error) return { ok: false, message: error.message };
+
+  await supabase.from("audit_event").insert({
+    tenant_id: tenantId,
+    action: "advocate.delete",
+    entity: "advocate",
+    entity_id: id,
+  });
+  revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard/calendar");
+  return { ok: true, message: "Deleted." };
+}

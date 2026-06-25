@@ -11,6 +11,20 @@ import type { Database } from "@/lib/db/database.types";
 
 export type ActionResult = { ok: boolean; message: string };
 
+// Delete a client. FKs SET NULL on matters/documents/notices/ip/messages (they
+// SURVIVE, unlinked — cases aren't deleted, just unclient'd) and CASCADE the portal
+// user + portal messages (access is revoked). Tenant-scoped via RLS.
+export async function deleteClient(clientId: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const { error } = await supabase.from("client").delete().eq("id", clientId);
+  if (error) return { ok: false, message: error.message };
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "client.delete", entity: "client", entity_id: clientId });
+  revalidatePath("/dashboard/clients");
+  return { ok: true, message: "Client deleted. Their cases and documents were kept (unlinked)." };
+}
+
 // Invite a client to the portal: create a portal auth user (is_portal=true so the
 // firm-bootstrap trigger skips it) and link it to this client. Firm sets the initial
 // password to share. RLS confines the portal user to this client only.

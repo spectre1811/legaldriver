@@ -216,6 +216,24 @@ export async function addCaseByCnr(_prev: ActionResult, formData: FormData): Pro
   };
 }
 
+// Delete a case. The DB FKs do the right thing: hearings, deadlines, time, expenses,
+// orders, activity CASCADE (gone with the case); documents/notices/messages/calendar
+// SET NULL — they SURVIVE, unlinked (a document belongs to the client, not the case).
+export async function deleteMatter(matterId: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  // Clear pending hearing reminders for this matter (notification has no FK; keyed by payload ref).
+  await supabase.from("notification").delete().eq("tenant_id", tenantId).eq("status", "pending").contains("payload", { ref: `matter:${matterId}` });
+  const { error } = await supabase.from("matter").delete().eq("id", matterId); // RLS scopes to tenant
+  if (error) return { ok: false, message: error.message };
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "case.delete", entity: "matter", entity_id: matterId });
+  revalidatePath("/dashboard/cases");
+  revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard");
+  return { ok: true, message: "Case deleted. Linked documents were kept in the client's library." };
+}
+
 export async function refreshCase(matterId: string): Promise<ActionResult> {
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);

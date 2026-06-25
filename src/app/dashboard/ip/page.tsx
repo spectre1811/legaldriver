@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
 import { IpForm } from "./ip-form";
+import { DeleteButton } from "@/components/delete-button";
+import { deleteIpAsset } from "./actions";
 
 const TYPE_TONE: Record<string, "brand" | "amber" | "green" | "neutral"> = {
   trademark: "brand", patent: "amber", copyright: "green", design: "neutral",
@@ -36,6 +38,7 @@ export default async function IpPage() {
                 <th className="hidden px-5 py-3 label sm:table-cell">Type</th>
                 <th className="hidden px-5 py-3 label md:table-cell">Reg. no.</th>
                 <th className="px-5 py-3 label">Renewal</th>
+                <th className="px-5 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -50,6 +53,9 @@ export default async function IpPage() {
                     <td className="px-5 py-3.5">
                       <span className={overdue ? "text-red-600" : due ? "text-amber-700" : "text-ink-soft"}>{fmtDate(a.renewal_date)}</span>
                       {due && <span className="ml-2 text-xs">{overdue ? "overdue" : "soon"}</span>}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <DeleteButton onDelete={deleteIpAsset.bind(null, a.id)} />
                     </td>
                   </tr>
                 );

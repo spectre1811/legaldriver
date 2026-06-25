@@ -40,3 +40,27 @@ export async function addIpAsset(_prev: ActionResult, formData: FormData): Promi
   revalidatePath("/dashboard/calendar");
   return { ok: true, message: `Added ${title}.` };
 }
+
+// Delete an IP asset (tenant-scoped via RLS). Also clears any pending renewal
+// reminders that reference it, then audits.
+export async function deleteIpAsset(id: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+
+  // Clear pending renewal reminders tied to this asset (best-effort).
+  await supabase
+    .from("notification")
+    .delete()
+    .eq("tenant_id", tenantId)
+    .eq("status", "pending")
+    .contains("payload", { ref: `ip:${id}` });
+
+  const { error } = await supabase.from("ip_asset").delete().eq("id", id); // RLS scopes to tenant
+  if (error) return { ok: false, message: error.message };
+
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "ip.delete", entity: "ip_asset", entity_id: id });
+  revalidatePath("/dashboard/ip");
+  revalidatePath("/dashboard/calendar");
+  return { ok: true, message: "Deleted." };
+}

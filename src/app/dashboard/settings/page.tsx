@@ -3,6 +3,8 @@ import { PageHeader, Card, Badge, fmtAgo, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdvocateForm } from "./advocate-form";
 import { CourtRefreshForms } from "./court-gateway";
+import { DeleteButton } from "@/components/delete-button";
+import { deleteAdvocate } from "./actions";
 import { getProviderHealth, getCacheStats } from "@/lib/court/gateway";
 
 export default async function SettingsPage() {
@@ -42,8 +44,11 @@ export default async function SettingsPage() {
                   </span>
                   {a.name}
                 </span>
-                <span className="font-mono text-xs text-ink-faint">
-                  {a.bar_registration_number ?? "—"}{a.state_code ? ` · ${a.state_code}` : ""}
+                <span className="flex items-center gap-3">
+                  <span className="font-mono text-xs text-ink-faint">
+                    {a.bar_registration_number ?? "—"}{a.state_code ? ` · ${a.state_code}` : ""}
+                  </span>
+                  <DeleteButton onDelete={deleteAdvocate.bind(null, a.id)} label="Remove" />
                 </span>
               </li>
             ))}

@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
 import { NoticeForm } from "./notice-form";
 import { RespondButton } from "./respond-button";
+import { DeleteButton } from "@/components/delete-button";
+import { deleteNotice } from "./actions";
 
 const STATE_TONE: Record<string, "neutral" | "brand" | "amber" | "orange" | "red" | "green"> = {
   draft: "neutral", sent: "brand", awaiting_response: "amber",
@@ -45,7 +47,12 @@ export default async function NoticesPage() {
                     <td className="hidden px-5 py-3.5 text-ink-muted md:table-cell">{m?.title ?? "—"}</td>
                     <td className="px-5 py-3.5 text-ink-soft">{fmtDate(n.response_due)}</td>
                     <td className="px-5 py-3.5"><Badge tone={STATE_TONE[n.escalation_state] ?? "neutral"}>{n.escalation_state.replace("_", " ")}</Badge></td>
-                    <td className="px-5 py-3.5 text-right">{active && <RespondButton noticeId={n.id} />}</td>
+                    <td className="px-5 py-3.5 text-right">
+                      <span className="inline-flex items-center gap-2">
+                        {active && <RespondButton noticeId={n.id} />}
+                        <DeleteButton onDelete={deleteNotice.bind(null, n.id)} />
+                      </span>
+                    </td>
                   </tr>
                 );
               })}

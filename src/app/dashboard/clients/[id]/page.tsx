@@ -7,6 +7,8 @@ import { DocActions } from "@/components/doc-actions";
 import { PortalInvite, FirmComposer } from "./portal-controls";
 import { ClientDocUpload } from "./client-docs";
 import { Communications } from "@/components/communications";
+import { ConfirmDelete } from "@/components/confirm-delete";
+import { deleteClient } from "./actions";
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -52,6 +54,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
             {client.phones?.[0] && <span>· {client.phones[0]}</span>}
           </div>
         </div>
+        <ConfirmDelete action={deleteClient} id={client.id} label="Delete client" confirmLabel="Delete client" note="Cases & documents are kept (unlinked)" redirectTo="/dashboard/clients" size="md" />
       </header>
 
       {/* Portal access */}
