@@ -19,6 +19,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string; icon: I
     heading: "Workflow",
     items: [
       { href: "/dashboard/notices", label: "Notices", icon: "notices" },
+      { href: "/dashboard/cause-list", label: "Cause list", icon: "clock" },
       { href: "/dashboard/inbox", label: "Inbox", icon: "gmail" },
       { href: "/dashboard/messages", label: "Messages", icon: "inbox" },
       { href: "/dashboard/voice", label: "Voice", icon: "clip" },

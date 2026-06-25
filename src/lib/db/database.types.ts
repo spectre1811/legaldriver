@@ -334,6 +334,44 @@ export type Database = {
           },
         ]
       }
+      capture_token: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          label: string | null
+          last_used_at: string | null
+          revoked: boolean
+          tenant_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          label?: string | null
+          last_used_at?: string | null
+          revoked?: boolean
+          tenant_id: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          label?: string | null
+          last_used_at?: string | null
+          revoked?: boolean
+          tenant_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capture_token_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cause_list_entry: {
         Row: {
           advocate_id: string

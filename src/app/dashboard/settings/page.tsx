@@ -3,6 +3,7 @@ import { PageHeader, Card, Badge, fmtAgo, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdvocateForm } from "./advocate-form";
 import { CourtRefreshForms } from "./court-gateway";
+import { CaptureTool } from "./capture-tool";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteAdvocate } from "./actions";
 import { getProviderHealth, getCacheStats } from "@/lib/court/gateway";
@@ -13,6 +14,16 @@ export default async function SettingsPage() {
     .from("advocate")
     .select("id, name, bar_registration_number, state_code")
     .order("name");
+
+  // Active capture token (HITL bookmarklet). baseUrl for the bookmarklet target.
+  const { data: tok } = await supabase
+    .from("capture_token")
+    .select("token")
+    .eq("revoked", false)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const captureBaseUrl = process.env.APP_BASE_URL?.startsWith("http") ? process.env.APP_BASE_URL : "https://legaldriver.vercel.app";
 
   // Cache + provider health come from the shared gateway (admin/service-role).
   // Refresh-request rows are tenant-scoped via RLS through createClient().
@@ -148,6 +159,14 @@ export default async function SettingsPage() {
           <Icon name="alert" className="h-3.5 w-3.5" />
           Source: eCourts. Court data is informational — verify against the official record.
         </p>
+      </Card>
+
+      <Card className="p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <Icon name="scale" className="h-4 w-4 text-brand-600" />
+          <h2 className="text-base font-medium">Capture from eCourts (human-in-the-loop)</h2>
+        </div>
+        <CaptureTool token={tok?.token ?? null} baseUrl={captureBaseUrl} />
       </Card>
 
       <Card className="flex items-start gap-3 p-5">
