@@ -2,7 +2,7 @@
 // the tenant's matter corpus + the global legal knowledge pack, then ANSWERS with
 // citations. It is assistive: every answer is a suggestion the advocate verifies.
 
-export type CitationSource = "matter" | "document" | "hearing" | "order" | "legal_reference";
+export type CitationSource = "matter" | "document" | "hearing" | "order" | "legal_reference" | "judgment";
 
 export interface RetrievalHit {
   source: CitationSource;

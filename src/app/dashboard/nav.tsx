@@ -13,6 +13,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string; icon: I
       { href: "/dashboard/cases", label: "Cases", icon: "cases" },
       { href: "/dashboard/calendar", label: "Calendar", icon: "calendar" },
       { href: "/dashboard/analytics", label: "Analytics", icon: "overview" },
+      { href: "/dashboard/research", label: "Case research", icon: "search" },
     ],
   },
   {

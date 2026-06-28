@@ -58,6 +58,38 @@ function detectCnr(q: string): string | null {
   return m ? m[0] : null;
 }
 
+const IHCJ_BASE = "https://indian-high-court-judgments.s3.amazonaws.com";
+
+// Common legal-fluff words that would match every judgment (judge fields all say
+// "JUSTICE", etc.) — excluded from corpus term matching.
+const CORPUS_FLUFF = new Set(["justice", "court", "honourable", "honble", "matter", "matters", "cite", "order", "orders", "decided", "please", "advocate", "petition", "respondent", "petitioner", "versus", "state", "gujarat"]);
+
+// Real precedent from the open judgments corpus (CC-BY High Court judgments).
+// Metadata-level today (party / case-no / judge / court) — full-text grounding
+// arrives when judgment PDFs are ingested. RLS-public table, safe via any client.
+async function corpusHits(sb: DB, terms: (string | null | undefined)[], limit = 4): Promise<RetrievalHit[]> {
+  const clean = [...new Set(
+    terms.flatMap((t) => (t ?? "").split(/[^A-Za-z]+/))
+      .map((w) => w.trim())
+      .filter((w) => w.length > 4 && !CORPUS_FLUFF.has(w.toLowerCase())),
+  )].slice(0, 4);
+  if (!clean.length) return [];
+  const ors = clean.flatMap((w) => [`petitioner.ilike.%${w}%`, `respondent.ilike.%${w}%`, `judge.ilike.%${w}%`]).join(",");
+  const { data } = await sb
+    .from("corpus_judgment")
+    .select("cnr, case_number, petitioner, respondent, judge, court, decision_date, disposal_nature, pdf_link")
+    .or(ors)
+    .order("decision_date", { ascending: false })
+    .limit(limit);
+  return (data ?? []).map((r) => ({
+    source: "judgment" as const,
+    ref: r.case_number ?? r.cnr ?? "judgment",
+    title: `${r.petitioner ?? "?"} v. ${r.respondent ?? "?"}`.slice(0, 120),
+    url: r.pdf_link ? `${IHCJ_BASE}/${r.pdf_link}` : undefined,
+    snippet: `${r.court ?? "High Court"} · decided ${r.decision_date ?? "—"}${r.judge ? ` · ${r.judge}` : ""}${r.disposal_nature ? ` · ${r.disposal_nature}` : ""}`,
+  }));
+}
+
 export async function retrieve(
   sb: DB,
   input: { tenantId: string; question: string; matterId?: string | null; clientId?: string | null },
@@ -152,6 +184,9 @@ export async function retrieve(
       for (const o of os ?? []) {
         hits.push({ source: "order", ref: o.title ?? "order", title: o.title ?? "Order", url, matterId: m.id, snippet: `${o.order_date ?? ""} ${o.title ?? ""}`.trim() });
       }
+      // Real precedent: judgments in the open corpus sharing a (non-generic) party.
+      const pName = (m.party_names ?? []).find((p) => p && !/state|union of india|govt/i.test(p));
+      hits.push(...(await corpusHits(sb, [pName, ...(m.judge_names ?? [])], 3)));
     }
   } else {
     // Corpus-wide: documents via FTS + matters via multi-word ilike (tenant-scoped).
@@ -179,6 +214,8 @@ export async function retrieve(
     for (const m of (matters.data as { id: string; cnr: string | null; title: string; court: string | null; act_names: string[] }[]) ?? []) {
       hits.push({ source: "matter", ref: m.cnr ?? m.title, title: m.title, url: `/dashboard/cases/${m.id}`, matterId: m.id, snippet: `Court: ${m.court ?? "—"}. Acts: ${(m.act_names ?? []).join(", ") || "—"}.` });
     }
+    // Precedent from the open judgments corpus matching the question's key terms.
+    hits.push(...(await corpusHits(sb, [...contentWords(q), detectCnr(q)], 3)));
   }
 
   return hits.slice(0, limit);
