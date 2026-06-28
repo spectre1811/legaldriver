@@ -58,6 +58,8 @@ P5 matter depth · P6 time+expense · P7/P8 client portal (RLS-isolated) · P10 
 ---
 
 ## 🟡 Decisions for you
+- **⚠️ Court corpus storage (NEW, important).** The full multi-court corpus (605k rows ≈ 775 MB; all-India ambition = millions = several GB) **exceeds Supabase Free's ~500 MB limit** — loading it tripped read-only mode (brief write outage, recovered; now a safe 7.5k Gujarat-2025 slice, DB 37 MB). To hold the real corpus, pick: **(A) Supabase Pro** ($25/mo, 8 GB+ — simplest, integrated), or **(B) separate store** (Postgres on the worker box, or Parquet in Cloudflare R2 + DuckDB — free, more infra; I'll build it). Until then the corpus stays a small Gujarat slice. **I will not re-load the full corpus until A or B is chosen.**
+
 - **Prod AI backend:** keep the keyless self-hosted worker (free, needs the box up) ↔ DeepSeek (fund it, synchronous) ↔ Anthropic key. Worker runs today.
 - **Go commercial / scale:** Vercel Pro ($20) + Supabase Pro ($25) + Cloudflare R2 for document blobs (you have CF creds).
 - **Worker hosting:** currently on this build VM; move to an always-on box (systemd) or switch to DeepSeek/API to retire it.
