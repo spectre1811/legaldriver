@@ -474,6 +474,129 @@ export type Database = {
           },
         ]
       }
+      corpus_ingest_watermark: {
+        Row: {
+          last_ingested_at: string | null
+          partition: string
+          rows: number | null
+          source: string
+        }
+        Insert: {
+          last_ingested_at?: string | null
+          partition: string
+          rows?: number | null
+          source: string
+        }
+        Update: {
+          last_ingested_at?: string | null
+          partition?: string
+          rows?: number | null
+          source?: string
+        }
+        Relationships: []
+      }
+      corpus_judgment: {
+        Row: {
+          case_number: string | null
+          cnr: string | null
+          content_hash: string | null
+          court: string | null
+          court_code: string | null
+          decision_date: string | null
+          disposal_nature: string | null
+          fts: unknown
+          id: string
+          ingested_at: string
+          judge: string | null
+          license: string
+          pdf_link: string | null
+          petitioner: string | null
+          registration_date: string | null
+          respondent: string | null
+          source: string
+          state: string | null
+          title: string | null
+          year: number | null
+        }
+        Insert: {
+          case_number?: string | null
+          cnr?: string | null
+          content_hash?: string | null
+          court?: string | null
+          court_code?: string | null
+          decision_date?: string | null
+          disposal_nature?: string | null
+          fts?: unknown
+          id?: string
+          ingested_at?: string
+          judge?: string | null
+          license?: string
+          pdf_link?: string | null
+          petitioner?: string | null
+          registration_date?: string | null
+          respondent?: string | null
+          source?: string
+          state?: string | null
+          title?: string | null
+          year?: number | null
+        }
+        Update: {
+          case_number?: string | null
+          cnr?: string | null
+          content_hash?: string | null
+          court?: string | null
+          court_code?: string | null
+          decision_date?: string | null
+          disposal_nature?: string | null
+          fts?: unknown
+          id?: string
+          ingested_at?: string
+          judge?: string | null
+          license?: string
+          pdf_link?: string | null
+          petitioner?: string | null
+          registration_date?: string | null
+          respondent?: string | null
+          source?: string
+          state?: string | null
+          title?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      corpus_source_batch: {
+        Row: {
+          finished_at: string | null
+          id: string
+          note: string | null
+          partition: string | null
+          rows_seen: number | null
+          rows_upserted: number | null
+          source: string
+          started_at: string
+        }
+        Insert: {
+          finished_at?: string | null
+          id?: string
+          note?: string | null
+          partition?: string | null
+          rows_seen?: number | null
+          rows_upserted?: number | null
+          source: string
+          started_at?: string
+        }
+        Update: {
+          finished_at?: string | null
+          id?: string
+          note?: string | null
+          partition?: string | null
+          rows_seen?: number | null
+          rows_upserted?: number | null
+          source?: string
+          started_at?: string
+        }
+        Relationships: []
+      }
       court_cache: {
         Row: {
           cache_key: string
@@ -1991,6 +2114,8 @@ export type Database = {
       portal_client_id: { Args: never; Returns: string }
       portal_tenant_id: { Args: never; Returns: string }
       read_secret: { Args: { secret_id: string }; Returns: string }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       store_secret: {
         Args: { secret: string; secret_name: string }
         Returns: string
