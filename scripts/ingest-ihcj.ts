@@ -92,7 +92,7 @@ async function main() {
       process.stdout.write(`  upserted ${upserted}/${mapped.length}\r`);
     }
     console.log(`\n  done ${year}: seen=${rows.length} upserted=${upserted}`);
-    await admin.from("corpus_source_batch").update({ rows_upserted: upserted, finished_at: new Date().toISOString() }).eq("id", batch?.id);
+    if (batch?.id) await admin.from("corpus_source_batch").update({ rows_upserted: upserted, finished_at: new Date().toISOString() }).eq("id", batch.id);
     await admin.from("corpus_ingest_watermark").upsert({ source: SOURCE, partition, last_ingested_at: new Date().toISOString(), rows: upserted }, { onConflict: "source,partition" });
   }
 
