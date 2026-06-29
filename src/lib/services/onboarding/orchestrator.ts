@@ -9,7 +9,7 @@ type DB = SupabaseClient<Database>;
 type Json = Database["public"]["Tables"]["onboarding_run"]["Update"]["counts"];
 
 export interface OnboardingCounts {
-  causelist: number; matters_seeded: number; enriched: number;
+  causelist: number; cases_fetched: number; matters_seeded: number; enriched: number;
   deadlines_proposed: number; inbox_filed: number; docs_attached: number; closed_found: number; summaries_queued: number;
 }
 
@@ -42,7 +42,7 @@ export async function runOnboarding(
   opts: { tenantId: string; advocateId: string; runId: string },
 ): Promise<OnboardingCounts> {
   const { tenantId, advocateId, runId } = opts;
-  const counts: OnboardingCounts = { causelist: 0, matters_seeded: 0, enriched: 0, deadlines_proposed: 0, inbox_filed: 0, docs_attached: 0, closed_found: 0, summaries_queued: 0 };
+  const counts: OnboardingCounts = { causelist: 0, cases_fetched: 0, matters_seeded: 0, enriched: 0, deadlines_proposed: 0, inbox_filed: 0, docs_attached: 0, closed_found: 0, summaries_queued: 0 };
 
   const { data: adv } = await supabase.from("advocate").select("id, name, bar_registration_number, state_code").eq("id", advocateId).maybeSingle();
   if (!adv) { await setRun(supabase, runId, { stage: "error", status: "error", message: "Advocate not found." }); return counts; }
@@ -78,6 +78,31 @@ export async function runOnboarding(
       }
     }
   }
+  await setRun(supabase, runId, { counts });
+
+  // ── Stage 1b: AUTO-FETCH the advocate's cases by name from compliant sources
+  // (our open corpus by default; licensed APIs when keyed) — no manual upload. ──
+  await setRun(supabase, runId, { stage: "fetch" });
+  try {
+    const { fetchAdvocateCases } = await import("@/lib/court/advocate-cases");
+    const fetched = await fetchAdvocateCases({ name: adv.name, barNumber: adv.bar_registration_number, stateCode: adv.state_code });
+    for (const fc of fetched.slice(0, 80)) {
+      // De-dupe: by CNR when present, else by title (avoids re-creating on re-run).
+      if (fc.cnr) {
+        const { data: ex } = await supabase.from("matter").select("id").eq("tenant_id", tenantId).eq("cnr", fc.cnr).maybeSingle();
+        if (ex) continue;
+      } else if (fc.title) {
+        const { data: ex } = await supabase.from("matter").select("id").eq("tenant_id", tenantId).ilike("title", fc.title).maybeSingle();
+        if (ex) continue;
+      } else continue;
+      const { error } = await supabase.from("matter").insert({
+        tenant_id: tenantId, cnr: fc.cnr ?? null, title: fc.title || fc.caseNumber || fc.cnr || "Case",
+        court: fc.court ?? null, status: fc.decided ? "disposed" : "active",
+        next_hearing_date: fc.nextHearingDate ?? null, source: fc.source,
+      });
+      if (!error) counts.cases_fetched++;
+    }
+  } catch { /* auto-fetch is best-effort; cause-list/manual paths still apply */ }
   await setRun(supabase, runId, { counts });
 
   // ── Stage 2: per-CNR enrich → upsertCase (puts hearings on calendar + reminders) ──

@@ -2,11 +2,14 @@ import Link from "next/link";
 import { PageHeader, Card, Badge, EmptyState, Stat, fmtDate } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
+import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
 import { RunOnboardingButton } from "./onboarding-ui";
 
 export const dynamic = "force-dynamic";
 
-interface Counts { causelist?: number; matters_seeded?: number; enriched?: number; deadlines_proposed?: number; inbox_filed?: number; docs_attached?: number; closed_found?: number; summaries_queued?: number }
+interface Counts { causelist?: number; cases_fetched?: number; matters_seeded?: number; enriched?: number; deadlines_proposed?: number; inbox_filed?: number; docs_attached?: number; closed_found?: number; summaries_queued?: number }
+
+const PROVIDER_LABEL: Record<string, string> = { corpus: "open corpus (free)", indiankanoon: "Indian Kanoon", vakeel360: "Vakeel360" };
 
 export default async function OnboardingPage() {
   const supabase = createClient();
@@ -22,6 +25,8 @@ export default async function OnboardingPage() {
   const latestByAdvocate = new Map<string, NonNullable<typeof runs>[number]>();
   for (const r of runs ?? []) if (r.advocate_id && !latestByAdvocate.has(r.advocate_id)) latestByAdvocate.set(r.advocate_id, r);
 
+  const providers = enabledAdvocateProviders();
+
   return (
     <div className="space-y-6">
       <PageHeader title="Advocate onboarding" subtitle="Enter once, and we assemble your practice: cases on the calendar, inbox filed, closed cases by name, and AI briefings." />
@@ -30,9 +35,12 @@ export default async function OnboardingPage() {
         <div className="px-5 py-4 text-sm text-ink-soft">
           <p className="font-medium text-ink">How this works — honestly</p>
           <p className="mt-1.5 text-ink-muted">
-            Indian courts don’t offer a compliant feed of an advocate’s open cases by bar number, so we don’t scrape one. We assemble your matters from your
-            <strong> cause list</strong>, the cases you <strong>add by CNR</strong>, and your <strong>inbox</strong>, and keep them refreshed via the official portal.
-            <strong> Closed cases &amp; judgments</strong> are pulled from the open judgments corpus by your name (coverage is partial). Everything is marked with its source and last-refreshed time, and is <strong>not legal advice</strong>.
+            We <strong>auto-fetch your cases by your name</strong> from compliant sources — no manual upload. Active sources:{" "}
+            <strong>{providers.map((p) => PROVIDER_LABEL[p] ?? p).join(", ") || "none configured"}</strong>. The free <strong>open judgments corpus</strong> covers
+            High Courts + the Supreme Court (mostly decided cases); adding a licensed key (Indian Kanoon / Vakeel360) broadens coverage to live orders automatically.
+          </p>
+          <p className="mt-1.5 text-ink-faint">
+            What we <em>don’t</em> do: scrape eCourts or solve its CAPTCHA. India has no compliant API for an advocate’s full live open-case roster by bar number, so for live status we also use your <strong>cause list</strong>, cases you <strong>add by CNR</strong>, and <strong>HITL refresh</strong>. Everything is marked with its source; <strong>not legal advice</strong>.
           </p>
         </div>
       </Card>
@@ -58,8 +66,9 @@ export default async function OnboardingPage() {
                   </div>
                   {run && (
                     <>
-                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-9">
                         <Stat label="Cause-list" value={String(c.causelist ?? 0)} />
+                        <Stat label="Cases fetched" value={String(c.cases_fetched ?? 0)} />
                         <Stat label="Matters seeded" value={String(c.matters_seeded ?? 0)} />
                         <Stat label="Enriched" value={String(c.enriched ?? 0)} />
                         <Stat label="Deadlines proposed" value={String(c.deadlines_proposed ?? 0)} />
