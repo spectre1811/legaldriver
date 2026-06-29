@@ -165,6 +165,30 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                   </ul>
                 </div>
               )}
+              {ai.arguments && ai.arguments.length > 0 && (
+                <div>
+                  <p className="label mb-2">Arguments — for &amp; against</p>
+                  <ul className="space-y-1.5">
+                    {ai.arguments.map((s, i) => (
+                      <li key={i} className="flex gap-2.5 text-sm text-ink-soft">
+                        <Icon name="scale" className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" /> {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {ai.what_to_present && ai.what_to_present.length > 0 && (
+                <div>
+                  <p className="label mb-2">What to present at the next hearing</p>
+                  <ul className="space-y-1.5">
+                    {ai.what_to_present.map((s, i) => (
+                      <li key={i} className="flex gap-2.5 text-sm text-ink-soft">
+                        <Icon name="documents" className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" /> {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <p className="text-xs text-ink-faint">AI-generated from this case record — informational, not legal advice.</p>
             </div>
           ) : (

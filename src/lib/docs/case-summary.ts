@@ -21,6 +21,8 @@ export interface CaseSummary {
   key_points: string[];
   next_steps: string[];
   risk_flags: string[];
+  arguments: string[];
+  what_to_present: string[];
   generated_at?: string;
 }
 
@@ -30,6 +32,8 @@ export const FALLBACK: CaseSummary = {
   key_points: [],
   next_steps: [],
   risk_flags: [],
+  arguments: [],
+  what_to_present: [],
 };
 
 export const CASE_SUMMARY_SCHEMA = {
@@ -41,8 +45,10 @@ export const CASE_SUMMARY_SCHEMA = {
     key_points: { type: "array", items: { type: "string" }, description: "the salient facts, issues, parties/representation, amounts and dates drawn from the record" },
     next_steps: { type: "array", items: { type: "string" }, description: "concrete, prioritised actions for the advocate, most urgent first; reference specific filings/documents to prepare" },
     risk_flags: { type: "array", items: { type: "string" }, description: "deadlines, limitation/statutory-compliance risks, missing documents or data, and stale-record warnings; empty if genuinely none" },
+    arguments: { type: "array", items: { type: "string" }, description: "the legal arguments to advance for this client AND the likely arguments from the other side to anticipate/rebut — grounded in the record + well-settled law; each as a crisp point" },
+    what_to_present: { type: "array", items: { type: "string" }, description: "what to actually present/submit at the next hearing — specific documents, submissions, authorities to cite, and the prayer/relief to seek; empty if not enough on record" },
   },
-  required: ["summary", "posture", "key_points", "next_steps", "risk_flags"],
+  required: ["summary", "posture", "key_points", "next_steps", "risk_flags", "arguments", "what_to_present"],
 } as const;
 
 export function buildCaseSummaryPrompt(c: CaseSummaryInput): string {
@@ -65,6 +71,8 @@ COVER (across the structured fields):
 3. key_points — salient facts, the parties and their counsel, amounts/quantum, key dates, and the legal issues at play (drawn from the record/documents).
 4. next_steps — prioritised, concrete actions (documents to file/serve, evidence to prepare, dates to confirm, compliance to verify), most urgent first.
 5. risk_flags — deadlines, limitation/statutory-notice compliance, missing documents or data, stale court record, and anything that could prejudice the client.
+6. arguments — the legal arguments to advance for this client, and the likely opposing arguments to anticipate and rebut; ground them in the record + well-settled Indian law (cite the provision/principle, not invented case-law).
+7. what_to_present — exactly what to bring/submit at the next hearing: documents, written submissions, authorities to cite, and the prayer/relief to seek. If the record is too thin, say what's needed first rather than inventing.
 
 CASE: ${c.title}
 CNR: ${c.cnr ?? "—"} | Court: ${c.court ?? "—"} | Type: ${c.caseType ?? "—"} | Stage: ${c.stage ?? "—"} | Status: ${c.status ?? "—"} | Next hearing: ${c.nextHearingDate ?? "—"}
@@ -90,6 +98,8 @@ export function normalizeCaseSummary(raw: unknown): CaseSummary | null {
     key_points: list(r.key_points),
     next_steps: list(r.next_steps),
     risk_flags: list(r.risk_flags),
+    arguments: list(r.arguments),
+    what_to_present: list(r.what_to_present),
     generated_at: new Date().toISOString(),
   };
 }
