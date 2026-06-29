@@ -1,78 +1,82 @@
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { corpusEnabled, searchJudgments, judgmentPdfUrl, courtLabel } from "@/lib/court/corpus-athena";
 import { Filters } from "./filters";
 
-const PDF_BASE = "https://indian-high-court-judgments.s3.amazonaws.com";
+export const dynamic = "force-dynamic";
 
-function parties(petitioner: string | null, respondent: string | null) {
-  const p = petitioner?.trim();
-  const r = respondent?.trim();
-  if (p && r) return `${p} v. ${r}`;
-  return p || r || null;
+const COURT_RE = /^[0-9]+_[0-9]+$/;
+
+// Title looks like "CR.RA/952/2023 of ARTHKUMAR... Vs BINALBEN...".
+// Split on " of " to separate case number from parties, then split parties on a
+// "versus" connective to render "X v. Y".
+function parseTitle(title: string | null): { caseNumber: string | null; parties: string | null } {
+  if (!title) return { caseNumber: null, parties: null };
+  const ofIdx = title.search(/\sof\s/i);
+  if (ofIdx === -1) return { caseNumber: title.trim() || null, parties: null };
+  const caseNumber = title.slice(0, ofIdx).trim() || null;
+  const rest = title.slice(ofIdx + 4).trim();
+  const vsParts = rest.split(/\s+(?:Vs|Versus|V\/s)\s+/i);
+  if (vsParts.length >= 2) {
+    const a = vsParts[0].trim();
+    const b = vsParts.slice(1).join(" ").trim();
+    return { caseNumber, parties: a && b ? `${a} v. ${b}` : rest || null };
+  }
+  return { caseNumber, parties: rest || null };
 }
 
 export default async function ResearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string; court?: string; year?: string; disposal?: string; sort?: string };
+  searchParams: { q?: string; court?: string; year?: string };
 }) {
-  const supabase = createClient();
-  const { q, court, year, disposal, sort } = searchParams;
+  const { q, court, year } = searchParams;
 
-  let query = supabase
-    .from("corpus_judgment")
-    .select("id, court, cnr, case_number, title, petitioner, respondent, judge, year, decision_date, disposal_nature, pdf_link");
+  if (!corpusEnabled()) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Case Research"
+          subtitle="Search the full judgment corpus across every Indian High Court — by party, case number, judge, court, or year."
+        />
+        <EmptyState
+          icon="scale"
+          title="Corpus not configured"
+          body="The court-judgments corpus is not connected in this environment yet. Once the S3 lake credentials are set, live search across all High Courts becomes available here."
+        />
+      </div>
+    );
+  }
 
-  if (sort === "year") query = query.order("year", { ascending: false, nullsFirst: false });
-  else query = query.order("decision_date", { ascending: false, nullsFirst: false });
-  query = query.limit(100);
+  const validCourt = court && COURT_RE.test(court) ? court : undefined;
+  const rows = await searchJudgments({
+    q,
+    court: validCourt,
+    year: year ? Number(year) : undefined,
+    limit: 100,
+  });
 
-  if (q) query = query.textSearch("fts", q, { type: "websearch" });
-  if (court) query = query.eq("court", court);
-  if (year) query = query.eq("year", Number(year));
-  if (disposal) query = query.eq("disposal_nature", disposal);
-
-  // Distinct option lists from a bounded sample (the corpus is 250k+ rows, so we
-  // never scan the whole table — just enough to surface the common values).
-  const [{ data: rows }, { data: courtRows }, { data: yearRows }, { data: dispRows }] = await Promise.all([
-    query,
-    supabase.from("corpus_judgment").select("court").not("court", "is", null).limit(2000),
-    supabase.from("corpus_judgment").select("year").not("year", "is", null).limit(2000),
-    supabase.from("corpus_judgment").select("disposal_nature").not("disposal_nature", "is", null).limit(2000),
-  ]);
-
-  const courts = [...new Set((courtRows ?? []).map((r) => r.court).filter(Boolean) as string[])]
-    .sort()
-    .map((c) => ({ value: c, label: c }));
-  const years = [...new Set((yearRows ?? []).map((r) => r.year).filter((y): y is number => y != null))]
-    .sort((a, b) => b - a)
-    .map((y) => ({ value: String(y), label: String(y) }));
-  const disposals = [...new Set((dispRows ?? []).map((r) => r.disposal_nature).filter(Boolean) as string[])]
-    .sort()
-    .map((d) => ({ value: d, label: d }));
-
-  const activeFilters = Boolean(q || court || year || disposal || sort);
+  const activeFilters = Boolean(q || court || year);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Case Research"
-        subtitle="Search a 250,000+ judgment corpus from India's High Courts by party, case number, judge, court, or year."
+        subtitle="Now searching the full judgment corpus across every Indian High Court — not just the local slice. Find judgments by party, case number, judge, court, or year."
       />
 
-      <Filters courts={courts} years={years} disposals={disposals} />
+      <Filters />
 
       <p className="flex items-center gap-1.5 text-xs text-ink-faint">
         <Icon name="search" className="h-3.5 w-3.5" />
-        Search matches parties, case number, and judge. Full-text search of the judgment itself is coming later.
+        Search matches parties, case number, and judge across the full multi-court corpus. Queries run live against our S3 lake, so results take a moment to load.
       </p>
 
-      {rows && rows.length ? (
+      {rows.length ? (
         <Card className="overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-paper/60 px-5 py-3">
             <div className="text-xs text-ink-faint">
-              {rows.length}{rows.length === 100 ? "+" : ""} judgment{rows.length === 1 ? "" : "s"}
+              {rows.length}{rows.length === 100 ? "+" : ""} judgment{rows.length === 1 ? "" : "s"} from the full multi-court corpus
               {activeFilters ? " · filtered" : ""}
             </div>
             {activeFilters && (
@@ -93,24 +97,25 @@ export default async function ResearchPage({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => {
-                  const p = parties(r.petitioner, r.respondent);
+                {rows.map((r, i) => {
+                  const { caseNumber, parties } = parseTitle(r.title);
+                  const pdfUrl = judgmentPdfUrl(r.pdf_link, r.court, r.year);
                   return (
-                    <tr key={r.id} className="border-b border-line last:border-0 hover:bg-paper">
+                    <tr key={r.cnr ?? `${r.title}-${i}`} className="border-b border-line last:border-0 hover:bg-paper">
                       <td className="px-5 py-3.5 align-top">
                         <span className="flex flex-col leading-tight">
                           <span className="flex items-center gap-2 font-medium text-ink">
                             <Icon name="cases" className="h-4 w-4 shrink-0 text-ink-faint" />
-                            {r.case_number ?? r.title ?? "—"}
+                            {caseNumber ?? r.title ?? "—"}
                           </span>
                           {r.cnr && <span className="mt-0.5 pl-6 text-xs text-ink-faint">CNR {r.cnr}</span>}
                         </span>
                       </td>
                       <td className="px-5 py-3.5 align-top text-ink-muted">
-                        {p ? <span className="font-medium text-ink">{p}</span> : <span className="text-ink-faint">—</span>}
+                        {parties ? <span className="font-medium text-ink">{parties}</span> : <span className="text-ink-faint">—</span>}
                       </td>
                       <td className="hidden px-5 py-3.5 align-top text-ink-muted lg:table-cell">{r.judge ?? <span className="text-ink-faint">—</span>}</td>
-                      <td className="hidden px-5 py-3.5 align-top text-xs text-ink-faint md:table-cell">{r.court ?? "—"}</td>
+                      <td className="hidden px-5 py-3.5 align-top text-xs text-ink-faint md:table-cell">{courtLabel(r.court)}</td>
                       <td className="hidden px-5 py-3.5 align-top text-xs text-ink-faint sm:table-cell">
                         {fmtDate(r.decision_date)}
                         {r.year && !r.decision_date ? <span>{r.year}</span> : null}
@@ -119,9 +124,9 @@ export default async function ResearchPage({
                         {r.disposal_nature ? <Badge>{r.disposal_nature}</Badge> : <span className="text-ink-faint">—</span>}
                       </td>
                       <td className="px-5 py-3.5 align-top text-right">
-                        {r.pdf_link ? (
+                        {pdfUrl ? (
                           <a
-                            href={`${PDF_BASE}/${r.pdf_link}`}
+                            href={pdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 hover:underline"
@@ -144,13 +149,13 @@ export default async function ResearchPage({
         <EmptyState
           icon="scale"
           title={activeFilters ? "No matching judgments" : "Search the judgment corpus"}
-          body={activeFilters ? "Try a different search or clear the filters." : "Search by party name, case number, or judge — or filter by court and year."}
+          body={activeFilters ? "Try a different search or clear the filters." : "Search by party name, case number, or judge — or filter by court and year across every High Court."}
         />
       )}
 
       <p className="flex items-start gap-1.5 text-xs text-ink-faint">
         <Icon name="alert" className="mt-px h-3.5 w-3.5 shrink-0" />
-        Source: Indian High Court Judgments — AWS Open Data, CC-BY 4.0. Reference only; not legal advice — verify against the official record.
+        Source: Indian High Court Judgments (AWS Open Data, CC-BY 4.0), queried live from our S3 lake. Reference only; not legal advice — verify against the official record.
       </p>
     </div>
   );
