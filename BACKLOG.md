@@ -61,7 +61,7 @@ P5 matter depth · P6 time+expense · P7/P8 client portal (RLS-isolated) · P10 
 S3 + Athena lake (your AWS, ap-south-1): **18,554,467 High Court (all 25 HCs) + 43,495 Supreme Court (e-SCR) judgments**, unified in the `judgments_all` view; ~free queries (partition projection); scoped read-only key; Supabase untouched. **Case Research + Lawyer-Agent precedent span every Indian High Court + the Supreme Court.** ✅ e-SCR done.
 **Next coverage (`docs/decisions/2026-06-29-rich-court-data-sources.md`):**
 - 🟢 **`parquet_case_details`** — advocates, acts/sections, hearing history (join on CNR). Currently only **3 HCs** in the open bucket (not Gujarat), "actively expanding" → ingest as infra; grows automatically.
-- 🟢 **On-demand judgment TEXT** — extract a judgment's PDF text (unpdf) when opened → topical reading + embed for semantic precedent (the 18.5M PDFs are 1.25 TiB, so on-demand/subset, not bulk).
+- ✅ **On-demand judgment TEXT — DONE.** Reader page (`/dashboard/research/judgment`) extracts + S3-caches PDF text; the **Lawyer Agent pulls the top precedent's real text into its grounding** (verified). Remaining: **embed** opened judgments for semantic (vector) precedent — bounded/on-demand (vector-store TBD; not Supabase free).
 - 🟢 **DevDataLab** district-court history (ODbL share-alike — don't redistribute a derived DB).
 - 🔴 **Indian Kanoon API** full text + citations (₹500 prepaid — needs your top-up; biggest agent-quality jump).
 - 🟡 **NJDG authorized access** (email eCommittee/DoJ/Gujarat HC CPC — I can draft it).
