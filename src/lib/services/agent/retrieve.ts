@@ -214,5 +214,18 @@ export async function retrieve(
     hits.push(...(await corpusHits([...contentWords(q), detectCnr(q)], 3)));
   }
 
+  // Deep grounding: pull the ACTUAL text of the top precedent judgment (one fetch,
+  // S3-cached) so the agent can cite real judgment content, not just metadata.
+  if (process.env.JUDGMENT_TEXT_GROUNDING !== "off") {
+    const jh = hits.find((h) => h.source === "judgment" && h.url);
+    if (jh?.url) {
+      try {
+        const { getJudgmentText } = await import("@/lib/court/judgment-text");
+        const t = await getJudgmentText({ pdfUrl: jh.url, cacheKey: jh.ref });
+        if (t?.text) hits.push({ source: "judgment", ref: jh.ref, title: `Excerpt — ${jh.title}`, url: jh.url, snippet: t.text.replace(/\s+/g, " ").slice(0, 800) });
+      } catch { /* text grounding is best-effort */ }
+    }
+  }
+
   return hits.slice(0, limit);
 }
