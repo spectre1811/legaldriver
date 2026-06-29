@@ -60,9 +60,9 @@ P5 matter depth · P6 time+expense · P7/P8 client portal (RLS-isolated) · P10 
 ## ✅ RESOLVED — court corpus on S3 + Athena (~18.6M judgments, HC + SC)
 S3 + Athena lake (your AWS, ap-south-1): **18,554,467 High Court (all 25 HCs) + 43,495 Supreme Court (e-SCR) judgments**, unified in the `judgments_all` view; ~free queries (partition projection); scoped read-only key; Supabase untouched. **Case Research + Lawyer-Agent precedent span every Indian High Court + the Supreme Court.** ✅ e-SCR done.
 **Next coverage (`docs/decisions/2026-06-29-rich-court-data-sources.md`):**
-- 🟢 **`parquet_case_details`** — advocates, acts/sections, hearing history (join on CNR). Currently only **3 HCs** in the open bucket (not Gujarat), "actively expanding" → ingest as infra; grows automatically.
+- ✅ **`parquet_case_details` — DONE** (advocates, acts/sections) for the 3 covered HCs; mirrored to the lake + Athena `case_details`; surfaced in the judgment reader (`caseDetailByCnr`). Grows automatically as the open set expands. (Hearing-history struct deferred — complex nested type, low ROI until more courts.)
 - ✅ **On-demand judgment TEXT — DONE.** Reader page (`/dashboard/research/judgment`) extracts + S3-caches PDF text; the **Lawyer Agent pulls the top precedent's real text into its grounding** (verified). Remaining: **embed** opened judgments for semantic (vector) precedent — bounded/on-demand (vector-store TBD; not Supabase free).
-- 🟢 **DevDataLab** district-court history (ODbL share-alike — don't redistribute a derived DB).
+- 🟡 **DevDataLab** district-court history (81M cases, 2010–2018) — a large multi-GB bulk ETL, and **ODbL share-alike**: querying it internally is fine, but exposing a derived DB to users triggers share-alike obligations. Needs a deliberate go/no-go (and is historical, not live), so not a blind grind.
 - 🔴 **Indian Kanoon API** full text + citations (₹500 prepaid — needs your top-up; biggest agent-quality jump).
 - 🟡 **NJDG authorized access** (email eCommittee/DoJ/Gujarat HC CPC — I can draft it).
 - ⛔ Live eCourts case-status/cause-list (CAPTCHA) → HITL/cause-list/licensed.
