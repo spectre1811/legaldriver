@@ -34,6 +34,9 @@ async function main() {
   const { suggestReply } = await import("../src/lib/services/agent/reply");
   const embeddingsOn = process.env.EMBEDDINGS_DISABLED !== "1";
   const emb = embeddingsOn ? await import("../src/lib/services/agent/embed") : null;
+  const ocrOn = process.env.OCR_DISABLED !== "1";
+  const ocrMod = ocrOn ? await import("../src/lib/docs/ocr/index") : null;
+  const langMod = ocrOn ? await import("../src/lib/docs/ocr/lang") : null;
   const admin = createAdminClient();
 
   // Backfill semantic chunks for documents that have parsed text but no chunks yet.
@@ -64,6 +67,53 @@ async function main() {
       }
     }
     if (done) console.log(`  [embed] ${done} chunks across ${todo.length} docs`);
+    return done;
+  }
+
+  // OCR scanned/image-only documents the app flagged `needsOcr`. Runs on-box
+  // (keyless Tesseract by default — bytes never leave our trust boundary), fills
+  // parsed_text + OCR provenance, and clears the flag so embedding/classification
+  // pick the doc up next tick. Each doc is attempted once (ocrTried stamp) so a
+  // scan OCR can't read doesn't loop forever — it stays flagged for human re-OCR.
+  async function ocrPending(): Promise<number> {
+    if (!ocrMod || !langMod) return 0;
+    const { data: docs } = await admin
+      .from("document")
+      .select("id, tenant_id, storage_path, mime, filename, extracted, parsed_text")
+      .filter("extracted->>needsOcr", "eq", "true")
+      .not("storage_path", "is", null)
+      .limit(BATCH);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const todo = (docs ?? []).filter((d) => !(d.extracted as any)?.ocrTried && !(d.parsed_text && d.parsed_text.length > 40)).slice(0, 3);
+    if (!todo.length) return 0;
+    let done = 0;
+    for (const d of todo) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const prev = (d.extracted ?? {}) as any;
+      const at = new Date().toISOString();
+      try {
+        const dl = await admin.storage.from("documents").download(d.storage_path as string);
+        if (!dl.data) { await admin.from("document").update({ extracted: { ...prev, ocrTried: at } }).eq("id", d.id); continue; }
+        const buf = Buffer.from(await dl.data.arrayBuffer());
+        const mime = (d.mime as string) || (String(d.filename).toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/png");
+        const out = await ocrMod.ocr(buf, mime);
+        if (out && out.text.trim()) {
+          const langs = out.langs.length ? out.langs : langMod.detectLangs(out.text);
+          await admin.from("document").update({
+            parsed_text: out.text,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            extracted: { ...prev, needsOcr: false, ocrTried: at, ocr: ocrMod.ocrProvenance(out, at), langs } as any,
+          }).eq("id", d.id);
+          done++;
+          console.log(`  [ocr] ${d.id.slice(0, 8)} ${out.provider} ${langs.join("+")||"?"} conf=${out.confidence.toFixed(2)} ${out.text.length}ch`);
+        } else {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await admin.from("document").update({ extracted: { ...prev, ocrTried: at, ocr: { provider: "none", langs: [], confidence: 0, at, failed: true } } as any }).eq("id", d.id);
+        }
+      } catch {
+        await admin.from("document").update({ extracted: { ...prev, ocrTried: at } }).eq("id", d.id);
+      }
+    }
     return done;
   }
 
@@ -237,6 +287,8 @@ async function main() {
 
   async function tick() {
     await pass();
+    const o = await ocrPending();
+    if (o) console.log(`documents OCR'd: ${o}`);
     const s = await summarize();
     if (s) console.log(`summaries generated: ${s}`);
     await embedDocuments();

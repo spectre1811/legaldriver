@@ -30,7 +30,7 @@ P5 matter depth · P6 time+expense · P7/P8 client portal (RLS-isolated) · P10 
 | Document versioning + approval + templates | `document_version` + draft→approved workflow; merge-token templates. |
 | Outbound email logging → Communications | Log Resend sends (notices/reminders) so the comms timeline shows two-way email. |
 | Suggested-reply → composer prefill | One-click load the AI draft into the WhatsApp composer (today: copy-to-clipboard). |
-| OCR fallback for scanned PDFs | tesseract path for image-only PDFs (currently flagged `needsOcr`). |
+| ~~OCR fallback for scanned PDFs~~ ✅ **DONE (P-A)** | `src/lib/docs/ocr/*` provider seam (env-routed, like the LLM layer): **keyless Tesseract.js default** (wasm, on-box, Indic via `TESSERACT_LANGS=eng+guj+hin`; PDFs rasterised with `pdf-to-img`) → **Google Vision** key-gated quality fallback (`GOOGLE_VISION_API_KEY`, auto-confidence escalation). Worker `ocrPending()` tick fills `parsed_text` + OCR provenance (`extracted.ocr`) + script `langs` and clears `needsOcr` → OCR'd scans flow into embeddings/classify/search. **Verified on a real prod scan** (en+gu+hi, conf 0.94). Deterministic script detector in `ocr/lang.ts`. **Next:** drafting agent P-B (draft_template KB) builds on this. |
 | Budget/spend per matter | Budget vs actual + threshold alerts (reuse reminder engine). |
 | Mobile nav | Sidebar hidden < md; add a drawer. |
 | Dynamic custom-field forms | Render typed fields per practice area (`custom_field_def` schema exists). |
