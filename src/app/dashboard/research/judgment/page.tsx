@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader, Card, Badge, EmptyState, Disclaimer, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
-import { judgmentPdfUrl, courtLabel } from "@/lib/court/corpus-athena";
+import { judgmentPdfUrl, courtLabel, caseDetailByCnr } from "@/lib/court/corpus-athena";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +62,11 @@ export default async function JudgmentReaderPage({
   const text = result?.text?.trim() ?? "";
   const hasText = Boolean(text) && !result?.needsOcr;
 
+  // Rich detail (advocates, acts/sections) where the open case-details set covers it.
+  let detail: Awaited<ReturnType<typeof caseDetailByCnr>> = null;
+  try { detail = await caseDetailByCnr(cnr); } catch { /* best-effort */ }
+  const hasDetail = Boolean(detail && (detail.pet_advocate || detail.res_advocate || detail.acts));
+
   return (
     <div className="space-y-6">
       <Link
@@ -101,6 +106,19 @@ export default async function JudgmentReaderPage({
           <Icon name="external" className="h-4 w-4" />
           Open original PDF (CC-BY open data)
         </a>
+      )}
+
+      {hasDetail && detail && (
+        <Card className="p-5">
+          <div className="mb-3 flex items-center gap-2"><Icon name="scale" className="h-4 w-4 text-brand-600" /><h2 className="text-base font-medium">Advocates &amp; acts</h2></div>
+          <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+            {detail.pet_advocate && <div><dt className="label">Petitioner advocate</dt><dd className="text-ink">{detail.pet_advocate}</dd></div>}
+            {detail.res_advocate && <div><dt className="label">Respondent advocate</dt><dd className="text-ink">{detail.res_advocate}</dd></div>}
+            {detail.acts && <div className="sm:col-span-2"><dt className="label">Acts &amp; sections</dt><dd className="text-ink">{detail.acts}</dd></div>}
+            {detail.fir_no && <div><dt className="label">FIR</dt><dd className="text-ink">{detail.fir_no}{detail.fir_year ? `/${detail.fir_year}` : ""}</dd></div>}
+            {detail.lower_court && <div><dt className="label">Lower court</dt><dd className="text-ink">{detail.lower_court}</dd></div>}
+          </dl>
+        </Card>
       )}
 
       {hasText ? (

@@ -95,6 +95,22 @@ export async function searchJudgments(opts: { q?: string; court?: string; year?:
   return (await athenaQuery(sql, params, opts.limit ?? 100)) as unknown as JudgmentRow[];
 }
 
+export interface CaseDetail {
+  case_type: string | null; pet_advocate: string | null; res_advocate: string | null;
+  fir_no: string | null; fir_year: string | null; lower_court: string | null; acts: string | null;
+}
+
+// Rich case detail (advocates, acts/sections, FIR) for a CNR, from the open
+// parquet_case_details (currently a few High Courts; grows). Null when not present.
+export async function caseDetailByCnr(cnr?: string | null): Promise<CaseDetail | null> {
+  if (!cnr) return null;
+  const sql = `SELECT case_type, pet_advocate, res_advocate, fir_no, fir_year, lower_court,
+    array_join(transform(acts, x -> concat(coalesce(x.act,''), ' ', coalesce(x.section,''))), '; ') acts
+    FROM case_details WHERE cnr = ? LIMIT 1`;
+  const rows = await athenaQuery(sql, [cnr], 1);
+  return (rows[0] as unknown as CaseDetail) ?? null;
+}
+
 // Precedent for the agent: judgments matching any of the given terms (party/judge), HC + SC.
 export async function searchJudgmentsByTerms(terms: string[], limit = 4): Promise<JudgmentRow[]> {
   const clean = [...new Set(terms.filter((t) => t && t.length > 4))].slice(0, 3);
