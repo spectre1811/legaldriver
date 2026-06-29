@@ -29,6 +29,7 @@ export async function buildGrounding(
     sourceText: string;
     sourceLabel: string;
     matterId?: string | null;
+    language?: string | null;
   },
 ): Promise<DraftGrounding> {
   const terms = sectionTerms(opts.sections.length ? opts.sections : opts.template.default_sections);
@@ -59,14 +60,49 @@ export async function buildGrounding(
     if (m) matter = { title: m.title, cnr: m.cnr, court: m.court, stage: m.stage, parties: m.party_names ?? [] };
   }
 
+  // Real precedent from the open judgments corpus (S3 lake via Athena). Keyed to the
+  // section terms + the matter's parties; one top judgment's real text is pulled in.
+  // Gracefully empty if the corpus isn't configured or DRAFT_PRECEDENT=off.
+  const precedent = await draftPrecedent([...terms, ...(matter?.parties ?? [])]);
+
   return {
     template: opts.template,
     sections: opts.sections,
+    language: opts.language || opts.template.language || "en",
     sourceText: opts.sourceText,
     sourceLabel: opts.sourceLabel,
     matter,
     references,
     deadlines,
-    precedent: [], // wired; populated in P-E (open-corpus precedent for drafts)
+    precedent,
   };
+}
+
+const PRECEDENT_FLUFF = new Set(["state", "gujarat", "union", "india", "court", "act", "section", "order", "rule"]);
+
+async function draftPrecedent(terms: string[]): Promise<DraftGrounding["precedent"]> {
+  if (process.env.DRAFT_PRECEDENT === "off") return [];
+  const clean = [...new Set(terms.map((t) => (t ?? "").trim().toLowerCase()).filter((w) => w.length > 4 && !PRECEDENT_FLUFF.has(w)))].slice(0, 4);
+  if (!clean.length) return [];
+  try {
+    const { searchJudgmentsByTerms, judgmentPdfUrl, courtLabel } = await import("@/lib/court/corpus-athena");
+    const rows = await searchJudgmentsByTerms(clean, 3);
+    const out: DraftGrounding["precedent"] = rows.map((r) => ({
+      ref: r.cnr ?? "judgment",
+      title: (r.title ?? "judgment").slice(0, 120),
+      url: judgmentPdfUrl(r.pdf_link, r.court, r.year, r.src),
+      snippet: `${courtLabel(r.court)} · ${r.year ?? ""}${r.citation ? ` · ${r.citation}` : ""}${r.disposal_nature ? ` · ${r.disposal_nature}` : ""}`,
+    }));
+    // Deep grounding: pull the top precedent's real text (one fetch, S3-cached).
+    if (out[0]?.url && process.env.JUDGMENT_TEXT_GROUNDING !== "off") {
+      try {
+        const { getJudgmentText } = await import("@/lib/court/judgment-text");
+        const t = await getJudgmentText({ pdfUrl: out[0].url, cacheKey: out[0].ref });
+        if (t?.text) out.push({ ref: out[0].ref, title: `Excerpt — ${out[0].title}`, url: out[0].url, snippet: t.text.replace(/\s+/g, " ").slice(0, 800) });
+      } catch { /* best-effort */ }
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }

@@ -30,6 +30,14 @@ export function buildDraftPrompt(g: DraftGrounding): string {
   for (const p of g.precedent) ctx.push(`(precedent) ${p.title} — ${p.ref}: ${p.snippet}`);
   const ctxBlock = ctx.map((c, i) => `[${i + 1}] ${c}`).join("\n") || "(no external context retrieved)";
 
+  const LANG: Record<string, string> = {
+    en: "Write the draft in English.",
+    hi: "Write the draft in formal legal Hindi (Devanagari). Keep statutory section numbers and Act names as commonly cited; transliterate party names.",
+    gu: "Write the draft in formal legal Gujarati. Keep statutory section numbers and Act names as commonly cited; transliterate party names.",
+    bilingual: "Write the draft bilingually: each section in English followed by a formal Hindi (Devanagari) rendering.",
+  };
+  const langLine = LANG[g.language] ?? LANG.en;
+
   const matter = g.matter
     ? `MATTER: ${g.matter.title}${g.matter.cnr ? ` (CNR ${g.matter.cnr})` : ""} · Court: ${g.matter.court ?? "—"} · Stage: ${g.matter.stage ?? "—"} · Parties: ${(g.matter.parties ?? []).join(" v. ") || "—"}`
     : "MATTER: (not linked to a case)";
@@ -43,6 +51,7 @@ STRICT RULES:
 - Where a fact the draft needs is NOT in the source/record, do ONE of: (a) ASSUME it and add it to "assumptions", or (b) leave a clearly-marked placeholder like [TO CONFIRM: …] in the body and add the question to "clarifications". Never fabricate specifics.
 - Handle old↔new law (IPC↔BNS, CrPC↔BNSS, IEA↔BSA) using the mappings in CONTEXT; flag "nearest, not identical" where relevant.
 - Follow the TEMPLATE STRUCTURE section-by-section. Keep it tight and usable.
+- LANGUAGE: ${langLine} (Always keep "assumptions", "presumptions", "clarifications", "bullet_points" in English for the advocate's review.)
 
 TEMPLATE STRUCTURE (draft body must follow this order):
 ${structure}

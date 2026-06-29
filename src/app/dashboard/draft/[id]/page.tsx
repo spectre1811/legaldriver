@@ -4,7 +4,7 @@ import { Card, Badge, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
-import { RegenerateButton, SectionsEditor, EditDraftForm, FinalizeButton, DiscardButton, PendingPoller } from "../draft-ui";
+import { RegenerateButton, SectionsEditor, LanguageSelector, EditDraftForm, FinalizeButton, DiscardButton, PendingPoller } from "../draft-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +74,10 @@ export default async function DraftDetailPage({ params }: { params: { id: string
             <RegenerateButton draftId={draft.id} sections={draft.sections ?? []} has={hasBody} />
           </div>
           <div className="space-y-5 px-5 py-5">
-            <SectionsEditor draftId={draft.id} initial={draft.sections ?? []} />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <SectionsEditor draftId={draft.id} initial={draft.sections ?? []} />
+              <LanguageSelector draftId={draft.id} current={draft.language ?? "en"} />
+            </div>
 
             {isPending && !hasBody ? (
               <PendingPoller />

@@ -84,6 +84,7 @@ export interface GenerateDraftInput {
   sourceDocumentId: string;
   overrideTemplateId?: string | null;
   overrideSections?: string[] | null;
+  language?: string | null;
   userId?: string | null;
 }
 
@@ -127,8 +128,9 @@ export async function generateDraft(sb: DB, input: GenerateDraftInput): Promise<
     producesDocType: template.produces_doc_type,
   });
 
+  const language = input.language || template.language || "en";
   const grounding = await buildGrounding(sb, {
-    tenantId: input.tenantId, template, sections, sourceText: doc.parsed_text ?? "",
+    tenantId: input.tenantId, template, sections, language, sourceText: doc.parsed_text ?? "",
     sourceLabel: `${doc.filename ?? "document"} (${doc.doc_type ?? "?"})`, matterId: doc.matter_id,
   });
 
@@ -142,7 +144,7 @@ export async function generateDraft(sb: DB, input: GenerateDraftInput): Promise<
     template_id: template.id,
     produces_doc_type: template.produces_doc_type,
     sections,
-    language: template.language,
+    language,
     title: `${template.title}`,
     status: result ? "draft" : "pending",
     created_by: input.userId ?? null,

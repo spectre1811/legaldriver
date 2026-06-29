@@ -15,7 +15,7 @@ export type DraftActionResult = { ok: boolean; message: string; draftId?: string
 type Json = Database["public"]["Tables"]["draft_version"]["Insert"]["meta"];
 
 // Generate a draft in response to an existing document.
-export async function draftFromDocument(documentId: string, opts?: { templateId?: string; sections?: string[] }): Promise<DraftActionResult> {
+export async function draftFromDocument(documentId: string, opts?: { templateId?: string; sections?: string[]; language?: string }): Promise<DraftActionResult> {
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
   if (!tenantId) return { ok: false, message: "No tenant." };
@@ -23,7 +23,7 @@ export async function draftFromDocument(documentId: string, opts?: { templateId?
 
   const out = await generateDraft(supabase, {
     tenantId, sourceDocumentId: documentId,
-    overrideTemplateId: opts?.templateId ?? null, overrideSections: opts?.sections ?? null, userId: user?.id ?? null,
+    overrideTemplateId: opts?.templateId ?? null, overrideSections: opts?.sections ?? null, language: opts?.language ?? null, userId: user?.id ?? null,
   });
   if (!out) return { ok: false, message: "Could not start the draft (document not found)." };
   if (out.noTemplate) return { ok: true, draftId: out.draftId, message: "No drafting template matches this document's category yet — pick one in the console." };
@@ -70,7 +70,7 @@ export async function uploadAndDraft(formData: FormData): Promise<DraftActionRes
 }
 
 // Re-synthesize the draft (optionally with new sections/template) → new version.
-export async function regenerateDraft(draftId: string, opts?: { templateId?: string; sections?: string[] }): Promise<DraftActionResult> {
+export async function regenerateDraft(draftId: string, opts?: { templateId?: string; sections?: string[]; language?: string }): Promise<DraftActionResult> {
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
   if (!tenantId) return { ok: false, message: "No tenant." };
@@ -88,14 +88,15 @@ export async function regenerateDraft(draftId: string, opts?: { templateId?: str
     override: opts?.sections ?? (draft.sections?.length ? draft.sections : null),
     templateDefaults: template.default_sections, sourceText: doc.parsed_text, producesDocType: template.produces_doc_type,
   });
+  const language = opts?.language ?? draft.language ?? template.language ?? "en";
   const grounding = await buildGrounding(supabase, {
-    tenantId, template, sections, sourceText: doc.parsed_text ?? "",
+    tenantId, template, sections, language, sourceText: doc.parsed_text ?? "",
     sourceLabel: `${doc.filename ?? "document"} (${doc.doc_type ?? "?"})`, matterId: doc.matter_id,
   });
   const result = await synthesizeDraft(grounding);
   const nextVersion = await nextVersionNo(supabase, draftId);
 
-  await supabase.from("draft").update({ template_id: template.id, sections, produces_doc_type: template.produces_doc_type, status: result ? "draft" : "pending", updated_at: new Date().toISOString() }).eq("id", draftId);
+  await supabase.from("draft").update({ template_id: template.id, sections, language, produces_doc_type: template.produces_doc_type, status: result ? "draft" : "pending", updated_at: new Date().toISOString() }).eq("id", draftId);
 
   if (result) {
     await supabase.from("draft_version").insert({

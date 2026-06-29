@@ -87,6 +87,30 @@ export function SectionsEditor({ draftId, initial }: { draftId: string; initial:
   );
 }
 
+const LANGS: { v: string; label: string }[] = [
+  { v: "en", label: "English" }, { v: "hi", label: "हिन्दी" }, { v: "gu", label: "ગુજરાતી" }, { v: "bilingual", label: "Bilingual (EN+HI)" },
+];
+
+// Output-language selector — re-synthesizes the draft in the chosen language.
+export function LanguageSelector({ draftId, current }: { draftId: string; current: string }) {
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  return (
+    <div className="flex items-center gap-2">
+      <span className="label">Language</span>
+      <select
+        defaultValue={current}
+        disabled={pending}
+        onChange={(e) => { const language = e.target.value; if (language !== current) start(async () => { await regenerateDraft(draftId, { language }); router.refresh(); }); }}
+        className="rounded-lg border border-line px-2 py-1 text-xs focus:border-brand-400 focus:outline-none"
+      >
+        {LANGS.map((l) => <option key={l.v} value={l.v}>{l.label}</option>)}
+      </select>
+      {pending && <Icon name="refresh" className="h-3.5 w-3.5 animate-spin text-ink-faint" />}
+    </div>
+  );
+}
+
 export function EditDraftForm({ draftId, body }: { draftId: string; body: string }) {
   const [text, setText] = useState(body);
   const [editing, setEditing] = useState(false);

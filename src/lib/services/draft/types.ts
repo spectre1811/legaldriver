@@ -25,6 +25,7 @@ export interface DraftResult {
 export interface DraftGrounding {
   template: DraftTemplate;
   sections: string[];          // statutory sections being drafted under
+  language: string;            // effective output language: 'en' | 'hi' | 'gu' | 'bilingual'
   sourceText: string;          // the document being responded to (extracted/OCR'd)
   sourceLabel: string;         // filename / doc_type for the prompt header
   matter?: {
