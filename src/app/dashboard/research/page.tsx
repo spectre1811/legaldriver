@@ -1,11 +1,29 @@
+import Link from "next/link";
 import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
-import { corpusEnabled, searchJudgments, judgmentPdfUrl, courtLabel } from "@/lib/court/corpus-athena";
+import { corpusEnabled, searchJudgments, judgmentPdfUrl, courtLabel, type JudgmentRow } from "@/lib/court/corpus-athena";
 import { Filters } from "./filters";
 
 export const dynamic = "force-dynamic";
 
 const COURT_RE = /^(SC|[0-9]+_[0-9]+)$/;
+
+// Build the judgment-reader href, omitting any null/empty params.
+function judgmentHref(r: JudgmentRow): string {
+  const params = new URLSearchParams();
+  const add = (k: string, v: string | null | undefined) => { if (v) params.set(k, v); };
+  add("cnr", r.cnr);
+  add("src", r.src);
+  add("court", r.court);
+  add("year", r.year);
+  add("pdf", r.pdf_link);
+  add("title", r.title);
+  add("judge", r.judge);
+  add("citation", r.citation);
+  add("date", r.decision_date);
+  add("disposal", r.disposal_nature);
+  return `/dashboard/research/judgment?${params.toString()}`;
+}
 
 // Title looks like "CR.RA/952/2023 of ARTHKUMAR... Vs BINALBEN...".
 // Split on " of " to separate case number from parties, then split parties on a
@@ -103,13 +121,13 @@ export default async function ResearchPage({
                   return (
                     <tr key={r.cnr ?? `${r.title}-${i}`} className="border-b border-line last:border-0 hover:bg-paper">
                       <td className="px-5 py-3.5 align-top">
-                        <span className="flex flex-col leading-tight">
-                          <span className="flex items-center gap-2 font-medium text-ink">
+                        <Link href={judgmentHref(r)} className="group flex flex-col leading-tight">
+                          <span className="flex items-center gap-2 font-medium text-ink group-hover:text-brand-700 group-hover:underline">
                             <Icon name="cases" className="h-4 w-4 shrink-0 text-ink-faint" />
                             {caseNumber ?? r.title ?? "—"}
                           </span>
                           {r.cnr && <span className="mt-0.5 pl-6 text-xs text-ink-faint">CNR {r.cnr}</span>}
-                        </span>
+                        </Link>
                       </td>
                       <td className="px-5 py-3.5 align-top text-ink-muted">
                         {parties ? <span className="font-medium text-ink">{parties}</span> : <span className="text-ink-faint">—</span>}

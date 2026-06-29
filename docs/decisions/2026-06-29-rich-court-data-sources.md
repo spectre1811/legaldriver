@@ -224,3 +224,136 @@ That is exactly what rule #2 forbids; consuming it doesn't launder the violation
 > join it to our existing judgment data on `cnr`. It is the one move that gives us *materially
 > richer* fields — advocates, acts & sections, hearing history, linked cases — with zero cost, a
 > clean licence, no eCourts contact, and coverage that grows on its own.
+
+---
+
+## Appendix: How eCourtsIndia (private) sources its data
+
+**Date added:** 2026-06-29 · **Type:** competitive / diligence research · **Subject:** the
+*private commercial vendor* at `ecourtsindia.com` (API host `webapi.ecourtsindia.com`) — NOT the
+government eCourts/NIC project. All findings below are from the vendors' own public marketing/API
+docs, the relevant open-source repos, and the official eCourts policies.
+
+### 1. Method of acquisition — their own words: a live re-scrape of the government portals
+
+eCourtsIndia's own API marketing page describes the mechanism explicitly:
+
+> "The API **forces a live re-scrape** of any case **from official eCourts servers** with updated
+> data ready in **5–10 seconds**." — paraphrased from [ecourtsindia.com/api](https://ecourtsindia.com/api)
+> (the page itself 403s to bots; this is the indexed marketing copy returned by search).
+
+They simultaneously claim the data is "**sourced from the official court backends of the
+e-Committee, the Supreme Court registry, and individual High Court portals**" and offer
+"certified true copy PDFs … digitally signed from the eCourts system." Their docs
+([ecourtsindia.com/api/docs](https://ecourtsindia.com/api/docs)) expose endpoints like
+`GET /api/partner/case/{cnr}` returning parties/advocates/judges/hearing history/orders/IAs, with
+CNRs "auto-validated and deduplicated, with updated data ready in ~30s — perfect for nightly sync
+jobs." There is **no claim of a licensed feed, MoU, or NJDG API access anywhere** — only that they
+"re-scrape … from official eCourts servers." That is option **(a): automated scraping of the
+official portals**, on demand, with the freshness window (5–30s) that only live re-scraping
+produces. A genuine licensed feed would be described as a feed/license, not a "re-scrape."
+
+Peers describe the same thing in thinner language:
+- **Vakeel360** ([vakeel360.com/api](https://vakeel360.com/api)): "**Live data directly from court
+  servers. No caching, no delays.** All data is fetched in **real-time directly from court
+  servers**." No mention of any license or authorization.
+- **Surepass** ([surepass.io/ecourts-api](https://surepass.io/ecourts-api/)): "Our system checks
+  the information from the board department … results within seconds … 100% accurate and updated."
+  No license claim.
+- **Kleopatra** ([court-api.kleopatra.io](https://court-api.kleopatra.io/)): "free … real-time
+  court case tracking" for "research and education" — same downstream pattern, no authorization
+  claim. (Note `eciapi.akshit.me` / "E-Courts India API" is the same family of community/reseller
+  wrappers around the portals.)
+
+None of these is the government. None claims a license. All claim the one thing a licensed feed
+cannot uniquely give you and a scraper does: an **on-demand, seconds-fresh re-fetch keyed to a CNR**.
+
+### 2. The open-source scraper lineage — and it ships CAPTCHA solvers
+
+The technique these vendors monetize is openly published on GitHub and Apify, and the public
+projects **bundle CAPTCHA solvers** (OCR/ONNX), because the portals gate every query behind a
+Securimage CAPTCHA:
+
+- **`iamshouvikmitra/bharat-courts`** ([github](https://github.com/iamshouvikmitra/bharat-courts)) —
+  async Python SDK, "without using official APIs, since none exist." It reverse-engineers the
+  portal: "The eCourts HC Services portal uses a PHP backend with Session cookies, **Securimage
+  CAPTCHAs pinned to sessions**, AJAX POST requests, and JSON responses." It ships **three solvers**:
+  `OCRCaptchaSolver` (`ddddocr`, "~75% accuracy … failed attempts are automatically retried with
+  fresh sessions (default 5 retries — P(all fail) ≈ 0.1%)"), `ONNXCaptchaSolver` ("lightweight
+  CAPTCHA solver using ONNX Runtime"), and `ManualCaptchaSolver`. This is a textbook
+  scrape-and-defeat-CAPTCHA pipeline — the exact thing CLAUDE.md rule #2 forbids us from building.
+- **`codingfrontend/ecourts-case-scraper`** (Apify) ([apify](https://apify.com/codingfrontend/ecourts-case-scraper)) —
+  "Playwright with Chromium … **OCR-Powered Captcha Solving: Uses Tesseract.js to automatically
+  solve captcha images** … Up to 5 attempts per case with fresh captcha images."
+- **`96mohitm/court-data-scraper`** ([github](https://github.com/96mohitm/court-data-scraper)) —
+  "uses tesseract for captcha recognition."
+- **`openjustice-in/ecourts`** ([github](https://github.com/openjustice-in/ecourts)) — GPL-3.0
+  scraper of `hcservices.ecourts.gov.in`, "intentionally single-threaded … to avoid overloading the
+  eCourts servers," for "journalists and law researchers." Notably it warns: "**If you run this
+  code, you are responsible for the legal implications of the same.**"
+
+The commercial vendors (eCourtsIndia, Vakeel360, Surepass, Kleopatra) are the **hosted, paid,
+SLA-wrapped version of exactly this lineage** — same portals, same CAPTCHA gate, same per-CNR
+re-fetch — with the CAPTCHA-solving and session-rotation hidden behind a Bearer token and credits.
+
+### 3. Authorization reality — no evidence of any, and the official policy cuts against them
+
+- **No vendor produces an MoU, NJDG license, or partner agreement.** Across their API pages, docs,
+  and pricing, the strongest claim is "from official eCourts servers" — which describes the *target*
+  of a scrape, not a *grant*. We found **zero** evidence of authorized sourcing.
+- The **NJDG Open API exists but is gated to government / institutional litigants** (Part 1 of this
+  doc) — not open to a commercial reseller. So "we use NJDG" would not even be available to them.
+- **eCourts' own policies cut against resale:** the Copyright Policy states "**The contents on this
+  website shall not be reproduced partially or fully, without duly & prominently acknowledging the
+  source**," prohibits use "in any misleading or objectionable context," and for third-party
+  copyrighted material requires "**Authorization to reproduce such material must be obtained from the
+  Courts Concerned**" ([copyright policy](https://services.ecourts.gov.in/ecourtindia_v6/?p=copy_right_policy/index)).
+  The Terms disclaim all liability and place disputes under Indian courts' jurisdiction
+  ([terms](https://services.ecourts.gov.in/ecourtindia_v6//?p=terms_and_conditions/index)).
+  Independently of the bare ToS text, **defeating the CAPTCHA is circumventing an access control**,
+  which is the bright line in CLAUDE.md rule #2 and `2026-06-24-court-data-strategy.md`.
+
+Net: these operate in the **scrape-and-resell grey zone**, not under authorization.
+
+### 4. Legal exposure for us as a *consumer* of such an API
+
+If the upstream is unauthorized scraping + CAPTCHA bypass, the taint and risk flow downstream to a
+paying consumer:
+- **Tainted provenance.** Our whole product promise is "source: eCourts, verify against the official
+  record." Data obtained by defeating an access control has provenance we cannot stand behind, and
+  re-publishing it can itself implicate the Copyright Policy's reproduction/attribution conditions.
+- **CAPTCHA bypass = circumventing access controls.** Under Indian law this is the riskiest facet —
+  squarely the conduct rule #2 forbids — and Indian courts analyze scraping primarily through
+  **copyright (compiled data as "literary work," Copyright Act 1957 s.2(o))** and **contract (ToS
+  breach)**; enforceability of ToS/`robots.txt` against scrapers is **still unsettled in India**,
+  which is itself a risk, not a safe harbor ([ikigailaw](https://www.ikigailaw.com/article/263/legality-of-data-scraping-in-india),
+  [babariaip](https://babariaip.com/blog/data-scraping-and-related-legal-issues-in-india/)).
+- **DPDPA 2023** adds consent/processing obligations once personal data (party names, advocate
+  details) is involved, even if "publicly available" ([law.asia](https://law.asia/india-data-scraping-regulation/)).
+- **Known takedowns/litigation:** we found **no specific reported judgment against an eCourts-data
+  reseller** to date (the space is grey, not yet litigated) — but the general scraping-litigation
+  pattern (ToS-breach + copyright-preemption fights, e.g. [Quinn Emanuel](https://www.quinnemanuel.com/the-firm/publications/the-legal-landscape-of-web-scraping/),
+  [Skadden](https://www.skadden.com/insights/publications/2024/05/district-court-adopts-broad-view))
+  shows the consumer of scraped data is not insulated. Absence of a precedent is not absence of risk.
+
+### Verdict & implication
+
+> **VERDICT:** The evidence — eCourtsIndia's own "forces a **live re-scrape from official eCourts
+> servers** (5–30s)" claim, the absence of any MoU/license, and an identical open-source lineage
+> (`bharat-courts`, Apify, `openjustice-in`) that ships OCR/ONNX **CAPTCHA solvers** against the
+> portals' Securimage gate — points to **(a): on-demand automated scraping of the official eCourts
+> portals with programmatic CAPTCHA bypass, resold behind an API**. No authorization exists; they
+> operate in the scrape-and-resell grey zone. Peers (Vakeel360/Surepass/Kleopatra) are the same.
+>
+> **IMPLICATION FOR US:** We will **not** replicate CAPTCHA-bypass scraping (CLAUDE.md rule #2), and
+> we would consume such a provider **only if it can contractually prove authorized sourcing** (a real
+> NJDG license / eCommittee MoU) — which none demonstrates today. Default stands: **open data
+> (AWS CC-BY-4.0 `parquet_case_details`, Indian Kanoon as a paying customer) + human-in-the-loop
+> manual entry** for anything the open corpus lacks.
+
+#### Sources
+- eCourtsIndia API & docs (marketing copy, pages 403 to bots): https://ecourtsindia.com/api · https://ecourtsindia.com/api/docs · https://ecourtsindia.com/services
+- Vakeel360: https://vakeel360.com/api · Surepass: https://surepass.io/ecourts-api/ · Kleopatra: https://court-api.kleopatra.io/ · ECIAPI: https://eciapi.akshit.me/
+- OSS scraper lineage w/ CAPTCHA solvers: https://github.com/iamshouvikmitra/bharat-courts · https://apify.com/codingfrontend/ecourts-case-scraper · https://github.com/96mohitm/court-data-scraper · https://github.com/openjustice-in/ecourts
+- eCourts official policies: https://services.ecourts.gov.in/ecourtindia_v6/?p=copy_right_policy/index · https://services.ecourts.gov.in/ecourtindia_v6//?p=terms_and_conditions/index
+- Indian scraping-law context: https://www.ikigailaw.com/article/263/legality-of-data-scraping-in-india · https://babariaip.com/blog/data-scraping-and-related-legal-issues-in-india/ · https://law.asia/india-data-scraping-regulation/ · https://www.quinnemanuel.com/the-firm/publications/the-legal-landscape-of-web-scraping/ · https://www.skadden.com/insights/publications/2024/05/district-court-adopts-broad-view
