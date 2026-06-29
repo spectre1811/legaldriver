@@ -36,3 +36,6 @@ npm-debug.log*
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# tesseract.js lang models (downloaded at runtime; worker cache)
+*.traineddata
