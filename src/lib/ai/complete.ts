@@ -99,7 +99,10 @@ async function apiCompleteText(prompt: string, opts?: CompleteOpts): Promise<str
 }
 async function cliCompleteJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
   const augmented = `${prompt}\n\nReturn ONLY a JSON object conforming to this JSON Schema (no markdown, no prose):\n${JSON.stringify(schema)}`;
-  const raw = await claudeCliJson(augmented, { model: opts?.model ?? MODEL });
+  // Long structured output (e.g. a full draft) needs more than the 90s default —
+  // scale the CLI timeout with the requested token budget.
+  const timeoutMs = opts?.maxTokens && opts.maxTokens > 2000 ? 300_000 : 120_000;
+  const raw = await claudeCliJson(augmented, { model: opts?.model ?? MODEL, timeoutMs });
   if (!raw) return null;
   try { return JSON.parse(raw); } catch { return null; }
 }

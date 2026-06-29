@@ -31,6 +31,7 @@ async function main() {
   const { resolveFiling } = await import("../src/lib/docs/autofile");
   const { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } = await import("../src/lib/docs/case-summary");
   const { synthesize } = await import("../src/lib/services/agent/agent");
+  const { synthesizeDraft } = await import("../src/lib/services/draft/draft");
   const { suggestReply } = await import("../src/lib/services/agent/reply");
   const embeddingsOn = process.env.EMBEDDINGS_DISABLED !== "1";
   const emb = embeddingsOn ? await import("../src/lib/services/agent/embed") : null;
@@ -113,6 +114,36 @@ async function main() {
       } catch {
         await admin.from("document").update({ extracted: { ...prev, ocrTried: at } }).eq("id", d.id);
       }
+    }
+    return done;
+  }
+
+  // Synthesize drafts queued by the app (keyless prod). The pending draft_version
+  // carries the full grounding in meta; we run the same provider-agnostic draft
+  // synthesis and write the result back. Never sends/files — status → 'draft'.
+  async function draftPending(): Promise<number> {
+    const { data: vers } = await admin
+      .from("draft_version")
+      .select("id, tenant_id, draft_id, meta")
+      .contains("meta", { pending: true })
+      .limit(2); // each synth is a long (~120s) LLM call — keep the tick responsive
+    if (!vers?.length) return 0;
+    let done = 0;
+    for (const v of vers) {
+      const meta = (v.meta ?? {}) as { grounding?: unknown };
+      if (!meta.grounding) continue;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await synthesizeDraft(meta.grounding as any);
+      if (!result) continue; // no answer this tick — retry next loop
+      await admin.from("draft_version").update({
+        body: result.body, assumptions: result.assumptions, presumptions: result.presumptions,
+        clarifications: result.clarifications, bullet_points: result.bullet_points,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        citations: result.citations as any, generated_by: "llm", meta: { done: true } as any,
+      }).eq("id", v.id);
+      await admin.from("draft").update({ status: "draft", updated_at: new Date().toISOString() }).eq("id", v.draft_id);
+      done++;
+      console.log(`  [draft] synthesized ${v.draft_id.slice(0, 8)} (${result.citations.length} cites, ${result.clarifications.length} clarifications)`);
     }
     return done;
   }
@@ -294,6 +325,8 @@ async function main() {
     await embedDocuments();
     const a = await answerPending();
     if (a) console.log(`agent answers: ${a}`);
+    const dr = await draftPending();
+    if (dr) console.log(`drafts synthesized: ${dr}`);
     await suggestReplies();
   }
 

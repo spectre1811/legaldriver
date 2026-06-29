@@ -1100,6 +1100,93 @@ export type Database = {
           },
         ]
       }
+      draft: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          language: string
+          matter_id: string | null
+          produces_doc_type: string | null
+          sections: string[]
+          source_document_id: string | null
+          status: string
+          template_id: string | null
+          tenant_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          language?: string
+          matter_id?: string | null
+          produces_doc_type?: string | null
+          sections?: string[]
+          source_document_id?: string | null
+          status?: string
+          template_id?: string | null
+          tenant_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          language?: string
+          matter_id?: string | null
+          produces_doc_type?: string | null
+          sections?: string[]
+          source_document_id?: string | null
+          status?: string
+          template_id?: string | null
+          tenant_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "document"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "draft_template"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       draft_template: {
         Row: {
           conventions: string | null
@@ -1152,6 +1239,69 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "draft_template_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      draft_version: {
+        Row: {
+          assumptions: string[]
+          body: string | null
+          bullet_points: string[]
+          citations: Json
+          clarifications: string[]
+          created_at: string
+          draft_id: string
+          generated_by: string | null
+          id: string
+          meta: Json
+          presumptions: string[]
+          tenant_id: string
+          version: number
+        }
+        Insert: {
+          assumptions?: string[]
+          body?: string | null
+          bullet_points?: string[]
+          citations?: Json
+          clarifications?: string[]
+          created_at?: string
+          draft_id: string
+          generated_by?: string | null
+          id?: string
+          meta?: Json
+          presumptions?: string[]
+          tenant_id: string
+          version: number
+        }
+        Update: {
+          assumptions?: string[]
+          body?: string | null
+          bullet_points?: string[]
+          citations?: Json
+          clarifications?: string[]
+          created_at?: string
+          draft_id?: string
+          generated_by?: string | null
+          id?: string
+          meta?: Json
+          presumptions?: string[]
+          tenant_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_version_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "draft"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "draft_version_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenant"

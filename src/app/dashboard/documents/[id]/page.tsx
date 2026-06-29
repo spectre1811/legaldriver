@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, Badge, Disclaimer, fmtDate, fmtSize } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
+import { DraftReplyButton } from "@/components/draft-reply-button";
 import { CATEGORY_LABEL } from "@/lib/docs/categories";
 
 const SOURCE: Record<string, string> = { gmail: "Gmail", upload: "Upload", court_order: "Court order" };
@@ -79,6 +80,7 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
           <a href={`/api/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer" className="btn-primary inline-flex items-center gap-1.5 px-3 py-2 text-sm">
             <Icon name="external" className="h-4 w-4" /> Download
           </a>
+          <DraftReplyButton documentId={doc.id} />
           <DocActions documentId={doc.id} matterId={doc.matter_id} clientId={doc.client_id} matters={matterOpts} clients={clientOpts} shared={doc.portal_shared} docType={doc.doc_type} />
         </div>
       </header>
