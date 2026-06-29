@@ -8,6 +8,7 @@ import { COURT_NAMES } from "@/lib/court/corpus-athena";
 // All 25 High Court codes in the corpus. Labels come from COURT_NAMES when known,
 // else fall back to "Court <code>".
 const COURT_CODES = [
+  "SC",
   "1_12", "2_5", "3_22", "5_15", "7_26", "8_9", "9_13", "10_8", "11_24", "14_25",
   "16_20", "17_21", "18_6", "19_16", "20_7", "21_11", "22_18", "23_23", "24_17",
   "27_1", "28_2", "29_3", "32_4", "33_10", "36_29",

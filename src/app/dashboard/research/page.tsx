@@ -5,7 +5,7 @@ import { Filters } from "./filters";
 
 export const dynamic = "force-dynamic";
 
-const COURT_RE = /^[0-9]+_[0-9]+$/;
+const COURT_RE = /^(SC|[0-9]+_[0-9]+)$/;
 
 // Title looks like "CR.RA/952/2023 of ARTHKUMAR... Vs BINALBEN...".
 // Split on " of " to separate case number from parties, then split parties on a
@@ -99,7 +99,7 @@ export default async function ResearchPage({
               <tbody>
                 {rows.map((r, i) => {
                   const { caseNumber, parties } = parseTitle(r.title);
-                  const pdfUrl = judgmentPdfUrl(r.pdf_link, r.court, r.year);
+                  const pdfUrl = judgmentPdfUrl(r.pdf_link, r.court, r.year, r.src);
                   return (
                     <tr key={r.cnr ?? `${r.title}-${i}`} className="border-b border-line last:border-0 hover:bg-paper">
                       <td className="px-5 py-3.5 align-top">

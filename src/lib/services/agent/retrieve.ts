@@ -78,8 +78,8 @@ async function corpusHits(terms: (string | null | undefined)[], limit = 4): Prom
       source: "judgment" as const,
       ref: r.cnr ?? "judgment",
       title: (r.title ?? "judgment").slice(0, 120),
-      url: judgmentPdfUrl(r.pdf_link, r.court, r.year),
-      snippet: `${courtLabel(r.court)} · ${r.year ?? ""} · decided ${r.decision_date?.slice(0, 10) ?? "—"}${r.judge ? ` · ${r.judge}` : ""}${r.disposal_nature ? ` · ${r.disposal_nature}` : ""}`,
+      url: judgmentPdfUrl(r.pdf_link, r.court, r.year, r.src),
+      snippet: `${courtLabel(r.court)} · ${r.year ?? ""} · decided ${r.decision_date?.slice(0, 10) ?? "—"}${r.citation ? ` · ${r.citation}` : ""}${r.judge ? ` · ${r.judge}` : ""}${r.disposal_nature ? ` · ${r.disposal_nature}` : ""}`,
     }));
   } catch {
     return [];
