@@ -853,32 +853,38 @@ export type Database = {
       }
       deadline: {
         Row: {
+          basis: string | null
           created_at: string
           due_date: string
           id: string
           jurisdiction_rule: string | null
           kind: string
           matter_id: string
+          source: string
           status: string
           tenant_id: string
         }
         Insert: {
+          basis?: string | null
           created_at?: string
           due_date: string
           id?: string
           jurisdiction_rule?: string | null
           kind: string
           matter_id: string
+          source?: string
           status?: string
           tenant_id: string
         }
         Update: {
+          basis?: string | null
           created_at?: string
           due_date?: string
           id?: string
           jurisdiction_rule?: string | null
           kind?: string
           matter_id?: string
+          source?: string
           status?: string
           tenant_id?: string
         }

@@ -3,7 +3,23 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
-import { generateCaseSummary, addCaseDocument, updateCase, refreshCase } from "../actions";
+import { generateCaseSummary, addCaseDocument, updateCase, refreshCase, confirmDeadline, dismissDeadline } from "../actions";
+
+// Confirm / dismiss a single proposed deadline (Phase D — propose-for-confirmation).
+export function ProposedDeadlineActions({ deadlineId }: { deadlineId: string }) {
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  return (
+    <span className="flex items-center gap-2">
+      <button onClick={() => start(async () => { await confirmDeadline(deadlineId); router.refresh(); })} disabled={pending} className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+        Confirm
+      </button>
+      <button onClick={() => start(async () => { await dismissDeadline(deadlineId); router.refresh(); })} disabled={pending} className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-red-600 disabled:opacity-50">
+        Dismiss
+      </button>
+    </span>
+  );
+}
 
 export function RefreshButton({ matterId }: { matterId: string }) {
   const [pending, start] = useTransition();

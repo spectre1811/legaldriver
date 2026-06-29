@@ -10,7 +10,7 @@ type Json = Database["public"]["Tables"]["onboarding_run"]["Update"]["counts"];
 
 export interface OnboardingCounts {
   causelist: number; matters_seeded: number; enriched: number;
-  inbox_filed: number; closed_found: number; summaries_queued: number;
+  deadlines_proposed: number; inbox_filed: number; closed_found: number; summaries_queued: number;
 }
 
 const LOOKAHEAD_DAYS = 7;
@@ -42,7 +42,7 @@ export async function runOnboarding(
   opts: { tenantId: string; advocateId: string; runId: string },
 ): Promise<OnboardingCounts> {
   const { tenantId, advocateId, runId } = opts;
-  const counts: OnboardingCounts = { causelist: 0, matters_seeded: 0, enriched: 0, inbox_filed: 0, closed_found: 0, summaries_queued: 0 };
+  const counts: OnboardingCounts = { causelist: 0, matters_seeded: 0, enriched: 0, deadlines_proposed: 0, inbox_filed: 0, closed_found: 0, summaries_queued: 0 };
 
   const { data: adv } = await supabase.from("advocate").select("id, name, bar_registration_number, state_code").eq("id", advocateId).maybeSingle();
   if (!adv) { await setRun(supabase, runId, { stage: "error", status: "error", message: "Advocate not found." }); return counts; }
@@ -92,7 +92,15 @@ export async function runOnboarding(
   }
   await setRun(supabase, runId, { counts });
 
-  // ── Stage 3: inbox backfill (only if a Gmail account is connected) ──
+  // ── Stage 3: propose deadlines from jurisdiction rules (human confirms) ──
+  await setRun(supabase, runId, { stage: "deadlines" });
+  try {
+    const { materializeDeadlines } = await import("./deadlines");
+    counts.deadlines_proposed = await materializeDeadlines(supabase, tenantId);
+  } catch { /* deadline proposals are best-effort */ }
+  await setRun(supabase, runId, { counts });
+
+  // ── Stage 4: inbox backfill (only if a Gmail account is connected) ──
   await setRun(supabase, runId, { stage: "inbox" });
   try {
     const { googleConfigured, refreshAccessToken } = await import("@/lib/mail/oauth");

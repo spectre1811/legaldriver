@@ -37,7 +37,7 @@ async function loadEvents(supabase: ReturnType<typeof createClient>, start: stri
   const [{ data: hearings }, { data: causeList }, { data: deadlines }, { data: events }, { data: ip }] = await Promise.all([
     supabase.from("hearing").select("id, date, purpose, matter:matter_id (id, title)").gte("date", start).lte("date", end),
     supabase.from("cause_list_entry").select("id, list_date, item_no, cnr, matter_id").gte("list_date", start).lte("list_date", end),
-    supabase.from("deadline").select("id, due_date, kind, matter_id").gte("due_date", start).lte("due_date", end),
+    supabase.from("deadline").select("id, due_date, kind, matter_id").eq("status", "open").gte("due_date", start).lte("due_date", end),
     supabase.from("calendar_event").select("id, event_date, title, kind, matter_id").gte("event_date", start).lte("event_date", end),
     supabase.from("ip_asset").select("id, title, type, renewal_date").gte("renewal_date", start).lte("renewal_date", end),
   ]);

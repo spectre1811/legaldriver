@@ -10,7 +10,32 @@ import { sha256Hex } from "@/lib/docs/hash";
 import { completeJson } from "@/lib/ai/complete";
 import { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } from "@/lib/docs/case-summary";
 import { logActivity } from "@/lib/activity";
+import { scheduleReminders } from "@/lib/notify/schedule";
 import type { Database } from "@/lib/db/database.types";
+
+// Confirm a proposed deadline → make it firm ('open') and schedule reminders.
+export async function confirmDeadline(deadlineId: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const { data: d } = await supabase.from("deadline").select("id, matter_id, kind, due_date").eq("id", deadlineId).maybeSingle();
+  if (!d) return { ok: false, message: "Deadline not found." };
+  await supabase.from("deadline").update({ status: "open" }).eq("id", deadlineId);
+  await scheduleReminders(supabase, tenantId, { kind: "deadline_reminder", eventDate: d.due_date, ref: `deadline:${d.id}`, title: d.kind.replace(/_/g, " ") });
+  if (d.matter_id) revalidatePath(`/dashboard/cases/${d.matter_id}`);
+  return { ok: true, message: "Deadline confirmed and reminders scheduled." };
+}
+
+// Dismiss a proposed deadline (advocate judged it inapplicable).
+export async function dismissDeadline(deadlineId: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const { data: d } = await supabase.from("deadline").select("matter_id").eq("id", deadlineId).maybeSingle();
+  await supabase.from("deadline").update({ status: "dismissed" }).eq("id", deadlineId);
+  if (d?.matter_id) revalidatePath(`/dashboard/cases/${d.matter_id}`);
+  return { ok: true, message: "Deadline dismissed." };
+}
 
 export type ActionResult = { ok: boolean; message: string };
 

@@ -7,7 +7,7 @@ import { DocActions } from "@/components/doc-actions";
 import { LogTimeExpense } from "./time-expense";
 import type { CaseSummary } from "@/lib/docs/case-summary";
 import { findSimilarCases } from "@/lib/court/similar";
-import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm } from "./case-actions";
+import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm, ProposedDeadlineActions } from "./case-actions";
 import { Communications } from "@/components/communications";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deleteMatter } from "../actions";
@@ -54,7 +54,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       judge_names: matter.judge_names ?? [],
       act_names: matter.act_names ?? [],
     }, 6),
-    supabase.from("deadline").select("id, kind, due_date, jurisdiction_rule, status").eq("matter_id", matter.id).order("due_date", { ascending: true }),
+    supabase.from("deadline").select("id, kind, due_date, jurisdiction_rule, status, basis").eq("matter_id", matter.id).order("due_date", { ascending: true }),
     supabase.from("deadline_rule").select("id, kind, days, jurisdiction, description").order("jurisdiction"),
   ]);
 
@@ -250,21 +250,46 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <p className="mt-0.5 text-xs text-ink-faint">Apply a limitation/procedural rule from a base date — it computes the due date and adds it to your calendar. Assistive; verify against the bare act.</p>
         </div>
         <div className="space-y-4 px-5 py-5">
-          {deadlines && deadlines.length > 0 ? (
-            <ul className="space-y-1.5 text-sm">
-              {deadlines.map((d) => {
-                const overdue = d.status === "open" && d.due_date < new Date().toISOString().slice(0, 10);
-                return (
-                  <li key={d.id} className="flex items-center justify-between gap-2">
-                    <span className="text-ink">{d.kind.replace(/_/g, " ")}{d.jurisdiction_rule ? <span className="text-ink-faint"> — {d.jurisdiction_rule}</span> : null}</span>
-                    <span className={`shrink-0 text-xs ${overdue ? "font-medium text-amber-700" : "text-ink-faint"}`}>{fmtDate(d.due_date)}{d.status !== "open" ? ` · ${d.status}` : overdue ? " · overdue" : ""}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="text-sm text-ink-faint">No deadlines yet. Apply a statutory rule below.</p>
-          )}
+          {(() => {
+            const proposed = (deadlines ?? []).filter((d) => d.status === "proposed");
+            const firm = (deadlines ?? []).filter((d) => d.status !== "proposed" && d.status !== "dismissed");
+            return (
+              <>
+                {proposed.length > 0 && (
+                  <div className="rounded-xl bg-amber-50 px-4 py-3">
+                    <p className="label mb-2 text-amber-700">Proposed — confirm to add to your calendar</p>
+                    <ul className="space-y-2">
+                      {proposed.map((d) => (
+                        <li key={d.id} className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-sm text-amber-900">
+                            {d.kind.replace(/_/g, " ")} · <span className="font-medium">{fmtDate(d.due_date)}</span>
+                            {d.basis ? <span className="block text-xs text-amber-700">{d.basis}</span> : null}
+                          </span>
+                          <ProposedDeadlineActions deadlineId={d.id} />
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-xs text-amber-700">Computed from a rule — verify against the bare act before confirming.</p>
+                  </div>
+                )}
+                {firm.length > 0 ? (
+                  <ul className="space-y-1.5 text-sm">
+                    {firm.map((d) => {
+                      const overdue = d.status === "open" && d.due_date < new Date().toISOString().slice(0, 10);
+                      return (
+                        <li key={d.id} className="flex items-center justify-between gap-2">
+                          <span className="text-ink">{d.kind.replace(/_/g, " ")}{d.jurisdiction_rule ? <span className="text-ink-faint"> — {d.jurisdiction_rule}</span> : null}</span>
+                          <span className={`shrink-0 text-xs ${overdue ? "font-medium text-amber-700" : "text-ink-faint"}`}>{fmtDate(d.due_date)}{d.status !== "open" ? ` · ${d.status}` : overdue ? " · overdue" : ""}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : proposed.length === 0 ? (
+                  <p className="text-sm text-ink-faint">No deadlines yet. Apply a statutory rule below.</p>
+                ) : null}
+              </>
+            );
+          })()}
           <DeadlineRuleForm matterId={matter.id} rules={deadlineRules ?? []} />
         </div>
       </Card>
