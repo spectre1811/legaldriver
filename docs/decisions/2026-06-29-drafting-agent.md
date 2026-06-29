@@ -139,17 +139,34 @@ support Hindi + Gujarati and auto-detect in document mode** → the strong cloud
 **Tesseract** is the cheapest keyless path and is good *enough* for the clean court/notice scans
 that dominate the corpus, at 300 DPI.
 
-### Recommendation
+### Recommendation (revised 2026-06-29 — make it "proper" without per-page cloud cost)
 
-> **Default: self-hosted Tesseract 5 with Indic `traineddata`, on the worker box (keyless,
-> free, private).** **Fallback / quality tier: Google Cloud Vision `DOCUMENT_TEXT_DETECTION`**
-> when a key is configured and either (a) Tesseract confidence is low, or (b) the user clicks
-> "improve OCR". This is the cheapest combination that actually handles scanned Indic documents,
-> keeps PII on our box by default, and gives a one-flag upgrade for hard scans.
+Cost reality: Google Vision is ~$1.50 / 1,000 pages (first 1k/mo free) — cheap in absolute
+terms, but it's a **forever per-page marginal cost**, sends **document bytes to a third party**,
+and isn't Indic-*specialised*. For a bootstrapped legal product the right default is a
+**genuinely good on-box pipeline at zero marginal cost**, with Vision demoted to optional.
 
-Defer Paddle/Surya/docTR to a future tier — strictly better DL accuracy but materially heavier
-ops (Python/large models) for marginal gain over Tesseract+Vision today. They drop into the same
-seam if ever needed.
+> **Default: keyless on-box Tesseract.js, made proper by two free levers —**
+> 1. **Image preprocessing** (`sharp`): grayscale → upscale low-res scans to ~300 DPI →
+>    contrast-normalise → denoise → sharpen. *The single biggest accuracy win on real scans.*
+> 2. **`tessdata_best` (LSTM) models** instead of `tessdata_fast` — markedly better on
+>    Devanagari/Gujarati matras & half-forms (env `TESSERACT_DATA=best|fast`).
+>
+> **Quality tier (no per-page cost, on-box): Surya** — open-source SOTA OCR, 90+ langs incl.
+> Devanagari/Gujarati, strong on hard scans; runs on the worker (Python CLI), gated on
+> `SURYA_OCR_CMD`. This is the real "make it proper" answer — it replaces a paid cloud OCR.
+>
+> **Free Indic option (govt): Bhashini / ULCA** — India's national language stack exposes an
+> OCR task type, free, Indic-tuned, compliant for an Indian legal product. A natural next
+> provider behind the same seam when we want a managed Indic engine without self-hosting Surya.
+>
+> **Optional convenience tier: Google Cloud Vision** — only if `GOOGLE_VISION_API_KEY` is set;
+> auto-confidence escalation. Not required, not the default.
+
+`auto` routing prefers the best provider actually available **on-box** (Surya if its CLI is
+configured, else Tesseract) and escalates to a fallback only when the primary returns null or
+low confidence — so we never pay a third party unless explicitly opted in. PaddleOCR/docTR drop
+into the same seam later if needed.
 
 ### The seam (mirror `complete.ts`)
 
