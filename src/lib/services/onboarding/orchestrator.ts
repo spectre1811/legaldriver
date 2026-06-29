@@ -10,7 +10,7 @@ type Json = Database["public"]["Tables"]["onboarding_run"]["Update"]["counts"];
 
 export interface OnboardingCounts {
   causelist: number; matters_seeded: number; enriched: number;
-  deadlines_proposed: number; inbox_filed: number; closed_found: number; summaries_queued: number;
+  deadlines_proposed: number; inbox_filed: number; docs_attached: number; closed_found: number; summaries_queued: number;
 }
 
 const LOOKAHEAD_DAYS = 7;
@@ -42,7 +42,7 @@ export async function runOnboarding(
   opts: { tenantId: string; advocateId: string; runId: string },
 ): Promise<OnboardingCounts> {
   const { tenantId, advocateId, runId } = opts;
-  const counts: OnboardingCounts = { causelist: 0, matters_seeded: 0, enriched: 0, deadlines_proposed: 0, inbox_filed: 0, closed_found: 0, summaries_queued: 0 };
+  const counts: OnboardingCounts = { causelist: 0, matters_seeded: 0, enriched: 0, deadlines_proposed: 0, inbox_filed: 0, docs_attached: 0, closed_found: 0, summaries_queued: 0 };
 
   const { data: adv } = await supabase.from("advocate").select("id, name, bar_registration_number, state_code").eq("id", advocateId).maybeSingle();
   if (!adv) { await setRun(supabase, runId, { stage: "error", status: "error", message: "Advocate not found." }); return counts; }
@@ -120,6 +120,13 @@ export async function runOnboarding(
       }
     }
   } catch { /* inbox is best-effort; never block onboarding */ }
+  await setRun(supabase, runId, { counts });
+
+  // ── Stage 3b: auto-attach orphan docs to the now-seeded matters (CNR/parties) ──
+  try {
+    const { sweepOrphanDocuments } = await import("@/lib/docs/attach");
+    counts.docs_attached = await sweepOrphanDocuments(supabase, tenantId);
+  } catch { /* best-effort */ }
   await setRun(supabase, runId, { counts });
 
   // ── Stage 4: closed cases + judgments by advocate NAME (open corpus, partial) ──

@@ -26,7 +26,7 @@ export async function startOnboarding(advocateId: string): Promise<OnboardingAct
     revalidatePath("/dashboard/onboarding");
     return {
       ok: true, runId: run.id,
-      message: `Done — ${counts.matters_seeded} matters seeded, ${counts.enriched} enriched, ${counts.deadlines_proposed} deadlines proposed, ${counts.inbox_filed} emails filed, ${counts.closed_found} closed cases found, ${counts.summaries_queued} AI briefings queued.`,
+      message: `Done — ${counts.matters_seeded} matters seeded, ${counts.enriched} enriched, ${counts.deadlines_proposed} deadlines proposed, ${counts.inbox_filed} emails filed, ${counts.docs_attached} docs auto-filed, ${counts.closed_found} closed cases found, ${counts.summaries_queued} AI briefings queued.`,
     };
   } catch (e) {
     await supabase.from("onboarding_run").update({ status: "error", message: e instanceof Error ? e.message : "failed", updated_at: new Date().toISOString() }).eq("id", run.id);

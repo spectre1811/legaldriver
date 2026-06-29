@@ -6,7 +6,7 @@ import { RunOnboardingButton } from "./onboarding-ui";
 
 export const dynamic = "force-dynamic";
 
-interface Counts { causelist?: number; matters_seeded?: number; enriched?: number; deadlines_proposed?: number; inbox_filed?: number; closed_found?: number; summaries_queued?: number }
+interface Counts { causelist?: number; matters_seeded?: number; enriched?: number; deadlines_proposed?: number; inbox_filed?: number; docs_attached?: number; closed_found?: number; summaries_queued?: number }
 
 export default async function OnboardingPage() {
   const supabase = createClient();
@@ -58,12 +58,13 @@ export default async function OnboardingPage() {
                   </div>
                   {run && (
                     <>
-                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
                         <Stat label="Cause-list" value={String(c.causelist ?? 0)} />
                         <Stat label="Matters seeded" value={String(c.matters_seeded ?? 0)} />
                         <Stat label="Enriched" value={String(c.enriched ?? 0)} />
                         <Stat label="Deadlines proposed" value={String(c.deadlines_proposed ?? 0)} />
                         <Stat label="Emails filed" value={String(c.inbox_filed ?? 0)} />
+                        <Stat label="Docs auto-filed" value={String(c.docs_attached ?? 0)} />
                         <Stat label="Closed found" value={String(c.closed_found ?? 0)} />
                         <Stat label="Briefings queued" value={String(c.summaries_queued ?? 0)} />
                       </div>
