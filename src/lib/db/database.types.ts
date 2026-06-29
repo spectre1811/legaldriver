@@ -1933,6 +1933,60 @@ export type Database = {
           },
         ]
       }
+      onboarding_run: {
+        Row: {
+          advocate_id: string | null
+          counts: Json
+          created_at: string
+          cursor: Json
+          id: string
+          message: string | null
+          stage: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          advocate_id?: string | null
+          counts?: Json
+          created_at?: string
+          cursor?: Json
+          id?: string
+          message?: string | null
+          stage?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          advocate_id?: string | null
+          counts?: Json
+          created_at?: string
+          cursor?: Json
+          id?: string
+          message?: string | null
+          stage?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_run_advocate_id_fkey"
+            columns: ["advocate_id"]
+            isOneToOne: false
+            referencedRelation: "advocate"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_run_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_message: {
         Row: {
           body: string

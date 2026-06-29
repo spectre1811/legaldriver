@@ -111,6 +111,29 @@ export async function caseDetailByCnr(cnr?: string | null): Promise<CaseDetail |
   return (rows[0] as unknown as CaseDetail) ?? null;
 }
 
+export interface AdvocateCaseRow {
+  cnr: string | null; pet_advocate: string | null; res_advocate: string | null; case_type: string | null;
+  title: string | null; court: string | null; year: string | null; decision_date: string | null;
+  disposal_nature: string | null; pdf_link: string | null; src: string | null;
+}
+
+// Closed cases + judgments for an advocate, from the open parquet_case_details
+// (joined to judgments_all on CNR for the order PDF). Compliance note: the corpus
+// has the advocate NAME, not the bar number, and coverage is partial (the HCs/SC
+// we've ingested) — surface that caveat. Matches either side's advocate field.
+export async function searchCasesByAdvocate(name: string, limit = 50): Promise<AdvocateCaseRow[]> {
+  const n = name?.trim();
+  if (!n || n.length < 3) return [];
+  const p = `%${n.toLowerCase()}%`;
+  const sql = `SELECT cd.cnr, cd.pet_advocate, cd.res_advocate, cd.case_type,
+      j.title, j.court_code court, j.year, j.decision_date, j.disposal_nature, j.path pdf_link, j.src
+    FROM case_details cd
+    LEFT JOIN judgments_all j ON j.cnr = cd.cnr
+    WHERE lower(cd.pet_advocate) LIKE ? OR lower(cd.res_advocate) LIKE ?
+    ORDER BY j.decision_date DESC LIMIT ${Math.min(limit, 200)}`;
+  return (await athenaQuery(sql, [p, p], limit)) as unknown as AdvocateCaseRow[];
+}
+
 // Precedent for the agent: judgments matching any of the given terms (party/judge), HC + SC.
 export async function searchJudgmentsByTerms(terms: string[], limit = 4): Promise<JudgmentRow[]> {
   const clean = [...new Set(terms.filter((t) => t && t.length > 4))].slice(0, 3);
