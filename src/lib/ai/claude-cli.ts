@@ -39,61 +39,46 @@ export function claudeCliEnabled(): boolean {
   return (process.env.CLASSIFIER_BACKEND ?? "auto") !== "off";
 }
 
-// Returns the raw JSON string the model produced, or null on any failure.
-export async function claudeCliJson(
-  prompt: string,
-  opts?: { model?: string; timeoutMs?: number },
-): Promise<string | null> {
+// Shared runner: returns the model's raw result text (the `result` field of the
+// CLI's JSON envelope), or null on any failure. Tools disabled, OAuth creds, timeout.
+function runClaudeCli(prompt: string, opts?: { model?: string; timeoutMs?: number; system?: string }): Promise<string | null> {
   const model = opts?.model ?? process.env.DOC_CLASSIFY_MODEL ?? "claude-haiku-4-5";
   const timeoutMs = opts?.timeoutMs ?? 90_000;
   const cwd = process.cwd();
-
   const env = { ...process.env };
   delete env.ANTHROPIC_API_KEY; // force OAuth creds (an empty key would 401)
-
   const args = [
-    "-p",
-    "--output-format", "json",
-    "--model", model,
-    "--system-prompt", "You are a strict JSON document classifier. Output ONLY one JSON object — no markdown, no code fences, no prose.",
+    "-p", "--output-format", "json", "--model", model,
+    "--system-prompt", opts?.system ?? "You are a strict JSON document classifier. Output ONLY one JSON object — no markdown, no code fences, no prose.",
     "--disallowed-tools", ...TOOL_DENYLIST,
   ];
-
   return new Promise((resolve) => {
     let child;
-    try {
-      child = spawn("claude", args, { env, cwd });
-    } catch {
-      resolve(null);
-      return;
-    }
+    try { child = spawn("claude", args, { env, cwd }); } catch { resolve(null); return; }
     let out = "";
-    const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      resolve(null);
-    }, timeoutMs);
-
+    const timer = setTimeout(() => { child.kill("SIGKILL"); resolve(null); }, timeoutMs);
     child.stdout.on("data", (d) => (out += d.toString()));
-    child.on("error", () => {
-      clearTimeout(timer);
-      resolve(null);
-    });
+    child.on("error", () => { clearTimeout(timer); resolve(null); });
     child.on("close", () => {
       clearTimeout(timer);
       try {
-        const envelope = JSON.parse(out) as { result?: string; session_id?: string; is_error?: boolean };
-        if (envelope.session_id) void cleanupSession(envelope.session_id, cwd);
-        if (envelope.is_error || !envelope.result) {
-          resolve(null);
-          return;
-        }
-        resolve(extractJson(envelope.result));
-      } catch {
-        resolve(null);
-      }
+        const env2 = JSON.parse(out) as { result?: string; session_id?: string; is_error?: boolean };
+        if (env2.session_id) void cleanupSession(env2.session_id, cwd);
+        resolve(env2.is_error || !env2.result ? null : env2.result);
+      } catch { resolve(null); }
     });
-
     child.stdin.write(prompt);
     child.stdin.end();
   });
+}
+
+// Raw JSON string the model produced, or null. (Strict-JSON system prompt + extract.)
+export async function claudeCliJson(prompt: string, opts?: { model?: string; timeoutMs?: number }): Promise<string | null> {
+  const result = await runClaudeCli(prompt, opts);
+  return result ? extractJson(result) : null;
+}
+
+// Prose/long-form output (e.g. drafting) — no JSON constraint. Longer default timeout.
+export async function claudeCliText(prompt: string, opts?: { model?: string; timeoutMs?: number }): Promise<string | null> {
+  return runClaudeCli(prompt, { model: opts?.model, timeoutMs: opts?.timeoutMs ?? 180_000, system: "You are a careful Indian legal assistant. Follow the user's instructions precisely. Output only the requested content." });
 }
