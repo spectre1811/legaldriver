@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
 import { extractText } from "@/lib/docs/extract";
 import { sha256Hex } from "@/lib/docs/hash";
@@ -50,7 +51,10 @@ export async function uploadAndDraft(formData: FormData): Promise<DraftActionRes
   const buffer = Buffer.from(await file.arrayBuffer());
   const contentHash = await sha256Hex(buffer);
   const path = `${tenantId}/drafts/${Date.now()}_${file.name}`;
-  const { error: upErr } = await supabase.storage.from("documents").upload(path, buffer, { contentType: file.type || "application/octet-stream", upsert: true });
+  // Storage has no RLS policies (deny-by-default), so uploads must go through the
+  // service-role admin client (mirrors the case-upload path). We still scope by tenantId.
+  const admin = createAdminClient();
+  const { error: upErr } = await admin.storage.from("documents").upload(path, buffer, { contentType: file.type || "application/octet-stream", upsert: true });
   if (upErr) return { ok: false, message: `Upload failed: ${upErr.message}` };
 
   const { text, needsOcr } = await extractText(buffer, file.type || "", file.name);
@@ -144,7 +148,8 @@ export async function finalizeDraft(draftId: string): Promise<DraftActionResult>
   const name = `${(draft.title ?? "draft").replace(/[^\w.-]+/g, "_")}.md`;
   const path = `${tenantId}/drafts/final/${Date.now()}_${name}`;
   const buf = Buffer.from(v.body, "utf8");
-  const { error: upErr } = await supabase.storage.from("documents").upload(path, buf, { contentType: "text/markdown", upsert: true });
+  const admin = createAdminClient();
+  const { error: upErr } = await admin.storage.from("documents").upload(path, buf, { contentType: "text/markdown", upsert: true });
   if (upErr) return { ok: false, message: `Could not save: ${upErr.message}` };
   await supabase.from("document").insert({
     tenant_id: tenantId, source: "upload", storage_path: path, filename: name, mime: "text/markdown",
