@@ -1100,6 +1100,65 @@ export type Database = {
           },
         ]
       }
+      draft_template: {
+        Row: {
+          conventions: string | null
+          created_at: string
+          default_sections: string[]
+          id: string
+          is_default: boolean
+          jurisdiction: string | null
+          language: string
+          produces_doc_type: string
+          responds_to_category: string
+          responds_to_doc_type: string | null
+          source: string | null
+          structure: Json
+          tenant_id: string
+          title: string
+        }
+        Insert: {
+          conventions?: string | null
+          created_at?: string
+          default_sections?: string[]
+          id?: string
+          is_default?: boolean
+          jurisdiction?: string | null
+          language?: string
+          produces_doc_type: string
+          responds_to_category: string
+          responds_to_doc_type?: string | null
+          source?: string | null
+          structure?: Json
+          tenant_id: string
+          title: string
+        }
+        Update: {
+          conventions?: string | null
+          created_at?: string
+          default_sections?: string[]
+          id?: string
+          is_default?: boolean
+          jurisdiction?: string | null
+          language?: string
+          produces_doc_type?: string
+          responds_to_category?: string
+          responds_to_doc_type?: string | null
+          source?: string | null
+          structure?: Json
+          tenant_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_template_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_message: {
         Row: {
           classified_client_id: string | null
@@ -2114,6 +2173,7 @@ export type Database = {
       portal_client_id: { Args: never; Returns: string }
       portal_tenant_id: { Args: never; Returns: string }
       read_secret: { Args: { secret_id: string }; Returns: string }
+      seed_draft_templates: { Args: { p_tenant: string }; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       store_secret: {
@@ -2252,4 +2312,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
