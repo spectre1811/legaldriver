@@ -74,6 +74,10 @@ S3 + Athena lake (your AWS, ap-south-1): **18,554,467 High Court (all 25 HCs) + 
 
 ---
 
+## 🛠 Dev tooling (evaluated)
+- **code-review-graph** (tirth8205) — ✅ endorsed for **dev/CI** token savings (~82× on code-review/navigation; Tree-sitter+SQLite, MCP-exposed). NOT a product-runtime component. **Blocked on this box** (PEP 668: no pip/ensurepip/venv) → wire in **CI** (GitHub Actions, clean Python) + an `.mcp.json` entry; verify the exact CLI/package name first. Low risk (local, read-only).
+- **ruflo** (ruvnet) — 🟡 pass for now. Heavy multi-agent meta-harness; big dependency + lock-in, token savings unquantified; conflicts with our lean/agnostic design. We already have Workflow + subagents + the agnostic `completeJson`/`completeText` router. Cherry-pick ideas at most.
+
 ## 🧹 Tech debt / polish
 - Two confirm-delete components (`confirm-delete.tsx` + `delete-button.tsx`) — unify.
 - Self-hosted embeddings deps (`@xenova/transformers`) carry npm-audit advisories (worker-only, not in the request path) — review.
