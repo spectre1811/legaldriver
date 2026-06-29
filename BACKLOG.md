@@ -57,8 +57,8 @@ P5 matter depth · P6 time+expense · P7/P8 client portal (RLS-isolated) · P10 
 
 ---
 
-## 🟡 Decisions for you
-- **⚠️ Court corpus storage (NEW, important).** The full multi-court corpus (605k rows ≈ 775 MB; all-India ambition = millions = several GB) **exceeds Supabase Free's ~500 MB limit** — loading it tripped read-only mode (brief write outage, recovered; now a safe 7.5k Gujarat-2025 slice, DB 37 MB). To hold the real corpus, pick: **(A) Supabase Pro** ($25/mo, 8 GB+ — simplest, integrated), or **(B) separate store** (Postgres on the worker box, or Parquet in Cloudflare R2 + DuckDB — free, more infra; I'll build it). Until then the corpus stays a small Gujarat slice. **I will not re-load the full corpus until A or B is chosen.**
+## ✅ RESOLVED — court corpus on S3 + Athena (18.5M judgments)
+The corpus now lives in an **S3 + Athena lake** (your AWS, ap-south-1) — **18,554,467 High Court judgments, all 25 HCs**, ~7.6 GB / ~$0.18/mo, queries ~free (partition projection). Case Research + Lawyer-Agent precedent query it live via a **scoped read-only key**. Supabase free-tier disk untouched. **Next coverage (per `docs/decisions/2026-06-29-rich-court-data-sources.md`):** ① ingest AWS **`parquet_case_details`** (advocates, acts/sections, hearing history — join on CNR; the highest-leverage richer data) ② **e-SCR** Supreme Court judgments ③ **Indian Kanoon API** full judgment TEXT (→ topical/semantic precedent search; ₹500 free) ④ **DevDataLab** district history (ODbL) ⑤ DAKSH Gujarat cause-list. Live eCourts case-status stays ⛔ (CAPTCHA) → HITL/licensed.
 
 - **Prod AI backend:** keep the keyless self-hosted worker (free, needs the box up) ↔ DeepSeek (fund it, synchronous) ↔ Anthropic key. Worker runs today.
 - **Go commercial / scale:** Vercel Pro ($20) + Supabase Pro ($25) + Cloudflare R2 for document blobs (you have CF creds).
