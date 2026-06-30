@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, fmtAgo, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AdvocateForm } from "./advocate-form";
+import { FirmBillingForm } from "../invoices/invoices-ui";
 import { CourtRefreshForms } from "./court-gateway";
 import { CaptureTool } from "./capture-tool";
 import { DeleteButton } from "@/components/delete-button";
@@ -14,6 +15,8 @@ export default async function SettingsPage() {
     .from("advocate")
     .select("id, name, bar_registration_number, state_code")
     .order("name");
+
+  const { data: firmBilling } = await supabase.from("firm_billing").select("*").maybeSingle();
 
   // Active capture token (HITL bookmarklet). baseUrl for the bookmarklet target.
   const { data: tok } = await supabase
@@ -65,6 +68,12 @@ export default async function SettingsPage() {
             ))}
           </ul>
         )}
+      </Card>
+
+      <Card className="p-5">
+        <h2 className="mb-1 text-base font-medium">Billing &amp; GST</h2>
+        <p className="mb-4 text-sm text-ink-muted">Used on invoices — firm details, GSTIN, place of supply, and GST defaults (legal services SAC 9982).</p>
+        <FirmBillingForm firm={firmBilling ?? null} />
       </Card>
 
       <Card className="p-5">

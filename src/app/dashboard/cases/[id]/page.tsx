@@ -8,6 +8,7 @@ import { LogTimeExpense } from "./time-expense";
 import type { CaseSummary } from "@/lib/docs/case-summary";
 import { findSimilarCases } from "@/lib/court/similar";
 import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm, ProposedDeadlineActions } from "./case-actions";
+import { CreateInvoiceButton } from "../../invoices/invoices-ui";
 import { Communications } from "@/components/communications";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deleteMatter } from "../actions";
@@ -432,6 +433,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <div className="flex items-center gap-4 text-sm">
             <span className="text-ink-muted">Time <span className="font-medium text-ink">{fmtHours(totalMinutes)}</span></span>
             <span className="text-ink-muted">Unbilled <span className="font-medium text-ink">{fmtMoney(wip)}</span></span>
+            <CreateInvoiceButton matterId={matter.id} />
           </div>
         </div>
         <LogTimeExpense matterId={matter.id} />

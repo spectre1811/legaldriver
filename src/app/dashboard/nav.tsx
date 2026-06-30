@@ -26,6 +26,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string; icon: I
       { href: "/dashboard/messages", label: "Messages", icon: "inbox" },
       { href: "/dashboard/voice", label: "Voice", icon: "clip" },
       { href: "/dashboard/documents", label: "Documents", icon: "documents" },
+      { href: "/dashboard/invoices", label: "Invoices", icon: "documents" },
       { href: "/dashboard/ip", label: "IP assets", icon: "scale" },
       { href: "/dashboard/notifications", label: "Notifications", icon: "bell" },
     ],

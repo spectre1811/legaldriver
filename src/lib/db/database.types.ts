@@ -1430,6 +1430,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "expense_invoiced_invoice_id_fkey"
+            columns: ["invoiced_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "expense_matter_id_fkey"
             columns: ["matter_id"]
             isOneToOne: false
@@ -1440,6 +1447,59 @@ export type Database = {
             foreignKeyName: "expense_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      firm_billing: {
+        Row: {
+          address: string | null
+          bank_details: string | null
+          default_gst_rate: number
+          gstin: string | null
+          hsn_sac: string
+          invoice_prefix: string
+          legal_name: string | null
+          reverse_charge: boolean
+          state_code: string | null
+          tenant_id: string
+          terms: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          bank_details?: string | null
+          default_gst_rate?: number
+          gstin?: string | null
+          hsn_sac?: string
+          invoice_prefix?: string
+          legal_name?: string | null
+          reverse_charge?: boolean
+          state_code?: string | null
+          tenant_id: string
+          terms?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          bank_details?: string | null
+          default_gst_rate?: number
+          gstin?: string | null
+          hsn_sac?: string
+          invoice_prefix?: string
+          legal_name?: string | null
+          reverse_charge?: boolean
+          state_code?: string | null
+          tenant_id?: string
+          terms?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "firm_billing_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenant"
             referencedColumns: ["id"]
           },
@@ -1489,6 +1549,180 @@ export type Database = {
           },
           {
             foreignKeyName: "hearing_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice: {
+        Row: {
+          cgst_minor: number
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          fy: string | null
+          gst_rate: number
+          id: string
+          igst_minor: number
+          issue_date: string
+          matter_id: string | null
+          notes: string | null
+          number: string | null
+          place_of_supply: string | null
+          reverse_charge: boolean
+          sgst_minor: number
+          status: string
+          subtotal_minor: number
+          tenant_id: string
+          total_minor: number
+          updated_at: string
+        }
+        Insert: {
+          cgst_minor?: number
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          fy?: string | null
+          gst_rate?: number
+          id?: string
+          igst_minor?: number
+          issue_date?: string
+          matter_id?: string | null
+          notes?: string | null
+          number?: string | null
+          place_of_supply?: string | null
+          reverse_charge?: boolean
+          sgst_minor?: number
+          status?: string
+          subtotal_minor?: number
+          tenant_id: string
+          total_minor?: number
+          updated_at?: string
+        }
+        Update: {
+          cgst_minor?: number
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          fy?: string | null
+          gst_rate?: number
+          id?: string
+          igst_minor?: number
+          issue_date?: string
+          matter_id?: string | null
+          notes?: string | null
+          number?: string | null
+          place_of_supply?: string | null
+          reverse_charge?: boolean
+          sgst_minor?: number
+          status?: string
+          subtotal_minor?: number
+          tenant_id?: string
+          total_minor?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_line: {
+        Row: {
+          amount_minor: number
+          created_at: string
+          description: string
+          hsn_sac: string | null
+          id: string
+          invoice_id: string
+          kind: string
+          quantity: number
+          rate_minor: number
+          sort: number
+          source_expense_id: string | null
+          source_time_entry_id: string | null
+          tenant_id: string
+          unit: string | null
+        }
+        Insert: {
+          amount_minor?: number
+          created_at?: string
+          description: string
+          hsn_sac?: string | null
+          id?: string
+          invoice_id: string
+          kind?: string
+          quantity?: number
+          rate_minor?: number
+          sort?: number
+          source_expense_id?: string | null
+          source_time_entry_id?: string | null
+          tenant_id: string
+          unit?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          created_at?: string
+          description?: string
+          hsn_sac?: string | null
+          id?: string
+          invoice_id?: string
+          kind?: string
+          quantity?: number
+          rate_minor?: number
+          sort?: number
+          source_expense_id?: string | null
+          source_time_entry_id?: string | null
+          tenant_id?: string
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_source_expense_id_fkey"
+            columns: ["source_expense_id"]
+            isOneToOne: false
+            referencedRelation: "expense"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_source_time_entry_id_fkey"
+            columns: ["source_time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entry"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenant"
@@ -2251,6 +2485,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "time_entry_invoiced_invoice_id_fkey"
+            columns: ["invoiced_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoice"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "time_entry_matter_id_fkey"
             columns: ["matter_id"]
