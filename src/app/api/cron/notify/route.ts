@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMailer } from "@/lib/notify/mailer";
+import { logOutboundEmail } from "@/lib/notify/log";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -56,6 +57,7 @@ export async function GET(request: NextRequest) {
         const subject = subjectFor(n.kind, payload);
         const res = await mailer.send(email, subject, htmlFor(n.kind, payload));
         ok = res.ok;
+        await logOutboundEmail(supabase, { tenantId: n.tenant_id, to: email, subject, kind: n.kind.includes("reminder") ? "reminder" : "notice", ok: res.ok, providerId: res.id });
       } else {
         ok = false;
       }

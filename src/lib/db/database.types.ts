@@ -2227,6 +2227,67 @@ export type Database = {
           },
         ]
       }
+      outbound_email: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          matter_id: string | null
+          provider_id: string | null
+          status: string
+          subject: string | null
+          tenant_id: string
+          to_addr: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          matter_id?: string | null
+          provider_id?: string | null
+          status?: string
+          subject?: string | null
+          tenant_id: string
+          to_addr: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          matter_id?: string | null
+          provider_id?: string | null
+          status?: string
+          subject?: string | null
+          tenant_id?: string
+          to_addr?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outbound_email_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_email_matter_id_fkey"
+            columns: ["matter_id"]
+            isOneToOne: false
+            referencedRelation: "matter"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_email_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_message: {
         Row: {
           body: string

@@ -6,6 +6,7 @@ import { getTenantId } from "@/lib/court/sync";
 import { getMailer } from "@/lib/notify/mailer";
 import { computeGst, financialYear, invoiceNumber, assembleLines, sumMinor } from "@/lib/billing/invoice";
 import { renderInvoiceHtml } from "@/lib/billing/render";
+import { logOutboundEmail } from "@/lib/notify/log";
 import type { Database } from "@/lib/db/database.types";
 
 export type InvoiceResult = { ok: boolean; message: string; invoiceId?: string };
@@ -165,7 +166,9 @@ export async function emailInvoice(invoiceId: string): Promise<InvoiceResult> {
   ]);
   const fresh = await supabase.from("invoice").select("*").eq("id", invoiceId).maybeSingle();
   const html = renderInvoiceHtml({ invoice: fresh.data!, lines: lines ?? [], firm: firm ?? null, clientName: client?.name ?? "Client" });
-  const r = await getMailer().send(to, `Invoice ${fresh.data?.number} — ${firm?.legal_name ?? "Legal services"}`, html);
+  const subject = `Invoice ${fresh.data?.number} — ${firm?.legal_name ?? "Legal services"}`;
+  const r = await getMailer().send(to, subject, html);
+  await logOutboundEmail(supabase, { tenantId, to, subject, kind: "invoice", matterId: fresh.data?.matter_id ?? null, clientId: fresh.data?.client_id ?? null, ok: r.ok, providerId: r.id });
   if (!r.ok) return { ok: false, message: `Email failed: ${r.error}` };
   await supabase.from("invoice").update({ status: "sent", updated_at: new Date().toISOString() }).eq("id", invoiceId);
   revalidatePath(`/dashboard/invoices/${invoiceId}`);
