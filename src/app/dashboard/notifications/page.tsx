@@ -6,6 +6,7 @@ const KIND: Record<string, string> = {
   deadline_reminder: "Deadline reminder",
   notice_escalation: "Notice escalation",
   ipr_renewal: "IP renewal",
+  case_update: "Case update",
 };
 const STATUS_TONE: Record<string, "green" | "amber" | "red"> = { sent: "green", pending: "amber", failed: "red" };
 

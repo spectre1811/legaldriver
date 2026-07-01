@@ -24,10 +24,18 @@ export async function upsertCase(
   // explicitly so this is safe under the RLS-bypassing admin client (cron).
   const { data: existing } = await supabase
     .from("matter")
-    .select("id")
+    .select("id, next_hearing_date, judge_names")
     .eq("tenant_id", tenantId)
     .eq("cnr", c.cnr)
     .maybeSingle();
+
+  // Snapshot the old order dates (before we replace them) so a refresh can detect
+  // NEW orders and fire a change alert — the "never get surprised" case-tracking value.
+  let oldOrderDates: string[] = [];
+  if (existing) {
+    const { data: oldOrders } = await supabase.from("court_order").select("order_date").eq("matter_id", existing.id);
+    oldOrderDates = (oldOrders ?? []).map((o) => o.order_date).filter((d): d is string => !!d);
+  }
 
   // Denormalized arrays power similar-case discovery (GIN-indexed) and console filters.
   const partyNames = [...new Set(c.parties.map((p) => p.name).filter(Boolean))];
@@ -119,5 +127,53 @@ export async function upsertCase(
     });
   }
 
+  // Change detection (only for an already-tracked case): if the next hearing moved,
+  // the bench changed, or new orders posted, record an activity + an in-app alert.
+  if (existing) {
+    await recordCaseChanges(supabase, tenantId, matterId, {
+      title: c.title,
+      oldNext: existing.next_hearing_date ?? null,
+      newNext: c.nextHearingDate ?? null,
+      oldJudge: (existing.judge_names ?? [])[0] ?? null,
+      newJudge: judgeNames[0] ?? null,
+      oldOrderDates,
+      newOrderDates: (c.orders ?? []).map((o) => o.date).filter((d): d is string => !!d),
+    });
+  }
+
   return { matterId, isNew: !existing, hearingCount: c.hearings.length };
+}
+
+// Diff a refreshed case against its prior state and record any material changes as
+// an activity_event (case feed) + an immediate in-app notification (the bell). This
+// is the "we watch the court so you never miss a re-listing" alerting.
+async function recordCaseChanges(
+  supabase: DB,
+  tenantId: string,
+  matterId: string,
+  s: { title: string; oldNext: string | null; newNext: string | null; oldJudge: string | null; newJudge: string | null; oldOrderDates: string[]; newOrderDates: string[] },
+): Promise<void> {
+  const changes: string[] = [];
+  if (s.newNext && s.oldNext !== s.newNext) changes.push(`Next hearing ${s.oldNext ? `moved from ${s.oldNext} to ${s.newNext}` : `listed for ${s.newNext}`}`);
+  if (!s.newNext && s.oldNext) changes.push(`Case shows no next date (possibly disposed) — was ${s.oldNext}`);
+  if (s.newJudge && s.oldJudge && s.newJudge !== s.oldJudge) changes.push(`Bench changed to ${s.newJudge}`);
+  const oldSet = new Set(s.oldOrderDates);
+  const newOrders = [...new Set(s.newOrderDates)].filter((d) => !oldSet.has(d));
+  if (newOrders.length && s.oldOrderDates.length) changes.push(`${newOrders.length} new order${newOrders.length > 1 ? "s" : ""} (latest ${newOrders.sort().reverse()[0]})`);
+  if (!changes.length) return;
+
+  try {
+    for (const ch of changes) {
+      await supabase.from("activity_event").insert({
+        tenant_id: tenantId, matter_id: matterId, type: "case.updated", summary: ch,
+        meta: {} as Database["public"]["Tables"]["activity_event"]["Insert"]["meta"],
+      });
+    }
+    // One consolidated in-app alert per refresh (delivered immediately by the notify cron).
+    await supabase.from("notification").insert({
+      tenant_id: tenantId, channel: "inapp", kind: "case_update", status: "pending",
+      scheduled_for: new Date().toISOString(),
+      payload: { ref: `matter:${matterId}`, title: s.title, body: changes.join(" · "), eventDate: s.newNext ?? undefined } as Database["public"]["Tables"]["notification"]["Insert"]["payload"],
+    });
+  } catch { /* alerting is best-effort — never break a sync */ }
 }

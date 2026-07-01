@@ -3,7 +3,36 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
-import { generateCaseSummary, addCaseDocument, updateCase, refreshCase, confirmDeadline, dismissDeadline } from "../actions";
+import { generateCaseSummary, addCaseDocument, updateCase, refreshCase, confirmDeadline, dismissDeadline, setDiaryDate } from "../actions";
+
+// The advocate's own next-hearing "diary" date — overrides a stale/wrong court date.
+export function MatterDiaryDate({ matterId, synced, override }: { matterId: string; synced: string | null; override: string | null }) {
+  const [editing, setEditing] = useState(false);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  if (!editing) {
+    return (
+      <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1.5 text-xs text-brand-600 hover:underline">
+        <Icon name="calendar" className="h-3.5 w-3.5" />
+        {override ? `Diary date: ${override} (overriding ${synced ?? "—"})` : "Set your diary date"}
+      </button>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <input type="date" defaultValue={override ?? synced ?? ""} id={`diary-${matterId}`} className="rounded-lg border border-line px-2 py-1 text-xs" />
+      <button
+        onClick={() => start(async () => {
+          const v = (document.getElementById(`diary-${matterId}`) as HTMLInputElement)?.value ?? "";
+          await setDiaryDate(matterId, v); setEditing(false); router.refresh();
+        })}
+        disabled={pending} className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700"
+      >Save</button>
+      {override && <button onClick={() => start(async () => { await setDiaryDate(matterId, ""); setEditing(false); router.refresh(); })} className="text-xs text-ink-faint hover:text-red-600">Clear</button>}
+      <button onClick={() => setEditing(false)} className="text-xs text-ink-faint">Cancel</button>
+    </div>
+  );
+}
 
 // Confirm / dismiss a single proposed deadline (Phase D — propose-for-confirmation).
 export function ProposedDeadlineActions({ deadlineId }: { deadlineId: string }) {

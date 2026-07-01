@@ -141,8 +141,12 @@ export class LegalDriverClient implements CourtDataClient {
   }
 
   async getOrder(cnr: string, orderId: string): Promise<CourtOrder | null> {
-    const pdf = await this.req<{ pdf_url?: string }>(`/order/${encodeURIComponent(orderId)}/pdf`);
-    if (!pdf) return null;
-    return { id: orderId, cnr, pdfUrl: pdf.pdf_url };
+    // The direct /order/{id}/pdf proxy returns 502; the working path is the case's
+    // orders list (with ?fetch=true it pulls missing PDFs live), which carries a
+    // time-limited signed S3 pdf_url per order. Pick the matching order.
+    const data = await this.req<{ orders?: { order_id?: number | string; pdf_url?: string | null; text?: string | null }[] }>(`/case/${encodeURIComponent(cnr)}/orders?fetch=true`);
+    const o = (data?.orders ?? []).find((x) => String(x.order_id ?? "") === String(orderId));
+    if (!o) return null;
+    return { id: orderId, cnr, pdfUrl: o.pdf_url ?? undefined, markdown: o.text ?? undefined };
   }
 }

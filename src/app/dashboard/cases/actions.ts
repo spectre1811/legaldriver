@@ -13,6 +13,24 @@ import { logActivity } from "@/lib/activity";
 import { scheduleReminders } from "@/lib/notify/schedule";
 import type { Database } from "@/lib/db/database.types";
 
+// Set (or clear) the advocate's diary next-hearing date — overrides a stale/wrong
+// synced court date. Reschedules hearing reminders on the EFFECTIVE date.
+export async function setDiaryDate(matterId: string, dateStr: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const override = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : null;
+  await supabase.from("matter").update({ next_hearing_override: override }).eq("id", matterId);
+  const { data: m } = await supabase.from("matter").select("next_hearing_date, title").eq("id", matterId).maybeSingle();
+  const effective = override ?? m?.next_hearing_date ?? null;
+  const ref = `matter:${matterId}`;
+  await supabase.from("notification").delete().eq("tenant_id", tenantId).eq("kind", "hearing_reminder").eq("status", "pending").contains("payload", { ref });
+  if (effective) await scheduleReminders(supabase, tenantId, { kind: "hearing_reminder", eventDate: effective, ref, title: m?.title ?? "Hearing" });
+  revalidatePath(`/dashboard/cases/${matterId}`);
+  revalidatePath("/dashboard/calendar");
+  return { ok: true, message: override ? `Diary date set to ${override}; reminders rescheduled.` : "Diary date cleared; using the court date." };
+}
+
 // Confirm a proposed deadline → make it firm ('open') and schedule reminders.
 export async function confirmDeadline(deadlineId: string): Promise<ActionResult> {
   const supabase = createClient();

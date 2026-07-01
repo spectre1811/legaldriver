@@ -80,6 +80,7 @@ function subjectFor(kind: string, p: { title?: string; eventDate?: string }) {
   if (kind === "hearing_reminder") return `Hearing reminder: ${p.title ?? "case"} on ${p.eventDate ?? ""}`;
   if (kind === "deadline_reminder") return `Deadline: ${p.title ?? ""} due ${p.eventDate ?? ""}`;
   if (kind === "notice_escalation") return `Notice escalated: ${p.title ?? ""}`;
+  if (kind === "case_update") return `Case update: ${p.title ?? "your case"}`;
   return `Legaldriver notification`;
 }
 function htmlFor(kind: string, p: { title?: string; eventDate?: string; body?: string }) {

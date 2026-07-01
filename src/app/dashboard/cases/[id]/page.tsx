@@ -7,7 +7,7 @@ import { DocActions } from "@/components/doc-actions";
 import { LogTimeExpense } from "./time-expense";
 import type { CaseSummary } from "@/lib/docs/case-summary";
 import { findSimilarCases } from "@/lib/court/similar";
-import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm, ProposedDeadlineActions } from "./case-actions";
+import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm, ProposedDeadlineActions, MatterDiaryDate } from "./case-actions";
 import { CreateInvoiceButton } from "../../invoices/invoices-ui";
 import { Communications } from "@/components/communications";
 import { ConfirmDelete } from "@/components/confirm-delete";
@@ -84,7 +84,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     ["Case type", matter.case_type],
     ["Stage", matter.stage],
     ["Client", client?.name ?? null],
-    ["Next hearing", fmtDate(matter.next_hearing_date)],
+    ["Next hearing", matter.next_hearing_override ? `${fmtDate(matter.next_hearing_override)} (your diary)` : fmtDate(matter.next_hearing_date)],
     ["Judge", hearings?.find((h) => h.judge)?.judge ?? null],
   ];
 
@@ -216,11 +216,15 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         ))}
       </section>
 
-      <Card className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-        <p className="text-sm text-ink-muted">
-          Source <span className="font-medium text-ink-soft">{matter.source ?? "manual"}</span> · last refreshed{" "}
-          {matter.last_synced_at ? new Date(matter.last_synced_at).toLocaleString("en-IN") : "never"}
-        </p>
+      <Card className="px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-ink-muted">
+            Source <span className="font-medium text-ink-soft">{matter.source ?? "manual"}</span> · last refreshed{" "}
+            {matter.last_synced_at ? new Date(matter.last_synced_at).toLocaleString("en-IN") : "never"}
+          </p>
+          <MatterDiaryDate matterId={matter.id} synced={matter.next_hearing_date} override={matter.next_hearing_override ?? null} />
+        </div>
+        <p className="mt-2 text-xs text-ink-faint">Court data is fetched from the official eCourts record via our licensed pipeline — it can lag or contain errors. <span className="font-medium">Always verify against the official record; not legal advice.</span> Set your own diary date above if the court record is wrong or stale.</p>
       </Card>
 
       {/* Case details */}

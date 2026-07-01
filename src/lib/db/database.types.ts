@@ -1854,6 +1854,7 @@ export type Database = {
           judge_names: string[]
           last_synced_at: string | null
           next_hearing_date: string | null
+          next_hearing_override: string | null
           parties: Json
           party_names: string[]
           practice_area_id: string | null
@@ -1878,6 +1879,7 @@ export type Database = {
           judge_names?: string[]
           last_synced_at?: string | null
           next_hearing_date?: string | null
+          next_hearing_override?: string | null
           parties?: Json
           party_names?: string[]
           practice_area_id?: string | null
@@ -1902,6 +1904,7 @@ export type Database = {
           judge_names?: string[]
           last_synced_at?: string | null
           next_hearing_date?: string | null
+          next_hearing_override?: string | null
           parties?: Json
           party_names?: string[]
           practice_area_id?: string | null
