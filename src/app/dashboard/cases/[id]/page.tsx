@@ -8,6 +8,15 @@ import { LogTimeExpense } from "./time-expense";
 import type { CaseSummary } from "@/lib/docs/case-summary";
 import { findSimilarCases } from "@/lib/court/similar";
 import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm, ProposedDeadlineActions, MatterDiaryDate } from "./case-actions";
+import { CaseTabs, CaseTabPanel } from "./case-tabs";
+
+const CASE_TAB_DEFS = [
+  { id: "overview", label: "Overview", icon: "sparkles" as const },
+  { id: "court", label: "Court record", icon: "scale" as const },
+  { id: "documents", label: "Documents", icon: "documents" as const },
+  { id: "billing", label: "Billing", icon: "clock" as const },
+  { id: "comms", label: "Communications", icon: "inbox" as const },
+];
 import { CreateInvoiceButton } from "../../invoices/invoices-ui";
 import { Communications } from "@/components/communications";
 import { ConfirmDelete } from "@/components/confirm-delete";
@@ -120,6 +129,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         </div>
       </header>
 
+      <CaseTabs tabs={CASE_TAB_DEFS}>
+      <CaseTabPanel id="overview">
+
       {/* AI summary */}
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-line bg-brand-50/40 px-5 py-3.5">
@@ -230,6 +242,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         </div>
         <p className="mt-2 text-xs text-ink-faint">Court data is fetched from the official eCourts record via our licensed pipeline — it can lag or contain errors. <span className="font-medium">Always verify against the official record; not legal advice.</span> Set your own diary date above if the court record is wrong or stale.</p>
       </Card>
+
+      </CaseTabPanel>
+      <CaseTabPanel id="court">
 
       {/* Case details */}
       {caseDetails.length > 0 && (
@@ -448,6 +463,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         </Card>
       )}
 
+      </CaseTabPanel>
+      <CaseTabPanel id="documents">
+
       {/* Documents linked to this case */}
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
@@ -470,6 +488,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <p className="px-5 py-8 text-center text-sm text-ink-faint">No documents yet — upload one above, or they&apos;ll arrive auto-filed from Gmail.</p>
         )}
       </Card>
+
+      </CaseTabPanel>
+      <CaseTabPanel id="billing">
 
       {/* Time & expenses */}
       <Card className="overflow-hidden">
@@ -507,6 +528,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         )}
       </Card>
 
+      </CaseTabPanel>
+      <CaseTabPanel id="comms">
+
       {/* Communications timeline (email + WhatsApp/SMS) */}
       <Communications matterId={matter.id} />
 
@@ -527,6 +551,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <p className="px-5 py-8 text-center text-sm text-ink-faint">No activity yet.</p>
         )}
       </Card>
+
+      </CaseTabPanel>
+      </CaseTabs>
 
       <Disclaimer />
     </div>
