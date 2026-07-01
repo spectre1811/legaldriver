@@ -58,9 +58,31 @@ export class LegalDriverClient implements CourtDataClient {
       const party = parties.find((p) => p.side === s && !p.advocate);
       if (party && a.name) party.advocate = a.name;
     }
-    const hearings: NormalizedHearing[] = (r.hearings ?? [])
-      .map((h) => ({ date: (h.hearing_date ?? h.business_date ?? "").slice(0, 10), purpose: h.purpose ?? undefined, judge: h.judge ?? undefined, raw: h }))
-      .filter((h) => h.date);
+    // eCourts hearing model: the court did business ON `business_date` and FIXED the
+    // next date to `hearing_date`. So the HISTORY of sittings = business_dates (with
+    // purpose + bench), and the UPCOMING hearing = the hearing_date fixed at the most
+    // recent sitting. (Using hearing_date as the sitting date is wrong — it shows the
+    // next date as if it were a past hearing.)
+    const rawHearings = r.hearings ?? [];
+    const disposed = (r.status ?? "").toUpperCase().includes("DISPOSED");
+    const sittings = rawHearings.filter((h) => h.business_date).sort((a, b) => String(a.business_date).localeCompare(String(b.business_date)));
+    const lastSitting = sittings[sittings.length - 1];
+    const nextHearingDate = disposed ? null : ((lastSitting?.hearing_date ?? null) || null)?.slice(0, 10) ?? null;
+
+    const hearings: NormalizedHearing[] = [];
+    const seenH = new Set<string>();
+    const pushHearing = (date?: string | null, purpose?: string | null, judge?: string | null, raw?: unknown) => {
+      const d = (date ?? "").slice(0, 10);
+      const key = `${d}|${purpose ?? ""}`;
+      if (!d || seenH.has(key)) return;
+      seenH.add(key);
+      hearings.push({ date: d, purpose: purpose ?? undefined, judge: judge ?? undefined, raw: raw ?? {} });
+    };
+    for (const h of sittings) pushHearing(h.business_date, h.purpose, h.judge, h);            // past sittings
+    if (nextHearingDate) pushHearing(nextHearingDate, "Next hearing (as listed)", lastSitting?.judge, { scheduled: true }); // upcoming → calendar + reminders
+    for (const h of rawHearings.filter((x) => !x.business_date && x.hearing_date)) pushHearing(h.hearing_date, h.purpose ?? "Listed", h.judge, h); // purely-scheduled rows
+    hearings.sort((a, b) => a.date.localeCompare(b.date));
+
     const orders: NormalizedOrderRef[] = (r.orders ?? []).map((o) => ({ id: String(o.order_id ?? ""), date: o.order_date ?? undefined, title: o.description ?? "Order" }));
     const acts = (r.acts ?? []).map((a) => `${a.act_name ?? ""}${a.section ? ` ${a.section}` : ""}`.trim()).filter(Boolean);
 
@@ -68,11 +90,6 @@ export class LegalDriverClient implements CourtDataClient {
     const pet = parties.find((p) => p.side === "petitioner")?.name || r.regional?.pet_name || "";
     const res = parties.find((p) => p.side === "respondent")?.name || r.regional?.res_name || "";
     const title = pet && res ? `${pet} v. ${res}` : pet || res || r.cnr;
-
-    // Next hearing: the latest listed hearing date for a live case; none if disposed.
-    const disposed = (r.status ?? "").toUpperCase().includes("DISPOSED");
-    const futureDates = hearings.map((h) => h.date).sort();
-    const nextHearingDate = disposed ? null : futureDates[futureDates.length - 1] ?? null;
 
     return {
       cnr: r.cnr,
