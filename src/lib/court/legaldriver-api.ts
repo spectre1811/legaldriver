@@ -40,6 +40,17 @@ export async function resolveJudgeId(name: string): Promise<string | null> {
   return (exact ?? results.sort((a, b) => b.cases - a.cases)[0]).judge_id;
 }
 
+// Resolve an advocate NAME (as on a judgment/case) to a bar code via search.
+export async function resolveAdvocateBar(name: string): Promise<string | null> {
+  const clean = name.replace(/^(MR|MS|MRS|M\/S|DR|SHRI|SMT)\.?\s+/i, "").trim();
+  const d = await ldGet<{ results?: { name_raw?: string; bar_id?: string | null; cases?: number }[] }>(`/search/advocate?name=${encodeURIComponent(clean)}`);
+  const results = (d?.results ?? []).filter((r) => r.bar_id);
+  if (!results.length) return null;
+  const norm = (s: string) => s.toUpperCase().replace(/[^A-Z]/g, "");
+  const exact = results.find((r) => r.name_raw && norm(r.name_raw) === norm(name));
+  return (exact ?? results.sort((a, b) => (b.cases ?? 0) - (a.cases ?? 0))[0]).bar_id ?? null;
+}
+
 export interface TimelineEvent { date: string; type: "hearing" | "order" | "process"; detail?: string; judge?: string }
 export async function getTimeline(cnr: string): Promise<TimelineEvent[]> {
   const d = await ldGet<{ events?: TimelineEvent[] }>(`/case/${encodeURIComponent(cnr)}/timeline`);

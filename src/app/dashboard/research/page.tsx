@@ -132,7 +132,7 @@ export default async function ResearchPage({
                       <td className="px-5 py-3.5 align-top text-ink-muted">
                         {parties ? <span className="font-medium text-ink">{parties}</span> : <span className="text-ink-faint">—</span>}
                       </td>
-                      <td className="hidden px-5 py-3.5 align-top text-ink-muted lg:table-cell">{r.judge ?? <span className="text-ink-faint">—</span>}</td>
+                      <td className="hidden px-5 py-3.5 align-top text-ink-muted lg:table-cell">{r.judge ? <Link href={`/api/court/judge?name=${encodeURIComponent(r.judge)}`} className="hover:text-brand-600 hover:underline">{r.judge}</Link> : <span className="text-ink-faint">—</span>}</td>
                       <td className="hidden px-5 py-3.5 align-top text-xs text-ink-faint md:table-cell">{courtLabel(r.court)}</td>
                       <td className="hidden px-5 py-3.5 align-top text-xs text-ink-faint sm:table-cell">
                         {fmtDate(r.decision_date)}

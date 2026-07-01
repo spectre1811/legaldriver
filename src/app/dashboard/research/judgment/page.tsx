@@ -89,10 +89,10 @@ export default async function JudgmentReaderPage({
         {citation && <Badge tone="amber">{citation}</Badge>}
         {disposal && <Badge tone="green">{disposal}</Badge>}
         {judge && (
-          <span className="flex items-center gap-1.5 text-xs text-ink-faint">
+          <Link href={`/api/court/judge?name=${encodeURIComponent(judge)}`} className="flex items-center gap-1.5 text-xs text-ink-faint hover:text-brand-600">
             <Icon name="scale" className="h-3.5 w-3.5" />
             {judge}
-          </span>
+          </Link>
         )}
       </div>
 
@@ -112,8 +112,8 @@ export default async function JudgmentReaderPage({
         <Card className="p-5">
           <div className="mb-3 flex items-center gap-2"><Icon name="scale" className="h-4 w-4 text-brand-600" /><h2 className="text-base font-medium">Advocates &amp; acts</h2></div>
           <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-            {detail.pet_advocate && <div><dt className="label">Petitioner advocate</dt><dd className="text-ink">{detail.pet_advocate}</dd></div>}
-            {detail.res_advocate && <div><dt className="label">Respondent advocate</dt><dd className="text-ink">{detail.res_advocate}</dd></div>}
+            {detail.pet_advocate && <div><dt className="label">Petitioner advocate</dt><dd><Link href={`/api/court/advocate?name=${encodeURIComponent(detail.pet_advocate)}`} className="text-brand-600 hover:underline">{detail.pet_advocate}</Link></dd></div>}
+            {detail.res_advocate && <div><dt className="label">Respondent advocate</dt><dd><Link href={`/api/court/advocate?name=${encodeURIComponent(detail.res_advocate)}`} className="text-brand-600 hover:underline">{detail.res_advocate}</Link></dd></div>}
             {detail.acts && <div className="sm:col-span-2"><dt className="label">Acts &amp; sections</dt><dd className="text-ink">{detail.acts}</dd></div>}
             {detail.fir_no && <div><dt className="label">FIR</dt><dd className="text-ink">{detail.fir_no}{detail.fir_year ? `/${detail.fir_year}` : ""}</dd></div>}
             {detail.lower_court && <div><dt className="label">Lower court</dt><dd className="text-ink">{detail.lower_court}</dd></div>}
