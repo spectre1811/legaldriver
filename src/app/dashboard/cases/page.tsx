@@ -32,7 +32,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   let query = supabase
     .from("matter")
     .select(
-      "id, cnr, title, court, case_type, stage, status, next_hearing_date, last_synced_at, source, party_names",
+      "id, cnr, title, court, case_type, stage, status, next_hearing_date, next_hearing_override, last_synced_at, source, party_names, client:client_id(name)",
     )
     .limit(500);
 
@@ -126,6 +126,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
             <thead>
               <tr className="border-b border-line text-left">
                 <th className="px-5 py-3 label">Case</th>
+                <th className="hidden px-5 py-3 label lg:table-cell">Client</th>
                 <th className="hidden px-5 py-3 label md:table-cell">Court</th>
                 <th className="hidden px-5 py-3 label sm:table-cell">Stage</th>
                 <th className="hidden px-5 py-3 label sm:table-cell">Status</th>
@@ -136,7 +137,9 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
             </thead>
             <tbody>
               {matters.map((m) => {
-                const overdue = m.next_hearing_date != null && m.next_hearing_date < today;
+                const client = m.client as { name?: string } | null;
+                const eff = m.next_hearing_override ?? m.next_hearing_date;
+                const overdue = eff != null && eff < today;
                 return (
                   <tr key={m.id} className="group border-b border-line last:border-0 transition hover:bg-paper">
                     <td className="px-5 py-3.5">
@@ -145,13 +148,14 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
                       </Link>
                       {m.cnr && <div className="mt-0.5 font-mono text-[0.7rem] text-ink-faint">{m.cnr}</div>}
                     </td>
+                    <td className="hidden px-5 py-3.5 text-ink-muted lg:table-cell">{client?.name ?? <span className="text-ink-faint">—</span>}</td>
                     <td className="hidden px-5 py-3.5 text-ink-muted md:table-cell">{m.court ?? "—"}</td>
                     <td className="hidden px-5 py-3.5 sm:table-cell">{m.stage ? <Badge>{m.stage}</Badge> : <span className="text-ink-faint">—</span>}</td>
                     <td className="hidden px-5 py-3.5 sm:table-cell">
                       {m.status ? <Badge tone={m.status === "disposed" ? "neutral" : "green"}>{m.status}</Badge> : <span className="text-ink-faint">—</span>}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className={overdue ? "font-medium text-amber-700" : "text-ink-soft"}>{fmtDate(m.next_hearing_date)}</span>
+                      {eff ? <span className={overdue ? "font-medium text-amber-700" : "text-ink-soft"}>{fmtDate(eff)}{m.next_hearing_override ? " ·diary" : ""}{overdue ? " · past" : ""}</span> : <span className="text-xs text-ink-faint">no date</span>}
                     </td>
                     <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{m.source ?? "—"} · {fmtAgo(m.last_synced_at)}</td>
                     <td className="px-5 py-3.5 text-right">

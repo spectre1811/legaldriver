@@ -13,7 +13,7 @@ export default async function InvoicesPage() {
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
   const { data: invoices } = tenantId
-    ? await supabase.from("invoice").select("id, number, status, issue_date, total_minor, client:client_id(name)").order("created_at", { ascending: false }).limit(100)
+    ? await supabase.from("invoice").select("id, number, status, issue_date, due_date, total_minor, client:client_id(name)").order("created_at", { ascending: false }).limit(100)
     : { data: [] };
 
   const outstanding = (invoices ?? []).filter((i) => i.status === "sent").reduce((a, i) => a + i.total_minor, 0);
@@ -33,7 +33,7 @@ export default async function InvoicesPage() {
                   <Link href={`/dashboard/invoices/${i.id}`} className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-paper">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{i.number ?? "Draft"} · {client?.name ?? "—"}</p>
-                      <p className="text-xs text-ink-muted">{fmtDate(i.issue_date)}</p>
+                      <p className="text-xs text-ink-muted">{fmtDate(i.issue_date)}{i.due_date ? <> · due {fmtDate(i.due_date)}{i.status === "sent" && i.due_date < new Date().toISOString().slice(0, 10) ? <span className="font-medium text-red-600"> · overdue</span> : null}</> : null}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       <span className="text-sm font-medium">{rupees(i.total_minor)}</span>

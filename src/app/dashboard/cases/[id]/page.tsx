@@ -46,9 +46,11 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const matterOpts = (allMatters ?? []).map((m) => ({ id: m.id, label: m.title }));
   const clientOpts = (allClients ?? []).map((c) => ({ id: c.id, label: c.name }));
 
-  const [{ data: timeEntries }, { data: expenses }] = await Promise.all([
+  const [{ data: timeEntries }, { data: expenses }, { data: caseInvoices }, { data: caseNotices }] = await Promise.all([
     supabase.from("time_entry").select("id, entry_date, minutes, billable, rate_minor, narrative").eq("matter_id", matter.id).order("entry_date", { ascending: false }),
     supabase.from("expense").select("id, entry_date, category, amount_minor, billable, notes").eq("matter_id", matter.id).order("entry_date", { ascending: false }),
+    supabase.from("invoice").select("id, number, status, issue_date, total_minor").eq("matter_id", matter.id).order("created_at", { ascending: false }),
+    supabase.from("notice").select("id, type, escalation_state, response_due").eq("matter_id", matter.id).order("created_at", { ascending: false }),
   ]);
   const totalMinutes = (timeEntries ?? []).reduce((s, t) => s + t.minutes, 0);
   const billableTime = (timeEntries ?? []).filter((t) => t.billable).reduce((s, t) => s + Math.round((t.minutes / 60) * t.rate_minor), 0);
@@ -528,8 +530,40 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         )}
       </Card>
 
+      {/* Invoices for this case */}
+      {caseInvoices && caseInvoices.length > 0 && (
+        <Card>
+          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Invoices <span className="text-ink-faint">({caseInvoices.length})</span></h2></div>
+          <ul className="divide-y divide-line">
+            {caseInvoices.map((inv) => (
+              <li key={inv.id}>
+                <Link href={`/dashboard/invoices/${inv.id}`} className="flex items-center justify-between px-5 py-3 text-sm hover:bg-paper">
+                  <span className="font-medium text-brand-600">{inv.number ?? "Draft"} · {fmtDate(inv.issue_date)}</span>
+                  <span className="flex items-center gap-3"><span className="font-medium text-ink">{fmtMoney(inv.total_minor)}</span><Badge tone={inv.status === "paid" ? "green" : inv.status === "sent" ? "amber" : "neutral"}>{inv.status}</Badge></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
       </CaseTabPanel>
       <CaseTabPanel id="comms">
+
+      {/* Notices for this case */}
+      {caseNotices && caseNotices.length > 0 && (
+        <Card>
+          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Notices <span className="text-ink-faint">({caseNotices.length})</span></h2></div>
+          <ul className="divide-y divide-line">
+            {caseNotices.map((n) => (
+              <li key={n.id} className="flex items-center justify-between px-5 py-3 text-sm">
+                <Link href="/dashboard/notices" className="font-medium capitalize text-brand-600">{n.type.replace(/_/g, " ")}</Link>
+                <span className="flex items-center gap-3">{n.response_due && <span className="text-xs text-ink-faint">due {fmtDate(n.response_due)}</span>}<Badge tone={/escalat/.test(n.escalation_state) ? "red" : ["responded", "closed"].includes(n.escalation_state) ? "green" : "amber"}>{n.escalation_state.replace(/_/g, " ")}</Badge></span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {/* Communications timeline (email + WhatsApp/SMS) */}
       <Communications matterId={matter.id} />
