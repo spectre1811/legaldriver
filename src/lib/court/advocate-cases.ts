@@ -117,7 +117,41 @@ const vakeel360Provider: AdvocateCaseProvider = {
   },
 };
 
-const PROVIDERS = [corpusProvider, indianKanoonProvider, vakeel360Provider];
+// ── LegalDriver API (our own; bar-code = exact, name = fuzzy) ─────────────────
+const legaldriverProvider: AdvocateCaseProvider = {
+  source: "legaldriver",
+  enabled() { return !!process.env.LD_API_KEY; },
+  async fetchByAdvocate(q): Promise<FetchedAdvocateCase[]> {
+    const key = process.env.LD_API_KEY;
+    if (!key) return [];
+    const base = process.env.LD_API_BASE || "http://43.205.90.255:8080";
+    const H = { "X-API-Key": key };
+    const get = async (path: string) => {
+      try { const r = await fetch(`${base}${path}`, { headers: H, signal: AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "60000")) }); return r.ok ? await r.json() : null; } catch { return null; }
+    };
+    // Resolve bar id(s): exact when given, else fuzzy by name.
+    let barIds: string[] = [];
+    if (q.barNumber) barIds = [q.barNumber];
+    else if (q.name) {
+      const s = await get(`/search/advocate?name=${encodeURIComponent(q.name)}`);
+      barIds = [...new Set(((s?.results ?? []) as { bar_id?: string }[]).map((r) => r.bar_id).filter((b): b is string => !!b))].slice(0, 3);
+    }
+    const out: FetchedAdvocateCase[] = [];
+    for (const bar of barIds) {
+      const a = await get(`/advocate/${encodeURIComponent(bar)}`);
+      for (const c of (a?.cases ?? []) as { cnr: string; case_type?: string; status?: string; tier?: string; registration_year?: number }[]) {
+        out.push({
+          cnr: c.cnr, caseNumber: null, title: `${c.case_type ?? "Case"}${c.registration_year ? ` (${c.registration_year})` : ""}`,
+          court: c.tier ?? null, status: c.status ?? null, nextHearingDate: null, parties: [], pdfUrl: null,
+          decided: (c.status ?? "").toUpperCase().includes("DISPOSED"), source: "legaldriver",
+        });
+      }
+    }
+    return out;
+  },
+};
+
+const PROVIDERS = [legaldriverProvider, corpusProvider, indianKanoonProvider, vakeel360Provider];
 
 export function enabledAdvocateProviders(): string[] {
   return PROVIDERS.filter((p) => p.enabled()).map((p) => p.source);

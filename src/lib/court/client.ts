@@ -39,8 +39,14 @@ export function getCourtDataClient(): CourtDataClient {
 
   const provider = process.env.COURT_DATA_PROVIDER ?? "mock";
   const token = process.env.ECOURTSINDIA_API_TOKEN;
+  const ldKey = process.env.LD_API_KEY;
 
-  if (provider === "ecourtsindia" && token) {
+  // LegalDriver API (our own, compliant): the provider whenever its key is present
+  // (or explicitly selected). Read-through DB-first with a live-eCourts fallback.
+  if ((provider === "legaldriver" || provider === "mock") && ldKey) {
+    const { LegalDriverClient } = require("./legaldriver") as typeof import("./legaldriver");
+    cached = new LegalDriverClient(ldKey);
+  } else if (provider === "ecourtsindia" && token) {
     // Lazy require so the mock path has zero dependency on the live adapter.
     const { ECourtsIndiaClient } = require("./ecourtsindia") as typeof import("./ecourtsindia");
     cached = new ECourtsIndiaClient(token);
