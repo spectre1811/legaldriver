@@ -124,7 +124,7 @@ const legaldriverProvider: AdvocateCaseProvider = {
   async fetchByAdvocate(q): Promise<FetchedAdvocateCase[]> {
     const key = process.env.LD_API_KEY;
     if (!key) return [];
-    const base = process.env.LD_API_BASE || "http://43.205.90.255:8080";
+    const base = process.env.LD_API_BASE || "http://13.202.148.71:8080";
     const H = { "X-API-Key": key };
     const get = async (path: string) => {
       try { const r = await fetch(`${base}${path}`, { headers: H, signal: AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "60000")) }); return r.ok ? await r.json() : null; } catch { return null; }

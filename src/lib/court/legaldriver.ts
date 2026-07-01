@@ -9,7 +9,7 @@ import type { CourtDataClient } from "./client";
 // through/DB-first with a live-eCourts fallback on the provider side, so any CNR
 // resolves. Base URL + key from env (LD_API_BASE / LD_API_KEY). See the API reference.
 
-const DEFAULT_BASE = "http://43.205.90.255:8080";
+const DEFAULT_BASE = "http://13.202.148.71:8080";
 
 type RawCase = {
   cnr: string; tier?: string; case_type?: string; status?: string;
