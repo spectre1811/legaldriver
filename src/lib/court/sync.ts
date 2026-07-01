@@ -94,6 +94,8 @@ export async function upsertCase(
       matter_id: matterId,
       order_date: o.date && /^\d{4}-\d{2}-\d{2}/.test(o.date) ? o.date.slice(0, 10) : null,
       title: o.title ?? null,
+      // Keep the provider order id so we can fetch the signed PDF on demand.
+      raw: { order_id: o.id } as Database["public"]["Tables"]["court_order"]["Insert"]["raw"],
     }));
     await supabase.from("court_order").insert(orderRows);
   }

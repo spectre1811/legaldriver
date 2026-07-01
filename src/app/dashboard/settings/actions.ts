@@ -9,6 +9,7 @@ export type ActionResult = { ok: boolean; message: string };
 export async function addAdvocate(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const name = String(formData.get("name") ?? "").trim();
   const bar = String(formData.get("bar_registration_number") ?? "").trim().toUpperCase();
+  const barCode = String(formData.get("bar_code") ?? "").trim().replace(/[^0-9]/g, "");
   const state = String(formData.get("state_code") ?? "").trim().toUpperCase();
   if (!name) return { ok: false, message: "Advocate name is required." };
 
@@ -20,6 +21,7 @@ export async function addAdvocate(_prev: ActionResult, formData: FormData): Prom
     tenant_id: tenantId,
     name,
     bar_registration_number: bar || null,
+    bar_code: barCode || null,
     state_code: state || null,
   });
   if (error) return { ok: false, message: error.message };

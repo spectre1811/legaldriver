@@ -103,6 +103,7 @@ export type Database = {
       }
       advocate: {
         Row: {
+          bar_code: string | null
           bar_registration_number: string | null
           courts: string[]
           created_at: string
@@ -112,6 +113,7 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          bar_code?: string | null
           bar_registration_number?: string | null
           courts?: string[]
           created_at?: string
@@ -121,6 +123,7 @@ export type Database = {
           tenant_id: string
         }
         Update: {
+          bar_code?: string | null
           bar_registration_number?: string | null
           courts?: string[]
           created_at?: string

@@ -106,8 +106,8 @@ export class LegalDriverClient implements CourtDataClient {
   }
 
   async searchByAdvocate(q: AdvocateQuery): Promise<CaseSearchResult[]> {
-    // Prefer the exact bar-code endpoint; else fuzzy name search → resolve bar → caseload.
-    if (q.barNumber) {
+    // Prefer the exact bar-code endpoint (numeric); else fuzzy name → resolve bar → caseload.
+    if (q.barNumber && /^\d+$/.test(q.barNumber)) {
       const r = await this.req<{ cases?: { cnr: string; case_type?: string; status?: string; tier?: string; registration_year?: number }[] }>(`/advocate/${encodeURIComponent(q.barNumber)}`);
       return (r?.cases ?? []).map((c) => ({ cnr: c.cnr, title: `${c.case_type ?? "Case"}${c.registration_year ? ` (${c.registration_year})` : ""}`, court: c.tier }));
     }

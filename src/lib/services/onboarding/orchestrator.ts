@@ -44,7 +44,7 @@ export async function runOnboarding(
   const { tenantId, advocateId, runId } = opts;
   const counts: OnboardingCounts = { causelist: 0, cases_fetched: 0, matters_seeded: 0, enriched: 0, deadlines_proposed: 0, inbox_filed: 0, docs_attached: 0, closed_found: 0, summaries_queued: 0 };
 
-  const { data: adv } = await supabase.from("advocate").select("id, name, bar_registration_number, state_code").eq("id", advocateId).maybeSingle();
+  const { data: adv } = await supabase.from("advocate").select("id, name, bar_registration_number, bar_code, state_code").eq("id", advocateId).maybeSingle();
   if (!adv) { await setRun(supabase, runId, { stage: "error", status: "error", message: "Advocate not found." }); return counts; }
 
   // ── Stage 1: cause-list seed (the only compliant per-advocate open-case signal) ──
@@ -85,7 +85,8 @@ export async function runOnboarding(
   await setRun(supabase, runId, { stage: "fetch" });
   try {
     const { fetchAdvocateCases } = await import("@/lib/court/advocate-cases");
-    const fetched = await fetchAdvocateCases({ name: adv.name, barNumber: adv.bar_registration_number, stateCode: adv.state_code });
+    // Prefer the numeric eCourts bar code (exact) → else resolve by name.
+    const fetched = await fetchAdvocateCases({ name: adv.name, barNumber: adv.bar_code, stateCode: adv.state_code });
     for (const fc of fetched.slice(0, 80)) {
       // De-dupe: by CNR when present, else by title (avoids re-creating on re-run).
       if (fc.cnr) {

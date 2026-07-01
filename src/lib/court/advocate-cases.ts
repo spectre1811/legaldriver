@@ -131,7 +131,7 @@ const legaldriverProvider: AdvocateCaseProvider = {
     };
     // Resolve bar id(s): exact when given, else fuzzy by name.
     let barIds: string[] = [];
-    if (q.barNumber) barIds = [q.barNumber];
+    if (q.barNumber && /^\d+$/.test(q.barNumber)) barIds = [q.barNumber]; // LD keys on numeric bar codes
     else if (q.name) {
       const s = await get(`/search/advocate?name=${encodeURIComponent(q.name)}`);
       barIds = [...new Set(((s?.results ?? []) as { bar_id?: string }[]).map((r) => r.bar_id).filter((b): b is string => !!b))].slice(0, 3);
