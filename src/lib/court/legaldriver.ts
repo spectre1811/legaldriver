@@ -88,9 +88,12 @@ export class LegalDriverClient implements CourtDataClient {
       orders,
       acts,
       detail: {
-        tier: r.tier, registration_number: r.registration_number, registration_year: r.registration_year,
-        decision_date: r.decision_date, coram: r.coram, fir_no: r.fir_no, fir_year: r.fir_year, police_station: r.police_station,
-        regional: r.regional ?? {}, processes: r.processes ?? [], advocate_bars: advBars, live_source: r._source, fetched_ms: r._fetched_ms,
+        // camelCase keys the case-page info grid already reads, plus the LD extras.
+        tier: r.tier, registrationNumber: r.registration_number, registrationYear: r.registration_year,
+        decisionDate: r.decision_date, coram: r.coram,
+        firNo: r.fir_no, firYear: r.fir_year, policeStation: r.police_station,
+        regional: r.regional ?? {}, processes: r.processes ?? [], advocateBars: advBars,
+        liveSource: r._source, fetchedMs: r._fetched_ms,
       },
       source: this.source,
       fetchedAt: new Date().toISOString(),

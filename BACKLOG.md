@@ -54,8 +54,8 @@ P5 matter depth · P6 time+expense · P7/P8 client portal (RLS-isolated) · P10 
 
 ---
 
-## ⛔ Blocked — no free/compliant path today
-- **Fully-automated (no-human) free live case-status refresh.** eCourts gates every query behind a CAPTCHA and forbids automated access; NJDG's Open API is restricted to government/institutional users. We will NOT use CAPTCHA-solving / Bright-Data-style bypass (ToS + IT Act + reputational risk for a legal product). **Mitigated** — we now have two compliant fresh-data paths live: **HITL capture** (human solves CAPTCHA → we parse) and **cause-list upload**; plus a **licensed API as opt-in cached fallback**. The only thing still blocked is *unattended* automation. Revisit if NJDG opens or we get authorized access. Analysis: `docs/decisions/2026-06-25-court-data-sourcing.md`.
+## ✅ RESOLVED — live court data via the LegalDriver API (our own, compliant)
+**Automated live case data by CNR + advocate is now solved** — we consume our **own keyed REST API** (`src/lib/court/legaldriver.ts`, licensed-provider model; we do NOT scrape eCourts ourselves). Auto-selected as the `CourtDataClient` + top advocate auto-fetch provider whenever `LD_API_KEY` is set. **Verified live** (2026-07-01, real Gujarat data): `getCaseByCNR` maps parties+advocates(bar-ids)+hearings+orders+acts+coram+FIR+**processes(warrants)**+regional→`matter.detail`; `searchByAdvocate(bar=1946)`→135 cases; `fetchAdvocateCases(name=PRAJAPATI)`→302 cases. Case page now surfaces coram/FIR/processes. Corpus ~40k Gujarat cases + live-eCourts fallback (provider-side) for any CNR. **Prod:** add `LD_API_KEY` to Vercel env. **Still to wire:** order-PDF on-demand fetch (`/order/{id}/pdf`), judge pages (`/judge/{id}`), FIR/act/order-text search surfaces, more states as they load. (HITL capture + cause-list upload remain as no-key fallbacks.)
 
 ---
 

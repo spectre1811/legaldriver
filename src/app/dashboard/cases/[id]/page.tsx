@@ -71,7 +71,13 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     ["Filing date", detail.filingDate ? fmtDate(str(detail.filingDate)) : null],
     ["District", str(detail.district)],
     ["State", str(detail.state)],
+    ["Coram", str(detail.coram)],
+    ["FIR no.", detail.firNo ? `${str(detail.firNo)}${detail.firYear ? `/${str(detail.firYear)}` : ""}` : null],
+    ["Police station", str(detail.policeStation)],
   ].filter(([, v]) => v) as [string, string | null][];
+
+  // LD extras: court processes (warrants/summons) — legally significant, surfaced distinctly.
+  const processes = (Array.isArray(detail.processes) ? detail.processes : []) as { process_id?: string; process_date?: string; title?: string }[];
 
   const info: [string, string | null][] = [
     ["Court", matter.court],
@@ -397,6 +403,25 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 ) : (
                   <span className="min-w-0 flex-1 truncate font-medium text-ink">{o.title}</span>
                 )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {/* Court processes — warrants, summons, notices issued (from the court record) */}
+      {processes.length > 0 && (
+        <Card>
+          <div className="border-b border-line px-5 py-4">
+            <h2 className="text-base font-medium">Processes <span className="text-ink-faint">({processes.length})</span></h2>
+            <p className="mt-0.5 text-xs text-ink-faint">Warrants / summons / notices on the court record.</p>
+          </div>
+          <ul className="divide-y divide-line">
+            {processes.map((p, i) => (
+              <li key={p.process_id ?? i} className="flex items-center gap-3 px-5 py-3 text-sm">
+                <Icon name="alert" className="h-4 w-4 shrink-0 text-amber-500" />
+                <span className="w-24 shrink-0 text-ink-muted">{fmtDate(p.process_date)}</span>
+                <span className="min-w-0 flex-1 truncate font-medium text-ink">{p.title ?? "Process"}</span>
               </li>
             ))}
           </ul>
