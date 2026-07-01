@@ -20,6 +20,7 @@ export interface NormalizedOrderRef {
   id: string;
   date?: string;
   title?: string;
+  pdfUrl?: string; // signed/open PDF link when the provider already has it
 }
 
 export interface NormalizedCase {

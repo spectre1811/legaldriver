@@ -31,6 +31,20 @@ const side = (s?: string): NormalizedParty["side"] => {
     : l.includes("res") || l.includes("opponent") || l.includes("accused") ? "respondent" : "other";
 };
 
+// The API leaks HTML entities (often double-encoded, e.g. "&amp;amp;") in coram /
+// judge / name fields — decode before storing/displaying.
+function decode(s?: string | null): string {
+  if (!s) return "";
+  let t = s;
+  for (let i = 0; i < 2; i++) t = t.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&apos;/g, "'");
+  return t.trim();
+}
+// On HC cases the API explodes an advocate name string into per-character junk rows
+// ({"name":"P"},{"name":"A"},{"name":"1"}…) — keep only real names.
+function isRealAdvocate(name: string): boolean {
+  return name.length >= 3 && /[a-z]/i.test(name) && !/^\d+$/.test(name);
+}
+
 export class LegalDriverClient implements CourtDataClient {
   readonly source = "legaldriver";
   constructor(private readonly apiKey: string, private readonly base: string = process.env.LD_API_BASE || DEFAULT_BASE) {}
@@ -49,14 +63,20 @@ export class LegalDriverClient implements CourtDataClient {
   }
 
   private map(r: RawCase): NormalizedCase {
-    const parties: NormalizedParty[] = (r.parties ?? []).map((p) => ({ name: p.name ?? "", side: side(p.side) }));
-    // Attach advocates to their side's party; collect all advocate names + bar ids.
+    const parties: NormalizedParty[] = (r.parties ?? []).map((p) => ({ name: decode(p.name) || (p.name ?? ""), side: side(p.side) }));
+    // Attach advocates to their side's party; collect VALID advocate names + bar ids
+    // (filter the per-character junk rows the API emits on HC cases; dedupe; keep bar).
     const advBars: Record<string, string> = {};
+    const seenAdv = new Set<string>();
     for (const a of r.advocates ?? []) {
-      if (a.name && a.bar_id) advBars[a.name] = a.bar_id;
+      const name = decode(a.name).replace(/\s*\(\d+\)\s*$/, "").trim(); // strip the "NAME(bar_id)" duplicate suffix
+      if (!isRealAdvocate(name)) continue;
+      if (a.bar_id) advBars[name] = String(a.bar_id); // capture the bar id from whichever row has it
+      if (seenAdv.has(name)) continue;
+      seenAdv.add(name);
       const s = side(a.side);
       const party = parties.find((p) => p.side === s && !p.advocate);
-      if (party && a.name) party.advocate = a.name;
+      if (party) party.advocate = name;
     }
     // eCourts hearing model: the court did business ON `business_date` and FIXED the
     // next date to `hearing_date`. So the HISTORY of sittings = business_dates (with
@@ -76,15 +96,20 @@ export class LegalDriverClient implements CourtDataClient {
       const key = `${d}|${purpose ?? ""}`;
       if (!d || seenH.has(key)) return;
       seenH.add(key);
-      hearings.push({ date: d, purpose: purpose ?? undefined, judge: judge ?? undefined, raw: raw ?? {} });
+      hearings.push({ date: d, purpose: decode(purpose) || undefined, judge: decode(judge) || undefined, raw: raw ?? {} });
     };
     for (const h of sittings) pushHearing(h.business_date, h.purpose, h.judge, h);            // past sittings
     if (nextHearingDate) pushHearing(nextHearingDate, "Next hearing (as listed)", lastSitting?.judge, { scheduled: true }); // upcoming → calendar + reminders
     for (const h of rawHearings.filter((x) => !x.business_date && x.hearing_date)) pushHearing(h.hearing_date, h.purpose ?? "Listed", h.judge, h); // purely-scheduled rows
     hearings.sort((a, b) => a.date.localeCompare(b.date));
 
-    const orders: NormalizedOrderRef[] = (r.orders ?? []).map((o) => ({ id: String(o.order_id ?? ""), date: o.order_date ?? undefined, title: o.description ?? "Order" }));
-    const acts = (r.acts ?? []).map((a) => `${a.act_name ?? ""}${a.section ? ` ${a.section}` : ""}`.trim()).filter(Boolean);
+    // Drop phantom placeholder orders (null date + "Order" + no PDF); keep real ones,
+    // decode the title, and carry the signed pdf_url through when present.
+    const orders: NormalizedOrderRef[] = (r.orders ?? [])
+      .filter((o) => !(!o.order_date && (o.description ?? "").trim().toLowerCase() === "order" && !o.pdf_url))
+      .map((o) => ({ id: String(o.order_id ?? ""), date: o.order_date ?? undefined, title: decode(o.description) || "Order", pdfUrl: o.pdf_url ?? undefined }));
+    const acts = (r.acts ?? []).map((a) => decode(`${a.act_name ?? ""}${a.section ? ` ${a.section}` : ""}`).trim()).filter(Boolean);
+    const coram = decode(r.coram) || undefined;
 
     // Title from English parties (fall back to regional / cnr).
     const pet = parties.find((p) => p.side === "petitioner")?.name || r.regional?.pet_name || "";
@@ -94,12 +119,12 @@ export class LegalDriverClient implements CourtDataClient {
     return {
       cnr: r.cnr,
       title,
-      court: r.coram || r.tier || undefined,
+      court: coram || r.tier || undefined,
       caseType: r.case_type ?? undefined,
       status: r.status ?? undefined,
       parties,
-      judge: r.coram ?? undefined,
-      judges: r.coram ? [r.coram] : [],
+      judge: coram,
+      judges: coram ? [coram] : [],
       nextHearingDate,
       hearings,
       orders,
@@ -107,7 +132,7 @@ export class LegalDriverClient implements CourtDataClient {
       detail: {
         // camelCase keys the case-page info grid already reads, plus the LD extras.
         tier: r.tier, registrationNumber: r.registration_number, registrationYear: r.registration_year,
-        decisionDate: r.decision_date, coram: r.coram,
+        decisionDate: r.decision_date, coram,
         firNo: r.fir_no, firYear: r.fir_year, policeStation: r.police_station,
         regional: r.regional ?? {}, processes: r.processes ?? [], advocateBars: advBars,
         liveSource: r._source, fetchedMs: r._fetched_ms,
