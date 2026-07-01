@@ -219,6 +219,24 @@ export async function updateCase(matterId: string, formData: FormData): Promise<
   return { ok: true, message: "Case updated." };
 }
 
+// Track a case by CNR directly (from the advocate/judge browse pages). Fetches
+// through the gateway (live LegalDriver) → upserts a matter → returns its id.
+export async function trackCaseByCnr(cnr: string): Promise<{ ok: boolean; message: string; matterId?: string }> {
+  const clean = (cnr ?? "").trim().toUpperCase();
+  if (clean.length < 6) return { ok: false, message: "Invalid CNR." };
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const { data: existing } = await supabase.from("matter").select("id").eq("tenant_id", tenantId).eq("cnr", clean).maybeSingle();
+  if (existing) return { ok: true, matterId: existing.id, message: "Already tracked." };
+  const fetched = await getCaseCached(clean);
+  if (!fetched.case) return { ok: false, message: `No case found for ${clean}.` };
+  const { matterId, isNew } = await upsertCase(supabase, tenantId, fetched.case);
+  await logActivity(supabase, tenantId, { matterId, type: isNew ? "case.added" : "case.resynced", summary: `Tracked ${clean} from a caseload browse` });
+  revalidatePath("/dashboard/cases");
+  return { ok: true, matterId, message: "Now tracking this case." };
+}
+
 export async function addCaseByCnr(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const cnr = String(formData.get("cnr") ?? "").trim().toUpperCase();
   if (cnr.length < 6) return { ok: false, message: "Enter a valid CNR (16 characters)." };

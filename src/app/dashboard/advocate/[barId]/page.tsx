@@ -1,0 +1,71 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
+import { Icon } from "@/components/icons";
+import { createClient } from "@/lib/supabase/server";
+import { getTenantId } from "@/lib/court/sync";
+import { getAdvocateProfile, ldEnabled } from "@/lib/court/legaldriver-api";
+import { TrackCaseButton } from "@/components/track-case-button";
+
+export const dynamic = "force-dynamic";
+
+const TIER_TONE: Record<string, "brand" | "neutral"> = { HIGH: "brand", DISTRICT: "neutral" };
+
+// Browsable advocate caseload from the live LegalDriver API (/advocate/{bar_id}).
+export default async function AdvocatePage({ params }: { params: { barId: string } }) {
+  if (!ldEnabled()) notFound();
+  const profile = await getAdvocateProfile(params.barId);
+  if (!profile) notFound();
+
+  // Which of these CNRs does the firm already track? (link straight to the matter).
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  const cnrs = profile.cases.map((c) => c.cnr).filter(Boolean);
+  const { data: tracked } = tenantId && cnrs.length
+    ? await supabase.from("matter").select("id, cnr").eq("tenant_id", tenantId).in("cnr", cnrs)
+    : { data: [] };
+  const byCnr = new Map((tracked ?? []).map((m) => [m.cnr, m.id]));
+
+  const pending = profile.cases.filter((c) => (c.status ?? "").toUpperCase() === "PENDING").length;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title={profile.names[0] ?? `Advocate ${profile.bar_id}`} subtitle={`Bar code ${profile.bar_id}${profile.names.length > 1 ? ` · also: ${profile.names.slice(1).join(", ")}` : ""}`} />
+
+      <section className="grid grid-cols-3 gap-3">
+        <Card><div className="px-4 py-3"><p className="label">Total cases</p><p className="text-2xl font-semibold">{profile.case_count}</p></div></Card>
+        <Card><div className="px-4 py-3"><p className="label">Pending</p><p className="text-2xl font-semibold">{pending}</p></div></Card>
+        <Card><div className="px-4 py-3"><p className="label">Disposed</p><p className="text-2xl font-semibold">{profile.case_count - pending}</p></div></Card>
+      </section>
+
+      <Card>
+        <div className="border-b border-line px-5 py-4"><p className="font-medium">Caseload <span className="text-ink-faint">(showing {profile.cases.length})</span></p></div>
+        {profile.cases.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="text-left text-ink-faint"><th className="px-5 py-2 font-medium">CNR</th><th className="px-3 py-2 font-medium">Type</th><th className="px-3 py-2 font-medium">Side</th><th className="px-3 py-2 font-medium">Status</th><th className="px-3 py-2 font-medium">Court</th><th className="px-3 py-2"></th></tr></thead>
+              <tbody>
+                {profile.cases.map((c) => {
+                  const mid = byCnr.get(c.cnr);
+                  return (
+                    <tr key={c.cnr} className="border-t border-line">
+                      <td className="px-5 py-2 font-mono text-xs">{mid ? <Link href={`/dashboard/cases/${mid}`} className="text-brand-600 hover:underline">{c.cnr}</Link> : c.cnr}</td>
+                      <td className="px-3 py-2 text-ink-soft">{c.case_type}{c.registration_year ? ` (${c.registration_year})` : ""}</td>
+                      <td className="px-3 py-2 text-ink-muted">{c.side}</td>
+                      <td className="px-3 py-2"><Badge tone={(c.status ?? "").toUpperCase() === "PENDING" ? "amber" : "green"}>{c.status}</Badge></td>
+                      <td className="px-3 py-2"><Badge tone={TIER_TONE[c.tier ?? ""] ?? "neutral"}>{c.tier}</Badge></td>
+                      <td className="px-3 py-2 text-right">{mid ? <span className="text-xs text-ink-faint">tracked</span> : <TrackCaseButton cnr={c.cnr} />}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState icon="scale" title="No cases on record" body="The API returned no caseload for this bar code." />
+        )}
+        <p className="px-5 py-3 text-xs text-ink-faint">Source: LegalDriver / eCourts. Coverage is Gujarat (HC + district), expanding. Not legal advice — verify against the official record.</p>
+      </Card>
+    </div>
+  );
+}

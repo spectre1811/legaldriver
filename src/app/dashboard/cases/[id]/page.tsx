@@ -72,12 +72,16 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     ["District", str(detail.district)],
     ["State", str(detail.state)],
     ["Coram", str(detail.coram)],
+    ["Decided on", detail.decisionDate ? fmtDate(str(detail.decisionDate)) : null],
     ["FIR no.", detail.firNo ? `${str(detail.firNo)}${detail.firYear ? `/${str(detail.firYear)}` : ""}` : null],
     ["Police station", str(detail.policeStation)],
   ].filter(([, v]) => v) as [string, string | null][];
 
   // LD extras: court processes (warrants/summons) — legally significant, surfaced distinctly.
   const processes = (Array.isArray(detail.processes) ? detail.processes : []) as { process_id?: string; process_date?: string; title?: string }[];
+  // Advocate bar-ids (name→code) → link each advocate to their caseload; regional (Gujarati) names.
+  const advocateBars = (detail.advocateBars ?? {}) as Record<string, string>;
+  const regional = (detail.regional ?? {}) as { pet_name?: string | null; res_name?: string | null };
 
   const info: [string, string | null][] = [
     ["Court", matter.court],
@@ -311,12 +315,24 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Parties</h2></div>
           {parties.length ? (
             <ul className="divide-y divide-line">
-              {parties.map((p, i) => (
-                <li key={i} className="flex items-center justify-between px-5 py-3 text-sm">
-                  <span className="font-medium text-ink">{p.name}</span>
-                  <span className="text-xs text-ink-faint">{[p.side, p.advocate].filter(Boolean).join(" · ") || "—"}</span>
-                </li>
-              ))}
+              {parties.map((p, i) => {
+                const reg = p.side === "petitioner" ? regional.pet_name : p.side === "respondent" ? regional.res_name : null;
+                const bar = p.advocate ? advocateBars[p.advocate] : undefined;
+                return (
+                  <li key={i} className="flex items-start justify-between gap-3 px-5 py-3 text-sm">
+                    <span className="min-w-0">
+                      <span className="font-medium text-ink">{p.name}</span>
+                      {reg && reg !== p.name && reg !== "XXXXXXX" && <span className="block text-xs text-ink-faint">{reg}</span>}
+                    </span>
+                    <span className="shrink-0 text-right text-xs text-ink-faint">
+                      {p.side}
+                      {p.advocate && (bar
+                        ? <> · <Link href={`/dashboard/advocate/${bar}`} className="text-brand-600 hover:underline">{p.advocate}</Link></>
+                        : ` · ${p.advocate}`)}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="px-5 py-8 text-center text-sm text-ink-faint">No party details on record.</p>
@@ -331,7 +347,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 <li key={h.id} className="flex items-center gap-3 px-5 py-3 text-sm">
                   <span className="w-20 shrink-0 text-ink-muted">{fmtDate(h.date)}</span>
                   <span className="flex-1 text-ink">{h.purpose ?? "Hearing"}</span>
-                  <span className="text-xs text-ink-faint">{h.judge ?? ""}</span>
+                  <span className="text-xs text-ink-faint">{h.judge ? <Link href={`/api/court/judge?name=${encodeURIComponent(h.judge)}`} className="hover:text-brand-600 hover:underline">{h.judge}</Link> : ""}</span>
                 </li>
               ))}
             </ul>
