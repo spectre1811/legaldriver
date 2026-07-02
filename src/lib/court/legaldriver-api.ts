@@ -22,6 +22,12 @@ export interface JudgeCaseItem { cnr: string; case_type?: string; status?: strin
 export interface JudgeProfile { judge_id: string; name: string; case_count: number; returned: number; cases: JudgeCaseItem[] }
 export const getJudge = (judgeId: string) => ldGet<JudgeProfile>(`/judge/${encodeURIComponent(judgeId)}`);
 
+export interface AdvocateSearchResult { name_raw: string; bar_id: string | null; cases: number }
+export async function searchAdvocates(name: string): Promise<AdvocateSearchResult[]> {
+  const d = await ldGet<{ results?: AdvocateSearchResult[] }>(`/search/advocate?name=${encodeURIComponent(name)}`);
+  return (d?.results ?? []).filter((r) => (r.name_raw ?? "").trim().length > 2);
+}
+
 export interface JudgeSearchResult { judge_id: string; name_raw: string; cases: number }
 export async function searchJudges(name: string): Promise<JudgeSearchResult[]> {
   const d = await ldGet<{ results?: JudgeSearchResult[] }>(`/judges?name=${encodeURIComponent(name)}`);

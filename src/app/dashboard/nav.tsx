@@ -16,6 +16,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string; icon: I
       { href: "/dashboard/analytics", label: "Analytics", icon: "overview" },
       { href: "/dashboard/portfolio", label: "Portfolio", icon: "alert" },
       { href: "/dashboard/research", label: "Case research", icon: "search" },
+      { href: "/dashboard/lookup", label: "Judges & advocates", icon: "scale" },
     ],
   },
   {
