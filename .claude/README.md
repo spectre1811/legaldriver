@@ -28,6 +28,20 @@ mkdir -p "$DEST" && cp .claude/memory/*.md "$DEST/"
 
 Then Claude Code will load it on the next session. (Re-run after moving the clone.)
 
+## Global / "org-level" config — reproduce in a clone (deliberately, not auto-committed)
+The 4 skills above ARE the project's custom (org-level) skills — committed here. The
+rest of `~/.claude` is intentionally NOT committed (third-party, personal, or secret);
+reproduce what you want:
+
+- **Plugin marketplace** (installed globally): `anthropics/claude-plugins-official`
+  (github, playwright, terraform, linear, session-report, plugin-dev, …). Re-add in a
+  clone with: `/plugin marketplace add anthropics/claude-plugins-official` — don't
+  copy the marketplace repo in here (it's public + large + self-updating).
+- **Personal settings** (`~/.claude/settings.json`) used on the build box:
+  `{ "theme": "dark", "tui": "fullscreen", "skipDangerousModePermissionPrompt": true }`.
+  Left to each developer — especially `skipDangerousModePermissionPrompt`, a safety
+  toggle you should opt into consciously, not inherit from a repo.
+
 ## Never committed (gitignored / lives only in ~/.claude)
 `.credentials.json`, chat history/transcripts (`*.jsonl`), `settings.local.json`,
 caches. Secrets stay in `.env` (also gitignored) — see `.env.example` for the keys.
