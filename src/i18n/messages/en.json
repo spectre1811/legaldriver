@@ -1,0 +1,23 @@
+{
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "add": "Add",
+      "search": "Search",
+      "retry": "Try again"
+    },
+    "states": {
+      "loading": "Loading…",
+      "empty": "Nothing here yet",
+      "error": "Something went wrong"
+    },
+    "disclaimer": "Not legal advice — verify against the official court record.",
+    "provenance": "Source: {source} · updated {time}",
+    "language": {
+      "label": "Language",
+      "en": "English",
+      "hi": "हिन्दी"
+    }
+  }
+}
