@@ -12,8 +12,18 @@ understanding of this project. Committed on purpose; local/secret bits are gitig
   `gmail-oauth-ingest`, `supabase-rls-multitenant` — each codifies a hard-won pattern
   (structured-output classification; licensed-court-API/no-scrape rule + CourtDataClient;
   Gmail OAuth ingest; multi-tenant RLS + the Next fetch-cache gotcha).
+- `agents/` — project subagents, **auto-loaded from `.claude/agents/`** (invoke via the
+  Agent tool). Adapted from the org agent set (Replatform/Service) to this project + one
+  of our own: `engineering` (our stack + conventions), `court-data` (court-API sourcing
+  discipline + dirty-data cleaning + no-scrape line — *built on top*), `skill-smith`
+  (codify recurring patterns into skills), `utility` (diagrams/docx/xlsx/OCR artifacts).
+  Model routing: Sonnet default, "[opus]" for hard architecture.
 - Project instructions live in the repo-root **`CLAUDE.md`** (Claude Code loads it
   automatically) — read it first.
+
+> Reusable org-level agents live outside this repo (e.g. `~/Projects/Service/.claude/agents/`:
+> engineering, skill-smith, strategist, utility, + GTM-specific ones). We vendored only the
+> relevant ones here, retargeted to Legaldriver, and added `court-data` on top.
 
 ## Using this after cloning
 Claude Code auto-loads memory from `~/.claude/projects/<encoded-abs-path>/memory/`,
