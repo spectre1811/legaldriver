@@ -12,9 +12,12 @@ export const dynamic = "force-dynamic";
 const TIER_TONE: Record<string, "brand" | "neutral"> = { HIGH: "brand", DISTRICT: "neutral" };
 
 // Browsable advocate caseload from the live LegalDriver API (/advocate/{bar_id}).
-export default async function AdvocatePage({ params }: { params: { barId: string } }) {
+// Catch-all route: bar_id is numeric (HC) OR slash-form "G/NN/YYYY" (district), which
+// arrives as multiple path segments — rejoin them.
+export default async function AdvocatePage({ params }: { params: { barId: string[] } }) {
   if (!ldEnabled()) notFound();
-  const profile = await getAdvocateProfile(params.barId);
+  const barId = params.barId.map(decodeURIComponent).join("/");
+  const profile = await getAdvocateProfile(barId);
   if (!profile) notFound();
 
   // Which of these CNRs does the firm already track? (link straight to the matter).

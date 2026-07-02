@@ -16,7 +16,8 @@ async function ldGet<T>(path: string): Promise<T | null> {
 
 export interface AdvocateCaseItem { cnr: string; side?: string; case_type?: string; status?: string; tier?: string; registration_year?: number }
 export interface AdvocateProfile { bar_id: string; names: string[]; case_count: number; cases: AdvocateCaseItem[] }
-export const getAdvocateProfile = (barId: string) => ldGet<AdvocateProfile>(`/advocate/${encodeURIComponent(barId)}`);
+// bar_id is numeric (HC) or slash-form "G/NN/YYYY" (district) — keep slashes raw (:path route).
+export const getAdvocateProfile = (barId: string) => ldGet<AdvocateProfile>(`/advocate/${barId.split("/").map(encodeURIComponent).join("/")}`);
 
 export interface JudgeCaseItem { cnr: string; case_type?: string; status?: string; decision_date?: string | null; tier?: string }
 export interface JudgeProfile { judge_id: string; name: string; case_count: number; returned: number; cases: JudgeCaseItem[] }

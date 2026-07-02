@@ -55,17 +55,24 @@ function splitAdvocateValue(raw?: string | null): { name: string; bar?: string }
   const s = decode(raw);
   if (!s) return [];
   const out: { name: string; bar?: string }[] = [];
-  const re = /([A-Za-z][A-Za-z.\s&]*?)\((\d{2,6})\)/g; // NAME(bar)
+  // Bar id is inline in two formats: HC numeric "NAME(7260)" and district slash-form
+  // "NAME G/3350/2020" (state-bar reg). Extract each advocate + its bar.
+  const re = /([A-Za-z][A-Za-z.\s&]*?)(?:\((\d{2,6})\)|\s+([A-Za-z]\/\d+\/\d{2,4}))/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(s))) {
     const nm = m[1].replace(/^[\s,.)0-9]+/, "").replace(/\s+/g, " ").trim(); // strip leaked party-marker leftovers
-    if (isRealAdvocate(nm) && !ADV_NOISE.test(nm)) out.push({ name: nm, bar: m[2] });
+    if (isRealAdvocate(nm) && !ADV_NOISE.test(nm)) out.push({ name: nm, bar: m[2] ?? m[3] });
   }
   if (out.length) return out;
-  // No bar markers → plain name: cut at the first leaked party marker ("5)" / "12.2)") + noise.
-  const plain = s.split(/\s+\d+[.\d]*\)/)[0].replace(/\s*\(\d+\)\s*$/, "").trim();
+  // No bar markers → plain name: cut at the first leaked party marker ("5)" / "12.2)"),
+  // any trailing (bar) or slash-bar, + noise.
+  const plain = s.split(/\s+\d+[.\d]*\)/)[0].replace(/\s*\(\d+\)\s*$/, "").replace(/\s+[A-Za-z]\/\d+\/\d{2,4}\s*$/, "").trim();
   return isRealAdvocate(plain) && !ADV_NOISE.test(plain) ? [{ name: plain }] : [];
 }
+// A bar id is numeric (HC) or slash-form "G/NN/YYYY" (district state bar).
+function isBarId(b: string): boolean { return /^\d+$/.test(b) || /^[A-Za-z]\/\d+\/\d{2,4}$/.test(b); }
+// Build the /advocate/{bar} path preserving slashes (the API uses a :path param).
+function barPath(b: string): string { return b.split("/").map(encodeURIComponent).join("/"); }
 
 export class LegalDriverClient implements CourtDataClient {
   readonly source = "legaldriver";
@@ -172,9 +179,10 @@ export class LegalDriverClient implements CourtDataClient {
   }
 
   async searchByAdvocate(q: AdvocateQuery): Promise<CaseSearchResult[]> {
-    // Prefer the exact bar-code endpoint (numeric); else fuzzy name → resolve bar → caseload.
-    if (q.barNumber && /^\d+$/.test(q.barNumber)) {
-      const r = await this.req<{ cases?: { cnr: string; case_type?: string; status?: string; tier?: string; registration_year?: number }[] }>(`/advocate/${encodeURIComponent(q.barNumber)}`);
+    // Prefer the exact bar-code endpoint (numeric HC or slash-form district); else fuzzy
+    // name → resolve bar → caseload. Slashes are kept raw (the API uses a :path param).
+    if (q.barNumber && isBarId(q.barNumber)) {
+      const r = await this.req<{ cases?: { cnr: string; case_type?: string; status?: string; tier?: string; registration_year?: number }[] }>(`/advocate/${barPath(q.barNumber)}`);
       return (r?.cases ?? []).map((c) => ({ cnr: c.cnr, title: `${c.case_type ?? "Case"}${c.registration_year ? ` (${c.registration_year})` : ""}`, court: c.tier }));
     }
     if (q.name) {
