@@ -41,9 +41,12 @@ export function getCourtDataClient(): CourtDataClient {
   const token = process.env.ECOURTSINDIA_API_TOKEN;
   const ldKey = process.env.LD_API_KEY;
 
-  // LegalDriver API (our own, compliant): the provider whenever its key is present
-  // (or explicitly selected). Read-through DB-first with a live-eCourts fallback.
-  if ((provider === "legaldriver" || provider === "mock") && ldKey) {
+  // LegalDriver API (our own, compliant) is the canonical provider — use it WHENEVER its
+  // key is present, regardless of COURT_DATA_PROVIDER. This avoids the footgun where a
+  // stale COURT_DATA_PROVIDER=ecourtsindia (from before LD existed) silently re-syncs cases
+  // through the legacy provider (synthetic order ids → broken PDFs). Set the env to
+  // "ecourtsindia" AND unset LD_API_KEY only to deliberately fall back to the legacy adapter.
+  if (ldKey && provider !== "ecourtsindia_force") {
     const { LegalDriverClient } = require("./legaldriver") as typeof import("./legaldriver");
     cached = new LegalDriverClient(ldKey);
   } else if (provider === "ecourtsindia" && token) {
