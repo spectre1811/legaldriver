@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
 import { NavLinks } from "./nav";
+import { CommandPalette } from "@/components/command-palette";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
@@ -31,6 +32,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
 
         <div className="mt-7 flex-1 overflow-y-auto">
+          <CommandPalette />
           <NavLinks />
         </div>
 
