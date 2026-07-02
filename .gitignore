@@ -39,3 +39,9 @@ npm-debug.log*
 
 # tesseract.js lang models (downloaded at runtime; worker cache)
 *.traineddata
+
+# Claude Code — commit shared config/memory, never the local/secret bits
+.claude/settings.local.json
+.claude/**/*.local.*
+.claude/.credentials.json
+.claude/**/*.jsonl
