@@ -7,6 +7,11 @@ understanding of this project. Committed on purpose; local/secret bits are gitig
 - `memory/` — durable project memory (working style, architecture, decisions,
   deployment gotchas, cost/legal-risk preferences). `MEMORY.md` is the index; each
   linked file holds one fact.
+- `skills/` — project skills, **auto-loaded by Claude Code from `.claude/skills/`
+  (no setup needed in a clone)**: `doc-classify-claude`, `ecourts-api-client`,
+  `gmail-oauth-ingest`, `supabase-rls-multitenant` — each codifies a hard-won pattern
+  (structured-output classification; licensed-court-API/no-scrape rule + CourtDataClient;
+  Gmail OAuth ingest; multi-tenant RLS + the Next fetch-cache gotcha).
 - Project instructions live in the repo-root **`CLAUDE.md`** (Claude Code loads it
   automatically) — read it first.
 
