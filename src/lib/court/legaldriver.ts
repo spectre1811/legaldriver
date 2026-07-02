@@ -134,11 +134,16 @@ export class LegalDriverClient implements CourtDataClient {
     for (const h of rawHearings.filter((x) => !x.business_date && x.hearing_date)) pushHearing(h.hearing_date, h.purpose ?? "Listed", h.judge, h); // purely-scheduled rows
     hearings.sort((a, b) => a.date.localeCompare(b.date));
 
-    // Drop phantom placeholder orders (null date + "Order" + no PDF); keep real ones,
-    // decode the title, and carry the signed pdf_url through when present.
+    // Keep every order that has a provider id (dedup by id). We do NOT drop dateless
+    // "Order" rows: district orders are legitimately dateless with pdf_url:null at /case
+    // time yet have a REAL PDF fetched on demand on first click (/order/{id}/pdf → S3).
+    // Filtering them by the null-date heuristic hid genuine PDFs (e.g. GJBN050013102026).
+    // PDF availability is resolved at click-time by the streaming route, not guessed here.
+    const seenOrder = new Set<string>();
     const orders: NormalizedOrderRef[] = (r.orders ?? [])
-      .filter((o) => !(!o.order_date && (o.description ?? "").trim().toLowerCase() === "order" && !o.pdf_url))
-      .map((o) => ({ id: String(o.order_id ?? ""), date: o.order_date ?? undefined, title: decode(o.description) || "Order", pdfUrl: o.pdf_url ?? undefined }));
+      .filter((o) => o.order_id != null && String(o.order_id) !== "")
+      .filter((o) => { const k = String(o.order_id); if (seenOrder.has(k)) return false; seenOrder.add(k); return true; })
+      .map((o) => ({ id: String(o.order_id), date: o.order_date ?? undefined, title: decode(o.description) || "Order", pdfUrl: o.pdf_url ?? undefined }));
     const acts = (r.acts ?? []).map((a) => decode(`${a.act_name ?? ""}${a.section ? ` ${a.section}` : ""}`).trim()).filter(Boolean);
     const coram = decode(r.coram) || undefined;
 

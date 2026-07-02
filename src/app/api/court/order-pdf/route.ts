@@ -40,17 +40,24 @@ export async function GET(request: NextRequest) {
     return page("No document available", "This order came from an earlier data source, so we can’t stream its PDF. Refresh the case to re-sync it from the current court source.", order.matter_id);
   }
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(`${LD_BASE()}/order/${encodeURIComponent(String(providerId))}/pdf`, {
-      headers: { "X-API-Key": key },
-      signal: AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "55000")),
-    });
-  } catch {
-    return page("Court service unavailable", "The court data service didn’t respond just now. Please try again shortly.", order.matter_id, 503);
+  // District PDFs are fetched on demand: the first request returns 202 (queued) while the
+  // worker pulls from the portal, then the same URL serves the bytes from S3 seconds later.
+  // Poll a few times so the click resolves on the same request instead of dead-ending.
+  let upstream: Response | null = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      upstream = await fetch(`${LD_BASE()}/order/${encodeURIComponent(String(providerId))}/pdf`, {
+        headers: { "X-API-Key": key },
+        signal: AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "55000")),
+      });
+    } catch {
+      return page("Court service unavailable", "The court data service didn’t respond just now. Please try again shortly.", order.matter_id, 503);
+    }
+    if (upstream.status !== 202) break;
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 3500)); // wait for the on-demand fetch, then retry
   }
 
-  if (upstream.status === 202) return page("Fetching the order…", "This district order’s copy is being retrieved from the court portal now.", order.matter_id, 202);
+  if (!upstream || upstream.status === 202) return page("Fetching the order…", "This district order’s copy is being retrieved from the court portal — it usually lands within a minute.", order.matter_id, 202);
   const ct = upstream.headers.get("content-type") ?? "";
   if (!upstream.ok || !upstream.body || !/pdf|octet-stream/i.test(ct)) {
     return page("Couldn’t open this order’s PDF", "The court may not publish a PDF for this order, or the portal is throttling. Try again shortly.", order.matter_id, upstream.status === 404 ? 404 : 503);
