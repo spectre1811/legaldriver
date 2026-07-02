@@ -84,7 +84,7 @@ export default async function LookupPage({ searchParams }: { searchParams: { q?:
                   </li>
                 ))}
               </ul>
-            ) : <EmptyState icon="search" title="No parties found" hint="Try a surname (fuzzy match across litigants)." />}
+            ) : <EmptyState icon="search" title="No parties found" body="Try a surname (fuzzy match across litigants)." />}
           </Card>
         </>
       )}
