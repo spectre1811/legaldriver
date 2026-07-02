@@ -28,6 +28,23 @@ export async function searchAdvocates(name: string): Promise<AdvocateSearchResul
   return (d?.results ?? []).filter((r) => (r.name_raw ?? "").trim().length > 2);
 }
 
+// /search/party — fuzzy litigant search → the cases that party appears in.
+export interface PartyCaseResult { cnr: string; side?: string; name: string; case_type?: string; tier?: string }
+export async function searchParties(name: string): Promise<PartyCaseResult[]> {
+  const d = await ldGet<{ results?: PartyCaseResult[] }>(`/search/party?name=${encodeURIComponent(name)}`);
+  return (d?.results ?? []).filter((r) => (r.name ?? "").trim().length > 1 && r.name !== "XXXXXXX");
+}
+
+// /search/case-number — find a case by registration type/number/year (alt to CNR).
+export async function searchByCaseNumber(type: string, number: string, year: string): Promise<PartyCaseResult[]> {
+  const d = await ldGet<{ results?: PartyCaseResult[] }>(`/search/case-number?type=${encodeURIComponent(type)}&number=${encodeURIComponent(number)}&year=${encodeURIComponent(year)}`);
+  return d?.results ?? [];
+}
+
+// /stats — corpus coverage counts (for the "we cover N cases" trust signal).
+export interface CorpusStats { cases_total: number; by_tier?: Record<string, number>; rich?: Record<string, number> }
+export const getStats = () => ldGet<CorpusStats>("/stats");
+
 export interface JudgeSearchResult { judge_id: string; name_raw: string; cases: number }
 export async function searchJudges(name: string): Promise<JudgeSearchResult[]> {
   const d = await ldGet<{ results?: JudgeSearchResult[] }>(`/judges?name=${encodeURIComponent(name)}`);

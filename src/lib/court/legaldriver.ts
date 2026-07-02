@@ -44,6 +44,28 @@ function decode(s?: string | null): string {
 function isRealAdvocate(name: string): boolean {
   return name.length >= 3 && /[a-z]/i.test(name) && !/^\d+$/.test(name);
 }
+// Court-process noise that leaks into advocate values on multi-party rows.
+const ADV_NOISE = /\b(NOTICE|RULE|SERVED|UNSERVED|APPEARANCE|EXPARTE|LEGAL HEIR|REPRESENTATIVE|DELETED|ORDER)\b/i;
+// Mirror of the API's split_advocate_value (DATA_QUALITY §1): a multi-party advocate
+// field concatenates several advocates + leaks the next party's "N)" marker, e.g.
+// "MR X(5950) ,BHARGAV P THAKAR(8194) 5) LEGAL HEIRS…". The "(NNNN)" bar-council markers
+// are reliable split points — recover each NAME(bar); else it's a plain single name.
+// No-op on already-clean values.
+function splitAdvocateValue(raw?: string | null): { name: string; bar?: string }[] {
+  const s = decode(raw);
+  if (!s) return [];
+  const out: { name: string; bar?: string }[] = [];
+  const re = /([A-Za-z][A-Za-z.\s&]*?)\((\d{2,6})\)/g; // NAME(bar)
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s))) {
+    const nm = m[1].replace(/^[\s,.)0-9]+/, "").replace(/\s+/g, " ").trim(); // strip leaked party-marker leftovers
+    if (isRealAdvocate(nm) && !ADV_NOISE.test(nm)) out.push({ name: nm, bar: m[2] });
+  }
+  if (out.length) return out;
+  // No bar markers → plain name: cut at the first leaked party marker ("5)" / "12.2)") + noise.
+  const plain = s.split(/\s+\d+[.\d]*\)/)[0].replace(/\s*\(\d+\)\s*$/, "").trim();
+  return isRealAdvocate(plain) && !ADV_NOISE.test(plain) ? [{ name: plain }] : [];
+}
 
 export class LegalDriverClient implements CourtDataClient {
   readonly source = "legaldriver";
@@ -69,14 +91,16 @@ export class LegalDriverClient implements CourtDataClient {
     const advBars: Record<string, string> = {};
     const seenAdv = new Set<string>();
     for (const a of r.advocates ?? []) {
-      const name = decode(a.name).replace(/\s*\(\d+\)\s*$/, "").trim(); // strip the "NAME(bar_id)" duplicate suffix
-      if (!isRealAdvocate(name)) continue;
-      if (a.bar_id) advBars[name] = String(a.bar_id); // capture the bar id from whichever row has it
-      if (seenAdv.has(name)) continue;
-      seenAdv.add(name);
       const s = side(a.side);
-      const party = parties.find((p) => p.side === s && !p.advocate);
-      if (party) party.advocate = name;
+      // Split any multi-party garbled concatenation into individual advocates (no-op if clean).
+      for (const adv of splitAdvocateValue(a.name)) {
+        const bar = adv.bar ?? (a.bar_id ? String(a.bar_id) : undefined);
+        if (bar) advBars[adv.name] = bar; // capture the bar id from whichever segment/row has it
+        if (seenAdv.has(adv.name)) continue;
+        seenAdv.add(adv.name);
+        const party = parties.find((p) => p.side === s && !p.advocate);
+        if (party) party.advocate = adv.name;
+      }
     }
     // eCourts hearing model: the court did business ON `business_date` and FIXED the
     // next date to `hearing_date`. So the HISTORY of sittings = business_dates (with
@@ -183,12 +207,13 @@ export class LegalDriverClient implements CourtDataClient {
   }
 
   async getOrder(cnr: string, orderId: string): Promise<CourtOrder | null> {
-    // The direct /order/{id}/pdf proxy returns 502; the working path is the case's
-    // orders list (with ?fetch=true it pulls missing PDFs live), which carries a
-    // time-limited signed S3 pdf_url per order. Pick the matching order.
-    const data = await this.req<{ orders?: { order_id?: number | string; pdf_url?: string | null; text?: string | null }[] }>(`/case/${encodeURIComponent(cnr)}/orders?fetch=true`);
+    // Per the API: PDFs are streamed durably via /order/{id}/pdf (our /api/court/order-pdf
+    // proxy does this). This helper returns the stable stream path (never a presigned URL —
+    // those expire) + extracted text. ?fetch=true pulls a missing district PDF live.
+    const data = await this.req<{ orders?: { order_id?: number | string; has_pdf?: boolean; pdf_stream?: string | null; text?: string | null }[] }>(`/case/${encodeURIComponent(cnr)}/orders?fetch=true&text=true`);
     const o = (data?.orders ?? []).find((x) => String(x.order_id ?? "") === String(orderId));
     if (!o) return null;
-    return { id: orderId, cnr, pdfUrl: o.pdf_url ?? undefined, markdown: o.text ?? undefined };
+    const streamPath = o.pdf_stream ?? (o.has_pdf ? `/order/${encodeURIComponent(orderId)}/pdf` : undefined);
+    return { id: orderId, cnr, pdfUrl: streamPath ? `${this.base}${streamPath}` : undefined, markdown: o.text ?? undefined };
   }
 }
