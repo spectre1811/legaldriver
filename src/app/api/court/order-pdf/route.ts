@@ -1,28 +1,28 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getCourtDataClient } from "@/lib/court/client";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
-// A friendly HTML fallback instead of raw JSON, with a route back to fixing it.
+const LD_BASE = () => process.env.LD_API_BASE || "http://13.202.148.71:8080";
+
 function page(title: string, body: string, matterId?: string | null, status = 200) {
   const back = matterId
-    ? `<a href="/dashboard/cases/${matterId}" style="display:inline-block;margin-top:14px;padding:8px 14px;background:#4f46e5;color:#fff;border-radius:8px;text-decoration:none">Open the case &amp; press Refresh</a>`
+    ? `<a href="/dashboard/cases/${matterId}" style="display:inline-block;margin-top:14px;padding:8px 14px;background:#4f46e5;color:#fff;border-radius:8px;text-decoration:none">Back to the case</a>`
     : `<a href="/dashboard/cases" style="color:#4f46e5">Back to cases</a>`;
+  const retry = status === 202 ? `<p style="color:#6b7280;font-size:13px">Refresh this page in ~30s.</p>` : "";
   return new NextResponse(
     `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
      <div style="font-family:system-ui,sans-serif;max-width:520px;margin:12vh auto;padding:0 20px;color:#1f2937;text-align:center">
-       <div style="font-size:40px">📄</div>
-       <h1 style="font-size:19px;margin:10px 0 6px">${title}</h1>
-       <p style="color:#6b7280;font-size:14px;line-height:1.5">${body}</p>
-       ${back}
-     </div>`,
+       <div style="font-size:40px">📄</div><h1 style="font-size:19px;margin:10px 0 6px">${title}</h1>
+       <p style="color:#6b7280;font-size:14px;line-height:1.5">${body}</p>${retry}${back}</div>`,
     { status, headers: { "content-type": "text/html; charset=utf-8" } },
   );
 }
 
-// On-demand order-PDF fetch. Signed URLs are short-lived, so we re-resolve live via
-// the provider and redirect. Degrades to a friendly page — never raw JSON.
+// STREAM the order PDF from the stable /order/{id}/pdf endpoint at click-time — never
+// store/serve a presigned URL (those expire in ~1h → AccessDenied). This proxies fresh
+// bytes on every click, so links are permanent. 202 = district PDF still being fetched.
 export async function GET(request: NextRequest) {
   const orderRowId = request.nextUrl.searchParams.get("order");
   if (!orderRowId) return page("Missing order", "No order was specified.");
@@ -32,24 +32,32 @@ export async function GET(request: NextRequest) {
   if (!order) return page("Order not found", "This order is no longer on file.");
 
   const providerId = (order.raw as { order_id?: string | number } | null)?.order_id;
-  const { data: matter } = await supabase.from("matter").select("cnr, source").eq("id", order.matter_id).maybeSingle();
+  const key = process.env.LD_API_KEY;
+  const numeric = providerId != null && /^\d+$/.test(String(providerId));
 
-  // A provider-order id that isn't numeric was synced by a previous provider
-  // (e.g. eCourtsIndia) and can't be resolved through the current one — a re-sync
-  // (Refresh) rewrites orders with resolvable ids.
-  const numericId = providerId != null && /^\d+$/.test(String(providerId));
-  if (order.url) return NextResponse.redirect(order.url);
-  if (!numericId || !matter?.cnr) {
-    return page("No document available", "This order was fetched from an earlier data source, so we can’t pull its PDF directly. Refreshing the case re-syncs it from the current court source.", order.matter_id);
+  // Legacy orders from a previous provider have no resolvable id — offer a re-sync.
+  if (!numeric || !key) {
+    return page("No document available", "This order came from an earlier data source, so we can’t stream its PDF. Refresh the case to re-sync it from the current court source.", order.matter_id);
   }
 
-  const fetched = await getCourtDataClient().getOrder(matter.cnr, String(providerId));
-  const url = fetched?.pdfUrl;
-  if (url) {
-    await supabase.from("court_order").update({ url }).eq("id", order.id);
-    return NextResponse.redirect(url);
+  let upstream: Response;
+  try {
+    upstream = await fetch(`${LD_BASE()}/order/${encodeURIComponent(String(providerId))}/pdf`, {
+      headers: { "X-API-Key": key },
+      signal: AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "55000")),
+    });
+  } catch {
+    return page("Court service unavailable", "The court data service didn’t respond just now. Please try again shortly.", order.matter_id, 503);
   }
-  // No PDF returned — either the court publishes none for this order (common for
-  // district orders) or the court data service is briefly unavailable. Honest about both.
-  return page("Couldn’t open this order’s PDF", "The court may not publish a PDF for this order, or the court data service is briefly unavailable. Try again shortly, or refresh the case to re-sync.", order.matter_id, 503);
+
+  if (upstream.status === 202) return page("Fetching the order…", "This district order’s copy is being retrieved from the court portal now.", order.matter_id, 202);
+  const ct = upstream.headers.get("content-type") ?? "";
+  if (!upstream.ok || !upstream.body || !/pdf|octet-stream/i.test(ct)) {
+    return page("Couldn’t open this order’s PDF", "The court may not publish a PDF for this order, or the portal is throttling. Try again shortly.", order.matter_id, upstream.status === 404 ? 404 : 503);
+  }
+  // Stream the fresh bytes straight through.
+  return new NextResponse(upstream.body, {
+    status: 200,
+    headers: { "content-type": "application/pdf", "content-disposition": `inline; filename="order-${providerId}.pdf"`, "cache-control": "private, max-age=300" },
+  });
 }

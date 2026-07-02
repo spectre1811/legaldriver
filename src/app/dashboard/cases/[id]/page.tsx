@@ -432,8 +432,13 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               <li key={o.id} className="flex items-center gap-3 px-5 py-3 text-sm">
                 <Icon name="notices" className="h-4 w-4 shrink-0 text-ink-faint" />
                 <span className="w-24 shrink-0 text-ink-muted">{fmtDate(o.order_date)}</span>
-                {o.url || (o.raw as { order_id?: unknown } | null)?.order_id ? (
-                  <a href={o.url ?? `/api/court/order-pdf?order=${o.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-brand-600 hover:underline">
+                {(o.raw as { order_id?: unknown } | null)?.order_id ? (
+                  <a href={`/api/court/order-pdf?order=${o.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-brand-600 hover:underline">
+                    <span className="truncate">{o.title}</span>
+                    <Icon name="external" className="h-3.5 w-3.5 shrink-0" />
+                  </a>
+                ) : o.url ? (
+                  <a href={o.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-brand-600 hover:underline">
                     <span className="truncate">{o.title}</span>
                     <Icon name="external" className="h-3.5 w-3.5 shrink-0" />
                   </a>
