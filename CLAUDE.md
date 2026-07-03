@@ -27,9 +27,14 @@ Resend for email. Deploy on Vercel (P4).
    `current_tenant_id()`. Never add a tenant-owned table without its 4 RLS policies. The
    service-role (`admin.ts`) bypasses RLS — only in trusted server jobs, and always filter
    by `tenant_id` manually there.
-2. **Court data only from a licensed API** (eCourtsIndia). NEVER scrape services.ecourts.gov.in
-   / hcservices.ecourts.gov.in, NEVER build/call a CAPTCHA solver. Missing data → manual-entry
-   path. See `docs/decisions/2026-06-24-court-data-strategy.md`.
+2. **Court data via the ecourts-scraper platform's internal API.** Scraping is the **settled org
+   data strategy** (INPUTS §4; founder decision 2026-07-03) — the old "licensed-API-only / never
+   scrape / never build a CAPTCHA solver" hard line is **superseded**. legaldriver itself consumes
+   the platform's `/v1` internal API behind the `CourtDataClient` interface; the ecourts-scraper
+   platform does the collection (CAPTCHA-free eCourts **mobile API** as the primary path, with a
+   CAPTCHA web route only for district order PDFs). Provenance + "verify against the official
+   record" disclaimer stay mandatory (conv. #3). See
+   `docs/decisions/2026-07-03-scraper-sync-contract.md` (supersedes `2026-06-24-court-data-strategy.md`).
 3. **Provenance + disclaimer on all court data**: store `source` + `last_synced_at`, show
    "source: eCourts, last refreshed X" and "not legal advice — verify against the official record".
 4. **No PII in logs.** Never log email bodies, tokens, or client data. OAuth refresh tokens are
