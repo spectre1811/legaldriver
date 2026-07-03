@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { brand } from "@/lib/brand";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -23,9 +24,12 @@ export default async function PortalLayout({ children }: { children: React.React
             <p className="ec-underline inline-block font-display text-xl font-semibold lowercase tracking-tight text-ec-ink">{brand.name}</p>
             <p className="mt-1 text-xs text-ec-ink-3">{t("headerLabel")} · {client?.name ?? t("yourMatters")}</p>
           </div>
-          <form action="/auth/signout" method="post">
-            <button className="ec-btn ec-btn-ghost text-sm"><Icon name="logout" className="h-4 w-4" /> {ts("signOut")}</button>
-          </form>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <form action="/auth/signout" method="post">
+              <button className="ec-btn ec-btn-ghost text-sm"><Icon name="logout" className="h-4 w-4" /> {ts("signOut")}</button>
+            </form>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-4xl animate-fade-in px-5 py-8">{children}</main>
