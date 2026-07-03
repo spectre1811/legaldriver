@@ -928,6 +928,14 @@
       "whyEmail": "Arrived by email",
       "whyParty": "Mentions {party}"
     },
+    "group": {
+      "by": "Group by",
+      "category": "Category",
+      "client": "Client",
+      "case": "Case",
+      "noClient": "No client",
+      "noCase": "No case"
+    },
     "summary": {
       "count": "{docs, plural, one {# document} other {# documents}} in {categories, plural, one {# category} other {# categories}}",
       "filtered": "filtered"

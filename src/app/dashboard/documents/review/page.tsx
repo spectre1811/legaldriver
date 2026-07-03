@@ -6,7 +6,7 @@ import { Icon } from "@/components/icons";
 import { whyKey } from "@/lib/docs/review-why";
 import { ReviewInbox, type ReviewDoc } from "./review-inbox";
 
-// WO-32 Wave 1 — the Review Inbox surface. A document needs review if it's explicitly flagged
+// WO-33 Wave 1 — the Review Inbox surface. A document needs review if it's explicitly flagged
 // (`extracted.status = 'needs_review'`, from a low-confidence upload) OR it's simply unfiled
 // (no client and no case) — the email-orphaned + never-filed docs that had no home before.
 export default async function DocumentReviewPage() {

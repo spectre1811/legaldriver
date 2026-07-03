@@ -77,7 +77,7 @@ export async function toggleDocShare(documentId: string, shared: boolean): Promi
   return { ok: true, message: shared ? "Shared with client." : "Unshared." };
 }
 
-// ── WO-32 Wave 1 · Review Inbox — resolve a needs-review document ──────────────────────────
+// ── WO-33 Wave 1 · Review Inbox — resolve a needs-review document ──────────────────────────
 // Files a document (to a case and/or client) from the Review Inbox and marks it reviewed
 // (`extracted.status = 'filed'`), so it leaves the queue. Reuses the soft-flag-in-JSON tactic (no
 // migration). This is the human-in-the-loop confirm for the intake engine.
