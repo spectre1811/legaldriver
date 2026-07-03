@@ -1,7 +1,7 @@
 # AI Gateway — the one seam every AI call goes through (ADR-AI1 realized)
 
 - **Date:** 2026-07-03
-- **Status:** Accepted (Waves 1–2 landed) · interface frozen with founder (WO-02)
+- **Status:** Accepted (Waves 1–2 merged; Wave 3 metering landed) · interface frozen with founder (WO-02)
 - **Work order:** WO-02 · **Plan refs:** 04-AI §0, §4.5, §5, §9; 12-CLOUD ADR-C8
 - **Supersedes/extends:** the ad-hoc `src/lib/ai/complete.ts` transport (kept as a backend)
 
@@ -87,7 +87,22 @@ feature code ── aiGateway.run({task, ...}) ──▶ gateway core (pure: rou
   Per-backend model selection moved out of feature code into the route table. **No
   feature calls `completeJson`/`completeText` or a provider SDK directly anymore**
   (grep-clean; only the transport + gateway do). Migrations/auth/billing/RLS: untouched.
-- **Known Wave-1 limitations (resolved in Wave 3):** tokens/cost are ESTIMATES
+- **Wave 3 (metering) — landed:** migration `0028_ai_usage_event` adds a per-tenant
+  usage ledger (deny-by-default RLS 4-policy; `ai_usage_monthly` rollup view with
+  `security_invoker=true` so it respects RLS) + regenerated `database.types.ts`.
+  The transport (`complete.ts`) now returns **real provider token usage + served
+  model** (OAI + Anthropic paths); the gateway records real tokens/cost and marks
+  `estimated=false` (keyless CLI reports no counts → estimate). A metering sink
+  (`meter.ts`) writes one `ai_usage_event` per call via the service-role client
+  (best-effort, never blocks the request; explicit tenant_id). **Soft-warn only**
+  (`AI_SOFT_WARN_USD_PER_MONTH`) — HARD budget caps are deferred to WO-04 because no
+  tenant tier source / billing exists yet (not inventing a throwaway tier system).
+  Cost panel at `/dashboard/ai-usage` (RLS-scoped). Cross-tenant isolation proven on
+  the live DB (`tests/rls_isolation.ts` now covers `ai_usage_event`). Migration was
+  founder-approved and applied via the Management API (additive/expand-only).
+- **Remaining (later waves):** exact-hash + provider prompt cache (`cacheHit` still
+  false); Wave 4 orchestration seam (AI-SDK vs LangGraph.js); Wave 5 multilingual.
+- **Known Wave-1 limitations (partly resolved in Wave 3):** tokens/cost were ESTIMATES
   (~4 chars/token + illustrative price table); `cacheHit` is always `false` (no cache
   yet); the trace `backend` label is the *routed/requested* backend, so when a request
   degrades to keyless the label still reads the requested backend until real

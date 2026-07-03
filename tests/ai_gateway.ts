@@ -102,6 +102,26 @@ async function main() {
     check(`${task} keyless-serves on Sonnet, not a downgrade`, r.ok && r.model === "claude-sonnet-4-6");
   }
 
+  // 8. Real provider usage → real tokens + estimated=false; absent usage → estimate.
+  const realUsageExec: ExecFn = async ({ schema }) => ({
+    text: "x", json: schema ? { summary: "x" } : null,
+    usage: { tokensIn: 1234, tokensOut: 56 }, model: "served-model-x",
+  });
+  const tU: TraceEvent[] = [];
+  const rU = await runCore(
+    { task: "summary.case", input: "p", schema: { type: "object" }, tenantId: "T", scope: { kind: "tenant", tenantId: "T" } },
+    deps(realUsageExec, tU),
+  );
+  check("real usage → exact tokens, estimated=false", rU.tokens.input === 1234 && rU.tokens.output === 56 && rU.tokens.estimated === false && tU[0].estimated === false);
+  check("real usage → served model reported", rU.model === "served-model-x");
+
+  const tE: TraceEvent[] = [];
+  const rE = await runCore(
+    { task: "summary.case", input: "p", schema: { type: "object" }, tenantId: "T", scope: { kind: "tenant", tenantId: "T" } },
+    deps(okJson, tE), // okJson returns no usage
+  );
+  check("no provider usage → estimated=true", rE.tokens.estimated === true && tE[0].estimated === true);
+
   console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
   process.exit(failures === 0 ? 0 : 1);
 }
