@@ -80,6 +80,10 @@ export default async function OverviewPage() {
         filings={filings}
         inboxReview={review.count ?? 0}
         firstRun={(advocateCount.count ?? 0) === 0 && (matterCount.count ?? 0) === 0}
+        activation={{
+          hasAdvocate: (advocateCount.count ?? 0) > 0,
+          hasCases: (matterCount.count ?? 0) > 0,
+        }}
       />
       <p className="flex items-center gap-1.5 text-xs text-ec-ink-3">
         <Icon name="alert" className="h-3.5 w-3.5" /> {tc("disclaimer")}

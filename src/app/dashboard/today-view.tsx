@@ -25,10 +25,18 @@ export type TodayViewProps = {
   filings: TodayFiling[];
   inboxReview: number;
   firstRun: boolean;
+  activation: { hasAdvocate: boolean; hasCases: boolean };
 };
 
-export async function TodayView({ now, week, hearings, courts, syncedAt, filings, inboxReview, firstRun }: TodayViewProps) {
+export async function TodayView({ now, week, hearings, courts, syncedAt, filings, inboxReview, firstRun, activation }: TodayViewProps) {
   const t = await getTranslations("today");
+  // WO-16 W3 — activation checklist: nudge partially-set-up tenants toward first case + WhatsApp alerts.
+  const steps = [
+    { key: "stepAdvocate", done: activation.hasAdvocate },
+    { key: "stepCases", done: activation.hasCases },
+  ];
+  const doneCount = steps.filter((s) => s.done).length;
+  const showChecklist = !firstRun && !(activation.hasAdvocate && activation.hasCases);
   const locale = await getLocale();
   const wd = (iso: string, opt: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat(locale === "hi" ? "hi-IN" : "en-IN", opt).format(new Date(iso));
@@ -37,6 +45,31 @@ export async function TodayView({ now, week, hearings, courts, syncedAt, filings
 
   return (
     <div className="space-y-4">
+      {/* WO-16 W3 — activation checklist (shown until advocate + cases are in) */}
+      {showChecklist && (
+        <div className="ec-card px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="font-display text-base font-medium text-ec-ink">{t("activation.title")}</p>
+              <p className="text-xs text-ec-ink-3">{t("activation.subtitle")}</p>
+            </div>
+            <span className="text-xs font-semibold text-ec-brass-deep">{t("activation.progress", { done: doneCount, total: steps.length })}</span>
+          </div>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {steps.map((s) => (
+              <li key={s.key} className={`flex items-center gap-1.5 rounded-ec-s border px-3 py-1.5 text-sm ${s.done ? "border-ec-hair bg-ec-paper-3 text-ec-ink-3" : "border-ec-brass bg-ec-brass-tint text-ec-brass-deep"}`}>
+                <span aria-hidden>{s.done ? "✓" : "○"}</span>
+                {s.done ? (
+                  <span className="line-through">{t(`activation.${s.key}`)}</span>
+                ) : (
+                  <Link href="/dashboard/onboarding" className="font-medium hover:underline">{t(`activation.${s.key}`)}</Link>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2.5 text-xs text-ec-ink-3">{t("activation.whatsappNote")}</p>
+        </div>
+      )}
       {/* header — vernacular flourish over the localized title */}
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>

@@ -138,6 +138,14 @@
       "primaryCta": "मेरी प्रैक्टिस सेट अप करें",
       "secondaryCta": "CNR से मुकदमा जोड़ें",
       "foot": "लगभग 2 मिनट · सार्वजनिक eCourts अभिलेख से।"
+    },
+    "activation": {
+      "title": "सेटअप पूरा करें",
+      "subtitle": "आपकी कॉज़ लिस्ट शुरू करने के लिए कुछ ही कदम।",
+      "progress": "{done}/{total} पूर्ण",
+      "stepAdvocate": "अपना अधिवक्ता जोड़ें",
+      "stepCases": "अपने मुकदमे लाएँ",
+      "whatsappNote": "WhatsApp कॉज़-लिस्ट अलर्ट जल्द आ रहे हैं — अभी अपने मुकदमे जोड़ें।"
     }
   },
   "causeList": {
