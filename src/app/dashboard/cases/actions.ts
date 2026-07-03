@@ -10,6 +10,7 @@ import { sha256Hex } from "@/lib/docs/hash";
 import { aiGateway } from "@/lib/ai/gateway";
 import { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } from "@/lib/docs/case-summary";
 import { logActivity } from "@/lib/activity";
+import { track } from "@/lib/analytics/track";
 import { scheduleReminders } from "@/lib/notify/schedule";
 import type { Database } from "@/lib/db/database.types";
 
@@ -273,6 +274,10 @@ export async function addCaseByCnr(_prev: ActionResult, formData: FormData): Pro
     after: { cnr, source: normalized.source, hearings: hearingCount },
   });
   await logActivity(supabase, tenantId, { matterId, type: isNew ? "case.added" : "case.resynced", summary: isNew ? `Case added by CNR ${cnr}` : `Case re-synced from ${normalized.source}` });
+
+  // Product analytics (WO-15) — the activation event. Safe props only (provider + new-vs-resync);
+  // distinctId = tenant uuid, never the CNR/name. No-op unless POSTHOG_KEY is set.
+  track("case_added", tenantId, { source: normalized.source, isNew: String(isNew) });
 
   revalidatePath("/dashboard/cases");
   revalidatePath("/dashboard/calendar");
