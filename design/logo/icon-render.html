@@ -1,43 +1,10 @@
-<!doctype html>
-<html><head><meta charset="utf-8">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
-<style>
-  html,body{margin:0;padding:0;background:transparent}
-  #stage{display:flex;align-items:center;justify-content:center}
-  svg text{font-family:Fraunces,Georgia,serif;font-weight:600}
-</style>
-</head>
-<body>
-<div id="stage"></div>
-<script>
-  const p = new URLSearchParams(location.search);
-  const size = +(p.get("size")||512);
-  const v = p.get("v")||"dark"; // light | dark | maskable
-  const stage = document.getElementById("stage");
-  stage.style.width = size+"px"; stage.style.height = size+"px";
-
-  const tile = v==="light" ? "#FAF7F1" : "#191926";
-  const glyph = v==="light" ? "#191926" : "#FAF7F1";
-
-  let svg;
-  if (v==="maskable") {
-    // full-bleed ink, glyph+underline in the centre safe zone (~62%)
-    svg = `<svg width="${size}" height="${size}" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-      <rect width="512" height="512" fill="#191926"/>
-      <text x="250" y="330" text-anchor="middle" font-size="300" fill="#FAF7F1">p</text>
-      <rect x="160" y="338" width="176" height="20" rx="10" fill="#A8823C"/>
-    </svg>`;
-  } else {
-    const border = v==="light" ? `stroke="#191926" stroke-opacity="0.12" stroke-width="2"` : "";
-    svg = `<svg width="${size}" height="${size}" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-      <rect x="5" y="5" width="118" height="118" rx="27" fill="${tile}" ${border}/>
-      <text x="62" y="94" text-anchor="middle" font-size="94" fill="${glyph}">p</text>
-      <rect x="38" y="96" width="52" height="6" rx="3" fill="#A8823C"/>
-    </svg>`;
-  }
-  stage.innerHTML = svg;
-  document.fonts.ready.then(()=>{ document.body.setAttribute("data-ready","1"); });
-</script>
-</body></html>
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:transparent}#s{display:flex;align-items:center;justify-content:center}</style></head><body><div id="s"></div><script>
+const P="M53.94 51.61L53.94 55.32Q55.96 53.20 58.26 51.65Q63.10 48.41 69.03 48.41Q74.57 48.41 78.94 51.23Q83.31 54.05 85.83 59.06Q88.34 64.06 88.34 70.59Q88.34 78.07 85.36 83.59Q82.37 89.11 77.25 92.14Q72.13 95.17 65.78 95.17Q60.19 95.17 55.87 92.54Q55.16 92.12 54.50 91.65L54.50 108.38Q54.50 109.84 54.90 110.52Q55.30 111.20 56.15 111.44L58.64 111.95Q59.58 112.24 60 112.73Q60.43 113.22 60.43 113.97Q60.43 114.87 59.79 115.39Q59.16 115.90 57.79 115.90L38.57 115.90Q37.25 115.90 36.64 115.39Q36.03 114.87 36.03 113.97Q36.03 113.27 36.46 112.78Q36.88 112.28 37.77 111.95L39.60 111.48Q40.45 111.20 40.85 110.52Q41.25 109.84 41.25 108.38L41.25 59.50Q41.25 58.33 40.90 57.81Q40.54 57.29 39.75 57.15L37.25 56.96Q36.41 56.78 36.03 56.35Q35.66 55.93 35.66 55.27Q35.66 54.47 36.10 54.05Q36.55 53.63 37.82 53.11L46.04 49.87Q47.74 49.16 48.84 48.90Q49.94 48.65 50.79 48.65Q52.39 48.65 53.16 49.47Q53.94 50.29 53.94 51.61M54.50 59.60L54.50 85.68Q55.77 87.04 57.18 87.94Q60.05 89.82 63.39 89.82Q66.63 89.82 69.14 87.94Q71.66 86.06 73.12 82.09Q74.57 78.11 74.57 72Q74.57 66.27 73.16 62.51Q71.75 58.75 69.28 56.89Q66.82 55.04 63.67 55.04Q60.28 55.04 57.32 57.06Q55.87 58.09 54.50 59.60";
+const q=new URLSearchParams(location.search),size=+(q.get("size")||512),v=q.get("v")||"dark",s=document.getElementById("s");
+s.style.width=size+"px";s.style.height=size+"px";
+let svg;
+if(v==="maskable"){svg='<svg width="'+size+'" height="'+size+'" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><rect width="512" height="512" fill="#191926"/><g transform="translate(96 96) scale(2.5)"><path d="'+P+'" fill="#FAF7F1"/><rect x="38" y="96" width="52" height="6" rx="3" fill="#A8823C"/></g></svg>';}
+else{const tile=v==="light"?"#FAF7F1":"#191926",glyph=v==="light"?"#191926":"#FAF7F1",bd=v==="light"?'stroke="#191926" stroke-opacity="0.12" stroke-width="2"':"";
+svg='<svg width="'+size+'" height="'+size+'" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="5" width="118" height="118" rx="27" fill="'+tile+'" '+bd+'/><path d="'+P+'" fill="'+glyph+'"/><rect x="38" y="96" width="52" height="6" rx="3" fill="#A8823C"/></svg>';}
+s.innerHTML=svg;document.body.setAttribute("data-ready","1");
+</script></body></html>
