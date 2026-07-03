@@ -6,17 +6,16 @@ import type { Database } from "@/lib/db/database.types";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const LOOKAHEAD_DAYS = 7;
-
 function isoIn(days: number): string {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
-// Daily cause-list pull. For each advocate, fetch the next N days' cause list,
-// upsert cause_list_entry, and link to a tracked matter by CNR where possible.
-// Unmatched entries surface on the calendar as "listed but not tracked".
+// Daily cause-list ALERT. The scraper's nightly sweep populates court.cause_list; here we ask the
+// internal API "which of this tenant's tracked CNRs are listed tomorrow?" and raise an in-app alert
+// + a case-feed activity for each match. CNR-keyed, so no court mapping is needed on this side.
+// (Email/WhatsApp digest delivery is a follow-up — WhatsApp is gated on the BSP work order.)
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
@@ -25,58 +24,70 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient();
   const court = getCourtDataClient();
+  // Only the internal API supports the CNR-keyed cause-list lookup; other providers → no-op.
+  if (typeof court.getCauseListByCNRs !== "function") {
+    return NextResponse.json({ ok: true, source: court.source, skipped: "provider has no by-CNR cause list" });
+  }
 
-  const { data: advocates, error } = await supabase
-    .from("advocate")
-    .select("id, tenant_id, name, bar_registration_number, state_code");
+  const date = isoIn(1); // tomorrow — the sweep publishes the next court day's list overnight
+
+  // Active tracked matters with a CNR, grouped by tenant.
+  const { data: matters, error } = await supabase
+    .from("matter")
+    .select("id, cnr, tenant_id, title")
+    .not("cnr", "is", null)
+    .eq("status", "active");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  let upserted = 0;
-  let linked = 0;
-  for (const adv of advocates ?? []) {
-    for (let i = 0; i < LOOKAHEAD_DAYS; i++) {
-      const date = isoIn(i);
-      let items;
-      try {
-        items = await court.getCauseList({
-          date,
-          name: adv.name,
-          barNumber: adv.bar_registration_number ?? undefined,
-          stateCode: adv.state_code ?? undefined,
-        });
-      } catch {
-        continue;
-      }
-      for (const item of items) {
-        // Link to a tracked matter by CNR (tenant-scoped).
-        let matterId: string | null = null;
-        if (item.cnr) {
-          const { data: m } = await supabase
-            .from("matter")
-            .select("id")
-            .eq("tenant_id", adv.tenant_id)
-            .eq("cnr", item.cnr)
-            .maybeSingle();
-          matterId = m?.id ?? null;
-          if (matterId) linked++;
-        }
-        const { error: upErr } = await supabase.from("cause_list_entry").upsert(
-          {
-            tenant_id: adv.tenant_id,
-            advocate_id: adv.id,
-            list_date: item.listDate,
-            court: item.court ?? null,
-            item_no: item.itemNo ?? null,
-            cnr: item.cnr ?? null,
-            matter_id: matterId,
-            raw: (item.raw ?? {}) as Database["public"]["Tables"]["cause_list_entry"]["Insert"]["raw"],
-          },
-          { onConflict: "tenant_id,advocate_id,list_date,item_no" },
-        );
-        if (!upErr) upserted++;
-      }
+  const byTenant = new Map<string, { id: string; cnr: string; title: string }[]>();
+  for (const m of matters ?? []) {
+    if (!m.cnr) continue;
+    (byTenant.get(m.tenant_id) ?? byTenant.set(m.tenant_id, []).get(m.tenant_id)!).push({ id: m.id, cnr: m.cnr, title: m.title ?? m.cnr });
+  }
+
+  let listed = 0;
+  let alerted = 0;
+  for (const [tenantId, ms] of byTenant) {
+    const byCnr = new Map(ms.map((m) => [m.cnr.toUpperCase(), m]));
+    let hits;
+    try {
+      hits = await court.getCauseListByCNRs!(ms.map((m) => m.cnr), date);
+    } catch {
+      continue; // one tenant's fetch failure never stops the job
+    }
+    if (!hits.length) continue;
+
+    // Dedupe: skip matters already alerted for this date (idempotent re-runs).
+    const { data: prior } = await supabase
+      .from("notification")
+      .select("payload")
+      .eq("tenant_id", tenantId)
+      .eq("kind", "cause_list_alert")
+      .eq("payload->>eventDate", date);
+    const alreadyAlerted = new Set((prior ?? []).map((p) => (p.payload as { ref?: string })?.ref).filter(Boolean));
+
+    for (const h of hits) {
+      const m = byCnr.get(h.cnr.toUpperCase());
+      if (!m) continue;
+      listed++;
+      const ref = `causelist:${m.id}:${date}`;
+      if (alreadyAlerted.has(ref)) continue;
+      alreadyAlerted.add(ref);
+      const body = `Listed ${date}${h.itemNo ? ` · item ${h.itemNo}` : ""}${h.type ? ` (${h.type})` : ""}${h.judge ? ` · ${h.judge}` : ""}`;
+      // In-app alert (the bell — delivered by the notify cron, which flips inapp pending→sent).
+      await supabase.from("notification").insert({
+        tenant_id: tenantId, channel: "inapp", kind: "cause_list_alert", status: "pending",
+        scheduled_for: new Date().toISOString(),
+        payload: { ref, title: m.title, body, eventDate: date } as Database["public"]["Tables"]["notification"]["Insert"]["payload"],
+      });
+      // Case-feed activity so it shows on the matter timeline too.
+      await supabase.from("activity_event").insert({
+        tenant_id: tenantId, matter_id: m.id, type: "case.listed", summary: body,
+        meta: { date, itemNo: h.itemNo ?? null, type: h.type ?? null } as Database["public"]["Tables"]["activity_event"]["Insert"]["meta"],
+      });
+      alerted++;
     }
   }
 
-  return NextResponse.json({ ok: true, source: court.source, advocates: advocates?.length ?? 0, upserted, linked });
+  return NextResponse.json({ ok: true, source: court.source, date, listed, alerted });
 }

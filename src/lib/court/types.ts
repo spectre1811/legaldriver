@@ -83,3 +83,17 @@ export interface CauseListQuery {
   court?: string;
   stateCode?: string;
 }
+
+// A "your tracked case is listed on this date" hit — the daily cause-list alert. Keyed by CNR
+// (matched against tracked matters), so it needs no court mapping on the consumer side.
+export interface CauseListListing {
+  cnr: string;
+  listDate: string; // ISO date
+  itemNo?: string;
+  caseNumber?: string;
+  type?: string; // "civil" | "criminal"
+  parties?: string;
+  advocate?: string;
+  judge?: string;
+  courtId?: number;
+}

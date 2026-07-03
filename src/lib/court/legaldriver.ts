@@ -1,6 +1,6 @@
 import type {
-  AdvocateQuery, CaseSearchResult, CauseListItem, CauseListQuery, CourtOrder, NormalizedCase,
-  NormalizedParty, NormalizedHearing, NormalizedOrderRef,
+  AdvocateQuery, CaseSearchResult, CauseListItem, CauseListListing, CauseListQuery, CourtOrder,
+  NormalizedCase, NormalizedParty, NormalizedHearing, NormalizedOrderRef,
 } from "./types";
 import type { CourtDataClient } from "./client";
 
@@ -229,6 +229,29 @@ export class LegalDriverClient implements CourtDataClient {
     this.checkSchema(r?.schema_version);
     const items = (r?.items ?? (Array.isArray(r?.cases) ? r?.cases : [])) as { item_no?: string; item_number?: string; cnr?: string; title?: string; parties?: string }[];
     return items.map((it) => ({ listDate: q.date, court: courtId, itemNo: it.item_no ?? it.item_number, cnr: it.cnr, title: it.title ?? it.parties, raw: it }));
+  }
+
+  async getCauseListByCNRs(cnrs: string[], date: string): Promise<CauseListListing[]> {
+    // Ask the internal API which of our tracked CNRs are listed on `date` (across any court).
+    // Batched so the query string stays bounded; dedupe + normalize CNRs first.
+    const uniq = [...new Set(cnrs.map((c) => c.trim().toUpperCase()).filter(Boolean))];
+    const out: CauseListListing[] = [];
+    for (let i = 0; i < uniq.length; i += 100) {
+      const qs = uniq.slice(i, i + 100).map((c) => `cnr=${encodeURIComponent(c)}`).join("&");
+      const r = await this.req<{ schema_version?: string; items?: { cnr?: string; item_number?: string | number; case_number?: string; cause_list_type?: string; parties?: string; advocate?: string; judge?: string; court_id?: number; list_date?: string }[] }>(`/v1/cause-lists/by-cnr?date=${encodeURIComponent(date)}&${qs}`);
+      this.checkSchema(r?.schema_version);
+      for (const it of r?.items ?? []) {
+        if (!it.cnr) continue;
+        out.push({
+          cnr: it.cnr, listDate: it.list_date ?? date,
+          itemNo: it.item_number != null ? String(it.item_number) : undefined,
+          caseNumber: it.case_number || undefined, type: it.cause_list_type || undefined,
+          parties: decode(it.parties) || undefined, advocate: it.advocate || undefined,
+          judge: decode(it.judge) || undefined, courtId: it.court_id,
+        });
+      }
+    }
+    return out;
   }
 
   async refreshCases(cnrs: string[]): Promise<NormalizedCase[]> {
