@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, EmptyState, fmtAgo } from "@/components/ui";
 import { Icon } from "@/components/icons";
@@ -6,13 +7,6 @@ import type { Citation } from "@/lib/services/agent/types";
 import { Chat } from "./chat";
 
 export const dynamic = "force-dynamic";
-
-const SUGGESTIONS = [
-  "What's the next step on my oldest pending matter?",
-  "Map IPC 420 to the BNS — what changed?",
-  "What's the limitation period for a money-recovery suit?",
-  "Summarise the last hearing and what I need to file next.",
-];
 
 // Citations live in jsonb; coerce defensively rather than trust the shape blindly.
 function asCitations(raw: unknown): Citation[] {
@@ -32,7 +26,14 @@ export default async function CopilotPage({
 }: {
   searchParams: { thread?: string; matter?: string; client?: string };
 }) {
+  const t = await getTranslations("copilot");
   const supabase = createClient();
+  const suggestions = [
+    t("suggestion1"),
+    t("suggestion2"),
+    t("suggestion3"),
+    t("suggestion4"),
+  ];
   const threadId = searchParams.thread ?? null;
   const matterId = searchParams.matter ?? null;
   const clientId = searchParams.client ?? null;
@@ -54,12 +55,12 @@ export default async function CopilotPage({
   return (
     <div className="space-y-7">
       <PageHeader
-        title="Copilot"
-        subtitle="Your grounded, cited legal research agent — across your matters and a maintained law pack."
+        title={t("title")}
+        subtitle={t("subtitle")}
       >
         <Badge tone="brand">
           <span className="flex items-center gap-1">
-            <Icon name="sparkles" className="h-3.5 w-3.5" /> Assistive
+            <Icon name="sparkles" className="h-3.5 w-3.5" /> {t("badgeAssistive")}
           </span>
         </Badge>
       </PageHeader>
@@ -69,32 +70,32 @@ export default async function CopilotPage({
         <aside className="lg:sticky lg:top-6 lg:self-start">
           <Card className="overflow-hidden">
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
-              <h2 className="text-sm font-medium">Conversations</h2>
+              <h2 className="text-sm font-medium">{t("conversations")}</h2>
               <Link
                 href="/dashboard/copilot"
                 className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
               >
-                <Icon name="plus" className="h-3.5 w-3.5" /> New
+                <Icon name="plus" className="h-3.5 w-3.5" /> {t("new")}
               </Link>
             </div>
             {threads && threads.length ? (
               <ul className="max-h-[28rem] divide-y divide-line overflow-y-auto">
-                {threads.map((t) => (
-                  <li key={t.id}>
+                {threads.map((thread) => (
+                  <li key={thread.id}>
                     <Link
-                      href={`/dashboard/copilot?thread=${t.id}`}
+                      href={`/dashboard/copilot?thread=${thread.id}`}
                       className={`block px-4 py-3 text-sm transition hover:bg-paper ${
-                        t.id === threadId ? "bg-brand-50" : ""
+                        thread.id === threadId ? "bg-brand-50" : ""
                       }`}
                     >
-                      <p className="line-clamp-2 font-medium text-ink">{t.title ?? "Untitled"}</p>
-                      <p className="mt-0.5 text-xs text-ink-faint">{fmtAgo(t.created_at)}</p>
+                      <p className="line-clamp-2 font-medium text-ink">{thread.title ?? t("untitled")}</p>
+                      <p className="mt-0.5 text-xs text-ink-faint">{fmtAgo(thread.created_at)}</p>
                     </Link>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="px-4 py-8 text-center text-xs text-ink-faint">No conversations yet.</p>
+              <p className="px-4 py-8 text-center text-xs text-ink-faint">{t("noConversations")}</p>
             )}
           </Card>
         </aside>
@@ -129,14 +130,14 @@ export default async function CopilotPage({
                               {pending ? (
                                 <p className="flex items-center gap-2 text-ink-faint">
                                   <Icon name="clock" className="h-4 w-4" />
-                                  Preparing this briefing in the background — refresh in a moment.
+                                  {t("pendingBriefing")}
                                 </p>
                               ) : (
                                 <p className="whitespace-pre-wrap">{turn.content}</p>
                               )}
                               {meta.abstained && !pending && (
                                 <p className="mt-2 text-xs text-amber-700">
-                                  No grounded source — add the case or its documents for a cited answer.
+                                  {t("noGroundedSource")}
                                 </p>
                               )}
                             </div>
@@ -182,7 +183,7 @@ export default async function CopilotPage({
                     );
                   })
                 ) : (
-                  <p className="py-12 text-center text-sm text-ink-faint">No turns in this conversation yet.</p>
+                  <p className="py-12 text-center text-sm text-ink-faint">{t("noTurns")}</p>
                 )}
               </div>
               <Chat threadId={threadId} matterId={matterId} clientId={clientId} />
@@ -192,11 +193,11 @@ export default async function CopilotPage({
               <div className="flex flex-1 flex-col justify-center px-5 py-8">
                 <EmptyState
                   icon="sparkles"
-                  title="Ask the Copilot"
-                  body="Ask about a case, a section (IPC↔BNS / CrPC↔BNSS), limitation, or next steps — answers are grounded in your matters + a maintained law pack, and cited."
+                  title={t("emptyTitle")}
+                  body={t("emptyBody")}
                 >
                   <div className="flex flex-col gap-2">
-                    {SUGGESTIONS.map((s) => (
+                    {suggestions.map((s) => (
                       <span
                         key={s}
                         className="rounded-xl border border-line bg-surface px-3.5 py-2 text-left text-sm text-ink-soft"
@@ -216,8 +217,7 @@ export default async function CopilotPage({
       {/* Guardrail — assistive only, grounded + cited, not legal advice */}
       <p className="flex items-center gap-1.5 text-xs text-ink-faint">
         <Icon name="alert" className="h-3.5 w-3.5" />
-        Assistive only — grounded and cited where possible. Not legal advice; verify against the official record and the
-        bare act.
+        {t("disclaimer")}
       </p>
     </div>
   );

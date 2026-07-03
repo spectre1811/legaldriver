@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
@@ -16,6 +17,7 @@ const TIER_TONE: Record<string, "brand" | "neutral"> = { HIGH: "brand", DISTRICT
 // arrives as multiple path segments — rejoin them.
 export default async function AdvocatePage({ params }: { params: { barId: string[] } }) {
   if (!ldEnabled()) notFound();
+  const t = await getTranslations("advocate");
   const barId = params.barId.map(decodeURIComponent).join("/");
   const profile = await getAdvocateProfile(barId);
   if (!profile) notFound();
@@ -33,20 +35,20 @@ export default async function AdvocatePage({ params }: { params: { barId: string
 
   return (
     <div className="space-y-6">
-      <PageHeader title={profile.names[0] ?? `Advocate ${profile.bar_id}`} subtitle={`Bar code ${profile.bar_id}${profile.names.length > 1 ? ` · also: ${profile.names.slice(1).join(", ")}` : ""}`} />
+      <PageHeader title={profile.names[0] ?? t("nameFallback", { barId: profile.bar_id })} subtitle={`${t("subtitle", { barId: profile.bar_id })}${profile.names.length > 1 ? ` ${t("alsoKnownAs", { names: profile.names.slice(1).join(", ") })}` : ""}`} />
 
       <section className="grid grid-cols-3 gap-3">
-        <Card><div className="px-4 py-3"><p className="label">Total cases</p><p className="text-2xl font-semibold">{profile.case_count}</p></div></Card>
-        <Card><div className="px-4 py-3"><p className="label">Pending</p><p className="text-2xl font-semibold">{pending}</p></div></Card>
-        <Card><div className="px-4 py-3"><p className="label">Disposed</p><p className="text-2xl font-semibold">{profile.case_count - pending}</p></div></Card>
+        <Card><div className="px-4 py-3"><p className="label">{t("totalCases")}</p><p className="text-2xl font-semibold">{profile.case_count}</p></div></Card>
+        <Card><div className="px-4 py-3"><p className="label">{t("pending")}</p><p className="text-2xl font-semibold">{pending}</p></div></Card>
+        <Card><div className="px-4 py-3"><p className="label">{t("disposed")}</p><p className="text-2xl font-semibold">{profile.case_count - pending}</p></div></Card>
       </section>
 
       <Card>
-        <div className="border-b border-line px-5 py-4"><p className="font-medium">Caseload <span className="text-ink-faint">(showing {profile.cases.length})</span></p></div>
+        <div className="border-b border-line px-5 py-4"><p className="font-medium">{t("caseload")} <span className="text-ink-faint">{t("showing", { count: profile.cases.length })}</span></p></div>
         {profile.cases.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="text-left text-ink-faint"><th className="px-5 py-2 font-medium">CNR</th><th className="px-3 py-2 font-medium">Type</th><th className="px-3 py-2 font-medium">Side</th><th className="px-3 py-2 font-medium">Status</th><th className="px-3 py-2 font-medium">Court</th><th className="px-3 py-2"></th></tr></thead>
+              <thead><tr className="text-left text-ink-faint"><th className="px-5 py-2 font-medium">{t("colCnr")}</th><th className="px-3 py-2 font-medium">{t("colType")}</th><th className="px-3 py-2 font-medium">{t("colSide")}</th><th className="px-3 py-2 font-medium">{t("colStatus")}</th><th className="px-3 py-2 font-medium">{t("colCourt")}</th><th className="px-3 py-2"></th></tr></thead>
               <tbody>
                 {profile.cases.map((c) => {
                   const mid = byCnr.get(c.cnr);
@@ -57,7 +59,7 @@ export default async function AdvocatePage({ params }: { params: { barId: string
                       <td className="px-3 py-2 text-ink-muted">{c.side}</td>
                       <td className="px-3 py-2"><Badge tone={(c.status ?? "").toUpperCase() === "PENDING" ? "amber" : "green"}>{c.status}</Badge></td>
                       <td className="px-3 py-2"><Badge tone={TIER_TONE[c.tier ?? ""] ?? "neutral"}>{c.tier}</Badge></td>
-                      <td className="px-3 py-2 text-right">{mid ? <span className="text-xs text-ink-faint">tracked</span> : <TrackCaseButton cnr={c.cnr} />}</td>
+                      <td className="px-3 py-2 text-right">{mid ? <span className="text-xs text-ink-faint">{t("tracked")}</span> : <TrackCaseButton cnr={c.cnr} />}</td>
                     </tr>
                   );
                 })}
@@ -65,9 +67,9 @@ export default async function AdvocatePage({ params }: { params: { barId: string
             </table>
           </div>
         ) : (
-          <EmptyState icon="scale" title="No cases on record" body="The API returned no caseload for this bar code." />
+          <EmptyState icon="scale" title={t("emptyTitle")} body={t("emptyBody")} />
         )}
-        <p className="px-5 py-3 text-xs text-ink-faint">Source: LegalDriver / eCourts. Coverage is Gujarat (HC + district), expanding. Not legal advice — verify against the official record.</p>
+        <p className="px-5 py-3 text-xs text-ink-faint">{t("sourceNote")}</p>
       </Card>
     </div>
   );

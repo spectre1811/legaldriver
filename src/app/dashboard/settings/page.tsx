@@ -8,8 +8,13 @@ import { CaptureTool } from "./capture-tool";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteAdvocate } from "./actions";
 import { getProviderHealth, getCacheStats } from "@/lib/court/gateway";
+import { getTranslations } from "next-intl/server";
 
 export default async function SettingsPage() {
+  const t = await getTranslations("settings");
+  const te = await getTranslations("enum");
+  const st = (v: string) =>
+    te.has(`status.${v}`) ? te(`status.${v}`) : t.has(`refreshStatus.${v}`) ? t(`refreshStatus.${v}`) : v;
   const supabase = createClient();
   const { data: advocates } = await supabase
     .from("advocate")
@@ -43,10 +48,10 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-7">
-      <PageHeader title="Settings" subtitle="Add advocates with their Bar Registration Number to pull their daily cause list." />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <Card className="p-5">
-        <h2 className="mb-4 text-base font-medium">Advocates</h2>
+        <h2 className="mb-4 text-base font-medium">{t("advocates.heading")}</h2>
         <AdvocateForm />
         {advocates && advocates.length > 0 && (
           <ul className="mt-5 divide-y divide-line">
@@ -62,7 +67,7 @@ export default async function SettingsPage() {
                   <span className="font-mono text-xs text-ink-faint">
                     {a.bar_registration_number ?? "—"}{a.state_code ? ` · ${a.state_code}` : ""}
                   </span>
-                  <DeleteButton onDelete={deleteAdvocate.bind(null, a.id)} label="Remove" />
+                  <DeleteButton onDelete={deleteAdvocate.bind(null, a.id)} label={t("advocates.remove")} />
                 </span>
               </li>
             ))}
@@ -71,8 +76,8 @@ export default async function SettingsPage() {
       </Card>
 
       <Card className="p-5">
-        <h2 className="mb-1 text-base font-medium">Billing &amp; GST</h2>
-        <p className="mb-4 text-sm text-ink-muted">Used on invoices — firm details, GSTIN, place of supply, and GST defaults (legal services SAC 9982).</p>
+        <h2 className="mb-1 text-base font-medium">{t("billing.heading")}</h2>
+        <p className="mb-4 text-sm text-ink-muted">{t("billing.desc")}</p>
         <FirmBillingForm firm={firmBilling ?? null} />
       </Card>
 
@@ -80,24 +85,20 @@ export default async function SettingsPage() {
         <div className="mb-4 flex items-start gap-2.5">
           <Icon name="scale" className="mt-0.5 h-5 w-5 text-ink-faint" />
           <div>
-            <h2 className="text-base font-medium">Court data</h2>
-            <p className="mt-0.5 text-sm text-ink-muted">
-              Reads come from our shared cache first. If a provider errors, we fall back to
-              the last good (stale) data rather than failing the request — resilience without
-              scraping.
-            </p>
+            <h2 className="text-base font-medium">{t("court.heading")}</h2>
+            <p className="mt-0.5 text-sm text-ink-muted">{t("court.desc")}</p>
           </div>
         </div>
 
         {/* Provider health */}
         <div className="rounded-xl border border-line">
           <div className="flex items-center justify-between px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-ink-faint">
-            <span>Provider</span>
-            <span>Status</span>
+            <span>{t("court.providerCol")}</span>
+            <span>{t("court.statusCol")}</span>
           </div>
           {health.length === 0 ? (
             <p className="border-t border-line px-4 py-3 text-sm text-ink-faint">
-              No provider activity yet.
+              {t("court.noActivity")}
             </p>
           ) : (
             <ul className="divide-y divide-line">
@@ -115,9 +116,9 @@ export default async function SettingsPage() {
                     )}
                     <span className="text-xs text-ink-faint">
                       <Icon name="clock" className="mr-1 inline h-3 w-3" />
-                      ok {fmtAgo(h.last_ok_at)}
+                      {t("court.okAgo", { ago: fmtAgo(h.last_ok_at) })}
                     </span>
-                    <Badge tone={h.ok ? "green" : "red"}>{h.ok ? "OK" : "Down"}</Badge>
+                    <Badge tone={h.ok ? "green" : "red"}>{h.ok ? t("court.ok") : t("court.down")}</Badge>
                   </span>
                 </li>
               ))}
@@ -128,11 +129,11 @@ export default async function SettingsPage() {
         {/* Cache stats */}
         <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-ink-muted">
           <span>
-            <span className="font-semibold text-ink">{stats.cases}</span> cached case{stats.cases === 1 ? "" : "s"}
+            <span className="font-semibold text-ink">{stats.cases}</span> {t("court.cachedCases", { count: stats.cases })}
           </span>
           <span className="flex items-center gap-1.5">
             <Icon name="refresh" className="h-3.5 w-3.5" />
-            Last refresh <span className="text-ink">{fmtAgo(stats.lastFetchedAt)}</span>
+            {t("court.lastRefresh")} <span className="text-ink">{fmtAgo(stats.lastFetchedAt)}</span>
           </span>
         </div>
 
@@ -144,7 +145,7 @@ export default async function SettingsPage() {
         {/* Recent refresh requests */}
         {recent.length > 0 && (
           <div className="mt-5">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-faint">Recent refresh requests</p>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-faint">{t("court.recentHeading")}</p>
             <ul className="divide-y divide-line rounded-xl border border-line">
               {recent.map((r) => (
                 <li key={r.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
@@ -155,7 +156,7 @@ export default async function SettingsPage() {
                   <span className="flex items-center gap-2.5">
                     <span className="text-xs text-ink-faint">{fmtDate(r.created_at)}</span>
                     <Badge tone={r.status === "fulfilled" ? "green" : r.status === "cancelled" ? "neutral" : "amber"}>
-                      {r.status}
+                      {st(r.status)}
                     </Badge>
                   </span>
                 </li>
@@ -166,14 +167,14 @@ export default async function SettingsPage() {
 
         <p className="mt-4 flex items-center gap-1.5 text-xs text-ink-faint">
           <Icon name="alert" className="h-3.5 w-3.5" />
-          Source: eCourts. Court data is informational — verify against the official record.
+          {t("court.provenance")}
         </p>
       </Card>
 
       <Card className="p-5">
         <div className="mb-3 flex items-center gap-2">
           <Icon name="scale" className="h-4 w-4 text-brand-600" />
-          <h2 className="text-base font-medium">Capture from eCourts (human-in-the-loop)</h2>
+          <h2 className="text-base font-medium">{t("capture.heading")}</h2>
         </div>
         <CaptureTool token={tok?.token ?? null} baseUrl={captureBaseUrl} />
       </Card>
@@ -181,8 +182,8 @@ export default async function SettingsPage() {
       <Card className="flex items-start gap-3 p-5">
         <Icon name="gmail" className="mt-0.5 h-5 w-5 text-ink-faint" />
         <div className="text-sm text-ink-muted">
-          <p className="font-medium text-ink">Connections</p>
-          <p className="mt-0.5">Connect Gmail from the <span className="text-brand-600">Inbox</span> to auto-file emails and attachments against the right client and case.</p>
+          <p className="font-medium text-ink">{t("connections.heading")}</p>
+          <p className="mt-0.5">{t.rich("connections.desc", { b: (c) => <span className="text-brand-600">{c}</span> })}</p>
         </div>
       </Card>
     </div>

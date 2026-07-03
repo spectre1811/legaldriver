@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import {
   submitRefreshRequest,
@@ -9,6 +10,7 @@ import {
 } from "./court-actions";
 
 export function CourtRefreshForms() {
+  const t = useTranslations("settings");
   const [cnr, setCnr] = useState("");
   const [payload, setPayload] = useState("");
   const [note, setNote] = useState("");
@@ -38,7 +40,7 @@ export function CourtRefreshForms() {
           name="cnr"
           value={cnr}
           onChange={(e) => setCnr(e.target.value)}
-          placeholder="CNR, e.g. MHAU010012342024"
+          placeholder={t("court.cnrPlaceholder")}
           aria-label="CNR"
           className="input font-mono uppercase sm:flex-1"
         />
@@ -49,33 +51,32 @@ export function CourtRefreshForms() {
           className="btn-primary flex items-center justify-center gap-1.5"
         >
           <Icon name="refresh" className="h-4 w-4" />
-          {pending ? "Refreshing…" : "Refresh via provider"}
+          {pending ? t("court.refreshing") : t("court.refreshViaProvider")}
         </button>
       </div>
 
       <details className="rounded-xl border border-line bg-paper/60 p-4">
         <summary className="cursor-pointer text-sm font-medium text-ink">
-          Provider unavailable? Refresh from the official portal yourself
+          {t("court.hitlSummary")}
         </summary>
         <div className="mt-3 space-y-3">
           <p className="flex items-start gap-1.5 text-xs text-ink-faint">
             <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            No scraping / no CAPTCHA solving — you solve any CAPTCHA on the official
-            eCourts portal; we parse what you bring back.
+            {t("court.hitlNote")}
           </p>
           <textarea
             value={payload}
             onChange={(e) => setPayload(e.target.value)}
-            placeholder="Paste the JSON or text the official eCourts portal returned for this CNR…"
-            aria-label="Pasted eCourts payload"
+            placeholder={t("court.payloadPlaceholder")}
+            aria-label={t("court.payloadLabel")}
             rows={5}
             className="input w-full font-mono text-xs"
           />
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Note (optional)"
-            aria-label="Note"
+            placeholder={t("court.notePlaceholder")}
+            aria-label={t("court.noteLabel")}
             className="input w-full"
           />
           <button
@@ -84,10 +85,10 @@ export function CourtRefreshForms() {
             disabled={pending || !cnr.trim()}
             className="btn-secondary"
           >
-            {pending ? "Submitting…" : "Submit refresh request"}
+            {pending ? t("court.submitting") : t("court.submitRequest")}
           </button>
           <p className="text-xs text-ink-faint">
-            Parsing the pasted payload into the matter is a follow-up — it&rsquo;s stored for now.
+            {t("court.hitlFollowup")}
           </p>
         </div>
       </details>

@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { COURT_NAMES } from "@/lib/court/corpus-athena";
 
@@ -21,6 +22,7 @@ const COURTS = COURT_CODES
 const YEARS = Array.from({ length: 2026 - 2008 + 1 }, (_, i) => 2026 - i).map((y) => String(y));
 
 export function Filters() {
+  const t = useTranslations("research");
   const router = useRouter();
   const sp = useSearchParams();
   const [q, setQ] = useState(sp.get("q") ?? "");
@@ -47,17 +49,17 @@ export function Filters() {
         className="relative min-w-[16rem] flex-1"
       >
         <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by party, case number, or judge…" className="input pl-9" aria-label="Search judgments" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchPlaceholder")} className="input pl-9" aria-label={t("searchAria")} />
       </form>
-      <select value={sp.get("court") ?? ""} onChange={(e) => setParam("court", e.target.value)} className="input max-w-[16rem]" aria-label="Court">
-        <option value="">All courts</option>
+      <select value={sp.get("court") ?? ""} onChange={(e) => setParam("court", e.target.value)} className="input max-w-[16rem]" aria-label={t("courtAria")}>
+        <option value="">{t("allCourts")}</option>
         {COURTS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
       </select>
-      <select value={sp.get("year") ?? ""} onChange={(e) => setParam("year", e.target.value)} className="input max-w-[9rem]" aria-label="Year">
-        <option value="">All years</option>
+      <select value={sp.get("year") ?? ""} onChange={(e) => setParam("year", e.target.value)} className="input max-w-[9rem]" aria-label={t("yearAria")}>
+        <option value="">{t("allYears")}</option>
         {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
       </select>
-      <button type="button" onClick={submitSearch} className="btn btn-primary">Search</button>
+      <button type="button" onClick={submitSearch} className="btn btn-primary">{t("searchButton")}</button>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { corpusEnabled, searchJudgments, judgmentPdfUrl, courtLabel, type JudgmentRow } from "@/lib/court/corpus-athena";
@@ -49,18 +50,19 @@ export default async function ResearchPage({
   searchParams: { q?: string; court?: string; year?: string };
 }) {
   const { q, court, year } = searchParams;
+  const t = await getTranslations("research");
 
   if (!corpusEnabled()) {
     return (
       <div className="space-y-6">
         <PageHeader
-          title="Case Research"
-          subtitle="Search the full judgment corpus across every Indian High Court — by party, case number, judge, court, or year."
+          title={t("title")}
+          subtitle={t("subtitleNotConfigured")}
         />
         <EmptyState
           icon="scale"
-          title="Corpus not configured"
-          body="The court-judgments corpus is not connected in this environment yet. Once the S3 lake credentials are set, live search across all High Courts becomes available here."
+          title={t("notConfiguredTitle")}
+          body={t("notConfiguredBody")}
         />
       </div>
     );
@@ -79,38 +81,38 @@ export default async function ResearchPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Case Research"
-        subtitle="Now searching the full judgment corpus across every Indian High Court — not just the local slice. Find judgments by party, case number, judge, court, or year."
+        title={t("title")}
+        subtitle={t("subtitle")}
       />
 
       <Filters />
 
       <p className="flex items-center gap-1.5 text-xs text-ink-faint">
         <Icon name="search" className="h-3.5 w-3.5" />
-        Search matches parties, case number, and judge across the full multi-court corpus. Queries run live against our S3 lake, so results take a moment to load.
+        {t("searchHint")}
       </p>
 
       {rows.length ? (
         <Card className="overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-paper/60 px-5 py-3">
             <div className="text-xs text-ink-faint">
-              {rows.length}{rows.length === 100 ? "+" : ""} judgment{rows.length === 1 ? "" : "s"} from the full multi-court corpus
-              {activeFilters ? " · filtered" : ""}
+              {rows.length}{rows.length === 100 ? "+" : ""} {t("results", { count: rows.length })}
+              {activeFilters ? ` · ${t("filtered")}` : ""}
             </div>
             {activeFilters && (
-              <a href="/dashboard/research" className="text-xs font-medium text-brand-700 hover:underline">Clear filters</a>
+              <a href="/dashboard/research" className="text-xs font-medium text-brand-700 hover:underline">{t("clearFilters")}</a>
             )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line text-left">
-                  <th className="px-5 py-3 label">Case</th>
-                  <th className="px-5 py-3 label">Parties</th>
-                  <th className="hidden px-5 py-3 label lg:table-cell">Judge</th>
-                  <th className="hidden px-5 py-3 label md:table-cell">Court</th>
-                  <th className="hidden px-5 py-3 label sm:table-cell">Decided</th>
-                  <th className="px-5 py-3 label">Disposition</th>
+                  <th className="px-5 py-3 label">{t("caseCol")}</th>
+                  <th className="px-5 py-3 label">{t("partiesCol")}</th>
+                  <th className="hidden px-5 py-3 label lg:table-cell">{t("judgeCol")}</th>
+                  <th className="hidden px-5 py-3 label md:table-cell">{t("courtCol")}</th>
+                  <th className="hidden px-5 py-3 label sm:table-cell">{t("decidedCol")}</th>
+                  <th className="px-5 py-3 label">{t("dispositionCol")}</th>
                   <th className="px-5 py-3"></th>
                 </tr>
               </thead>
@@ -166,14 +168,14 @@ export default async function ResearchPage({
       ) : (
         <EmptyState
           icon="scale"
-          title={activeFilters ? "No matching judgments" : "Search the judgment corpus"}
-          body={activeFilters ? "Try a different search or clear the filters." : "Search by party name, case number, or judge — or filter by court and year across every High Court."}
+          title={activeFilters ? t("noMatchTitle") : t("emptyTitle")}
+          body={activeFilters ? t("noMatchBody") : t("emptyBody")}
         />
       )}
 
       <p className="flex items-start gap-1.5 text-xs text-ink-faint">
         <Icon name="alert" className="mt-px h-3.5 w-3.5 shrink-0" />
-        Source: Indian High Court Judgments (AWS Open Data, CC-BY 4.0), queried live from our S3 lake. Reference only; not legal advice — verify against the official record.
+        {t("sourceListing")}
       </p>
     </div>
   );

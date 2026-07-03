@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 // Browsable judge dossier ("know your judge") from /judge/{id}: caseload, disposal
 // mix, case-type breakdown, and recent decisions — pre-hearing intelligence.
 export default async function JudgePage({ params }: { params: { judgeId: string } }) {
+  const t = await getTranslations("judge");
   if (!ldEnabled()) notFound();
   const j = await getJudge(params.judgeId);
   if (!j) notFound();
@@ -31,24 +33,24 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
 
   return (
     <div className="space-y-6">
-      <PageHeader title={j.name} subtitle={`Judge dossier · ${j.case_count.toLocaleString("en-IN")} cases on record (analysing latest ${j.returned})`} />
+      <PageHeader title={j.name} subtitle={t("subtitle", { count: j.case_count.toLocaleString("en-IN"), returned: j.returned })} />
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card><div className="px-4 py-3"><p className="label">Total cases</p><p className="text-2xl font-semibold">{j.case_count.toLocaleString("en-IN")}</p></div></Card>
-        <Card><div className="px-4 py-3"><p className="label">Disposed (sample)</p><p className="text-2xl font-semibold">{disposed.length}</p></div></Card>
-        <Card><div className="px-4 py-3"><p className="label">Pending (sample)</p><p className="text-2xl font-semibold">{pending}</p></div></Card>
-        <Card><div className="px-4 py-3"><p className="label">Disposal rate</p><p className="text-2xl font-semibold">{j.cases.length ? Math.round((disposed.length / j.cases.length) * 100) : 0}%</p></div></Card>
+        <Card><div className="px-4 py-3"><p className="label">{t("statTotalCases")}</p><p className="text-2xl font-semibold">{j.case_count.toLocaleString("en-IN")}</p></div></Card>
+        <Card><div className="px-4 py-3"><p className="label">{t("statDisposed")}</p><p className="text-2xl font-semibold">{disposed.length}</p></div></Card>
+        <Card><div className="px-4 py-3"><p className="label">{t("statPending")}</p><p className="text-2xl font-semibold">{pending}</p></div></Card>
+        <Card><div className="px-4 py-3"><p className="label">{t("statDisposalRate")}</p><p className="text-2xl font-semibold">{j.cases.length ? Math.round((disposed.length / j.cases.length) * 100) : 0}%</p></div></Card>
       </section>
 
       <Card>
-        <div className="border-b border-line px-5 py-4"><p className="font-medium">Case-type mix <span className="text-ink-faint">(sample)</span></p></div>
+        <div className="border-b border-line px-5 py-4"><p className="font-medium">{t("caseTypeMix")} <span className="text-ink-faint">{t("sample")}</span></p></div>
         <ul className="flex flex-wrap gap-2 px-5 py-4">
           {topTypes.map(([t, n]) => <li key={t}><Badge tone="neutral">{t} · {n}</Badge></li>)}
         </ul>
       </Card>
 
       <Card>
-        <div className="border-b border-line px-5 py-4"><p className="font-medium">Recent decisions</p></div>
+        <div className="border-b border-line px-5 py-4"><p className="font-medium">{t("recentDecisions")}</p></div>
         {recent.length > 0 ? (
           <ul className="divide-y divide-line text-sm">
             {recent.map((c) => {
@@ -68,9 +70,9 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
             })}
           </ul>
         ) : (
-          <EmptyState icon="scale" title="No dated decisions in the sample" />
+          <EmptyState icon="scale" title={t("emptyDecisions")} />
         )}
-        <p className="px-5 py-3 text-xs text-ink-faint">Analytics over the latest {j.returned} of {j.case_count.toLocaleString("en-IN")} cases. Source: LegalDriver / eCourts. Indicative only — not legal advice.</p>
+        <p className="px-5 py-3 text-xs text-ink-faint">{t("provenance", { returned: j.returned, count: j.case_count.toLocaleString("en-IN") })}</p>
       </Card>
     </div>
   );

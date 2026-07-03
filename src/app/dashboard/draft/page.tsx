@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +13,7 @@ const STATUS_TONE: Record<string, "neutral" | "brand" | "green" | "amber"> = {
 };
 
 export default async function DraftConsolePage() {
+  const t = await getTranslations("draft");
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
 
@@ -26,21 +28,21 @@ export default async function DraftConsolePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Drafting" subtitle="Read a document — even a scanned, vernacular one — and draft the right reply under Indian law. Assistive only; you review and finalise." />
+      <PageHeader title={t("header")} subtitle={t("subtitle")} />
 
       <Card>
         <div className="border-b border-line px-5 py-4">
-          <p className="font-medium">Start a new draft</p>
-          <p className="mt-0.5 text-sm text-ink-muted">Upload a notice, summons, petition or order. Scans are OCR’d (any Indian language) before drafting.</p>
+          <p className="font-medium">{t("startNewDraft")}</p>
+          <p className="mt-0.5 text-sm text-ink-muted">{t("startNewDraftHint")}</p>
         </div>
         <div className="px-5 py-5">
           <UploadAndDraftForm />
-          <p className="mt-3 text-xs text-ink-faint">You can also click “Draft a reply” on any document in a case or the Documents library.</p>
+          <p className="mt-3 text-xs text-ink-faint">{t("alsoDraftHint")}</p>
         </div>
       </Card>
 
       <Card>
-        <div className="border-b border-line px-5 py-4"><p className="font-medium">Your drafts</p></div>
+        <div className="border-b border-line px-5 py-4"><p className="font-medium">{t("yourDrafts")}</p></div>
         {drafts && drafts.length > 0 ? (
           <ul className="divide-y divide-line">
             {drafts.map((d) => {
@@ -49,10 +51,10 @@ export default async function DraftConsolePage() {
                 <li key={d.id}>
                   <Link href={`/dashboard/draft/${d.id}`} className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-paper">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{d.title ?? "Draft"}</p>
+                      <p className="truncate text-sm font-medium">{d.title ?? t("draftFallback")}</p>
                       <p className="truncate text-xs text-ink-muted">
-                        {d.produces_doc_type?.replace(/_/g, " ") ?? "draft"}
-                        {doc?.filename ? ` · in reply to ${doc.filename}` : ""} · {fmtDate(d.updated_at)}
+                        {d.produces_doc_type?.replace(/_/g, " ") ?? t("draftTypeFallback")}
+                        {doc?.filename ? ` · ${t("inReplyTo", { filename: doc.filename })}` : ""} · {fmtDate(d.updated_at)}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
@@ -65,7 +67,7 @@ export default async function DraftConsolePage() {
             })}
           </ul>
         ) : (
-          <EmptyState icon="edit" title="No drafts yet" body="Upload a document above to draft a reply." />
+          <EmptyState icon="edit" title={t("emptyTitle")} body={t("emptyBody")} />
         )}
       </Card>
     </div>
