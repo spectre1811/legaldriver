@@ -33,18 +33,19 @@ scraper's **unversioned** legacy paths (`/case/{cnr}`, `/cause-list`) and respon
    with the "verify against the official record" disclaimer; PDFs stay behind the stable stream
    endpoint (never a persisted presigned URL).
 
-## Reconciling the repo "never scrape" posture (CLAUDE.md conv. #2)
+## The "never scrape" posture — OVERRIDDEN by founder decision (2026-07-03)
 
-legaldriver's CLAUDE.md and the `court-data-own-datastore-direction` memory state a hard line:
-*never scrape eCourts, never build/call a CAPTCHA solver, court data only via a licensed API behind
-`CourtDataClient`.* This holds under WO-01: **legaldriver still never scrapes.** It calls an
-internal REST API with a key and normalizes the response behind the existing `CourtDataClient`
-interface — exactly the "own your data over time" path the `ecourts-api-client` skill describes
-(the `OwnStore` provider). The scraping/CAPTCHA concerns live entirely in the ecourts-scraper
-platform, which is the org's settled data strategy (INPUTS §4/§9). No CAPTCHA code, portal URL, or
-solver enters the legaldriver repo. **Follow-up:** once accepted, update legaldriver CLAUDE.md
-conv. #2 to name the internal-API (`LegalDriverClient`) provider alongside the licensed one, so the
-repo posture and this contract agree.
+legaldriver's CLAUDE.md conv. #2 and the `court-data-own-datastore-direction` memory previously
+stated a hard line: *never scrape eCourts, never build/call a CAPTCHA solver, court data only via a
+licensed API.* **The founder has overridden that line (2026-07-03): scraping is the settled org data
+strategy (INPUTS §4).** The `ecourts-scraper` platform is our first-party court-data store,
+collected primarily via the CAPTCHA-free eCourts **mobile API** (with a CAPTCHA web route only for
+district order PDFs). legaldriver consumes that platform's `/v1` internal API behind the
+`CourtDataClient` interface — no scraping/CAPTCHA code lives in the legaldriver repo itself; the
+collection concerns live in the platform. **Applied this change:** legaldriver CLAUDE.md conv. #2 +
+the `court-data-own-datastore-direction` memory updated to supersede the old rule (this doc
+supersedes `2026-06-24-court-data-strategy.md`). **Follow-up:** the `ecourts-api-client` skill
+(`.claude/skills/`) still recites the old hard line — refresh it in a follow-up so the skill agrees.
 
 ## Scope / non-goals
 
