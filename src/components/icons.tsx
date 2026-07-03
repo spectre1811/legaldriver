@@ -3,7 +3,8 @@ type IconProps = { name: IconName; className?: string };
 export type IconName =
   | "overview" | "cases" | "calendar" | "notices" | "bell" | "inbox" | "documents"
   | "settings" | "scale" | "plus" | "refresh" | "back" | "search" | "check" | "alert"
-  | "sparkles" | "upload" | "clip" | "external" | "chevron" | "logout" | "gmail" | "clock" | "dot" | "edit";
+  | "sparkles" | "upload" | "clip" | "external" | "chevron" | "logout" | "gmail" | "clock" | "dot" | "edit"
+  | "menu" | "close";
 
 const P: Record<IconName, React.ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
@@ -31,6 +32,8 @@ const P: Record<IconName, React.ReactNode> = {
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   dot: <><circle cx="12" cy="12" r="4" /></>,
   edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></>,
+  menu: <><path d="M3 6h18M3 12h18M3 18h18" /></>,
+  close: <><path d="M18 6 6 18M6 6l12 12" /></>,
 };
 
 export function Icon({ name, className = "h-5 w-5" }: IconProps) {

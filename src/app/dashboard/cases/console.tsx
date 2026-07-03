@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { saveView, deleteView } from "./view-actions";
 
@@ -25,6 +26,7 @@ export function Console({
   acts: string[];
   views: SavedView[];
 }) {
+  const t = useTranslations("cases.console");
   const router = useRouter();
   const sp = useSearchParams();
   const [q, setQ] = useState(sp.get("q") ?? "");
@@ -84,74 +86,74 @@ export function Console({
           }}
           className="relative min-w-[14rem] flex-1"
         >
-          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
+          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ec-ink-3" />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search cases — title, CNR, court, parties…"
+            placeholder={t("searchPlaceholder")}
             className="input pl-9"
-            aria-label="Search cases"
+            aria-label={t("searchAria")}
           />
         </form>
 
-        <select value={sp.get("court") ?? ""} onChange={(e) => setParam("court", e.target.value)} className="input max-w-[12rem]" aria-label="Court">
-          <option value="">All courts</option>
+        <select value={sp.get("court") ?? ""} onChange={(e) => setParam("court", e.target.value)} className="input max-w-[12rem]" aria-label={t("court")}>
+          <option value="">{t("allCourts")}</option>
           {courts.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
 
-        <select value={sp.get("case_type") ?? ""} onChange={(e) => setParam("case_type", e.target.value)} className="input max-w-[11rem]" aria-label="Case type">
-          <option value="">All types</option>
-          {caseTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+        <select value={sp.get("case_type") ?? ""} onChange={(e) => setParam("case_type", e.target.value)} className="input max-w-[11rem]" aria-label={t("caseType")}>
+          <option value="">{t("allTypes")}</option>
+          {caseTypes.map((ct) => <option key={ct} value={ct}>{ct}</option>)}
         </select>
 
-        <select value={sp.get("stage") ?? ""} onChange={(e) => setParam("stage", e.target.value)} className="input max-w-[11rem]" aria-label="Stage">
-          <option value="">All stages</option>
+        <select value={sp.get("stage") ?? ""} onChange={(e) => setParam("stage", e.target.value)} className="input max-w-[11rem]" aria-label={t("stage")}>
+          <option value="">{t("allStages")}</option>
           {stages.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
 
-        <select value={sp.get("status") ?? ""} onChange={(e) => setParam("status", e.target.value)} className="input max-w-[10rem]" aria-label="Status">
-          <option value="">All statuses</option>
-          <option value="open">Open</option>
-          <option value="disposed">Disposed</option>
+        <select value={sp.get("status") ?? ""} onChange={(e) => setParam("status", e.target.value)} className="input max-w-[10rem]" aria-label={t("status")}>
+          <option value="">{t("allStatuses")}</option>
+          <option value="open">{t("open")}</option>
+          <option value="disposed">{t("disposed")}</option>
         </select>
 
-        <select value={sp.get("advocate") ?? ""} onChange={(e) => setParam("advocate", e.target.value)} className="input max-w-[12rem]" aria-label="Advocate">
-          <option value="">All advocates</option>
+        <select value={sp.get("advocate") ?? ""} onChange={(e) => setParam("advocate", e.target.value)} className="input max-w-[12rem]" aria-label={t("advocate")}>
+          <option value="">{t("allAdvocates")}</option>
           {advocates.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
 
-        <select value={sp.get("act") ?? ""} onChange={(e) => setParam("act", e.target.value)} className="input max-w-[12rem]" aria-label="Act / Section">
-          <option value="">All acts / sections</option>
+        <select value={sp.get("act") ?? ""} onChange={(e) => setParam("act", e.target.value)} className="input max-w-[12rem]" aria-label={t("act")}>
+          <option value="">{t("allActs")}</option>
           {acts.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
 
-        <select value={sp.get("next") ?? ""} onChange={(e) => setParam("next", e.target.value)} className="input max-w-[11rem]" aria-label="Next hearing">
-          <option value="">Any hearing</option>
-          <option value="overdue">Overdue</option>
-          <option value="7d">Next 7 days</option>
-          <option value="30d">Next 30 days</option>
-          <option value="none">No hearing set</option>
+        <select value={sp.get("next") ?? ""} onChange={(e) => setParam("next", e.target.value)} className="input max-w-[11rem]" aria-label={t("nextHearing")}>
+          <option value="">{t("anyHearing")}</option>
+          <option value="overdue">{t("overdue")}</option>
+          <option value="7d">{t("next7")}</option>
+          <option value="30d">{t("next30")}</option>
+          <option value="none">{t("noHearing")}</option>
         </select>
 
-        <select value={sp.get("sort") ?? ""} onChange={(e) => setParam("sort", e.target.value)} className="input max-w-[12rem]" aria-label="Sort">
-          <option value="">Next hearing ↑</option>
-          <option value="created_at">Recently added</option>
-          <option value="title">Title A–Z</option>
+        <select value={sp.get("sort") ?? ""} onChange={(e) => setParam("sort", e.target.value)} className="input max-w-[12rem]" aria-label={t("sort")}>
+          <option value="">{t("sortNext")}</option>
+          <option value="created_at">{t("sortRecent")}</option>
+          <option value="title">{t("sortTitle")}</option>
         </select>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         {views.map((v) => (
-          <span key={v.id} className="badge bg-paper text-ink-muted border border-line">
-            <button type="button" onClick={() => applyView(v.query)} className="hover:text-brand-700">
+          <span key={v.id} className="ec-chip inline-flex items-center gap-1.5">
+            <button type="button" onClick={() => applyView(v.query)} className="hover:text-ec-brass-deep">
               {v.name}
             </button>
             <button
               type="button"
               onClick={() => onDelete(v.id)}
               disabled={pending}
-              aria-label={`Delete view ${v.name}`}
-              className="text-ink-faint hover:text-red-600"
+              aria-label={t("deleteView", { name: v.name })}
+              className="text-ec-ink-3 hover:text-ec-danger"
             >
               ×
             </button>
@@ -163,25 +165,25 @@ export function Console({
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="View name"
+              placeholder={t("viewName")}
               className="input max-w-[10rem] py-1.5 text-xs"
-              aria-label="View name"
+              aria-label={t("viewName")}
               autoFocus
             />
-            <button type="button" onClick={onSave} disabled={pending} className="btn-primary px-3 py-1.5 text-xs">
-              <Icon name="check" className="h-3.5 w-3.5" /> Save
+            <button type="button" onClick={onSave} disabled={pending} className="ec-btn ec-btn-ink px-3 py-1.5 text-xs">
+              <Icon name="check" className="h-3.5 w-3.5" /> {t("save")}
             </button>
-            <button type="button" onClick={() => { setSaving(false); setMsg(null); }} className="btn-ghost px-2 py-1.5 text-xs">
-              Cancel
+            <button type="button" onClick={() => { setSaving(false); setMsg(null); }} className="ec-btn ec-btn-ghost px-2 py-1.5 text-xs">
+              {t("cancel")}
             </button>
           </span>
         ) : (
-          <button type="button" onClick={() => { setSaving(true); setMsg(null); }} className="btn-ghost px-3 py-1.5 text-xs">
-            <Icon name="plus" className="h-3.5 w-3.5" /> Save this view
+          <button type="button" onClick={() => { setSaving(true); setMsg(null); }} className="ec-btn ec-btn-ghost px-3 py-1.5 text-xs">
+            <Icon name="plus" className="h-3.5 w-3.5" /> {t("saveView")}
           </button>
         )}
 
-        {msg && <span className="text-xs text-ink-faint">{msg}</span>}
+        {msg && <span className="text-xs text-ec-ink-3">{msg}</span>}
       </div>
     </div>
   );

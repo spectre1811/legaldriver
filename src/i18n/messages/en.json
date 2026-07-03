@@ -1,0 +1,297 @@
+{
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "add": "Add",
+      "search": "Search",
+      "retry": "Try again"
+    },
+    "states": {
+      "loading": "Loading…",
+      "empty": "Nothing here yet",
+      "error": "Something went wrong"
+    },
+    "disclaimer": "Not legal advice — verify against the official court record.",
+    "provenance": "Source: {source} · updated {time}",
+    "language": {
+      "label": "Language",
+      "en": "English",
+      "hi": "हिन्दी"
+    }
+  },
+  "shell": {
+    "workspace": "Workspace",
+    "signOut": "Sign out",
+    "nav": "Navigation",
+    "openNav": "Open menu",
+    "closeNav": "Close menu"
+  },
+  "enum": {
+    "status": { "active": "Active", "disposed": "Disposed", "open": "Open", "draft": "Draft", "sent": "Sent", "paid": "Paid", "cancelled": "Cancelled" }
+  },
+  "nav": {
+    "ariaMain": "Navigation",
+    "heading": {
+      "practice": "Practice",
+      "workflow": "Workflow",
+      "assistant": "Assistant",
+      "account": "Account"
+    },
+    "item": {
+      "overview": "Overview",
+      "onboarding": "Onboarding",
+      "clients": "Clients",
+      "cases": "Cases",
+      "calendar": "Calendar",
+      "analytics": "Analytics",
+      "portfolio": "Portfolio",
+      "research": "Case research",
+      "lookup": "Judges & advocates",
+      "notices": "Notices",
+      "causeList": "Cause list",
+      "inbox": "Inbox",
+      "messages": "Messages",
+      "voice": "Voice",
+      "documents": "Documents",
+      "invoices": "Invoices",
+      "ip": "IP assets",
+      "notifications": "Notifications",
+      "copilot": "Copilot",
+      "drafting": "Drafting",
+      "settings": "Settings"
+    }
+  },
+  "today": {
+    "overline": "आज की पेशी",
+    "title": "Today's hearings",
+    "weekAria": "This week's hearings",
+    "listed": "{count, plural, one {# listed} other {# listed}}",
+    "ledger": { "date": "Date", "court": "Court / Bench", "matter": "Matter", "actions": "Actions" },
+    "hearingFallback": "Hearing",
+    "openFile": "Open file",
+    "summary": "{count, plural, =0 {No listings today} one {# listing} other {# listings}} · {courts, plural, =0 {no courts} one {# court} other {# courts}}",
+    "syncedAt": "synced from the court record at {time}",
+    "empty": { "title": "No hearings today", "body": "Nothing listed. Add a case by CNR to keep your diary current.", "addCase": "Add case" },
+    "glance": { "title": "Today at a glance", "openCopilot": "Open Copilot" },
+    "filingsDue": "Filings due",
+    "filing": "Filing",
+    "noFilings": "No filings due.",
+    "inbox": { "title": "Inbox review", "body": "emails waiting to be filed to a client or case.", "open": "Open inbox" }
+  },
+  "causeList": {
+    "page": {
+      "title": "Cause list",
+      "subtitle": "Upload the cause list you received from the court — we match it to your cases and update next-hearing dates. You supply the file."
+    },
+    "choose": "Choose cause-list PDF",
+    "parse": "Parse & match",
+    "parsing": "Parsing…",
+    "badge": {
+      "matched": "{count} matched",
+      "updated": "{count} updated",
+      "unmatched": "{count} not in your cases"
+    },
+    "th": { "cnr": "CNR", "date": "Hearing date", "item": "Item / Court", "case": "Case" },
+    "item": "Item {n}",
+    "notMatched": "not in your cases",
+    "dateUpdated": "date updated",
+    "empty": {
+      "title": "No cause list parsed yet",
+      "body": "Upload the daily cause list you received from the court. We read it, match the CNRs to your cases, and update their next-hearing dates. You supply the file."
+    }
+  },
+  "cases": {
+    "title": "Cases",
+    "subtitle": "Add a case by CNR; we fetch its details and keep it fresh on a nightly sync.",
+    "count": "{count, plural, one {# case} other {# cases}}",
+    "filtered": "filtered",
+    "clearFilters": "Clear filters",
+    "th": { "case": "Case", "client": "Client", "court": "Court", "stage": "Stage", "status": "Status", "next": "Next hearing", "source": "Source" },
+    "diary": "diary",
+    "past": "past",
+    "noDate": "no date",
+    "delete": "Delete case",
+    "empty": {
+      "title": "No cases yet",
+      "body": "Add your first case by CNR above — its hearings, parties and orders will sync automatically.",
+      "filteredTitle": "No matching cases",
+      "filteredBody": "Try a different search or clear the filters."
+    },
+    "add": { "cta": "Add case", "fetching": "Fetching…", "placeholder": "Add a case by CNR — e.g. MHPU010012342022", "aria": "CNR number" },
+    "console": {
+      "searchPlaceholder": "Search cases — title, CNR, court, parties…",
+      "searchAria": "Search cases",
+      "court": "Court", "allCourts": "All courts",
+      "caseType": "Case type", "allTypes": "All types",
+      "stage": "Stage", "allStages": "All stages",
+      "status": "Status", "allStatuses": "All statuses", "open": "Open", "disposed": "Disposed",
+      "advocate": "Advocate", "allAdvocates": "All advocates",
+      "act": "Act / Section", "allActs": "All acts / sections",
+      "nextHearing": "Next hearing", "anyHearing": "Any hearing", "overdue": "Overdue", "next7": "Next 7 days", "next30": "Next 30 days", "noHearing": "No hearing set",
+      "sort": "Sort", "sortNext": "Next hearing ↑", "sortRecent": "Recently added", "sortTitle": "Title A–Z",
+      "deleteView": "Delete view {name}", "viewName": "View name", "save": "Save", "cancel": "Cancel", "saveView": "Save this view"
+    }
+  },
+  "caseDetail": {
+    "back": "Cases",
+    "delete": "Delete",
+    "deleteConfirm": "Delete case",
+    "deleteNote": "Documents stay in the client's library",
+    "via": "via {source}",
+    "tab": { "overview": "Overview", "court": "Court record", "documents": "Documents", "billing": "Billing", "comms": "Communications" },
+    "ai": {
+      "title": "AI briefing",
+      "posture": "Procedural posture",
+      "keyPoints": "Key points",
+      "nextSteps": "Suggested next steps",
+      "watch": "Watch",
+      "arguments": "Arguments — for & against",
+      "present": "What to present at the next hearing",
+      "disclaimer": "AI-generated from this case record — informational, not legal advice.",
+      "empty": "Generate a plain-language briefing with suggested next steps and risk flags from everything on this case."
+    },
+    "info": { "court": "Court", "caseType": "Case type", "stage": "Stage", "client": "Client", "next": "Next hearing", "judge": "Judge", "yourDiary": "(your diary)" },
+    "source": {
+      "line": "Source {source} · last refreshed {time}",
+      "never": "never",
+      "note": "Court data is fetched from the official eCourts record via our licensed pipeline — it can lag or contain errors.",
+      "verify": "Always verify against the official record; not legal advice.",
+      "diaryHint": "Set your own diary date above if the court record is wrong or stale."
+    },
+    "details": { "title": "Case details" },
+    "detail": {
+      "registrationNo": "Registration no.",
+      "filingNo": "Filing no.",
+      "registrationDate": "Registration date",
+      "filingDate": "Filing date",
+      "district": "District",
+      "state": "State",
+      "coram": "Coram",
+      "decidedOn": "Decided on",
+      "firNo": "FIR no.",
+      "policeStation": "Police station"
+    },
+    "acts": { "title": "Acts & Sections" },
+    "deadlines": {
+      "title": "Statutory deadlines",
+      "help": "Apply a limitation/procedural rule from a base date — it computes the due date and adds it to your calendar. Assistive; verify against the bare act.",
+      "proposed": "Proposed — confirm to add to your calendar",
+      "proposedNote": "Computed from a rule — verify against the bare act before confirming.",
+      "empty": "No deadlines yet. Apply a statutory rule below.",
+      "overdue": "overdue"
+    },
+    "parties": { "title": "Parties", "empty": "No party details on record." },
+    "hearings": { "title": "Hearing history", "fallback": "Hearing", "empty": "No hearings on record yet." },
+    "similar": {
+      "title": "Similar cases",
+      "help": "Matches by shared parties, advocates, judges, or acts — verify relevance.",
+      "next": "Next {date}",
+      "emptyTitle": "No related cases yet",
+      "emptyBody": "Similarity grows as you track more matters."
+    },
+    "reason": { "party": "party", "advocate": "advocate", "judge": "judge", "act": "act" },
+    "orders": { "title": "Orders & Judgments" },
+    "processes": { "title": "Processes", "help": "Warrants / summons / notices on the court record.", "fallback": "Process" },
+    "documents": { "title": "Documents", "empty": "No documents yet — upload one above, or they'll arrive auto-filed from Gmail." },
+    "billing": { "title": "Time & expenses", "time": "Time", "unbilled": "Unbilled", "entryFallback": "Time entry", "nonBillable": "non-billable" },
+    "invoices": { "title": "Invoices", "draft": "Draft" },
+    "notices": { "title": "Notices", "due": "due {date}" },
+    "activity": { "title": "Activity", "empty": "No activity yet." }
+  },
+  "auth": {
+    "brand": {
+      "headline": "Your practice, on a single daily driver.",
+      "sub": "Track cases by CNR, surface your cause list and deadlines, escalate notices, and let your inbox file itself — built for advocates and firms.",
+      "footnote": "Court data from the public court record · not legal advice · verify against the official record."
+    },
+    "trust": {
+      "cases": "Every case, hearing & deadline in one calendar",
+      "inbox": "Gmail auto-filed against the right client & case",
+      "notices": "Legal-notice escalation that runs itself"
+    },
+    "welcome": "Welcome back",
+    "subtitle": "Sign in to your workspace, or create a new one.",
+    "fullName": "Full name",
+    "fullNameHint": "(sign up)",
+    "email": "Email",
+    "password": "Password",
+    "ph": { "fullName": "Adv. Meera Joshi", "email": "you@firm.in" },
+    "signIn": "Sign in",
+    "createWorkspace": "Create a workspace",
+    "disclaimer": "By continuing you agree this is informational only and not legal advice."
+  },
+  "invoices": {
+    "title": "Invoices",
+    "subtitle": "Assemble GST invoices from unbilled time & expenses. Start one from any case via “Create invoice”.",
+    "outstanding": "Outstanding (sent, unpaid):",
+    "all": "All invoices",
+    "draft": "Draft",
+    "due": "due {date}",
+    "overdue": "overdue",
+    "empty": { "title": "No invoices yet", "body": "Open a case, log billable time/expenses, then click “Create invoice”." },
+    "detail": {
+      "draftInvoice": "Draft invoice",
+      "taxSettings": "Tax settings",
+      "lineItems": "Line items",
+      "th": { "description": "Description", "sac": "SAC", "qty": "Qty", "rate": "Rate", "amount": "Amount" },
+      "subtotal": "Subtotal", "cgst": "CGST", "sgst": "SGST", "igst": "IGST", "total": "Total",
+      "reverseCharge": "Reverse charge: GST payable by the recipient under RCM — not added to this invoice."
+    }
+  },
+  "portal": {
+    "title": "Your matters",
+    "subtitle": "Track your cases, hearings and documents, and message your firm.",
+    "nextHearing": "Next hearing: {date}",
+    "noMatters": "No matters shared with you yet.",
+    "hearings": { "title": "Upcoming hearings", "empty": "No upcoming hearings." },
+    "hearingFallback": "Hearing",
+    "docs": { "title": "Shared documents", "empty": "No documents shared yet." },
+    "messages": { "title": "Messages", "empty": "No messages yet. Say hello to your firm." },
+    "footer": "Secure client portal · you only see your own matters. Not legal advice.",
+    "headerLabel": "Client portal",
+    "yourMatters": "your matters",
+    "composer": { "send": "Send", "placeholder": "Message your firm…", "aria": "Message" }
+  },
+  "landing": {
+    "nav": { "features": "Features", "pricing": "Pricing", "login": "Login", "startFree": "Start free" },
+    "hero": {
+      "overline": "आज की पेशी, कल की तैयारी।",
+      "title1": "Your entire practice.",
+      "title2": "One daily driver.",
+      "sub": "Cause lists, cases, clients and invoices — synced from the court record by CNR and delivered to your WhatsApp every evening. Built for Indian courts, free to begin.",
+      "ctaStart": "Start free — track 25 cases",
+      "ctaPricing": "See pricing",
+      "note": "No card. No clerk calls.",
+      "overline2": "आज की पेशी",
+      "miniFoot": "Tomorrow's list reaches WhatsApp before 8 pm"
+    },
+    "proof": { "hc": "Gujarat High Court", "district": "District courts across Gujarat", "judgments": "18.6M judgments indexed", "cnr": "CNR-native" },
+    "features": {
+      "evening": { "eyebrow": "the evening list", "title": "Tomorrow's peshi, on WhatsApp before 8 pm.", "body": "Every evening your full cause list for tomorrow — court, item number, stage — arrives where you already are. No portal logins, no calls to the clerk." },
+      "running": { "eyebrow": "the running file", "title": "Every case, auto-updated by CNR.", "body": "Add a CNR once. Hearings, orders and next dates keep themselves current from the court record — your diary maintains itself." },
+      "fee": { "eyebrow": "the fee book", "title": "Invoices that file themselves.", "body": "Hours become GST-ready invoices; clients pay by UPI, card or netbanking. The cash-and-diary fee book, respectfully retired." }
+    },
+    "pricing": {
+      "title": "Priced like one consultation.",
+      "note": "Per lawyer / month, billed annually · monthly +25%",
+      "mostChosen": "Most chosen",
+      "tier": {
+        "free": { "name": "Free", "f": { "cases": "25 tracked cases", "digest": "Daily WhatsApp digest", "clients": "10 clients & matters", "search": "Search 18.6M judgments" } },
+        "basic": { "name": "Basic", "f": { "cases": "200 tracked cases", "alerts": "Per-case WhatsApp alerts", "invoicing": "Invoicing + UPI collection", "credits": "100 AI credits / mo" } },
+        "pro": { "name": "Pro", "f": { "cases": "Unlimited cases + escalations", "credits": "500 AI credits / mo", "portal": "Client portal, unlimited seats", "marketplace": "Marketplace inquiry priority" } },
+        "enterprise": { "name": "Enterprise", "f": { "tenants": "Multi-lawyer tenants, SSO", "audit": "Audit logs & custom rules", "pooled": "Pooled AI credits", "support": "Dedicated support, SLA" } }
+      },
+      "cta": { "start": "Start free", "choose": "Choose plan", "talk": "Talk to us" }
+    },
+    "footer": {
+      "tagline": "Making Indian litigation legible — for the advocates who run it and the citizens who live through it.",
+      "col": {
+        "product": { "h": "Product", "a": "Features", "b": "Pricing", "c": "For clients" },
+        "company": { "h": "Company", "a": "About", "b": "Why us", "c": "Contact" },
+        "legal": { "h": "Legal", "a": "Privacy", "b": "Terms", "c": "Data corrections" }
+      },
+      "compliance": "Case data is sourced from public court records and refreshed daily. Peshi is practice software and a neutral directory; it does not rank, recommend or endorse advocates. © 2026 Peshi."
+    }
+  }
+}

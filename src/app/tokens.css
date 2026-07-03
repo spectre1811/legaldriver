@@ -1,0 +1,61 @@
+/* ============================================================
+   PESHI · DESIGN TOKENS — "Editorial Chambers"  (WO-03, Wave 1)
+   SINGLE SOURCE OF TRUTH for colour / type / space / radius /
+   elevation / motion. Ported verbatim from plan/design/ui-concept.html.
+   Screens consume these via Tailwind's `ec-*` token scale (see
+   tailwind.config.ts) or `var(--…)` directly — never hardcode values.
+
+   NOTE: the legacy Tailwind palette (paper/ink/brand/brass in
+   tailwind.config.ts) is intentionally left untouched so screens not
+   yet reskinned do not shift. Reskinned screens (Waves 2–3) move onto
+   the `ec-*` tokens below.
+   ============================================================ */
+:root {
+  /* colour — brand */
+  --paper:      #FAF7F1;
+  --paper-2:    #FFFDF8;   /* raised surfaces */
+  --paper-3:    #F3EEE3;   /* recessed / wells */
+  --ink:        #191926;
+  --ink-2:      #46465A;
+  --ink-3:      #7C7C90;
+  --brass:      #A8823C;
+  --brass-deep: #8A6A2C;   /* AA-safe brass for text */
+  --brass-tint: #F4EBD8;
+  --indigo:     #3B3B98;
+  --indigo-tint:#E8E8F5;
+
+  /* colour — semantic */
+  --success:    #2E6B45;
+  --success-t:  #E4EFE7;
+  --warn:       #A4650E;
+  --warn-t:     #F6ECD9;
+  --danger:     #A93B2A;
+  --danger-t:   #F6E4E0;
+
+  /* neutrals ramp (ink → paper); N300 and lighter are lines/wells only */
+  --n900:#191926; --n800:#2E2E3E; --n700:#46465A; --n600:#5F5F74;
+  --n500:#7C7C90; --n400:#9C9CAC; --n300:#BFBECB; --n200:#DCDAE0;
+  --n100:#ECE9E6; --n050:#F3EEE3;
+
+  /* lines */
+  --hair:        color-mix(in srgb, var(--ink) 13%, transparent);
+  --hair-strong: color-mix(in srgb, var(--ink) 26%, transparent);
+
+  /* type — self-hosted via next/font (see layout.tsx).
+     Latin carries meaning; Noto Devanagari/Gujarati cover vernacular glyphs. */
+  --f-display: var(--font-serif), var(--font-noto-deva), var(--font-noto-guj), Georgia, serif;
+  --f-ui:      var(--font-sans),  var(--font-noto-deva), var(--font-noto-guj), system-ui, sans-serif;
+
+  /* spacing — 4px grid (mirrors Tailwind's default scale) */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px; --s8:32px; --s12:48px; --s16:64px; --s24:96px;
+
+  /* radius + elevation (paper aesthetic: two shadows, ever) */
+  --r-s:6px; --r-m:10px;
+  --e1: 0 1px 2px rgba(25,25,38,.06), 0 1px 1px rgba(25,25,38,.04);
+  --e2: 0 2px 6px rgba(25,25,38,.08), 0 8px 24px rgba(25,25,38,.07);
+
+  /* motion — micro-interactions only; respect prefers-reduced-motion */
+  --motion-fast: 120ms;
+  --motion-base: 150ms;
+  --ease: cubic-bezier(.2, 0, 0, 1);
+}

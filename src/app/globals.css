@@ -1,3 +1,5 @@
+@import "./tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -49,6 +51,54 @@
     @apply text-[0.7rem] font-semibold uppercase tracking-wider text-ink-faint;
   }
 }
+
+@layer components {
+  /* ——— WO-03 "Editorial Chambers" reskin primitives (tokened, → tokens.css). ———
+     Namespaced .ec-* so the legacy .card/.btn primitives above keep serving
+     screens not yet reskinned. Reskinned screens (Waves 2–3) use these. */
+  .ec-btn {
+    @apply inline-flex items-center justify-center gap-1.5;
+    border: none; border-radius: var(--r-s);
+    font-size: 14px; font-weight: 600; padding: 10px 16px;
+    text-decoration: none; cursor: pointer;
+    transition: background var(--motion-base) var(--ease), box-shadow var(--motion-base), transform var(--motion-fast);
+  }
+  .ec-btn:active { transform: translateY(1px); }
+  .ec-btn:disabled { opacity: 0.5; pointer-events: none; }
+  .ec-btn-ink { background: var(--ink); color: var(--paper); }
+  .ec-btn-ink:hover { background: var(--n800); box-shadow: var(--e1); }
+  .ec-btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--hair-strong); }
+  .ec-btn-ghost:hover { background: var(--paper-3); }
+  .ec-btn-brass { background: var(--brass); color: #fff; }
+  .ec-btn-brass:hover { background: var(--brass-deep); }
+
+  .ec-card { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-m); box-shadow: var(--e1); }
+
+  /* stage / status pill */
+  .ec-chip {
+    display: inline-block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; border: 1px solid var(--hair-strong); color: var(--ink-2);
+    border-radius: 99px; padding: 3px 10px; background: var(--paper);
+  }
+  .ec-chip-hot { border-color: var(--brass); color: var(--brass-deep); background: var(--brass-tint); }
+  .ec-chip-success { border-color: color-mix(in srgb, var(--success) 40%, transparent); color: var(--success); background: var(--success-t); }
+  .ec-chip-warn { border-color: color-mix(in srgb, var(--warn) 40%, transparent); color: var(--warn); background: var(--warn-t); }
+  .ec-chip-danger { border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: var(--danger); background: var(--danger-t); }
+
+  /* small-caps section label */
+  .ec-label { font-size: 11px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-3); }
+
+  /* ledger row hover — the brass-wash on the active line */
+  .ec-row { transition: background var(--motion-fast) var(--ease); }
+  .ec-row:hover { background: color-mix(in srgb, var(--brass-tint) 40%, transparent); }
+
+  /* the "date underline" motif — a brass hairline that overshoots its text */
+  .ec-underline { position: relative; }
+  .ec-underline::after { content: ""; position: absolute; left: 1px; right: -8px; bottom: -4px; height: 2px; background: var(--brass); }
+}
+
+/* tabular numerals for dates / ₹ / CNRs — always available (not layer-scoped) */
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
 
 /* Accessibility floor: respect reduced-motion. */
 @media (prefers-reduced-motion: reduce) {

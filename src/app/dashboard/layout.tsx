@@ -1,11 +1,15 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
 import { NavLinks } from "./nav";
+import { MobileNav } from "./mobile-nav";
 import { CommandPalette } from "@/components/command-palette";
+import { brand } from "@/lib/brand";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
+  const t = await getTranslations("shell");
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -15,19 +19,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const { data: tenant } = await supabase.from("tenant").select("name").single();
-  const tenantName = tenant?.name ?? "Workspace";
+  const tenantName = tenant?.name ?? t("workspace");
   const initial = (user.email ?? "?").slice(0, 1).toUpperCase();
 
   return (
-    <div className="flex min-h-screen bg-paper">
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-line bg-surface px-4 py-5 md:flex">
+    <div className="flex min-h-screen bg-ec-paper text-ec-ink">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-ec-hair bg-ec-paper px-4 py-5 md:flex">
         <div className="flex items-center gap-2.5 px-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
-            <Icon name="scale" className="h-5 w-5" />
-          </span>
+          {/* Typographic wordmark — the "date underline" motif. Name from the
+              swappable brand config (working name until B1 lands). */}
           <div className="leading-tight">
-            <p className="font-serif text-lg font-medium">Legaldriver</p>
-            <p className="truncate text-xs text-ink-faint" title={tenantName}>{tenantName}</p>
+            <p className="ec-underline inline-block font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink">
+              {brand.name}
+            </p>
+            <p className="mt-1.5 truncate text-xs text-ec-ink-3" title={tenantName}>{tenantName}</p>
           </div>
         </div>
 
@@ -36,16 +41,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <NavLinks />
         </div>
 
-        <div className="mt-4 border-t border-line pt-4">
+        <div className="mt-4 border-t border-ec-hair pt-4">
           <div className="flex items-center gap-3 px-1">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-sm font-semibold text-brand-700">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ec-indigo text-sm font-semibold text-white">
               {initial}
             </span>
-            <p className="min-w-0 flex-1 truncate text-xs text-ink-muted" title={user.email ?? ""}>
+            <p className="min-w-0 flex-1 truncate text-xs text-ec-ink-2" title={user.email ?? ""}>
               {user.email}
             </p>
             <form action="/auth/signout" method="post">
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-faint transition hover:bg-paper hover:text-ink" title="Sign out" aria-label="Sign out">
+              <button className="flex h-8 w-8 items-center justify-center rounded-ec-s text-ec-ink-3 transition hover:bg-ec-paper-3 hover:text-ec-ink" title={t("signOut")} aria-label={t("signOut")}>
                 <Icon name="logout" className="h-4 w-4" />
               </button>
             </form>
@@ -54,6 +59,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       <main className="min-w-0 flex-1">
+        <MobileNav email={user.email ?? ""} tenantName={tenantName} initial={initial} />
         <div className="mx-auto max-w-6xl animate-fade-in px-5 py-8 sm:px-8 lg:py-10">{children}</div>
       </main>
     </div>
