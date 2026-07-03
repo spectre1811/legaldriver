@@ -122,6 +122,23 @@ async function main() {
   );
   check("no provider usage → estimated=true", rE.tokens.estimated === true && tE[0].estimated === true);
 
+  // 9. Multilingual (§9): a locale directive is appended for PROSE tasks in a
+  // non-English locale, and NOT for English or for classification/extraction.
+  const prompts: { task: string; locale?: string; sent: string }[] = [];
+  const capturePrompt: ExecFn = async ({ prompt, schema }) => {
+    prompts.length = 0; prompts.push({ task: "", sent: prompt });
+    return schema ? { json: { summary: "x" }, text: null } : { text: "x", json: null };
+  };
+  const runLoc = async (task: "summary.case" | "classify.doc", locale?: string) => {
+    prompts.length = 0;
+    await runCore({ task, input: "BASE", schema: { type: "object" }, locale, tenantId: "T", scope: { kind: "tenant", tenantId: "T" } }, deps(capturePrompt, []));
+    return prompts[0]?.sent ?? "";
+  };
+  check("hi summary → locale directive appended", /Respond in Hindi/.test(await runLoc("summary.case", "hi")));
+  check("en summary → no directive", (await runLoc("summary.case", "en")) === "BASE");
+  check("hi classify → no directive (structured stays English)", (await runLoc("classify.doc", "hi")) === "BASE");
+  check("unknown locale → no directive", (await runLoc("summary.case", "xx")) === "BASE");
+
   console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
   process.exit(failures === 0 ? 0 : 1);
 }

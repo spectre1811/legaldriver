@@ -52,6 +52,22 @@ model (e.g. Sonnet) on its own choice. The chain always ends in a keyless choice
 local/Vercel works with no infra. Add a new `task` to the `AiTask` union + `AI_TASKS`
 in `core.ts` and a row in `ROUTES` (a test asserts every task resolves).
 
+## Multilingual (04-AI §9)
+
+Pass `locale` (e.g. `"hi"`, `"gu"`) — the gateway appends a "respond in <language>"
+directive for PROSE tasks (`summary.case`, `draft.document`, `agent.lawyer`,
+`agent.reply`), keeping citations/section numbers/CNRs/terms-of-art in English.
+Classification/extraction ignores locale (stable English enums). Edit
+`src/lib/ai/gateway/locale.ts` to add a language or flip a (task,locale) to `bridge`.
+Callers should pass `locale` from the user's locale seam.
+
+## Metering (04-AI §5)
+
+Every call writes one `ai_usage_event` (per-tenant token ledger, RLS-scoped) via a
+best-effort sink — nothing to do per feature. Cost panel: `/dashboard/ai-usage`.
+Real provider tokens are recorded when available (OAI/Anthropic); keyless CLI →
+`estimated`. Soft-warn via `AI_SOFT_WARN_USD_PER_MONTH`; hard caps are WO-04.
+
 ## Guardrails (do not break)
 
 - **Scope**: always compute `scope` from the authenticated session BEFORE the call and
