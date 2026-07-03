@@ -113,7 +113,8 @@
       "body": "Add your first case by CNR above — its hearings, parties and orders will sync automatically.",
       "filteredTitle": "No matching cases",
       "filteredBody": "Try a different search or clear the filters."
-    }
+    },
+    "add": { "cta": "Add case", "fetching": "Fetching…", "placeholder": "Add a case by CNR — e.g. MHPU010012342022", "aria": "CNR number" }
   },
   "caseDetail": {
     "back": "Cases",
@@ -202,5 +203,26 @@
     "signIn": "Sign in",
     "createWorkspace": "Create a workspace",
     "disclaimer": "By continuing you agree this is informational only and not legal advice."
+  },
+  "invoices": {
+    "title": "Invoices",
+    "subtitle": "Assemble GST invoices from unbilled time & expenses. Start one from any case via “Create invoice”.",
+    "outstanding": "Outstanding (sent, unpaid):",
+    "all": "All invoices",
+    "draft": "Draft",
+    "due": "due {date}",
+    "overdue": "overdue",
+    "empty": { "title": "No invoices yet", "body": "Open a case, log billable time/expenses, then click “Create invoice”." }
+  },
+  "portal": {
+    "title": "Your matters",
+    "subtitle": "Track your cases, hearings and documents, and message your firm.",
+    "nextHearing": "Next hearing: {date}",
+    "noMatters": "No matters shared with you yet.",
+    "hearings": { "title": "Upcoming hearings", "empty": "No upcoming hearings." },
+    "hearingFallback": "Hearing",
+    "docs": { "title": "Shared documents", "empty": "No documents shared yet." },
+    "messages": { "title": "Messages", "empty": "No messages yet. Say hello to your firm." },
+    "footer": "Secure client portal · you only see your own matters. Not legal advice."
   }
 }
