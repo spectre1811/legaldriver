@@ -54,11 +54,15 @@ export default async function DocumentsPage({
     ? query.not("extracted->>deletedAt", "is", null)
     : query.filter("extracted->>deletedAt", "is", null);
 
-  const [{ data: docs }, { data: clients }, { data: typeRows }, { count: trashCount }] = await Promise.all([
+  const [{ data: docs }, { data: clients }, { data: typeRows }, { count: trashCount }, { count: reviewCount }] = await Promise.all([
     query,
     supabase.from("client").select("id, name"),
     supabase.from("document").select("doc_type").not("doc_type", "is", null).limit(1000),
     supabase.from("document").select("id", { count: "exact", head: true }).not("extracted->>deletedAt", "is", null),
+    // WO-32: needs-review = flagged OR unfiled, not trashed — the Review Inbox count.
+    supabase.from("document").select("id", { count: "exact", head: true })
+      .filter("extracted->>deletedAt", "is", null)
+      .or("extracted->>status.eq.needs_review,and(client_id.is.null,matter_id.is.null)"),
   ]);
 
   const clientName = new Map((clients ?? []).map((c) => [c.id, c.name]));
@@ -104,10 +108,18 @@ export default async function DocumentsPage({
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <PageHeader title={isTrash ? t("trash.title") : t("title")} subtitle={isTrash ? t("trash.subtitle") : t("subtitle")} />
-        <Link href={isTrash ? "/dashboard/documents" : "/dashboard/documents?trash=1"} className="btn-ghost shrink-0 text-sm">
-          <Icon name={isTrash ? "back" : "trash"} className="h-4 w-4" />
-          <span className="ml-1.5">{isTrash ? t("trash.back") : t("trash.link", { n: trashCount ?? 0 })}</span>
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          {!isTrash && (reviewCount ?? 0) > 0 && (
+            <Link href="/dashboard/documents/review" className="btn-primary text-sm">
+              <Icon name="sparkles" className="h-4 w-4" />
+              <span className="ml-1.5">{t("review.link", { n: reviewCount ?? 0 })}</span>
+            </Link>
+          )}
+          <Link href={isTrash ? "/dashboard/documents" : "/dashboard/documents?trash=1"} className="btn-ghost text-sm">
+            <Icon name={isTrash ? "back" : "trash"} className="h-4 w-4" />
+            <span className="ml-1.5">{isTrash ? t("trash.back") : t("trash.link", { n: trashCount ?? 0 })}</span>
+          </Link>
+        </div>
       </div>
 
       {!isTrash && <DocumentsUpload />}

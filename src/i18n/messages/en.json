@@ -907,6 +907,27 @@
       "emptyTitle": "Trash is empty",
       "emptyBody": "Deleted documents will appear here, and can be restored."
     },
+    "review": {
+      "title": "Review & file",
+      "subtitle": "Documents we read but weren't sure how to file. Confirm where each belongs — we've pre-filled our best guess.",
+      "link": "Review {n}",
+      "back": "Back to Documents",
+      "hint": "Tip: J/K to move, Enter to file, S to skip.",
+      "allClear": "Nothing to review",
+      "allClearBody": "Every document is filed. New ones we're unsure about will land here.",
+      "confidence": "{percent}% sure",
+      "fileTo": "File to",
+      "client": "Client",
+      "case": "Case",
+      "clientOption": "Choose client",
+      "caseOption": "Choose case",
+      "file": "File",
+      "filing": "Filing…",
+      "skip": "Skip",
+      "whyCnr": "Case number {cnr} found in the document",
+      "whyEmail": "Arrived by email",
+      "whyParty": "Mentions {party}"
+    },
     "summary": {
       "count": "{docs, plural, one {# document} other {# documents}} in {categories, plural, one {# category} other {# categories}}",
       "filtered": "filtered"

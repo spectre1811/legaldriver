@@ -77,6 +77,27 @@ export async function toggleDocShare(documentId: string, shared: boolean): Promi
   return { ok: true, message: shared ? "Shared with client." : "Unshared." };
 }
 
+// ── WO-32 Wave 1 · Review Inbox — resolve a needs-review document ──────────────────────────
+// Files a document (to a case and/or client) from the Review Inbox and marks it reviewed
+// (`extracted.status = 'filed'`), so it leaves the queue. Reuses the soft-flag-in-JSON tactic (no
+// migration). This is the human-in-the-loop confirm for the intake engine.
+export async function resolveReview(documentId: string, matterId: string | null, clientId: string | null): Promise<DocResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const { data: doc } = await supabase.from("document").select("extracted").eq("id", documentId).maybeSingle();
+  if (!doc) return { ok: false, message: "Not found." };
+  const ex = { ...((doc.extracted as Record<string, unknown>) ?? {}), status: "filed" };
+  const patch: { matter_id: string | null; client_id: string | null; extracted: unknown } = { matter_id: matterId, client_id: clientId, extracted: ex };
+  const { error } = await supabase.from("document").update(patch as never).eq("id", documentId); // RLS-scoped
+  if (error) return { ok: false, message: error.message };
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "document.reviewed", entity: "document", entity_id: documentId });
+  if (matterId) await logActivity(supabase, tenantId, { matterId, type: "document.filed", summary: "Document filed from review" });
+  revalidatePath("/dashboard/documents/review");
+  revalidatePath("/dashboard/documents");
+  return { ok: true, message: matterId ? "Filed to case." : clientId ? "Filed to client." : "Filed." };
+}
+
 // ── WO-27 Wave 2 · bulk + reversible delete ───────────────────────────────────────────────
 // Reversible delete uses a soft-delete flag in `extracted.deletedAt` (no schema migration): the
 // main list hides flagged rows, the Trash view shows them, restore clears the flag, and a hard
