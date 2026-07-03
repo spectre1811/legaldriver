@@ -17,17 +17,18 @@ ok("explicit matter context wins + files", a.matterId === "M1" && a.status === "
 const b = decideFiling({ confidence: 0.9, client_id: "cX", matter_id: "mX" }, { clientId: "C1" });
 ok("explicit client context wins", b.clientId === "C1" && b.status === "filed");
 
-// 3) Hub upload, high-confidence existing match → auto-files to it.
+// 3) Hub upload, concrete existing match → auto-files to it.
 const c = decideFiling({ confidence: 0.9, client_id: "C9", matter_id: "M9" });
-ok("hub high-confidence match auto-files", c.clientId === "C9" && c.matterId === "M9" && c.status === "filed");
+ok("concrete match auto-files", c.clientId === "C9" && c.matterId === "M9" && c.status === "filed");
 
-// 4) Hub upload, LOW confidence → needs_review, links to NOTHING (never the wrong matter).
-const d = decideFiling({ confidence: 0.4, client_id: "C9", matter_id: "M9" });
-ok("hub low-confidence → needs_review, unlinked", d.clientId === null && d.matterId === null && d.status === "needs_review");
+// 4) STRUCTURAL: a concrete match files even at LOW self-confidence — a real record match is
+//    trustworthy; the model's confidence number is not (research §5).
+const d = decideFiling({ confidence: 0.2, client_id: "C9", matter_id: null });
+ok("low self-confidence but a real match → filed", d.clientId === "C9" && d.status === "filed");
 
-// 5) Hub upload, high confidence but NO match → needs_review.
-const e = decideFiling({ confidence: 0.95, client_id: null, matter_id: null });
-ok("hub high-confidence but no match → needs_review", e.status === "needs_review" && e.clientId === null);
+// 5) HIGH self-confidence but NO concrete match → needs_review (don't trust the number, no wrong file).
+const e = decideFiling({ confidence: 0.99, client_id: null, matter_id: null });
+ok("high self-confidence but no match → needs_review, unlinked", e.status === "needs_review" && e.clientId === null && e.matterId === null);
 
 console.log(failed === 0 ? "\nPASS" : `\nFAIL (${failed})`);
 process.exit(failed === 0 ? 0 : 1);
