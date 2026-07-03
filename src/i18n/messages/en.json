@@ -538,7 +538,7 @@
     "features": {
       "evening": {
         "eyebrow": "the evening list",
-        "title": "Tomorrow's peshi, on WhatsApp before 8 pm.",
+        "title": "Tomorrow's hearings, on WhatsApp before 8 pm.",
         "body": "Every evening your full cause list for tomorrow — court, item number, stage — arrives where you already are. No portal logins, no calls to the clerk."
       },
       "running": {
@@ -624,7 +624,7 @@
           "c": "Data corrections"
         }
       },
-      "compliance": "Case data is sourced from public court records and refreshed daily. Peshi is practice software and a neutral directory; it does not rank, recommend or endorse advocates. © 2026 Peshi."
+      "compliance": "Case data is sourced from public court records and refreshed daily. Mukadma is practice software and a neutral directory; it does not rank, recommend or endorse advocates. © 2026 Mukadma."
     }
   },
   "pages": {
@@ -1064,11 +1064,11 @@
     "noJudges": "No judges found",
     "noParties": "No parties found",
     "noPartiesBody": "Try a surname (fuzzy match across litigants).",
-    "footer": "Source: Peshi / eCourts (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record."
+    "footer": "Source: Mukadma / eCourts (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record."
   },
   "analytics": {
     "title": "Analytics",
-    "subtitle": "Your caseload, billing, and everything Peshi has ingested and stored for you.",
+    "subtitle": "Your caseload, billing, and everything Mukadma has ingested and stored for you.",
     "errorSubtitle": "Practice, billing, and data overview.",
     "errorTitle": "Couldn't load analytics",
     "section": {
@@ -1245,12 +1245,12 @@
       "heading": "Capture from eCourts (human-in-the-loop)",
       "intro": "Get fresh case data without any scraping: <b>you</b> log into the official eCourts portal and solve the CAPTCHA, open a case, then click this button — we parse the page into the case. We never automate or bypass the CAPTCHA.",
       "dragTitle": "Drag me to your bookmarks bar",
-      "buttonLabel": "Capture to Peshi",
+      "buttonLabel": "Capture to Mukadma",
       "dragHint": "← drag to your bookmarks bar",
       "copied": "Copied",
       "copyLink": "Copy link",
       "regenerate": "Regenerate",
-      "step1": "Drag <b>Capture to Peshi</b> to your browser's bookmarks bar (once).",
+      "step1": "Drag <b>Capture to Mukadma</b> to your browser's bookmarks bar (once).",
       "step2": "Open <url>services.ecourts.gov.in</url>, solve the CAPTCHA, and view a <b>case-details</b> page <i>or</i> a <b>cause list</b>.",
       "step3": "Click the bookmark — a case-details page files the case (parties, next hearing, acts); a cause list matches listed cases to yours and updates hearing dates.",
       "step4": "Updated the tool recently? Click <b>Regenerate</b> and re-drag to get the latest.",
@@ -1502,7 +1502,7 @@
     "sample": "(sample)",
     "recentDecisions": "Recent decisions",
     "emptyDecisions": "No dated decisions in the sample",
-    "provenance": "Analytics over the latest {returned} of {count} cases. Source: Peshi / eCourts. Indicative only — not legal advice."
+    "provenance": "Analytics over the latest {returned} of {count} cases. Source: Mukadma / eCourts. Indicative only — not legal advice."
   },
   "advocate": {
     "nameFallback": "Advocate {barId}",
@@ -1521,18 +1521,18 @@
     "tracked": "tracked",
     "emptyTitle": "No cases on record",
     "emptyBody": "The API returned no caseload for this bar code.",
-    "sourceNote": "Source: Peshi / eCourts. Coverage is Gujarat (HC + district), expanding. Not legal advice — verify against the official record."
+    "sourceNote": "Source: Mukadma / eCourts. Coverage is Gujarat (HC + district), expanding. Not legal advice — verify against the official record."
   },
   "privacy": {
     "title": "Privacy",
-    "subtitle": "How Peshi handles your data — the account and client information you give us, and the court records we surface.",
+    "subtitle": "How Mukadma handles your data — the account and client information you give us, and the court records we surface.",
     "twoKindsHeading": "Two kinds of data",
     "yourDataItem": "<b>Your data</b> — your account, your clients, matters, documents and messages. We are a Data Fiduciary for this under the Digital Personal Data Protection Act, 2023, and it is isolated to your workspace.",
     "courtRecordsItem": "<b>Court records</b> — cases, hearings, orders, judges and advocates sourced from public court records. Our position is that this is personal data made publicly available by or under law (DPDP §3(c)(ii)).",
     "collectHeading": "What we collect and why",
     "collectBody": "Account details (name, email) to run your workspace; the case, client and billing information you enter; and technical logs to keep the service secure and reliable. We do not sell your data, and we do not log document contents, message bodies or credentials.",
     "rightsHeading": "Your rights",
-    "rightsBody": "You can access, correct, export or delete your workspace data from within the product, or by contacting us. For court records about you, see <corrections>Data corrections & takedowns</corrections>. You may raise a grievance with our grievance officer at <email>grievance@peshi.app</email>.",
+    "rightsBody": "You can access, correct, export or delete your workspace data from within the product, or by contacting us. For court records about you, see <corrections>Data corrections & takedowns</corrections>. You may raise a grievance with our grievance officer at <email>grievance@mukadma.app</email>.",
     "securityHeading": "Security & retention",
     "securityBody": "Data is encrypted in transit and at rest; access is tenant-isolated. Third-party credentials (e.g. Gmail) are stored encrypted and never in plaintext. We retain your data for as long as your account is active and as required for legal and accountability obligations.",
     "aiHeading": "AI",
@@ -1540,31 +1540,31 @@
   },
   "terms": {
     "title": "Terms of use",
-    "subtitle": "The terms on which Peshi is provided. By using Peshi you agree to these.",
-    "whatHeading": "What Peshi is",
-    "whatBody": "Peshi is practice software for advocates and firms, and a neutral directory built on public court records. It helps you track cases by CNR, see your cause list and deadlines, and run billing and client communication.",
+    "subtitle": "The terms on which Mukadma is provided. By using Mukadma you agree to these.",
+    "whatHeading": "What Mukadma is",
+    "whatBody": "Mukadma is practice software for advocates and firms, and a neutral directory built on public court records. It helps you track cases by CNR, see your cause list and deadlines, and run billing and client communication.",
     "notAdviceHeading": "Not legal advice",
-    "notAdviceBody": "Everything Peshi shows — court data, deadlines, AI output — is <b>informational, not legal advice</b>. Court data can lag or contain errors; always verify against the official record before relying on it.",
+    "notAdviceBody": "Everything Mukadma shows — court data, deadlines, AI output — is <b>informational, not legal advice</b>. Court data can lag or contain errors; always verify against the official record before relying on it.",
     "directoryHeading": "A neutral directory",
-    "directoryBody": "Peshi does not rank, recommend or endorse advocates, and carries no ratings or “best lawyer” claims. Directory information is drawn from the public record and from details an advocate chooses to claim.",
+    "directoryBody": "Mukadma does not rank, recommend or endorse advocates, and carries no ratings or “best lawyer” claims. Directory information is drawn from the public record and from details an advocate chooses to claim.",
     "acceptableHeading": "Acceptable use",
-    "acceptableBody": "Use Peshi lawfully and only for your own practice and clients. Do not attempt to access other tenants’ data, scrape the service, or misuse court data. Tenant data is isolated; you are responsible for the accuracy of what you enter.",
+    "acceptableBody": "Use Mukadma lawfully and only for your own practice and clients. Do not attempt to access other tenants’ data, scrape the service, or misuse court data. Tenant data is isolated; you are responsible for the accuracy of what you enter.",
     "subscriptionsHeading": "Subscriptions & payment",
     "subscriptionsBody": "Paid plans are billed per lawyer as described on our <pricing>pricing</pricing>. Taxes apply as required. You can cancel; access continues to the end of the paid period.",
     "liabilityHeading": "Liability & governing law",
-    "liabilityBody": "Peshi is provided “as is” to the extent permitted by law; we are not liable for actions taken in reliance on informational data. These terms are governed by the laws of India, with courts at Ahmedabad, Gujarat having jurisdiction. We may update these terms; material changes will be notified."
+    "liabilityBody": "Mukadma is provided “as is” to the extent permitted by law; we are not liable for actions taken in reliance on informational data. These terms are governed by the laws of India, with courts at Ahmedabad, Gujarat having jurisdiction. We may update these terms; material changes will be notified."
   },
   "dataCorrections": {
     "title": "Data corrections & takedowns",
-    "subtitle": "Case data on Peshi comes from public court records and can lag or contain errors. If something about you or a matter is wrong, here’s how to have it corrected or removed.",
+    "subtitle": "Case data on Mukadma comes from public court records and can lag or contain errors. If something about you or a matter is wrong, here’s how to have it corrected or removed.",
     "whatYouCanRequest": {
       "heading": "What you can request",
-      "correction": "<b>Correction</b> — a case, party, advocate or date shown on Peshi is inaccurate.",
+      "correction": "<b>Correction</b> — a case, party, advocate or date shown on Mukadma is inaccurate.",
       "takedown": "<b>Takedown / suppression</b> — a record should not be shown (e.g. a sensitive matter, a wrong identity match, or a court/government order to remove it)."
     },
     "howToRaise": {
       "heading": "How to raise a request",
-      "body": "Email <email>grievance@peshi.app</email> with the CNR (or a link to the record), what is wrong, and — for a takedown — the reason. If you are the person named, please tell us so; if you act on someone’s behalf, say in what capacity."
+      "body": "Email <email>grievance@mukadma.app</email> with the CNR (or a link to the record), what is wrong, and — for a takedown — the reason. If you are the person named, please tell us so; if you act on someone’s behalf, say in what capacity."
     },
     "whatHappensNext": {
       "heading": "What happens next — and by when",
@@ -1578,11 +1578,11 @@
     },
     "grievanceOfficer": {
       "heading": "Grievance officer",
-      "body": "Concerns about how we handle personal data or a request can be sent to our grievance officer at <email>grievance@peshi.app</email>. Peshi does not rank, recommend or endorse advocates; corrections do not affect any ranking because there is none."
+      "body": "Concerns about how we handle personal data or a request can be sent to our grievance officer at <email>grievance@mukadma.app</email>. Mukadma does not rank, recommend or endorse advocates; corrections do not affect any ranking because there is none."
     }
   },
   "about": {
-    "title": "About Peshi",
+    "title": "About Mukadma",
     "subtitle": "The operating system for India’s lawyers — and the marketplace where India finds them.",
     "intro": "India’s courts are public, but scattered. We turn that public record into software a lawyer can run their whole practice on, and into a place any citizen can find the right advocate with clarity and trust.",
     "whyHeading": "Why we’re building it",
@@ -1593,9 +1593,9 @@
     "bilingual": "<b>Bilingual by default.</b> English and the litigant’s language, first-class — India’s courts are multilingual, and so are we."
   },
   "whyUs": {
-    "title": "Why Peshi",
+    "title": "Why Mukadma",
     "subtitle": "Built for how Indian litigation actually runs — the daily cause list, the CNR, WhatsApp, two languages.",
-    "item1": "<b>Tomorrow’s peshi, before 8 pm.</b> Your full cause list for the next day reaches your WhatsApp every evening — no portal logins, no calls to the clerk.",
+    "item1": "<b>Tomorrow’s hearings, before 8 pm.</b> Your full cause list for the next day reaches your WhatsApp every evening — no portal logins, no calls to the clerk.",
     "item2": "<b>CNR-native.</b> Add a case once; hearings, orders and next dates keep themselves current from the court record.",
     "item3": "<b>One daily driver.</b> Cases, clients, deadlines, documents and GST invoicing in one place, instead of five.",
     "item4": "<b>Bilingual by default.</b> The whole product works in English and Hindi, with Gujarati following — first-class, not bolted on.",
@@ -1604,17 +1604,17 @@
   "contact": {
     "title": "Contact",
     "subtitle": "We read everything. The fastest way to reach us is email.",
-    "support": "<b>General & support</b> — <mail>hello@peshi.app</mail>",
-    "grievances": "<b>Data corrections & grievances</b> — <mail>grievance@peshi.app</mail> (see <corrections>corrections & takedowns</corrections>)",
+    "support": "<b>General & support</b> — <mail>hello@mukadma.app</mail>",
+    "grievances": "<b>Data corrections & grievances</b> — <mail>grievance@mukadma.app</mail> (see <corrections>corrections & takedowns</corrections>)",
     "member": "<b>Already a member?</b> Use in-app support from your dashboard.",
-    "advocate": "If you’re an advocate, the quickest way to see Peshi is to <login>start free</login> and add a case by CNR."
+    "advocate": "If you’re an advocate, the quickest way to see Mukadma is to <login>start free</login> and add a case by CNR."
   },
   "forClients": {
     "title": "For clients",
     "subtitle": "Finding the right advocate — and following your own case — shouldn’t be a shot in the dark.",
-    "today": "Today, Peshi is where advocates run their practice. Many already use it to keep their clients updated — case status, next hearing dates and documents, in plain language, on WhatsApp.",
+    "today": "Today, Mukadma is where advocates run their practice. Many already use it to keep their clients updated — case status, next hearing dates and documents, in plain language, on WhatsApp.",
     "comingNextHeading": "Coming next",
-    "comingNext": "We’re building a place where any citizen can find the right advocate with clarity and trust — drawn from the public court record, never rankings or “best lawyer” claims. If you’d like to be told when it opens, write to <email>hello@peshi.app</email>.",
-    "portal": "Already working with an advocate on Peshi? Ask them to share your case portal."
+    "comingNext": "We’re building a place where any citizen can find the right advocate with clarity and trust — drawn from the public court record, never rankings or “best lawyer” claims. If you’d like to be told when it opens, write to <email>hello@mukadma.app</email>.",
+    "portal": "Already working with an advocate on Mukadma? Ask them to share your case portal."
   }
 }

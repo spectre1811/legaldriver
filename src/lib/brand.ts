@@ -1,15 +1,19 @@
-// Brand config (WO-03) — the ONE place the product name/wordmark lives, so
-// nothing user-facing hardcodes it. Name locked to "Peshi" by founder decision
-// B1 (2026-07-03); TM search still advisable before external launch. See
-// plan/brand/BRAND.md.
+// Brand config — the ONE place the product name/wordmark lives, so nothing
+// user-facing hardcodes it. Name = "Mukadma" (मुक़दमा = a lawsuit / case),
+// founder decision 2026-07-03, replacing "Peshi" after a name collision with a
+// live competitor at peshi.app. Formal IP-India TM (class 9/42/45) + domain +
+// app-store clearance still pending before external launch — see WO-26 /
+// tracker B5. Keep this the single source; never hardcode the name elsewhere.
 export const brand = {
-  /** Product name — locked (tracker B1, 2026-07-03). */
-  name: "Peshi",
-  /** Devanagari lockup (पेशी = a hearing / one's court date). */
-  nameDevanagari: "पेशी",
+  /** Product name (canonical romanization = "Mukadma" per brand/NAMING.md). */
+  name: "Mukadma",
+  /** Devanagari lockup (मुक़दमा = a lawsuit / case). */
+  nameDevanagari: "मुक़दमा",
+  /** Gujarati lockup. */
+  nameGujarati: "મુકદમા",
   /** One-liner; canonical copy in BRAND.md. */
   tagline: "The operating system for Indian lawyers.",
-  /** Name is decided — Wave 4 (landing + full brand application) is unblocked. */
+  /** Design/wordmark applied. External launch still gated on TM/domain clearance (B5). */
   isFinal: true,
 } as const;
 

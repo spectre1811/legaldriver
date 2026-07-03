@@ -1,7 +1,7 @@
 import { MarketingShell, Prose, DraftNotice } from "@/components/marketing-shell";
 import { getTranslations } from "next-intl/server";
 
-export const metadata = { title: "Privacy · Peshi" };
+export const metadata = { title: "Privacy · Mukadma" };
 
 export default async function PrivacyPage() {
   const t = await getTranslations("privacy");
@@ -26,7 +26,7 @@ export default async function PrivacyPage() {
         <p>
           {t.rich("rightsBody", {
             corrections: (c) => <a href="/data-corrections">{c}</a>,
-            email: (c) => <a href="mailto:grievance@peshi.app">{c}</a>,
+            email: (c) => <a href="mailto:grievance@mukadma.app">{c}</a>,
           })}
         </p>
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { brand } from "@/lib/brand";
-import { PeshiMark } from "@/components/peshi-mark";
+import { BrandMark } from "@/components/brand-mark";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 // Shared chrome for the public secondary pages (legal/company). Editorial
@@ -14,7 +14,7 @@ export async function MarketingShell({ title, subtitle, children }: { title: str
       <header className="border-b border-ec-hair">
         <div className="mx-auto flex max-w-3xl items-center gap-4 px-6 py-4">
           <Link href="/" className="flex items-center gap-2.5">
-            <PeshiMark size={28} tone="dark" />
+            <BrandMark size={28} tone="dark" />
             <span className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight">{brand.name}</span>
           </Link>
           <div className="ml-auto flex items-center gap-3">
@@ -33,7 +33,7 @@ export async function MarketingShell({ title, subtitle, children }: { title: str
       <footer className="border-t border-ec-hair bg-ec-paper-3">
         <div className="mx-auto max-w-3xl px-6 py-8">
           <Link href="/" className="inline-flex items-center gap-2">
-            <PeshiMark size={22} tone="dark" />
+            <BrandMark size={22} tone="dark" />
             <span className="ec-underline font-display text-lg font-semibold lowercase tracking-tight">{brand.name}</span>
           </Link>
           <p className="mt-3 text-[11.5px] leading-relaxed text-ec-ink-3">{tl("footer.compliance")}</p>

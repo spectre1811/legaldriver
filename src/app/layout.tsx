@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Fraunces, Noto_Sans_Devanagari, Noto_Sans_Gujarati } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { brand } from "@/lib/brand";
 import "./globals.css";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -26,14 +27,14 @@ const notoGuj = Noto_Sans_Gujarati({
 });
 
 export const metadata: Metadata = {
-  title: "Peshi — the operating system for Indian lawyers",
+  title: `${brand.name} — ${brand.tagline.replace(/\.$/, "")}`,
   description:
     "Track cases by CNR, get tomorrow's cause list on WhatsApp before 8pm, and run your whole practice — built for Indian courts.",
   openGraph: {
-    title: "Peshi — the operating system for Indian lawyers",
+    title: `${brand.name} — ${brand.tagline.replace(/\.$/, "")}`,
     description:
       "Cause lists, cases, clients and invoices — synced from the court record by CNR. Built for Indian courts, free to begin.",
-    siteName: "Peshi",
+    siteName: brand.name,
     locale: "en_IN",
     type: "website",
   },

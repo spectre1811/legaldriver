@@ -1,7 +1,7 @@
 import { MarketingShell, Prose, DraftNotice } from "@/components/marketing-shell";
 import { getTranslations } from "next-intl/server";
 
-export const metadata = { title: "Terms · Peshi" };
+export const metadata = { title: "Terms · Mukadma" };
 
 export default async function TermsPage() {
   const t = await getTranslations("terms");
