@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { MarketingShell, Prose } from "@/components/marketing-shell";
 
-export const metadata = { title: "Why Peshi · Peshi" };
+export const metadata = { title: "Why Mukadma · Mukadma" };
 
 export default async function WhyUsPage() {
   const t = await getTranslations("whyUs");

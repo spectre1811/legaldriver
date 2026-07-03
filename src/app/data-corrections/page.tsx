@@ -1,7 +1,7 @@
 import { MarketingShell, Prose, DraftNotice } from "@/components/marketing-shell";
 import { getTranslations } from "next-intl/server";
 
-export const metadata = { title: "Data corrections & takedowns · Peshi" };
+export const metadata = { title: "Data corrections & takedowns · Mukadma" };
 
 // Compliance-critical: the correction/takedown workflow (07-COMPLIANCE §3).
 export default async function DataCorrectionsPage() {
@@ -20,7 +20,7 @@ export default async function DataCorrectionsPage() {
         </ul>
 
         <h2>{t("howToRaise.heading")}</h2>
-        <p>{t.rich("howToRaise.body", { email: (c) => <a href="mailto:grievance@peshi.app">{c}</a> })}</p>
+        <p>{t.rich("howToRaise.body", { email: (c) => <a href="mailto:grievance@mukadma.app">{c}</a> })}</p>
 
         <h2>{t("whatHappensNext.heading")}</h2>
         <ul>
@@ -33,7 +33,7 @@ export default async function DataCorrectionsPage() {
         <p>{t.rich("howWeAct.body", { b: (c) => <strong>{c}</strong> })}</p>
 
         <h2>{t("grievanceOfficer.heading")}</h2>
-        <p>{t.rich("grievanceOfficer.body", { email: (c) => <a href="mailto:grievance@peshi.app">{c}</a> })}</p>
+        <p>{t.rich("grievanceOfficer.body", { email: (c) => <a href="mailto:grievance@mukadma.app">{c}</a> })}</p>
       </Prose>
     </MarketingShell>
   );

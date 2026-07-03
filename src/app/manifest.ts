@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
+import { brand } from "@/lib/brand";
 
-// PWA manifest — Peshi mark (WO-05). Icons live in /public/icons.
+// PWA manifest — brand mark (WO-05). Icons live in /public/icons.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Peshi — the operating system for Indian lawyers",
-    short_name: "Peshi",
+    name: `${brand.name} — ${brand.tagline.replace(/\.$/, "")}`,
+    short_name: brand.name,
     description:
       "Track court cases by CNR, your cause list and deadlines, notices, billing and client communication — in English and हिन्दी.",
     start_url: "/dashboard",

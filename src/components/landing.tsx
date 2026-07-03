@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { brand } from "@/lib/brand";
 import { Icon } from "@/components/icons";
-import { PeshiMark } from "@/components/peshi-mark";
+import { BrandMark } from "@/components/brand-mark";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 // Public marketing landing (WO-03 Wave 4), from design/ui-concept.html Mockup A.
@@ -35,7 +35,7 @@ export async function Landing() {
       {/* nav */}
       <nav className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-4">
         <span className="flex items-center gap-2.5">
-          <PeshiMark size={30} tone="dark" />
+          <BrandMark size={30} tone="dark" />
           <span className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight">{brand.name}</span>
         </span>
         <div className="ml-6 hidden gap-1 sm:flex">
@@ -141,7 +141,7 @@ export async function Landing() {
         <div className="mx-auto flex max-w-6xl flex-wrap gap-8 px-6 py-10">
           <div className="max-w-xs">
             <span className="flex items-center gap-2">
-              <PeshiMark size={24} tone="dark" />
+              <BrandMark size={24} tone="dark" />
               <span className="ec-underline font-display text-xl font-semibold lowercase tracking-tight">{brand.name}</span>
             </span>
             <p className="mt-3 text-[13px] leading-relaxed text-ec-ink-3">{t("footer.tagline")}</p>

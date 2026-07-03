@@ -1,4 +1,4 @@
-// i18n configuration (WO-03, Wave 1) — the supported locales for Peshi.
+// i18n configuration (WO-03, Wave 1) — the supported locales for Mukadma.
 // English + Hindi at launch; Gujarati is a fast-follow (fonts already loaded).
 // Locale routing is NOT used (flat routes preserved — no IA change); the active
 // locale is resolved per-request from a cookie, see src/lib/locale.ts.

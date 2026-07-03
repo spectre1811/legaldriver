@@ -1,0 +1,40 @@
+// Brand logo mark — the letter tile (WO-05 / WO-26): a lowercase Fraunces mark
+// letter (outlined, font-independent) over the brass hearing-date underline, in
+// a rounded tile. Name-agnostic filename so a rebrand only swaps the glyph.
+// Two colourways:
+//   tone="light" → paper tile + ink glyph (for dark surfaces)
+//   tone="dark"  → ink tile + paper glyph (for light surfaces / high contrast)
+// The glyph is the real Fraunces 600 letter converted to a path so it renders
+// identically without the font. Purely presentational.
+
+// Fraunces 600 lowercase "m", centred in the 128 viewBox, baseline ~80.
+const GLYPH_PATH =
+  "M40.99 42.90L40.99 47.33Q45.25 43.64 48.49 42Q52.30 40.12 55.71 40.12Q61 40.12 64.15 43.48Q65.87 45.32 66.65 47.86Q71.16 43.93 74.48 42.08Q78.09 40.12 81.37 40.12Q86.42 40.12 89.22 43.50Q92.03 46.88 92.61 52.50L94.90 73.20Q95.07 74.56 95.37 75.17Q95.68 75.79 96.46 76.03L97.90 76.44Q98.67 76.73 99.04 77.16Q99.41 77.59 99.41 78.20Q99.41 78.98 98.88 79.43Q98.35 79.89 97.20 79.89L81.21 79.89Q78.91 79.89 78.91 78.08Q78.91 76.97 80.18 76.44L81.74 76.03Q82.56 75.74 82.97 75.13Q83.38 74.51 83.26 73.20L81.13 54.18Q80.72 50.61 79.30 48.81Q77.89 47 75.10 47Q73.46 47 71.61 47.93Q69.77 48.85 67.68 50.61L67.27 50.98Q67.31 51.72 67.31 52.50L67.31 73.20Q67.31 74.56 67.70 75.15Q68.09 75.74 68.87 76.03L70.26 76.44Q71.53 77.02 71.53 78.08Q71.53 79.89 69.28 79.89L53.74 79.89Q51.44 79.89 51.44 78.08Q51.44 76.97 52.71 76.44L54.27 76.03Q55.09 75.74 55.44 75.13Q55.79 74.51 55.79 73.20L55.79 54.18Q55.79 50.57 54.09 48.79Q52.39 47 49.43 47Q47.59 47 45.58 47.86Q43.57 48.73 41.40 50.61L40.99 50.98L40.99 73.33Q40.99 74.60 41.36 75.17Q41.73 75.74 42.46 76.03L43.94 76.44Q45.25 76.97 45.25 78.08Q45.25 79.89 42.96 79.89L27.13 79.89Q25.98 79.89 25.45 79.43Q24.92 78.98 24.92 78.20Q24.92 77.59 25.26 77.16Q25.61 76.73 26.39 76.44L28.03 76.03Q28.77 75.74 29.12 75.17Q29.47 74.60 29.47 73.33L29.47 49.83Q29.47 48.77 29.16 48.32Q28.85 47.86 28.15 47.74L25.98 47.58Q25.24 47.41 24.92 47.04Q24.59 46.68 24.59 46.10Q24.59 45.40 24.98 44.99Q25.37 44.58 26.47 44.17L34.10 41.39Q35.66 40.81 36.60 40.57Q37.54 40.32 38.40 40.32Q39.68 40.32 40.33 41.04Q40.99 41.76 40.99 42.90";
+
+export function BrandMark({
+  size = 28,
+  tone = "dark",
+  className,
+  title = "Mukadma",
+}: {
+  size?: number;
+  tone?: "light" | "dark";
+  className?: string;
+  title?: string;
+}) {
+  const tile = tone === "light" ? "#FAF7F1" : "#191926";
+  const glyph = tone === "light" ? "#191926" : "#FAF7F1";
+  return (
+    <svg width={size} height={size} viewBox="0 0 128 128" role="img" aria-label={title} className={className}>
+      <rect
+        x="5" y="5" width="118" height="118" rx="27"
+        fill={tile}
+        stroke={tone === "light" ? "#191926" : "none"}
+        strokeOpacity={tone === "light" ? 0.12 : 0}
+        strokeWidth="2"
+      />
+      <path d={GLYPH_PATH} fill={glyph} />
+      <rect x="34" y="84" width="56" height="6" rx="3" fill="#A8823C" />
+    </svg>
+  );
+}

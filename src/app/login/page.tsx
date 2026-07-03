@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { signIn, signUp } from "./actions";
 import { Icon, type IconName } from "@/components/icons";
-import { PeshiMark } from "@/components/peshi-mark";
+import { BrandMark } from "@/components/brand-mark";
 import { brand } from "@/lib/brand";
 
 const TRUST: [IconName, string][] = [
@@ -21,12 +21,12 @@ export default async function LoginPage({
       {/* Brand panel — ink plate, one line of brass. No gradients. */}
       <section className="relative hidden flex-col justify-between overflow-hidden bg-ec-ink p-12 text-ec-paper lg:flex">
         <div className="relative flex items-center gap-2.5">
-          <PeshiMark size={30} tone="light" />
+          <BrandMark size={30} tone="light" />
           <span className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight text-ec-paper">{brand.name}</span>
         </div>
 
         <div className="relative max-w-md">
-          <p lang="gu" className="mb-3 font-display text-7xl font-medium leading-none text-ec-paper/10">પેશી</p>
+          <p lang="gu" className="mb-3 font-display text-7xl font-medium leading-none text-ec-paper/10">{brand.nameGujarati}</p>
           <h1 className="font-display text-4xl font-medium leading-[1.15] text-ec-paper">{t("brand.headline")}</h1>
           <p className="mt-4 text-ec-paper/70">{t("brand.sub")}</p>
           <ul className="mt-8 space-y-3">
@@ -48,7 +48,7 @@ export default async function LoginPage({
       <section className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm animate-fade-in">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <PeshiMark size={30} tone="dark" />
+            <BrandMark size={30} tone="dark" />
             <span className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink">{brand.name}</span>
           </div>
 
