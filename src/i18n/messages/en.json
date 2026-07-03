@@ -71,5 +71,45 @@
     "filing": "Filing",
     "noFilings": "No filings due.",
     "inbox": { "title": "Inbox review", "body": "emails waiting to be filed to a client or case.", "open": "Open inbox" }
+  },
+  "causeList": {
+    "page": {
+      "title": "Cause list",
+      "subtitle": "Upload the cause list you received from the court — we match it to your cases and update next-hearing dates. You supply the file."
+    },
+    "choose": "Choose cause-list PDF",
+    "parse": "Parse & match",
+    "parsing": "Parsing…",
+    "badge": {
+      "matched": "{count} matched",
+      "updated": "{count} updated",
+      "unmatched": "{count} not in your cases"
+    },
+    "th": { "cnr": "CNR", "date": "Hearing date", "item": "Item / Court", "case": "Case" },
+    "item": "Item {n}",
+    "notMatched": "not in your cases",
+    "dateUpdated": "date updated",
+    "empty": {
+      "title": "No cause list parsed yet",
+      "body": "Upload the daily cause list you received from the court. We read it, match the CNRs to your cases, and update their next-hearing dates. You supply the file."
+    }
+  },
+  "cases": {
+    "title": "Cases",
+    "subtitle": "Add a case by CNR; we fetch its details and keep it fresh on a nightly sync.",
+    "count": "{count, plural, one {# case} other {# cases}}",
+    "filtered": "filtered",
+    "clearFilters": "Clear filters",
+    "th": { "case": "Case", "client": "Client", "court": "Court", "stage": "Stage", "status": "Status", "next": "Next hearing", "source": "Source" },
+    "diary": "diary",
+    "past": "past",
+    "noDate": "no date",
+    "delete": "Delete case",
+    "empty": {
+      "title": "No cases yet",
+      "body": "Add your first case by CNR above — its hearings, parties and orders will sync automatically.",
+      "filteredTitle": "No matching cases",
+      "filteredBody": "Try a different search or clear the filters."
+    }
   }
 }
