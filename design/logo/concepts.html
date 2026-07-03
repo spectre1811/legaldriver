@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Peshi — Logo concepts (Route A)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Noto+Serif+Devanagari:wght@500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF7F1; --paper2:#FFFDF8; --paper3:#F3EEE3;
+    --ink:#191926; --ink2:#46465A; --ink3:#7C7C90;
+    --brass:#A8823C; --brass-deep:#8A6A2C; --line:#DCDAE0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:44px 40px 80px}
+  h1{font-family:Fraunces,serif;font-weight:600;font-size:30px;letter-spacing:-.02em;margin:0 0 4px}
+  .sub{color:var(--ink3);font-size:13.5px;margin:0 0 34px}
+  h2{font-family:Fraunces,serif;font-weight:600;font-size:19px;margin:44px 0 4px;letter-spacing:-.01em}
+  .hint{color:var(--ink3);font-size:12.5px;margin:0 0 18px}
+  .row{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end}
+  .card{background:var(--paper2);border:1px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:14px}
+  .card.dark{background:var(--ink);border-color:#2E2E3E}
+  .tile-row{display:flex;align-items:flex-end;gap:18px}
+  .cap{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3)}
+  .card.dark .cap{color:#9C9CAC}
+  .swatches{display:flex;gap:10px;margin-top:8px}
+  .sw{width:56px;height:56px;border-radius:12px;display:flex;align-items:flex-end;padding:6px;font-size:10px;color:#fff}
+  /* wordmark (matches the live treatment: Fraunces lowercase + brass date-underline overshoot) */
+  .wordmark{position:relative;display:inline-block;font-family:Fraunces,serif;font-weight:600;letter-spacing:-.02em;line-height:1;text-transform:lowercase}
+  .wordmark::after{content:"";position:absolute;left:1px;right:-.34em;bottom:-.14em;height:.07em;background:var(--brass);border-radius:2px}
+  .wm-hero{font-size:76px}
+  .wm-mid{font-size:34px}
+  .card.dark .wordmark{color:var(--paper)}
+  .devnag{font-family:"Noto Serif Devanagari",serif;font-weight:600}
+  figcaption{font-size:12px;color:var(--ink2);margin-top:2px}
+  .note{margin-top:40px;padding:18px 20px;border:1px dashed var(--brass);border-radius:14px;background:#F4EBD8;font-size:13px;line-height:1.55;color:#5F4A1E}
+  .lockup{display:flex;align-items:center;gap:14px}
+  .stack{display:flex;flex-direction:column;align-items:center;gap:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Peshi — logo concepts</h1>
+  <p class="sub">Route A (Claude-authored SVG). Palette-clean (ink #191926 · brass #A8823C · paper #FAF7F1). No gavel/scales/pillars/shield/AI-sparkle. Every mark shown at 16px + monochrome to prove it survives.</p>
+
+  <!-- ============ WORDMARK ============ -->
+  <h2>1 · Wordmark</h2>
+  <p class="hint">Fraunces, lowercase, warm-editorial, with the single brass hairline that doubles as a hearing-date underline (overshoots to the right). This already lives on the site as text — here as the identity anchor.</p>
+  <div class="row">
+    <div class="card"><span class="cap">on paper</span><span class="wordmark wm-hero">peshi</span></div>
+    <div class="card dark"><span class="cap">on ink</span><span class="wordmark wm-hero">peshi</span></div>
+    <div class="card"><span class="cap">with पेशी</span><span class="wordmark wm-mid">peshi</span><span class="devnag" style="font-size:30px">पेशी</span></div>
+  </div>
+
+  <!-- ============ MARKS ============ -->
+  <h2>2 · Standalone mark (app icon / favicon / avatar)</h2>
+  <p class="hint">The missing piece. Three directions, each rendered at 96 / 32 / 16 px, colour + one-colour, on light + dark. <b>B (date-tab docket)</b> is my recommendation: fully ownable, on-motif, and cleanest at 16px.</p>
+
+  <div class="row">
+    <!-- MARK A: प monogram -->
+    <div class="card">
+      <span class="cap">A · प monogram</span>
+      <div class="tile-row">
+        <!-- 96 -->
+        <svg width="96" height="96" viewBox="0 0 128 128" aria-label="peshi mark A 96">
+          <rect x="4" y="4" width="120" height="120" rx="30" fill="#191926"/>
+          <text x="64" y="82" text-anchor="middle" font-family="'Noto Serif Devanagari',serif" font-weight="600" font-size="74" fill="#FAF7F1">प</text>
+          <rect x="34" y="92" width="60" height="5" rx="2.5" fill="#A8823C"/>
+        </svg>
+        <svg width="32" height="32" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="#191926"/><text x="64" y="82" text-anchor="middle" font-family="'Noto Serif Devanagari',serif" font-weight="600" font-size="74" fill="#FAF7F1">प</text><rect x="34" y="92" width="60" height="5" rx="2.5" fill="#A8823C"/></svg>
+        <svg width="16" height="16" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="#191926"/><text x="64" y="82" text-anchor="middle" font-family="'Noto Serif Devanagari',serif" font-weight="600" font-size="74" fill="#FAF7F1">प</text><rect x="34" y="92" width="60" height="5" rx="2.5" fill="#A8823C"/></svg>
+      </div>
+      <figcaption>Devanagari प + brass date-underline. Native + typographic review required; convert to outlines before ship.</figcaption>
+    </div>
+
+    <!-- MARK B: date-tab docket (recommended) -->
+    <div class="card">
+      <span class="cap">B · date-tab docket ★</span>
+      <div class="tile-row">
+        <svg width="96" height="96" viewBox="0 0 128 128" aria-label="peshi mark B 96">
+          <rect x="4" y="4" width="120" height="120" rx="30" fill="#191926"/>
+          <!-- docket card with index tab -->
+          <path d="M40 34 h30 a8 8 0 0 1 8 8 v2 h10 a8 8 0 0 1 8 8 v40 a8 8 0 0 1 -8 8 H40 a8 8 0 0 1 -8 -8 V42 a8 8 0 0 1 8 -8 Z" fill="#FAF7F1"/>
+          <!-- brass hearing-date underline (overshoots the card to the right) -->
+          <rect x="44" y="84" width="52" height="6" rx="3" fill="#A8823C"/>
+        </svg>
+        <svg width="32" height="32" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="#191926"/><path d="M40 34 h30 a8 8 0 0 1 8 8 v2 h10 a8 8 0 0 1 8 8 v40 a8 8 0 0 1 -8 8 H40 a8 8 0 0 1 -8 -8 V42 a8 8 0 0 1 8 -8 Z" fill="#FAF7F1"/><rect x="44" y="84" width="52" height="6" rx="3" fill="#A8823C"/></svg>
+        <svg width="16" height="16" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="#191926"/><path d="M40 34 h30 a8 8 0 0 1 8 8 v2 h10 a8 8 0 0 1 8 8 v40 a8 8 0 0 1 -8 8 H40 a8 8 0 0 1 -8 -8 V42 a8 8 0 0 1 8 -8 Z" fill="#FAF7F1"/><rect x="44" y="84" width="52" height="6" rx="3" fill="#A8823C"/></svg>
+      </div>
+      <figcaption>A docket/index-tab card with the brass hearing-date rule. Cliché-free, TM-able, crisp at 16px.</figcaption>
+    </div>
+
+    <!-- MARK C: p tile -->
+    <div class="card">
+      <span class="cap">C · “p” tile</span>
+      <div class="tile-row">
+        <svg width="96" height="96" viewBox="0 0 128 128" aria-label="peshi mark C 96">
+          <rect x="4" y="4" width="120" height="120" rx="30" fill="#FAF7F1"/>
+          <text x="60" y="94" text-anchor="middle" font-family="Fraunces,serif" font-weight="600" font-size="96" fill="#191926">p</text>
+          <rect x="36" y="96" width="58" height="6" rx="3" fill="#A8823C"/>
+        </svg>
+        <svg width="32" height="32" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="#FAF7F1"/><text x="60" y="94" text-anchor="middle" font-family="Fraunces,serif" font-weight="600" font-size="96" fill="#191926">p</text><rect x="36" y="96" width="58" height="6" rx="3" fill="#A8823C"/></svg>
+        <svg width="16" height="16" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="#FAF7F1"/><text x="60" y="94" text-anchor="middle" font-family="Fraunces,serif" font-weight="600" font-size="96" fill="#191926">p</text><rect x="36" y="96" width="58" height="6" rx="3" fill="#A8823C"/></svg>
+      </div>
+      <figcaption>Lowercase Fraunces “p” + brass underline — the wordmark, distilled. Latin, safe, but less distinctive than B.</figcaption>
+    </div>
+  </div>
+
+  <!-- monochrome + dark proof for the recommended mark -->
+  <h2>2b · Mark B — one-colour & dark proof</h2>
+  <p class="hint">Must survive a single ink, single brass, reversed (paper on ink), and on a dark tile.</p>
+  <div class="row">
+    <div class="card"><span class="cap">mono ink</span>
+      <svg width="72" height="72" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="none" stroke="#191926" stroke-width="6"/><path d="M40 34 h30 a8 8 0 0 1 8 8 v2 h10 a8 8 0 0 1 8 8 v40 a8 8 0 0 1 -8 8 H40 a8 8 0 0 1 -8 -8 V42 a8 8 0 0 1 8 -8 Z" fill="none" stroke="#191926" stroke-width="6"/><rect x="44" y="84" width="52" height="6" rx="3" fill="#191926"/></svg>
+    </div>
+    <div class="card"><span class="cap">brass on ink</span>
+      <svg width="72" height="72" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="#191926"/><path d="M40 34 h30 a8 8 0 0 1 8 8 v2 h10 a8 8 0 0 1 8 8 v40 a8 8 0 0 1 -8 8 H40 a8 8 0 0 1 -8 -8 V42 a8 8 0 0 1 8 -8 Z" fill="none" stroke="#A8823C" stroke-width="6"/><rect x="44" y="84" width="52" height="6" rx="3" fill="#A8823C"/></svg>
+    </div>
+    <div class="card dark"><span class="cap">on dark</span>
+      <svg width="72" height="72" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="#FAF7F1"/><path d="M40 34 h30 a8 8 0 0 1 8 8 v2 h10 a8 8 0 0 1 8 8 v40 a8 8 0 0 1 -8 8 H40 a8 8 0 0 1 -8 -8 V42 a8 8 0 0 1 8 -8 Z" fill="#191926"/><rect x="44" y="84" width="52" height="6" rx="3" fill="#A8823C"/></svg>
+    </div>
+  </div>
+
+  <!-- ============ LOCKUPS ============ -->
+  <h2>3 · Lockups (with mark B)</h2>
+  <div class="row">
+    <div class="card"><span class="cap">horizontal (nav)</span>
+      <div class="lockup">
+        <svg width="46" height="46" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="#191926"/><path d="M40 34 h30 a8 8 0 0 1 8 8 v2 h10 a8 8 0 0 1 8 8 v40 a8 8 0 0 1 -8 8 H40 a8 8 0 0 1 -8 -8 V42 a8 8 0 0 1 8 -8 Z" fill="#FAF7F1"/><rect x="44" y="84" width="52" height="6" rx="3" fill="#A8823C"/></svg>
+        <span class="wordmark" style="font-size:40px">peshi</span>
+      </div>
+    </div>
+    <div class="card"><span class="cap">stacked (splash)</span>
+      <div class="stack">
+        <svg width="60" height="60" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="#191926"/><path d="M40 34 h30 a8 8 0 0 1 8 8 v2 h10 a8 8 0 0 1 8 8 v40 a8 8 0 0 1 -8 8 H40 a8 8 0 0 1 -8 -8 V42 a8 8 0 0 1 8 -8 Z" fill="#FAF7F1"/><rect x="44" y="84" width="52" height="6" rx="3" fill="#A8823C"/></svg>
+        <span class="wordmark" style="font-size:34px">peshi</span>
+      </div>
+    </div>
+    <div class="card dark"><span class="cap">horizontal reversed</span>
+      <div class="lockup">
+        <svg width="46" height="46" viewBox="0 0 128 128"><rect x="4" y="4" width="120" height="120" rx="30" fill="#FAF7F1"/><path d="M40 34 h30 a8 8 0 0 1 8 8 v2 h10 a8 8 0 0 1 8 8 v40 a8 8 0 0 1 -8 8 H40 a8 8 0 0 1 -8 -8 V42 a8 8 0 0 1 8 -8 Z" fill="#191926"/><rect x="44" y="84" width="52" height="6" rx="3" fill="#A8823C"/></svg>
+        <span class="wordmark" style="font-size:40px">peshi</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="swatches">
+    <div class="sw" style="background:#191926">ink<br>191926</div>
+    <div class="sw" style="background:#A8823C">brass<br>A8823C</div>
+    <div class="sw" style="background:#FAF7F1;color:#191926">paper<br>FAF7F1</div>
+  </div>
+
+  <div class="note">
+    <b>These are Route-A first drafts for direction, not a finalized logo.</b> Per LOGO-BRIEF §6–7: an AI-generated identity must be <b>human-refined</b> (optical spacing, curve smoothing) and <b>TM-searched</b> on “Peshi” before locking; the प monogram needs a <b>native Devanagari review</b> and outline conversion. Once you pick a direction (B recommended), I’ll produce the full asset set: SVG masters, favicon 16/32/48, 512 maskable PWA icon, PNG @1–3×, and a one-page usage sheet — then wire the mark into the app (nav, favicon, login, PWA manifest).
+  </div>
+</div>
+</body>
+</html>
