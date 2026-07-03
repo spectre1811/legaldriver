@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { deleteCalendarEvent } from "./actions";
@@ -20,6 +21,7 @@ export type AgendaEvent = {
 type Group = { date: string; label: string; relative: string; events: AgendaEvent[] };
 
 function DeleteControl({ id, title }: { id: string; title: string }) {
+  const t = useTranslations("calendar");
   const [confirming, setConfirming] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -29,9 +31,9 @@ function DeleteControl({ id, title }: { id: string; title: string }) {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        aria-label={`Delete ${title}`}
+        aria-label={t("deleteAria", { title })}
         className="rounded-md p-1 text-ink-faint transition hover:bg-rose-50 hover:text-rose-600"
-        title="Delete entry"
+        title={t("deleteEntry")}
       >
         <Icon name="alert" className="h-3.5 w-3.5" />
       </button>
@@ -42,7 +44,7 @@ function DeleteControl({ id, title }: { id: string; title: string }) {
       {error ? (
         <span className="text-amber-700">{error}</span>
       ) : (
-        <span className="text-ink-muted">Delete?</span>
+        <span className="text-ink-muted">{t("deleteConfirm")}</span>
       )}
       <button
         type="button"
@@ -59,29 +61,30 @@ function DeleteControl({ id, title }: { id: string; title: string }) {
         }
         className="rounded-md bg-rose-50 px-2 py-0.5 font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60"
       >
-        {pending ? "…" : "Yes"}
+        {pending ? "…" : t("yes")}
       </button>
       <button
         type="button"
         onClick={() => setConfirming(false)}
         className="rounded-md px-2 py-0.5 text-ink-muted hover:text-ink"
       >
-        No
+        {t("no")}
       </button>
     </span>
   );
 }
 
 export function Agenda({ groups }: { groups: Group[] }) {
+  const t = useTranslations("calendar");
   if (!groups.length) {
     return (
       <div className="px-5 py-12 text-center">
         <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
           <Icon name="calendar" className="h-5 w-5" />
         </span>
-        <h3 className="text-sm font-medium">Nothing upcoming</h3>
+        <h3 className="text-sm font-medium">{t("emptyTitle")}</h3>
         <p className="mx-auto mt-1 max-w-xs text-xs text-ink-muted">
-          No hearings, deadlines or entries in the next 30 days for the selected types.
+          {t("emptyBody")}
         </p>
       </div>
     );

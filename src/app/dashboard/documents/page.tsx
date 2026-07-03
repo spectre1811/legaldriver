@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, EmptyState, fmtDate, fmtSize } from "@/components/ui";
 import { Icon, type IconName } from "@/components/icons";
@@ -6,7 +7,6 @@ import { DocActions } from "@/components/doc-actions";
 import { CATEGORIES, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/docs/categories";
 import { FilterBar } from "./filter-bar";
 
-const SOURCE: Record<string, string> = { gmail: "Gmail", upload: "Upload", court_order: "Court order" };
 const CATEGORY_ICON: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.icon]));
 
 export default async function DocumentsPage({
@@ -14,6 +14,12 @@ export default async function DocumentsPage({
 }: {
   searchParams: { q?: string; source?: string; type?: string; filed?: string; client?: string; category?: string };
 }) {
+  const t = await getTranslations("documents");
+  const SOURCE: Record<string, string> = {
+    gmail: t("source.gmail"),
+    upload: t("source.upload"),
+    court_order: t("source.courtOrder"),
+  };
   const supabase = createClient();
   const { q, source, type, filed, client, category } = searchParams;
 
@@ -72,14 +78,14 @@ export default async function DocumentsPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Documents" subtitle="Every document, organised by category and client. A case is an optional tag — file by client first, link to a case when it matters." />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <FilterBar types={types} clients={clientOpts} />
 
       {docs && docs.length ? (
         <div className="space-y-6">
           <div className="text-xs text-ink-faint">
-            {docs.length} document{docs.length === 1 ? "" : "s"} in {sections.length} categor{sections.length === 1 ? "y" : "ies"}{activeFilters ? " · filtered" : ""}
+            {t("summary.count", { docs: docs.length, categories: sections.length })}{activeFilters ? ` · ${t("summary.filtered")}` : ""}
           </div>
           {sections.map(([cat, rows]) => (
             <Card key={cat} className="overflow-hidden">
@@ -91,12 +97,12 @@ export default async function DocumentsPage({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line text-left">
-                    <th className="px-5 py-3 label">File</th>
-                    <th className="hidden px-5 py-3 label sm:table-cell">Type</th>
-                    <th className="px-5 py-3 label">Filed under</th>
-                    <th className="hidden px-5 py-3 label md:table-cell">Source</th>
-                    <th className="hidden px-5 py-3 label lg:table-cell">Size</th>
-                    <th className="hidden px-5 py-3 label lg:table-cell">Added</th>
+                    <th className="px-5 py-3 label">{t("field.file")}</th>
+                    <th className="hidden px-5 py-3 label sm:table-cell">{t("field.type")}</th>
+                    <th className="px-5 py-3 label">{t("field.filedUnder")}</th>
+                    <th className="hidden px-5 py-3 label md:table-cell">{t("field.source")}</th>
+                    <th className="hidden px-5 py-3 label lg:table-cell">{t("field.size")}</th>
+                    <th className="hidden px-5 py-3 label lg:table-cell">{t("field.added")}</th>
                     <th className="px-5 py-3"></th>
                   </tr>
                 </thead>
@@ -124,7 +130,7 @@ export default async function DocumentsPage({
                               {secondary && <span className="mt-0.5 text-xs text-ink-faint">{secondary}</span>}
                             </span>
                           ) : (
-                            <span className="text-amber-600">unfiled</span>
+                            <span className="text-amber-600">{t("unfiled")}</span>
                           )}
                         </td>
                         <td className="hidden px-5 py-3.5 text-xs text-ink-faint md:table-cell">{SOURCE[d.source] ?? d.source}</td>
@@ -142,10 +148,10 @@ export default async function DocumentsPage({
           ))}
         </div>
       ) : (
-        <EmptyState icon="documents" title={activeFilters ? "No matching documents" : "No documents yet"} body={activeFilters ? "Try a different search or clear the filters." : "Connect Gmail or upload to a case — everything is parsed and searchable here."} />
+        <EmptyState icon="documents" title={activeFilters ? t("empty.filteredTitle") : t("empty.emptyTitle")} body={activeFilters ? t("empty.filteredBody") : t("empty.emptyBody")} />
       )}
 
-      <p className="text-xs text-ink-faint">Files are stored in a private bucket; downloads use short-lived signed URLs scoped to your tenant.</p>
+      <p className="text-xs text-ink-faint">{t("storageNote")}</p>
     </div>
   );
 }
