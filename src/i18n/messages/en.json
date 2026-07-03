@@ -94,7 +94,8 @@
       "copilot": "Copilot",
       "drafting": "Drafting",
       "settings": "Settings"
-    }
+    },
+    "aiUsage": "AI usage"
   },
   "today": {
     "overline": "आज की पेशी",
@@ -1636,5 +1637,34 @@
     "comingNextHeading": "Coming next",
     "comingNext": "We’re building a place where any citizen can find the right advocate with clarity and trust — drawn from the public court record, never rankings or “best lawyer” claims. If you’d like to be told when it opens, write to <email>hello@mukadma.in</email>.",
     "portal": "Already working with an advocate on Mukadma? Ask them to share your case portal."
+  },
+  "aiUsage": {
+    "title": "AI usage & cost",
+    "subtitle": "Every AI call runs through one metered gateway — cite-or-abstain, per-tenant cost. No client data trains anyone's model.",
+    "empty": {
+      "title": "No AI usage yet",
+      "body": "Generate a case summary or ask the Copilot — metered calls appear here."
+    },
+    "stat": {
+      "cost": "Total cost",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "tokensHint": "{in} in · {out} out",
+      "cacheRate": "Cache hit",
+      "cacheHint": "served from cache"
+    },
+    "byModel": "By model",
+    "recent": "Recent calls",
+    "col": {
+      "model": "Model",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "cost": "Cost",
+      "task": "Task",
+      "when": "When"
+    },
+    "cached": "cached",
+    "failed": "failed",
+    "footer": "Assistive AI — grounded and cited where possible, not legal advice. Costs are gateway-metered per tenant."
   }
 }
