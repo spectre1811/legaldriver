@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
 
   let refreshed = 0;
   let changed = 0;
+  let failedBatches = 0;
   for (const [tenantId, list] of byTenant) {
     const prevByCnr = new Map(list.map((m) => [m.cnr.toUpperCase(), m.next]));
     for (let i = 0; i < list.length; i += 50) {
@@ -59,6 +60,7 @@ export async function GET(request: NextRequest) {
       try {
         cases = await refreshCasesCached(batch); // through the gateway: writes cache + health
       } catch {
+        failedBatches++; // count skipped batches for observability (not silently swallowed)
         continue; // skip a failing batch; never throw the whole job
       }
       for (const c of cases) {
@@ -80,6 +82,6 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     ok: true, source: court.source,
-    considered: candidates.length, refreshed, changed, deferred,
+    considered: candidates.length, refreshed, changed, deferred, failedBatches,
   });
 }

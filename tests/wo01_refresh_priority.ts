@@ -42,5 +42,12 @@ const capped = orderForRefresh(cands, NOW, 3);
 ok(capped.ordered.length === 3 && capped.deferred === 2, "cap=3 → 3 refreshed, 2 deferred");
 ok(!capped.ordered.some((m) => m.id === "disposed_stale"), "deferred tail is the lowest-priority (disposed) case");
 
+// Tenant fairness: a bulk-import tenant (many tier-0 never-synced) must NOT starve another
+// tenant's urgent case. Round-robin within the urgent tier surfaces small-tenant B early.
+const cb = (id: string, tenant: string) => c(id, { tenant_id: tenant, next_hearing_date: day(1), last_synced_at: null });
+const many = [cb("A1", "A"), cb("A2", "A"), cb("A3", "A"), cb("A4", "A"), cb("A5", "A"), cb("B1", "B")];
+const fair = orderForRefresh(many, NOW, 2);
+ok(fair.ordered.some((m) => m.id === "B1"), "tenant B's urgent case is NOT starved by tenant A's bulk import (round-robin within tier)");
+
 console.log(failed === 0 ? "\nWO-01 REFRESH PRIORITY: PASS" : `\nWO-01 REFRESH PRIORITY: FAIL (${failed})`);
 process.exit(failed === 0 ? 0 : 1);

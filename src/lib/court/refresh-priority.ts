@@ -31,21 +31,34 @@ export function refreshTier(m: RefreshCandidate, nowMs: number): 0 | 1 | 2 {
   return daysToNext <= URGENT_DAYS ? 0 : 1; // overdue or ≤3 days out = urgent
 }
 
-// Order candidates for refresh: by tier, then stalest-first (never-synced counts as
-// infinitely stale → front of its tier). Returns the slice to refresh THIS run (`ordered`,
-// capped) plus how many were `deferred` — the caller logs the deferred count (no silent
-// truncation; protocol §6).
+// Order candidates for refresh: global tier order (urgent-first across ALL tenants), and WITHIN
+// each tier round-robin across tenants (stalest-first per tenant). The round-robin prevents a
+// single high-volume tenant — e.g. a firm that just bulk-imported 500 never-synced cases (all
+// tier-0) — from consuming the whole run cap and starving other tenants' urgent cases, while
+// still refreshing everyone's most time-sensitive cases before anyone's low-priority ones.
+// Returns the slice to refresh THIS run (`ordered`, capped) + how many were `deferred` (reported,
+// never silently dropped — protocol §6).
 export function orderForRefresh(
   candidates: RefreshCandidate[],
   nowMs: number,
   cap: number,
 ): { ordered: RefreshCandidate[]; deferred: number } {
   const watermark = (m: RefreshCandidate) => (m.last_synced_at ? Date.parse(m.last_synced_at) : -Infinity);
-  const sorted = [...candidates].sort((a, b) => {
-    const t = refreshTier(a, nowMs) - refreshTier(b, nowMs);
-    if (t !== 0) return t;
-    return watermark(a) - watermark(b); // ascending = stalest first
-  });
-  const limit = cap > 0 ? cap : sorted.length;
-  return { ordered: sorted.slice(0, limit), deferred: Math.max(0, sorted.length - limit) };
+  // Bucket by tier → tenant.
+  const byTier: Map<string, RefreshCandidate[]>[] = [new Map(), new Map(), new Map()];
+  for (const m of candidates) {
+    const byTenant = byTier[refreshTier(m, nowMs)];
+    (byTenant.get(m.tenant_id) ?? byTenant.set(m.tenant_id, []).get(m.tenant_id)!).push(m);
+  }
+  const ordered: RefreshCandidate[] = [];
+  for (const byTenant of byTier) {
+    // stalest-first within each tenant, then round-robin across tenants for this tier
+    const queues = [...byTenant.values()].map((list) => list.sort((a, b) => watermark(a) - watermark(b)));
+    for (let i = 0, any = true; any; i++) {
+      any = false;
+      for (const q of queues) if (i < q.length) { ordered.push(q[i]); any = true; }
+    }
+  }
+  const limit = cap > 0 ? cap : ordered.length;
+  return { ordered: ordered.slice(0, limit), deferred: Math.max(0, ordered.length - limit) };
 }
