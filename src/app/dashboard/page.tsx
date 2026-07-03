@@ -26,7 +26,7 @@ export default async function OverviewPage() {
     return isoDay(d);
   });
 
-  const [upcoming, weekRows, deadlines, review, lastSync] = await Promise.all([
+  const [upcoming, weekRows, deadlines, review, lastSync, advocateCount, matterCount] = await Promise.all([
     supabase
       .from("hearing")
       .select("id, date, purpose, court_no, judge, matter:matter_id (id, title, cnr, court)")
@@ -42,6 +42,8 @@ export default async function OverviewPage() {
       .limit(4),
     supabase.from("email_message").select("*", { count: "exact", head: true }).eq("status", "needs_review"),
     supabase.from("matter").select("last_synced_at").order("last_synced_at", { ascending: false, nullsFirst: false }).limit(1).maybeSingle(),
+    supabase.from("advocate").select("id", { count: "exact", head: true }),
+    supabase.from("matter").select("id", { count: "exact", head: true }),
   ]);
 
   const hearings: TodayHearing[] = (upcoming.data ?? []).map((h) => ({
@@ -77,6 +79,7 @@ export default async function OverviewPage() {
         syncedAt={lastSync.data?.last_synced_at ?? null}
         filings={filings}
         inboxReview={review.count ?? 0}
+        firstRun={(advocateCount.count ?? 0) === 0 && (matterCount.count ?? 0) === 0}
       />
       <p className="flex items-center gap-1.5 text-xs text-ec-ink-3">
         <Icon name="alert" className="h-3.5 w-3.5" /> {tc("disclaimer")}

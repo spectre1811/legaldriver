@@ -24,9 +24,10 @@ export type TodayViewProps = {
   syncedAt: string | null;
   filings: TodayFiling[];
   inboxReview: number;
+  firstRun: boolean;
 };
 
-export async function TodayView({ now, week, hearings, courts, syncedAt, filings, inboxReview }: TodayViewProps) {
+export async function TodayView({ now, week, hearings, courts, syncedAt, filings, inboxReview, firstRun }: TodayViewProps) {
   const t = await getTranslations("today");
   const locale = await getLocale();
   const wd = (iso: string, opt: Intl.DateTimeFormatOptions) =>
@@ -114,6 +115,28 @@ export async function TodayView({ now, week, hearings, courts, syncedAt, filings
                 {syncedAt ? ` · ${t("syncedAt", { time: time(syncedAt) })}` : ""}
               </p>
             </>
+          ) : firstRun ? (
+            /* WO-16 first-run activation — turn the cold empty dashboard into a guided setup. */
+            <div className="ec-card px-6 py-10 sm:px-10 sm:py-12">
+              <p className="mb-2 font-display text-[15px] italic text-ec-brass-deep">{t("firstRun.eyebrow")}</p>
+              <h2 className="font-display text-2xl font-medium text-ec-ink">{t("firstRun.title")}</h2>
+              <p className="mt-2 max-w-lg text-[15px] leading-relaxed text-ec-ink-2">{t("firstRun.body")}</p>
+              <ol className="mt-6 grid gap-3 sm:grid-cols-3">
+                {[1, 2, 3].map((n) => (
+                  <li key={n} className="rounded-ec-m border border-ec-hair bg-ec-paper p-4">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-ec-brass-tint text-sm font-semibold text-ec-brass-deep">{n}</span>
+                    <p className="mt-2 text-sm text-ec-ink-2">{t(`firstRun.step${n}`)}</p>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <Link href="/dashboard/onboarding" className="ec-btn ec-btn-ink">{t("firstRun.primaryCta")}</Link>
+                <Link href="/dashboard/cases" className="ec-btn ec-btn-ghost">{t("firstRun.secondaryCta")}</Link>
+              </div>
+              <p className="mt-4 flex items-center gap-1.5 text-xs text-ec-ink-3">
+                <Icon name="alert" className="h-3.5 w-3.5" /> {t("firstRun.foot")}
+              </p>
+            </div>
           ) : (
             <div className="ec-card flex flex-col items-center justify-center px-6 py-14 text-center">
               <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-ec-m bg-ec-brass-tint text-ec-brass-deep">
