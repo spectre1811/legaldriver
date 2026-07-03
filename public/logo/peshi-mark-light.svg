@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Peshi">
+  <rect x="5" y="5" width="118" height="118" rx="27" fill="#FAF7F1" stroke="#191926" stroke-opacity="0.12" stroke-width="2"/>
+  <text x="62" y="94" text-anchor="middle" font-size="94" font-family="Fraunces, Georgia, serif" font-weight="600" fill="#191926">p</text>
+  <rect x="38" y="96" width="52" height="6" rx="3" fill="#A8823C"/>
+</svg>
