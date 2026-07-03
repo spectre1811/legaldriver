@@ -11,6 +11,7 @@ import { aiGateway } from "@/lib/ai/gateway";
 import { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } from "@/lib/docs/case-summary";
 import { logActivity } from "@/lib/activity";
 import { track } from "@/lib/analytics/track";
+import { fileUploadedDocument } from "@/lib/docs/file-upload";
 import { scheduleReminders } from "@/lib/notify/schedule";
 import type { Database } from "@/lib/db/database.types";
 
@@ -123,30 +124,19 @@ export async function addCaseDocument(matterId: string, formData: FormData): Pro
   if (file.size > 25 * 1024 * 1024) return { ok: false, message: "File too large (max 25 MB)." };
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const contentHash = await sha256Hex(buffer);
-
-  // Skip exact dupes (same tenant + content_hash) already in the library.
-  const { data: dupe } = await supabase.from("document").select("id").eq("content_hash", contentHash).limit(1).maybeSingle();
-  if (dupe) return { ok: true, message: `“${file.name}” is already on file — skipped as a duplicate.` };
-
-  const admin = createAdminClient();
-  const path = `${tenantId}/cases/${matterId}/${Date.now()}_${file.name}`;
-  const { error: upErr } = await admin.storage.from("documents").upload(path, buffer, { contentType: file.type || "application/octet-stream", upsert: true });
-  if (upErr) return { ok: false, message: `Upload failed: ${upErr.message}` };
-
-  const { text, needsOcr } = await extractText(buffer, file.type || "", file.name);
-  await admin.from("document").insert({
-    tenant_id: tenantId,
-    source: "upload",
-    storage_path: path,
+  // WO-27 — shared path: store + dedup + extract + CLASSIFY, with this case as explicit context
+  // (respected, never overridden). The upload now gets a doc_type/summary it didn't before.
+  const r = await fileUploadedDocument({
+    tenantId,
+    buffer,
+    mime: file.type,
     filename: file.name,
-    mime: file.type || "application/octet-stream",
-    size_bytes: buffer.length,
-    parsed_text: text || null,
-    matter_id: matterId,
-    content_hash: contentHash,
-    extracted: { needsOcr: needsOcr ?? false } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],
+    pathPrefix: `cases/${matterId}`,
+    context: { matterId },
   });
+  if (!r.ok) return { ok: false, message: `Upload failed: ${r.error}` };
+  if (r.status === "duplicate") return { ok: true, message: `“${file.name}” is already on file — skipped as a duplicate.` };
+
   await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "document.upload", entity: "matter", entity_id: matterId, after: { filename: file.name } });
   await logActivity(supabase, tenantId, { matterId, type: "document.uploaded", summary: `Document “${file.name}” uploaded` });
   revalidatePath(`/dashboard/cases/${matterId}`);

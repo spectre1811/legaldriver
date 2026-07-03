@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
 import { logActivity } from "@/lib/activity";
+import { fileUploadedDocument } from "@/lib/docs/file-upload";
 import { extractText } from "@/lib/docs/extract";
 import { sha256Hex } from "@/lib/docs/hash";
 import type { Database } from "@/lib/db/database.types";
@@ -85,52 +86,27 @@ export async function uploadClientDocuments(clientId: string, formData: FormData
   const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
   if (!files.length) return { ok: false, message: "Choose at least one file to upload." };
 
-  const admin = createAdminClient();
   let uploaded = 0;
   let skipped = 0;
   let failed = 0;
 
   for (const file of files) {
     if (file.size > 25 * 1024 * 1024) { failed++; continue; }
-
     const buffer = Buffer.from(await file.arrayBuffer());
-    const contentHash = await sha256Hex(buffer);
-
-    // App-level dedup: skip if an identical file already exists for this tenant.
-    const { data: dupe } = await supabase
-      .from("document")
-      .select("id")
-      .eq("content_hash", contentHash)
-      .limit(1)
-      .maybeSingle();
-    if (dupe) { skipped++; continue; }
-
-    const path = `${tenantId}/client/${clientId}/${Date.now()}_${crypto.randomUUID().slice(0, 8)}_${file.name}`;
-    const { error: upErr } = await admin.storage
-      .from("documents")
-      .upload(path, buffer, { contentType: file.type || "application/octet-stream", upsert: true });
-    if (upErr) { failed++; continue; }
-
-    const { text, needsOcr } = await extractText(buffer, file.type || "", file.name);
-    const { error: insErr } = await admin.from("document").insert({
-      tenant_id: tenantId,
-      source: "upload",
-      storage_path: path,
+    // WO-27 — shared path: store + dedup + extract + CLASSIFY, with the client as explicit context
+    // (the human chose it, so it's respected — never overridden). Adds doc_type/summary a manual
+    // upload didn't get before.
+    const r = await fileUploadedDocument({
+      tenantId,
+      buffer,
+      mime: file.type,
       filename: file.name,
-      mime: file.type || "application/octet-stream",
-      size_bytes: buffer.length,
-      parsed_text: text || null,
-      client_id: clientId,
-      matter_id: null,
-      content_hash: contentHash,
-      extracted: { needsOcr: needsOcr ?? false } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],
+      pathPrefix: `client/${clientId}`,
+      context: { clientId },
     });
-    if (insErr) {
-      await admin.storage.from("documents").remove([path]); // don't orphan the object
-      failed++;
-      continue;
-    }
-    uploaded++;
+    if (!r.ok) failed++;
+    else if (r.status === "duplicate") skipped++;
+    else uploaded++;
   }
 
   if (uploaded) {

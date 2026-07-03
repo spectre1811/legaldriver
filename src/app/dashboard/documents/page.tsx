@@ -6,6 +6,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
 import { CATEGORIES, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/docs/categories";
 import { FilterBar } from "./filter-bar";
+import { DocumentsUpload } from "./documents-upload";
 
 const CATEGORY_ICON: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.icon]));
 
@@ -79,6 +80,8 @@ export default async function DocumentsPage({
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
+
+      <DocumentsUpload />
 
       <FilterBar types={types} clients={clientOpts} />
 
