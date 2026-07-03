@@ -492,5 +492,184 @@
     "footer": {
       "added": "added"
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Reminders for hearings & deadlines (T-3, T-1, day-of) and notice escalations — in-app and email.",
+    "kind": {
+      "hearing_reminder": "Hearing reminder",
+      "deadline_reminder": "Deadline reminder",
+      "notice_escalation": "Notice escalation",
+      "ipr_renewal": "IP renewal",
+      "case_update": "Case update"
+    },
+    "channel": {
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "inapp": "In-app",
+      "sms": "SMS"
+    },
+    "status": {
+      "sent": "Sent",
+      "pending": "Pending",
+      "failed": "Failed"
+    },
+    "empty": {
+      "title": "No notifications yet",
+      "body": "Add a case with an upcoming hearing — reminders get scheduled automatically."
+    }
+  },
+  "portfolio": {
+    "title": "Portfolio",
+    "subtitle": "Firm-wide risk at a glance — upcoming hearings, at-risk cases, deadlines nearing limitation, and cases needing attention.",
+    "stat": {
+      "openCases": "Open cases",
+      "hearings7d": "Hearings ≤7d",
+      "atRisk": "At risk",
+      "deadlines15d": "Deadlines ≤15d",
+      "pastDue": "Past-due dates"
+    },
+    "cards": {
+      "atRisk": {
+        "title": "⚠️ At-risk cases",
+        "hint": "Hearing within 7 days and nothing filed in the last 14 — prepare now."
+      },
+      "upcoming": {
+        "title": "📅 Upcoming hearings (30 days)",
+        "hint": "Effective next-hearing date (your diary override wins over the court date)."
+      },
+      "deadlines": {
+        "title": "⏳ Deadlines nearing limitation (15 days)",
+        "hint": "Confirmed statutory/procedural deadlines due soon."
+      },
+      "pastDue": {
+        "title": "🔁 Past-due next dates",
+        "hint": "The listed hearing date has passed — verify re-listing / refresh."
+      },
+      "needsRefresh": {
+        "title": "🕓 Needs refresh",
+        "hint": "Not synced from the court source in 10+ days."
+      }
+    },
+    "empty": {
+      "atRisk": {
+        "title": "Nothing at risk",
+        "body": "No imminent hearings without a recent filing."
+      },
+      "upcoming": {
+        "title": "No upcoming hearings",
+        "body": "Nothing listed in the next 30 days."
+      },
+      "deadlines": {
+        "title": "No deadlines within 15 days"
+      },
+      "pastDue": {
+        "title": "All next-dates are current"
+      },
+      "needsRefresh": {
+        "title": "Everything is fresh"
+      }
+    },
+    "hearingOn": "hearing {date}",
+    "today": "today",
+    "inDays": "in {d}d",
+    "wasOn": "was {date}",
+    "daysAgo": "{d}d ago",
+    "never": "never",
+    "caseFallback": "case",
+    "footer": "Risk signals are computed from tracked cases + court data — indicative, not legal advice. Verify against the official record."
+  },
+  "lookup": {
+    "title": "Judges, advocates & parties",
+    "subtitle": "Search the live court corpus for any advocate (bar-wise caseload), judge (dossier + disposal patterns), or party (their cases + the side they're on).",
+    "placeholder": "Advocate, judge, or party name — e.g. Prajapati, Pinto, Patel…",
+    "search": "Search",
+    "notConfigured": "Live court API not configured (LD_API_KEY).",
+    "coverage": "Searching {total} cases across Gujarat ({district} district · {high} High Court).",
+    "advocates": "Advocates",
+    "judges": "Judges",
+    "parties": "Parties / litigants",
+    "casesCount": "{n} cases",
+    "barSuffix": " · bar {id}",
+    "noBar": " · no bar id",
+    "noAdvocates": "No advocates found",
+    "noJudges": "No judges found",
+    "noParties": "No parties found",
+    "noPartiesBody": "Try a surname (fuzzy match across litigants).",
+    "footer": "Source: Peshi / eCourts (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record."
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Your caseload, billing, and everything Peshi has ingested and stored for you.",
+    "errorSubtitle": "Practice, billing, and data overview.",
+    "errorTitle": "Couldn't load analytics",
+    "section": {
+      "caseload": "Caseload",
+      "billing": "Time & billing",
+      "clientsDocs": "Clients & documents",
+      "yourData": "Your data — ingested & stored"
+    },
+    "stat": {
+      "cases": "Cases",
+      "active": "Active",
+      "hearings7d": "Hearings · 7d",
+      "hearings30d": "Hearings · 30d",
+      "deadlinesOpen": "Deadlines open",
+      "overdue": "Overdue",
+      "hoursLogged": "Hours logged",
+      "billableHours": "Billable hours",
+      "unbilledTime": "Unbilled (time)",
+      "expenses": "Expenses",
+      "unbilledExpenses": "Unbilled expenses",
+      "clients": "Clients",
+      "documents": "Documents",
+      "unfiledDocs": "Unfiled docs",
+      "storageUsed": "Storage used",
+      "casesTracked": "Cases tracked",
+      "hearingsTotal": "Hearings",
+      "courtOrders": "Court orders",
+      "emailsIngested": "Emails ingested",
+      "docEmbeddings": "Doc embeddings",
+      "messages": "Messages",
+      "voiceNotes": "Voice notes",
+      "ipAssets": "IP assets",
+      "deadlineRules": "Deadline rules",
+      "lawPack": "Law-pack entries"
+    },
+    "hint": {
+      "needsAttention": "needs attention",
+      "wip": "work-in-progress",
+      "toTriage": "to triage"
+    },
+    "breakdown": {
+      "byStage": "Cases by stage",
+      "byCourt": "Cases by court",
+      "noData": "No data yet."
+    },
+    "receivablesNote": "Receivables/invoicing analytics fill in once invoice assembly ships (keyless, in the backlog).",
+    "storageNote": "Stored in Supabase Postgres (RLS-isolated to your tenant). Document files live in a private Storage bucket; their semantic embeddings in document_chunk (pgvector). Court records are cached in a shared court_cache ({cached} cases cached) and copied into your matters. Court-data ingestion health + cache stats are on Settings → Court data."
+  },
+  "ip": {
+    "title": "Intellectual property",
+    "subtitle": "Track trademarks, patents and more — renewal dates feed your reminders and calendar.",
+    "addAsset": "Add IP asset",
+    "th": {
+      "asset": "Asset",
+      "type": "Type",
+      "regNo": "Reg. no.",
+      "renewal": "Renewal"
+    },
+    "type": {
+      "trademark": "Trademark",
+      "patent": "Patent",
+      "copyright": "Copyright",
+      "design": "Design"
+    },
+    "overdue": "overdue",
+    "soon": "soon",
+    "empty": {
+      "title": "No IP assets yet",
+      "body": "Add a trademark or patent above — renewal reminders schedule automatically."
+    }
   }
 }
