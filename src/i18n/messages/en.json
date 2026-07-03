@@ -344,6 +344,11 @@
     },
     "documents": {
       "title": "Documents",
+      "upload": {
+        "cta": "Upload documents",
+        "hint": "Drop files here or click — we read, type, and file each one to the right case.",
+        "uploading": "Uploading & filing…"
+      },
       "empty": "No documents yet — upload one above, or they'll arrive auto-filed from Gmail."
     },
     "billing": {
