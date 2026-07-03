@@ -93,9 +93,9 @@
       "notifications": "Notifications",
       "copilot": "Copilot",
       "drafting": "Drafting",
-      "settings": "Settings"
-    },
-    "aiUsage": "AI usage"
+      "settings": "Settings",
+      "aiUsage": "AI usage"
+    }
   },
   "today": {
     "overline": "आज की पेशी",
