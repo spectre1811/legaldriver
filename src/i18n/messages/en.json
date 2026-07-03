@@ -1544,7 +1544,7 @@
     "collectHeading": "What we collect and why",
     "collectBody": "Account details (name, email) to run your workspace; the case, client and billing information you enter; and technical logs to keep the service secure and reliable. We do not sell your data, and we do not log document contents, message bodies or credentials.",
     "rightsHeading": "Your rights",
-    "rightsBody": "You can access, correct, export or delete your workspace data from within the product, or by contacting us. For court records about you, see <corrections>Data corrections & takedowns</corrections>. You may raise a grievance with our grievance officer at <email>grievance@mukadma.app</email>.",
+    "rightsBody": "You can access, correct, export or delete your workspace data from within the product, or by contacting us. For court records about you, see <corrections>Data corrections & takedowns</corrections>. You may raise a grievance with our grievance officer at <email>grievance@mukadma.in</email>.",
     "securityHeading": "Security & retention",
     "securityBody": "Data is encrypted in transit and at rest; access is tenant-isolated. Third-party credentials (e.g. Gmail) are stored encrypted and never in plaintext. We retain your data for as long as your account is active and as required for legal and accountability obligations.",
     "aiHeading": "AI",
@@ -1576,7 +1576,7 @@
     },
     "howToRaise": {
       "heading": "How to raise a request",
-      "body": "Email <email>grievance@mukadma.app</email> with the CNR (or a link to the record), what is wrong, and — for a takedown — the reason. If you are the person named, please tell us so; if you act on someone’s behalf, say in what capacity."
+      "body": "Email <email>grievance@mukadma.in</email> with the CNR (or a link to the record), what is wrong, and — for a takedown — the reason. If you are the person named, please tell us so; if you act on someone’s behalf, say in what capacity."
     },
     "whatHappensNext": {
       "heading": "What happens next — and by when",
@@ -1590,7 +1590,7 @@
     },
     "grievanceOfficer": {
       "heading": "Grievance officer",
-      "body": "Concerns about how we handle personal data or a request can be sent to our grievance officer at <email>grievance@mukadma.app</email>. Mukadma does not rank, recommend or endorse advocates; corrections do not affect any ranking because there is none."
+      "body": "Concerns about how we handle personal data or a request can be sent to our grievance officer at <email>grievance@mukadma.in</email>. Mukadma does not rank, recommend or endorse advocates; corrections do not affect any ranking because there is none."
     }
   },
   "about": {
@@ -1616,8 +1616,8 @@
   "contact": {
     "title": "Contact",
     "subtitle": "We read everything. The fastest way to reach us is email.",
-    "support": "<b>General & support</b> — <mail>hello@mukadma.app</mail>",
-    "grievances": "<b>Data corrections & grievances</b> — <mail>grievance@mukadma.app</mail> (see <corrections>corrections & takedowns</corrections>)",
+    "support": "<b>General & support</b> — <mail>hello@mukadma.in</mail>",
+    "grievances": "<b>Data corrections & grievances</b> — <mail>grievance@mukadma.in</mail> (see <corrections>corrections & takedowns</corrections>)",
     "member": "<b>Already a member?</b> Use in-app support from your dashboard.",
     "advocate": "If you’re an advocate, the quickest way to see Mukadma is to <login>start free</login> and add a case by CNR."
   },
@@ -1626,7 +1626,7 @@
     "subtitle": "Finding the right advocate — and following your own case — shouldn’t be a shot in the dark.",
     "today": "Today, Mukadma is where advocates run their practice. Many already use it to keep their clients updated — case status, next hearing dates and documents, in plain language, on WhatsApp.",
     "comingNextHeading": "Coming next",
-    "comingNext": "We’re building a place where any citizen can find the right advocate with clarity and trust — drawn from the public court record, never rankings or “best lawyer” claims. If you’d like to be told when it opens, write to <email>hello@mukadma.app</email>.",
+    "comingNext": "We’re building a place where any citizen can find the right advocate with clarity and trust — drawn from the public court record, never rankings or “best lawyer” claims. If you’d like to be told when it opens, write to <email>hello@mukadma.in</email>.",
     "portal": "Already working with an advocate on Mukadma? Ask them to share your case portal."
   }
 }

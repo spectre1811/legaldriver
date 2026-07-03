@@ -13,7 +13,7 @@ export default async function ForClientsPage() {
         <h2>{t("comingNextHeading")}</h2>
         <p>
           {t.rich("comingNext", {
-            email: (c) => <a href="mailto:hello@mukadma.app">{c}</a>,
+            email: (c) => <a href="mailto:hello@mukadma.in">{c}</a>,
           })}
         </p>
         <p>{t("portal")}</p>
