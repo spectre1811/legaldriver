@@ -19,5 +19,57 @@
       "en": "English",
       "hi": "हिन्दी"
     }
+  },
+  "shell": {
+    "workspace": "कार्यक्षेत्र",
+    "signOut": "साइन आउट"
+  },
+  "nav": {
+    "heading": {
+      "practice": "प्रैक्टिस",
+      "workflow": "कार्यप्रवाह",
+      "assistant": "सहायक",
+      "account": "खाता"
+    },
+    "item": {
+      "overview": "अवलोकन",
+      "onboarding": "शुरुआत",
+      "clients": "मुवक्किल",
+      "cases": "मुकदमे",
+      "calendar": "कैलेंडर",
+      "analytics": "विश्लेषण",
+      "portfolio": "पोर्टफोलियो",
+      "research": "केस शोध",
+      "lookup": "न्यायाधीश व अधिवक्ता",
+      "notices": "नोटिस",
+      "causeList": "पेशी सूची",
+      "inbox": "इनबॉक्स",
+      "messages": "संदेश",
+      "voice": "वॉइस",
+      "documents": "दस्तावेज़",
+      "invoices": "बिल",
+      "ip": "आईपी संपत्ति",
+      "notifications": "सूचनाएँ",
+      "copilot": "कोपायलट",
+      "drafting": "प्रारूपण",
+      "settings": "सेटिंग्स"
+    }
+  },
+  "today": {
+    "overline": "Today's hearings",
+    "title": "आज की पेशी",
+    "weekAria": "इस सप्ताह की पेशियाँ",
+    "listed": "{count, plural, one {# सूचीबद्ध} other {# सूचीबद्ध}}",
+    "ledger": { "date": "तारीख़", "court": "न्यायालय / पीठ", "matter": "मुकदमा", "actions": "क्रियाएँ" },
+    "hearingFallback": "पेशी",
+    "openFile": "फ़ाइल खोलें",
+    "summary": "{count, plural, =0 {आज कोई पेशी नहीं} one {# पेशी} other {# पेशियाँ}} · {courts, plural, =0 {कोई न्यायालय नहीं} one {# न्यायालय} other {# न्यायालय}}",
+    "syncedAt": "न्यायालय अभिलेख से {time} पर समन्वयित",
+    "empty": { "title": "आज कोई पेशी नहीं", "body": "कुछ सूचीबद्ध नहीं। अपनी डायरी अद्यतन रखने के लिए CNR से मुकदमा जोड़ें।", "addCase": "मुकदमा जोड़ें" },
+    "glance": { "title": "आज एक नज़र में", "openCopilot": "कोपायलट खोलें" },
+    "filingsDue": "देय फाइलिंग",
+    "filing": "फाइलिंग",
+    "noFilings": "कोई देय फाइलिंग नहीं।",
+    "inbox": { "title": "इनबॉक्स समीक्षा", "body": "मुवक्किल या मुकदमे में फ़ाइल करने हेतु प्रतीक्षारत ईमेल।", "open": "इनबॉक्स खोलें" }
   }
 }

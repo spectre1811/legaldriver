@@ -19,5 +19,57 @@
       "en": "English",
       "hi": "हिन्दी"
     }
+  },
+  "shell": {
+    "workspace": "Workspace",
+    "signOut": "Sign out"
+  },
+  "nav": {
+    "heading": {
+      "practice": "Practice",
+      "workflow": "Workflow",
+      "assistant": "Assistant",
+      "account": "Account"
+    },
+    "item": {
+      "overview": "Overview",
+      "onboarding": "Onboarding",
+      "clients": "Clients",
+      "cases": "Cases",
+      "calendar": "Calendar",
+      "analytics": "Analytics",
+      "portfolio": "Portfolio",
+      "research": "Case research",
+      "lookup": "Judges & advocates",
+      "notices": "Notices",
+      "causeList": "Cause list",
+      "inbox": "Inbox",
+      "messages": "Messages",
+      "voice": "Voice",
+      "documents": "Documents",
+      "invoices": "Invoices",
+      "ip": "IP assets",
+      "notifications": "Notifications",
+      "copilot": "Copilot",
+      "drafting": "Drafting",
+      "settings": "Settings"
+    }
+  },
+  "today": {
+    "overline": "आज की पेशी",
+    "title": "Today's hearings",
+    "weekAria": "This week's hearings",
+    "listed": "{count, plural, one {# listed} other {# listed}}",
+    "ledger": { "date": "Date", "court": "Court / Bench", "matter": "Matter", "actions": "Actions" },
+    "hearingFallback": "Hearing",
+    "openFile": "Open file",
+    "summary": "{count, plural, =0 {No listings today} one {# listing} other {# listings}} · {courts, plural, =0 {no courts} one {# court} other {# courts}}",
+    "syncedAt": "synced from the court record at {time}",
+    "empty": { "title": "No hearings today", "body": "Nothing listed. Add a case by CNR to keep your diary current.", "addCase": "Add case" },
+    "glance": { "title": "Today at a glance", "openCopilot": "Open Copilot" },
+    "filingsDue": "Filings due",
+    "filing": "Filing",
+    "noFilings": "No filings due.",
+    "inbox": { "title": "Inbox review", "body": "emails waiting to be filed to a client or case.", "open": "Open inbox" }
   }
 }
