@@ -93,9 +93,9 @@
       "notifications": "सूचनाएँ",
       "copilot": "कोपायलट",
       "drafting": "प्रारूपण",
-      "settings": "सेटिंग्स",
-      "aiUsage": "AI उपयोग"
-    }
+      "settings": "सेटिंग्स"
+    },
+    "aiUsage": "AI उपयोग"
   },
   "today": {
     "overline": "Today's hearings",
@@ -174,6 +174,25 @@
     "empty": {
       "title": "अभी कोई पेशी सूची नहीं पढ़ी गई",
       "body": "न्यायालय से प्राप्त दैनिक पेशी सूची अपलोड करें। हम इसे पढ़ते हैं, CNR को आपके मुकदमों से मिलाते हैं, और अगली पेशी की तारीख़ें अद्यतन करते हैं। फ़ाइल आप देते हैं।"
+    },
+    "board": {
+      "heading": "आज और कल आपके मुकदमे",
+      "today": "आज",
+      "tomorrow": "कल",
+      "th": {
+        "item": "क्रम सं.",
+        "matter": "मुकदमा",
+        "court": "न्यायालय",
+        "cnr": "CNR"
+      },
+      "unknownCase": "अज्ञात मुकदमा",
+      "empty": {
+        "title": "आज या कल कोई सूची नहीं",
+        "body": "जब दैनिक पेशी सूची अपलोड होगी और आपके मुकदमे मिलेंगे, तो वे यहाँ तारीख़ के अनुसार दिखेंगे।"
+      }
+    },
+    "uploader": {
+      "heading": "पेशी सूची अपलोड करें"
     }
   },
   "cases": {
@@ -250,6 +269,7 @@
     "tab": {
       "overview": "अवलोकन",
       "court": "न्यायालय अभिलेख",
+      "timeline": "टाइमलाइन",
       "documents": "दस्तावेज़",
       "billing": "बिलिंग",
       "comms": "संवाद"
@@ -291,12 +311,30 @@
       "filingNo": "दाख़िल सं.",
       "registrationDate": "पंजीकरण तारीख़",
       "filingDate": "दाख़िल तारीख़",
+      "firstHearingDate": "पहली पेशी",
       "district": "ज़िला",
       "state": "राज्य",
+      "category": "श्रेणी",
+      "subCategory": "उप-श्रेणी",
+      "benchType": "पीठ प्रकार",
+      "judicialBranch": "न्यायिक शाखा",
+      "subordinateCourt": "अधीनस्थ न्यायालय",
+      "filedBy": "दायरकर्ता",
       "coram": "पीठ",
       "decidedOn": "निर्णय तारीख़",
       "firNo": "FIR सं.",
       "policeStation": "थाना"
+    },
+    "timeline": {
+      "title": "मुकदमा टाइमलाइन",
+      "help": "एकीकृत कालानुक्रमिक अभिलेख — न्यायालय से पेशियाँ, आदेश और प्रक्रिया घटनाएँ।",
+      "empty": "इस मुकदमे के लिए कोई टाइमलाइन घटना अभिलेख में नहीं है।",
+      "dataGap": "टाइमलाइन अभिलेख में नहीं — न्यायालय स्रोत से ताज़ा करने का प्रयास करें।",
+      "typeHearing": "पेशी",
+      "typeOrder": "आदेश",
+      "typeProcess": "प्रक्रिया",
+      "judgePrefix": "के समक्ष",
+      "noDetail": "पेशी"
     },
     "acts": {
       "title": "अधिनियम व धाराएँ"
@@ -346,6 +384,11 @@
     },
     "documents": {
       "title": "दस्तावेज़",
+      "upload": {
+        "cta": "दस्तावेज़ अपलोड करें",
+        "hint": "फ़ाइलें यहाँ छोड़ें या क्लिक करें — हम हर एक को पढ़कर, वर्गीकृत कर, सही मुकदमे में फ़ाइल करते हैं।",
+        "uploading": "अपलोड व फ़ाइल हो रहा है…"
+      },
       "empty": "अभी कोई दस्तावेज़ नहीं — ऊपर अपलोड करें, या वे Gmail से स्वतः फ़ाइल होकर आएँगे।"
     },
     "billing": {
@@ -798,7 +841,12 @@
       "noLinkedCase": "कोई संलग्न मुकदमा नहीं",
       "submit": "नोटिस जोड़ें",
       "submitPending": "जोड़ा जा रहा है…"
-    }
+    },
+    "stepperAria": "नोटिस एस्केलेशन टाइमलाइन",
+    "dueDate": "देय {date}",
+    "escalatesAt": "एस्केलेशन {date}",
+    "openNoticeDoc": "नोटिस दस्तावेज़ खोलें",
+    "noticeDoc": "नोटिस दस्तावेज़"
   },
   "inbox": {
     "title": "इनबॉक्स",
@@ -1392,7 +1440,15 @@
     "loadErrorTitle": "इस निर्णय का पाठ लोड नहीं किया जा सका",
     "textNotAvailableTitle": "पाठ उपलब्ध नहीं",
     "textNotAvailableBody": "इस निर्णय का पाठ नहीं निकाला जा सका (यह स्कैन की गई छवि हो सकती है)। ऊपर मूल PDF खोलें।",
-    "sourceJudgment": "स्रोत: भारतीय न्यायालय निर्णय (AWS Open Data, CC-BY 4.0)। केवल संदर्भ हेतु — विधिक सलाह नहीं; प्रमाणित प्रति से सत्यापित करें।"
+    "sourceJudgment": "स्रोत: भारतीय न्यायालय निर्णय (AWS Open Data, CC-BY 4.0)। केवल संदर्भ हेतु — विधिक सलाह नहीं; प्रमाणित प्रति से सत्यापित करें।",
+    "judgePlaceholder": "न्यायाधीश के नाम से फ़िल्टर करें…",
+    "judgeAria": "न्यायाधीश",
+    "disposalAria": "निपटान",
+    "allDisposals": "सभी निपटान",
+    "petAdvCol": "याचिकाकर्ता अधिवक्ता",
+    "resAdvCol": "प्रतिवादी अधिवक्ता",
+    "relatedToMatter": "संबंधित: {matter}",
+    "filterByDisposal": "इस निपटान से फ़िल्टर करें"
   },
   "copilot": {
     "title": "कोपायलट",
@@ -1571,29 +1627,59 @@
     }
   },
   "judge": {
+    "backToLookup": "न्यायाधीश और अधिवक्ता",
     "subtitle": "न्यायाधीश डोसियर · अभिलेख में {count} मुकदमे (नवीनतम {returned} का विश्लेषण)",
     "statTotalCases": "कुल मुकदमे",
     "statDisposed": "निस्तारित (नमूना)",
     "statPending": "लंबित (नमूना)",
     "statDisposalRate": "निपटान दर",
+    "disposalNatureTitle": "निपटान-प्रकृति विश्लेषण",
+    "decisionsByYearTitle": "वर्षवार निर्णय",
     "caseTypeMix": "मुकदमा प्रकार वितरण",
+    "tierSplitTitle": "न्यायालय स्तर",
+    "topAdvocatesTitle": "सर्वाधिक बार उपस्थित अधिवक्ता",
+    "topAdvocatesHelp": "इस न्यायाधीश के समक्ष उपस्थिति के आधार पर क्रम (नमूना)।",
+    "topAdvocatesNote": "लिंक अधिवक्ता की प्रोफ़ाइल खोलते हैं। स्रोत: नमूना।",
     "sample": "(नमूना)",
+    "colCnr": "CNR",
+    "colType": "प्रकार",
+    "colTier": "स्तर",
+    "colNature": "निपटान",
+    "colDecided": "निर्णय तिथि",
     "recentDecisions": "हाल के निर्णय",
     "emptyDecisions": "नमूने में कोई दिनांकित निर्णय नहीं",
+    "dataGapLabel": "डेटा अंतराल:",
+    "dataGapDisposalNature": "इस नमूने के मुकदमों में निपटान-प्रकृति उपलब्ध नहीं — API ने इसे कैप्चर नहीं किया हो सकता।",
     "provenance": "नवीनतम {returned} में से {count} मुकदमों पर विश्लेषण। स्रोत: Mukadma / eCourts। केवल संकेतात्मक — कानूनी सलाह नहीं।"
   },
   "advocate": {
+    "backToLookup": "न्यायाधीश और अधिवक्ता",
     "nameFallback": "अधिवक्ता {barId}",
     "subtitle": "बार कोड {barId}",
     "alsoKnownAs": "· साथ ही: {names}",
+    "barLabel": "बार · {barId}",
+    "seniorityLabel": "{year} से · {years} वर्ष",
+    "aliasesLabel": "अन्य नाम:",
     "totalCases": "कुल मुकदमे",
     "pending": "लंबित",
     "disposed": "निस्तारित",
+    "showing": "दिखाया जा रहा है",
+    "showingOf": "({count} / {total} दिखाए जा रहे हैं)",
+    "sideSplitTitle": "याचिकाकर्ता बनाम प्रतिवादी",
+    "asPetitioner": "याचिकाकर्ता के रूप में",
+    "asRespondent": "प्रतिवादी के रूप में",
+    "otherSides": "{n} अन्य भूमिकाओं में",
+    "caseTypeBreakdownTitle": "मुकदमा प्रकार विश्लेषण",
+    "tierBreakdownTitle": "न्यायालय स्तर",
+    "topJudgesTitle": "सर्वाधिक बार सामना किए न्यायाधीश",
+    "topJudgesHelp": "उपस्थिति के आधार पर क्रम (नमूना)।",
+    "dataGapLabel": "डेटा अंतराल:",
+    "dataGapJudges": "इस एंडपॉइंट से प्रति-मुकदमा न्यायाधीश डेटा उपलब्ध नहीं — किसी विशेष न्यायाधीश के समक्ष अधिवक्ताओं को देखने के लिए न्यायाधीश डोसियर पृष्ठ का उपयोग करें।",
     "caseload": "मुकदमे",
-    "showing": "({count} दिखाए जा रहे हैं)",
     "colCnr": "CNR",
     "colType": "प्रकार",
     "colSide": "पक्ष",
+    "colTier": "स्तर",
     "colStatus": "स्थिति",
     "colCourt": "न्यायालय",
     "tracked": "ट्रैक किया गया",

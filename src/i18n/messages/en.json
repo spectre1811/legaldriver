@@ -93,9 +93,9 @@
       "notifications": "Notifications",
       "copilot": "Copilot",
       "drafting": "Drafting",
-      "settings": "Settings",
-      "aiUsage": "AI usage"
-    }
+      "settings": "Settings"
+    },
+    "aiUsage": "AI usage"
   },
   "today": {
     "overline": "आज की पेशी",
@@ -174,6 +174,25 @@
     "empty": {
       "title": "No cause list parsed yet",
       "body": "Upload the daily cause list you received from the court. We read it, match the CNRs to your cases, and update their next-hearing dates. You supply the file."
+    },
+    "board": {
+      "heading": "Your cases listed today & tomorrow",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "th": {
+        "item": "Item no.",
+        "matter": "Case / matter",
+        "court": "Court",
+        "cnr": "CNR"
+      },
+      "unknownCase": "Unknown case",
+      "empty": {
+        "title": "No listings for today or tomorrow",
+        "body": "When the daily cause list is uploaded and your cases are matched, they appear here grouped by date."
+      }
+    },
+    "uploader": {
+      "heading": "Upload cause list"
     }
   },
   "cases": {
@@ -250,6 +269,7 @@
     "tab": {
       "overview": "Overview",
       "court": "Court record",
+      "timeline": "Timeline",
       "documents": "Documents",
       "billing": "Billing",
       "comms": "Communications"
@@ -291,12 +311,30 @@
       "filingNo": "Filing no.",
       "registrationDate": "Registration date",
       "filingDate": "Filing date",
+      "firstHearingDate": "First hearing",
       "district": "District",
       "state": "State",
+      "category": "Category",
+      "subCategory": "Sub-category",
+      "benchType": "Bench type",
+      "judicialBranch": "Judicial branch",
+      "subordinateCourt": "Subordinate court",
+      "filedBy": "Filed by",
       "coram": "Coram",
       "decidedOn": "Decided on",
       "firNo": "FIR no.",
       "policeStation": "Police station"
+    },
+    "timeline": {
+      "title": "Case timeline",
+      "help": "Unified reverse-chronological record — hearings, orders, and process events from the court.",
+      "empty": "No timeline events on record for this case.",
+      "dataGap": "Timeline not on record — try refreshing from the court source.",
+      "typeHearing": "Hearing",
+      "typeOrder": "Order",
+      "typeProcess": "Process",
+      "judgePrefix": "Before",
+      "noDetail": "Hearing"
     },
     "acts": {
       "title": "Acts & Sections"
@@ -346,6 +384,11 @@
     },
     "documents": {
       "title": "Documents",
+      "upload": {
+        "cta": "Upload documents",
+        "hint": "Drop files here or click — we read, type, and file each one to the right case.",
+        "uploading": "Uploading & filing…"
+      },
       "empty": "No documents yet — upload one above, or they'll arrive auto-filed from Gmail."
     },
     "billing": {
@@ -798,7 +841,12 @@
       "noLinkedCase": "No linked case",
       "submit": "Create notice",
       "submitPending": "Creating…"
-    }
+    },
+    "stepperAria": "Notice escalation timeline",
+    "dueDate": "Due {date}",
+    "escalatesAt": "Escalates {date}",
+    "openNoticeDoc": "Open notice document",
+    "noticeDoc": "Notice doc"
   },
   "inbox": {
     "title": "Inbox",
@@ -1392,7 +1440,15 @@
     "loadErrorTitle": "Couldn't load this judgment's text",
     "textNotAvailableTitle": "Text not available",
     "textNotAvailableBody": "This judgment's text couldn't be extracted (it may be a scanned image). Open the original PDF above.",
-    "sourceJudgment": "Source: Indian Court Judgments (AWS Open Data, CC-BY 4.0). Reference only — not legal advice; verify against the certified copy."
+    "sourceJudgment": "Source: Indian Court Judgments (AWS Open Data, CC-BY 4.0). Reference only — not legal advice; verify against the certified copy.",
+    "judgePlaceholder": "Filter by judge name…",
+    "judgeAria": "Judge",
+    "disposalAria": "Disposition",
+    "allDisposals": "All dispositions",
+    "petAdvCol": "Pet. advocate",
+    "resAdvCol": "Res. advocate",
+    "relatedToMatter": "Related: {matter}",
+    "filterByDisposal": "Filter by this disposition"
   },
   "copilot": {
     "title": "Copilot",
@@ -1571,29 +1627,59 @@
     }
   },
   "judge": {
+    "backToLookup": "Judges & advocates",
     "subtitle": "Judge dossier · {count} cases on record (analysing latest {returned})",
     "statTotalCases": "Total cases",
     "statDisposed": "Disposed (sample)",
     "statPending": "Pending (sample)",
     "statDisposalRate": "Disposal rate",
+    "disposalNatureTitle": "Disposal-nature breakdown",
+    "decisionsByYearTitle": "Decisions by year",
     "caseTypeMix": "Case-type mix",
+    "tierSplitTitle": "Tier split",
+    "topAdvocatesTitle": "Most frequent advocates",
+    "topAdvocatesHelp": "Ranked by appearances before this judge (sample).",
+    "topAdvocatesNote": "Links open the advocate's practice profile. Source: sample.",
     "sample": "(sample)",
+    "colCnr": "CNR",
+    "colType": "Type",
+    "colTier": "Tier",
+    "colNature": "Disposal",
+    "colDecided": "Decided",
     "recentDecisions": "Recent decisions",
     "emptyDecisions": "No dated decisions in the sample",
+    "dataGapLabel": "DATA GAP:",
+    "dataGapDisposalNature": "Disposal-nature is not present for cases in this sample — the API may not have captured it.",
     "provenance": "Analytics over the latest {returned} of {count} cases. Source: Mukadma / eCourts. Indicative only — not legal advice."
   },
   "advocate": {
+    "backToLookup": "Judges & advocates",
     "nameFallback": "Advocate {barId}",
     "subtitle": "Bar code {barId}",
     "alsoKnownAs": "· also: {names}",
+    "barLabel": "Bar · {barId}",
+    "seniorityLabel": "Since {year} · {years}yr",
+    "aliasesLabel": "Also known as:",
     "totalCases": "Total cases",
     "pending": "Pending",
     "disposed": "Disposed",
+    "showing": "Showing",
+    "showingOf": "(showing {count} of {total})",
+    "sideSplitTitle": "Petitioner vs respondent",
+    "asPetitioner": "as petitioner",
+    "asRespondent": "as respondent",
+    "otherSides": "{n} in other roles",
+    "caseTypeBreakdownTitle": "Case-type breakdown",
+    "tierBreakdownTitle": "Court tier",
+    "topJudgesTitle": "Most frequent judges",
+    "topJudgesHelp": "Ranked by appearances (sample).",
+    "dataGapLabel": "DATA GAP:",
+    "dataGapJudges": "Per-case judge data is not available from this endpoint — use the judge dossier page to see advocates before a specific judge.",
     "caseload": "Caseload",
-    "showing": "(showing {count})",
     "colCnr": "CNR",
     "colType": "Type",
     "colSide": "Side",
+    "colTier": "Tier",
     "colStatus": "Status",
     "colCourt": "Court",
     "tracked": "tracked",

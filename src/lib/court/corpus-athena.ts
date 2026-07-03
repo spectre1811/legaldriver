@@ -76,18 +76,28 @@ export function judgmentPdfUrl(pdfLink?: string | null, court?: string | null, y
 export interface JudgmentRow {
   src: string | null; cnr: string | null; title: string | null; judge: string | null; court: string | null;
   year: string | null; decision_date: string | null; disposal_nature: string | null; citation: string | null; pdf_link: string | null;
+  // petitioner/respondent: present in judgments_all for HC rows; null for SC / older batches.
+  petitioner: string | null; respondent: string | null;
 }
 
-const SELECT_COLS = "src, cnr, title, judge, court_code court, year, decision_date, disposal_nature, citation, path pdf_link";
+const SELECT_COLS = "src, cnr, title, judge, court_code court, year, decision_date, disposal_nature, citation, path pdf_link, petitioner, respondent";
 
 // Full-corpus judgment search across ALL High Courts + the Supreme Court (judgments_all).
 // court/year validated + inlined (partition pruning); free-text binds as parameters.
-export async function searchJudgments(opts: { q?: string; court?: string; year?: number; limit?: number }): Promise<JudgmentRow[]> {
+// disposal/judgeFilter: optional equality filters (validated + inlined — no user-controlled SQL).
+export async function searchJudgments(opts: {
+  q?: string; court?: string; year?: number; limit?: number;
+  disposal?: string; judgeFilter?: string;
+}): Promise<JudgmentRow[]> {
   const where: string[] = [];
   const params: string[] = [];
   if (opts.court === "SC") where.push("court_code = 'SC'");
   else if (opts.court && COURT_RE.test(opts.court)) where.push(`court_code = '${opts.court}'`);
   if (opts.year && Number.isInteger(opts.year)) where.push(`year = ${opts.year}`);
+  // disposal_nature: equality filter; value comes from URL param validated in the page.
+  if (opts.disposal) { where.push("lower(disposal_nature) = ?"); params.push(opts.disposal.toLowerCase()); }
+  // judgeFilter: substring match (same style as q).
+  if (opts.judgeFilter?.trim()) { where.push("lower(judge) LIKE ?"); params.push(`%${opts.judgeFilter.trim().toLowerCase()}%`); }
   const term = opts.q?.trim();
   if (term) { where.push("(lower(title) LIKE ? OR lower(judge) LIKE ? OR lower(cnr) LIKE ? OR lower(citation) LIKE ?)"); const p = `%${term.toLowerCase()}%`; params.push(p, p, p, p); }
   const sql = `SELECT ${SELECT_COLS} FROM judgments_all ${where.length ? "WHERE " + where.join(" AND ") : ""}

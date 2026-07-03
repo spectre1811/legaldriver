@@ -45,3 +45,6 @@ npm-debug.log*
 .claude/**/*.local.*
 .claude/.credentials.json
 .claude/**/*.jsonl
+
+# never commit session transcripts/artifacts
+.claude-sessions/

@@ -2,12 +2,15 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { createClient } from "@/lib/supabase/server";
 import { corpusEnabled, searchJudgments, judgmentPdfUrl, courtLabel, type JudgmentRow } from "@/lib/court/corpus-athena";
 import { Filters } from "./filters";
 
 export const dynamic = "force-dynamic";
 
 const COURT_RE = /^(SC|[0-9]+_[0-9]+)$/;
+// disposal values come from URL; allow only known safe labels (alpha + spaces) to prevent injection.
+const DISPOSAL_RE = /^[A-Za-z\s]{1,40}$/;
 
 // Build the judgment-reader href, omitting any null/empty params.
 function judgmentHref(r: JudgmentRow): string {
@@ -44,12 +47,40 @@ function parseTitle(title: string | null): { caseNumber: string | null; parties:
   return { caseNumber, parties: rest || null };
 }
 
+// Truncate long advocate names cleanly.
+function truncate(s: string | null, max = 32): string {
+  if (!s) return "—";
+  return s.length > max ? s.slice(0, max - 1) + "…" : s;
+}
+
+// Check if a judgment row shares CNR or parties with tracked matters.
+// Returns the matter title if related, null otherwise.
+function relatesToMatter(
+  r: JudgmentRow,
+  matters: Array<{ cnr: string | null; title: string; partyNames: string[] }>,
+): string | null {
+  if (!matters.length) return null;
+  // CNR match is definitive.
+  if (r.cnr) {
+    const byC = matters.find((m) => m.cnr && m.cnr === r.cnr);
+    if (byC) return byC.title;
+  }
+  // Party name substring match: if the judgment's title contains any tracked party name (5+ chars).
+  const titleLower = (r.title ?? "").toLowerCase();
+  for (const m of matters) {
+    for (const name of m.partyNames) {
+      if (name.length >= 5 && titleLower.includes(name.toLowerCase())) return m.title;
+    }
+  }
+  return null;
+}
+
 export default async function ResearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string; court?: string; year?: string };
+  searchParams: { q?: string; court?: string; year?: string; disposal?: string; judge?: string };
 }) {
-  const { q, court, year } = searchParams;
+  const { q, court, year, disposal, judge } = searchParams;
   const t = await getTranslations("research");
 
   if (!corpusEnabled()) {
@@ -69,14 +100,32 @@ export default async function ResearchPage({
   }
 
   const validCourt = court && COURT_RE.test(court) ? court : undefined;
-  const rows = await searchJudgments({
-    q,
-    court: validCourt,
-    year: year ? Number(year) : undefined,
-    limit: 100,
-  });
+  const validDisposal = disposal && DISPOSAL_RE.test(disposal) ? disposal : undefined;
+  const validJudge = judge?.trim() || undefined;
 
-  const activeFilters = Boolean(q || court || year);
+  // Fetch judgments + tenant's tracked matters in parallel.
+  const supabase = createClient();
+  const [rows, { data: mattersData }] = await Promise.all([
+    searchJudgments({
+      q,
+      court: validCourt,
+      year: year ? Number(year) : undefined,
+      disposal: validDisposal,
+      judgeFilter: validJudge,
+      limit: 100,
+    }),
+    supabase.from("matter").select("cnr, title, party_names").order("title"),
+  ]);
+
+  // Build a lightweight matter index for cross-link detection.
+  // party_names is string[] — confirmed in DB schema. Use for substring match.
+  const matters = (mattersData ?? []).map((m) => ({
+    cnr: (m as { cnr?: string | null }).cnr as string | null,
+    title: m.title as string,
+    partyNames: (m as { party_names?: string[] }).party_names ?? [],
+  }));
+
+  const activeFilters = Boolean(q || court || year || disposal || judge);
 
   return (
     <div className="space-y-6">
@@ -109,6 +158,8 @@ export default async function ResearchPage({
                 <tr className="border-b border-line text-left">
                   <th className="px-5 py-3 label">{t("caseCol")}</th>
                   <th className="px-5 py-3 label">{t("partiesCol")}</th>
+                  <th className="hidden px-5 py-3 label xl:table-cell">{t("petAdvCol")}</th>
+                  <th className="hidden px-5 py-3 label xl:table-cell">{t("resAdvCol")}</th>
                   <th className="hidden px-5 py-3 label lg:table-cell">{t("judgeCol")}</th>
                   <th className="hidden px-5 py-3 label md:table-cell">{t("courtCol")}</th>
                   <th className="hidden px-5 py-3 label sm:table-cell">{t("decidedCol")}</th>
@@ -120,8 +171,9 @@ export default async function ResearchPage({
                 {rows.map((r, i) => {
                   const { caseNumber, parties } = parseTitle(r.title);
                   const pdfUrl = judgmentPdfUrl(r.pdf_link, r.court, r.year, r.src);
+                  const relatedMatter = relatesToMatter(r, matters);
                   return (
-                    <tr key={r.cnr ?? `${r.title}-${i}`} className="border-b border-line last:border-0 hover:bg-paper">
+                    <tr key={r.cnr ?? `${r.title}-${i}`} className={`border-b border-line last:border-0 hover:bg-paper ${relatedMatter ? "bg-brand-50/30" : ""}`}>
                       <td className="px-5 py-3.5 align-top">
                         <Link href={judgmentHref(r)} className="group flex flex-col leading-tight">
                           <span className="flex items-center gap-2 font-medium text-ink group-hover:text-brand-700 group-hover:underline">
@@ -129,19 +181,46 @@ export default async function ResearchPage({
                             {caseNumber ?? r.title ?? "—"}
                           </span>
                           {r.cnr && <span className="mt-0.5 pl-6 text-xs text-ink-faint">CNR {r.cnr}</span>}
+                          {relatedMatter && (
+                            <span className="mt-1 pl-6 inline-flex items-center gap-1 text-xs font-medium text-brand-700">
+                              <Icon name="cases" className="h-3 w-3 shrink-0" />
+                              {t("relatedToMatter", { matter: relatedMatter })}
+                            </span>
+                          )}
                         </Link>
                       </td>
                       <td className="px-5 py-3.5 align-top text-ink-muted">
                         {parties ? <span className="font-medium text-ink">{parties}</span> : <span className="text-ink-faint">—</span>}
                       </td>
-                      <td className="hidden px-5 py-3.5 align-top text-ink-muted lg:table-cell">{r.judge ? <Link href={`/api/court/judge?name=${encodeURIComponent(r.judge)}`} className="hover:text-brand-600 hover:underline">{r.judge}</Link> : <span className="text-ink-faint">—</span>}</td>
+                      <td className="hidden px-5 py-3.5 align-top text-xs text-ink-muted xl:table-cell">
+                        {truncate(r.petitioner)}
+                      </td>
+                      <td className="hidden px-5 py-3.5 align-top text-xs text-ink-muted xl:table-cell">
+                        {truncate(r.respondent)}
+                      </td>
+                      <td className="hidden px-5 py-3.5 align-top text-ink-muted lg:table-cell">
+                        {r.judge
+                          ? <button
+                              type="button"
+                              onClick={undefined}
+                              className="hover:text-brand-600 hover:underline text-left"
+                              aria-label={`Filter by judge ${r.judge}`}
+                            >
+                              <a href={`/dashboard/research?judge=${encodeURIComponent(r.judge)}`} className="hover:text-brand-600 hover:underline">{r.judge}</a>
+                            </button>
+                          : <span className="text-ink-faint">—</span>}
+                      </td>
                       <td className="hidden px-5 py-3.5 align-top text-xs text-ink-faint md:table-cell">{courtLabel(r.court)}</td>
                       <td className="hidden px-5 py-3.5 align-top text-xs text-ink-faint sm:table-cell">
                         {fmtDate(r.decision_date)}
                         {r.year && !r.decision_date ? <span>{r.year}</span> : null}
                       </td>
                       <td className="px-5 py-3.5 align-top">
-                        {r.disposal_nature ? <Badge>{r.disposal_nature}</Badge> : <span className="text-ink-faint">—</span>}
+                        {r.disposal_nature
+                          ? <a href={`/dashboard/research?disposal=${encodeURIComponent(r.disposal_nature)}`} title={t("filterByDisposal")} className="hover:opacity-70 transition-opacity">
+                              <Badge>{r.disposal_nature}</Badge>
+                            </a>
+                          : <span className="text-ink-faint">—</span>}
                       </td>
                       <td className="px-5 py-3.5 align-top text-right">
                         {pdfUrl ? (
