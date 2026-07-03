@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
 import type { Classification } from "./classify-core";
+import { bestMatch } from "./name-match";
 
 type DB = SupabaseClient<Database>;
 
@@ -101,6 +102,15 @@ export async function resolveFiling(
     }
   }
 
+  // 2b) Client — fuzzy-match the document's PARTY names against existing clients (WO-33 W2, JS
+  //     trigram, no LLM). Match-only: a fuzzy party is too weak to spawn a NEW client (that would
+  //     risk a wrong file), but it's a strong enough signal to derive an EXISTING one.
+  if (!clientId && c.extracted.parties?.length) {
+    const { data: cands } = await sb.from("client").select("id, name").eq("tenant_id", tenantId).limit(500);
+    const id = bestMatch(c.extracted.parties, (cands ?? []).map((x) => ({ id: x.id, name: x.name })), 0.55);
+    if (id) clientId = id;
+  }
+
   // 3) Matter — optional, later tag. Only on a strong legal signal (CNR or title).
   if (!matterId && c.is_legal) {
     const cnr = c.extracted.cnrs?.[0]?.trim().toUpperCase();
@@ -130,6 +140,16 @@ export async function resolveFiling(
         matterId = data?.id ?? null;
         createdMatter = !!data;
       }
+    } else if (c.extracted.parties?.length) {
+      // Fuzzy-match party names against existing cases' party_names[] (WO-33 W2, match-only — never
+      // create a case from a fuzzy party; that needs a CNR or an explicit title).
+      const { data: matters } = await sb.from("matter").select("id, title, party_names").eq("tenant_id", tenantId).limit(500);
+      const cands = (matters ?? []).flatMap((m) => {
+        const names = (m.party_names && m.party_names.length ? m.party_names : [m.title]).filter(Boolean) as string[];
+        return names.map((n) => ({ id: m.id as string, name: n }));
+      });
+      const id = bestMatch(c.extracted.parties, cands, 0.55);
+      if (id) matterId = id;
     }
   }
 

@@ -7,7 +7,7 @@ import { resolveFiling } from "@/lib/docs/autofile";
 import { sha256Hex } from "@/lib/docs/hash";
 
 type DB = SupabaseClient<Database>;
-// WO-32: auto-file bar raised to ~0.8 (founder 2026-07-04) — borderline docs route to the Review
+// WO-33: auto-file bar raised to ~0.8 (founder 2026-07-04) — borderline docs route to the Review
 // Inbox rather than filing silently. Overridable via env for calibration on real data (design §7).
 const THRESHOLD = Number(process.env.CONFIDENCE_THRESHOLD ?? "0.8");
 const BUCKET = "documents";

@@ -17,7 +17,7 @@ export type ReviewDoc = {
 };
 type Opt = { id: string; label: string };
 
-// WO-32 Wave 1 — the document Review Inbox. Surfaces every needs-review / unfiled document (upload
+// WO-33 Wave 1 — the document Review Inbox. Surfaces every needs-review / unfiled document (upload
 // OR email-orphaned) that today has no home, with the AI's PROPOSED filing pre-selected + an
 // explanation. The human confirms (File) or corrects (pick) or skips — keyboard-driven (J/K move,
 // Enter files, S skips). The LLM proposed; the human + code file (never a silent mis-file).

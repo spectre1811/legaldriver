@@ -13,7 +13,7 @@ const CATEGORY_ICON: Record<string, string> = Object.fromEntries(CATEGORIES.map(
 export default async function DocumentsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; source?: string; type?: string; filed?: string; client?: string; category?: string; trash?: string };
+  searchParams: { q?: string; source?: string; type?: string; filed?: string; client?: string; category?: string; trash?: string; group?: string };
 }) {
   const t = await getTranslations("documents");
   const isTrash = searchParams.trash === "1";
@@ -59,7 +59,7 @@ export default async function DocumentsPage({
     supabase.from("client").select("id, name"),
     supabase.from("document").select("doc_type").not("doc_type", "is", null).limit(1000),
     supabase.from("document").select("id", { count: "exact", head: true }).not("extracted->>deletedAt", "is", null),
-    // WO-32: needs-review = flagged OR unfiled, not trashed — the Review Inbox count.
+    // WO-33: needs-review = flagged OR unfiled, not trashed — the Review Inbox count.
     supabase.from("document").select("id", { count: "exact", head: true })
       .filter("extracted->>deletedAt", "is", null)
       .or("extracted->>status.eq.needs_review,and(client_id.is.null,matter_id.is.null)"),
@@ -74,17 +74,10 @@ export default async function DocumentsPage({
   const activeFilters = Boolean(q || source || type || filed || client || category);
 
   type Doc = NonNullable<typeof docs>[number];
+  // WO-33 W2 — segregate by category (default) | client | case (founder: "both, co-equal").
+  const groupBy: "category" | "client" | "case" =
+    searchParams.group === "client" || searchParams.group === "case" ? searchParams.group : "category";
 
-  // Group rows by canonical category, then iterate in CATEGORY_ORDER so sections
-  // appear in a stable legal-practice order. Unknown/missing categories fall back
-  // to "other". Empty categories are skipped.
-  const groups = new Map<string, Doc[]>();
-  for (const d of docs ?? []) {
-    const key = d.category && CATEGORY_LABEL[d.category] ? d.category : "other";
-    const bucket = groups.get(key) ?? [];
-    if (!groups.has(key)) groups.set(key, bucket);
-    bucket.push(d);
-  }
   // Resolve display fields server-side (client-first: direct client, else via the tagged case's
   // client) into serialisable rows for the client-side selectable browser.
   const toRow = (d: Doc): DocRow => {
@@ -98,10 +91,36 @@ export default async function DocumentsPage({
       matterId: d.matter_id, clientId: d.client_id, shared: d.portal_shared,
     };
   };
-  const sectionData = CATEGORY_ORDER.filter((k) => groups.has(k)).map((k) => ({
-    cat: k, label: CATEGORY_LABEL[k], icon: CATEGORY_ICON[k] ?? "documents",
-    rows: groups.get(k)!.map(toRow),
-  }));
+
+  type Section = { cat: string; label: string; icon: string; rows: DocRow[] };
+  let sectionData: Section[];
+  if (groupBy === "category") {
+    // Canonical category order; unknown → "other"; empty categories skipped.
+    const groups = new Map<string, Doc[]>();
+    for (const d of docs ?? []) {
+      const key = d.category && CATEGORY_LABEL[d.category] ? d.category : "other";
+      const arr = groups.get(key); if (arr) arr.push(d); else groups.set(key, [d]);
+    }
+    sectionData = CATEGORY_ORDER.filter((k) => groups.has(k)).map((k) => ({
+      cat: k, label: CATEGORY_LABEL[k], icon: CATEGORY_ICON[k] ?? "documents", rows: groups.get(k)!.map(toRow),
+    }));
+  } else {
+    // By client (resolved client-first) or by case; an "unfiled" bucket collects rows with no key.
+    const NONE = "__none__";
+    const keyOf = (d: Doc): string =>
+      (groupBy === "client" ? (d.client_id ?? (d.matter_id ? matterClient.get(d.matter_id) ?? null : null)) : d.matter_id) ?? NONE;
+    const labelOf = (k: string): string =>
+      k === NONE ? (groupBy === "client" ? t("group.noClient") : t("group.noCase"))
+        : (groupBy === "client" ? clientName.get(k) ?? k : matterName.get(k) ?? k);
+    const groups = new Map<string, Doc[]>();
+    for (const d of docs ?? []) {
+      const k = keyOf(d);
+      const arr = groups.get(k); if (arr) arr.push(d); else groups.set(k, [d]);
+    }
+    sectionData = [...groups.entries()]
+      .sort((a, b) => (a[0] === NONE ? 1 : b[0] === NONE ? -1 : labelOf(a[0]).localeCompare(labelOf(b[0]))))
+      .map(([k, ds]) => ({ cat: k, label: labelOf(k), icon: groupBy === "client" ? "cases" : "scale", rows: ds.map(toRow) }));
+  }
   const orderedIds = sectionData.flatMap((s) => s.rows.map((r) => r.id));
 
   return (
@@ -123,6 +142,20 @@ export default async function DocumentsPage({
       </div>
 
       {!isTrash && <DocumentsUpload />}
+      {!isTrash && (
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="text-ink-faint">{t("group.by")}</span>
+          {(["category", "client", "case"] as const).map((g) => (
+            <Link
+              key={g}
+              href={g === "category" ? "/dashboard/documents" : `/dashboard/documents?group=${g}`}
+              className={`rounded-full px-2.5 py-1 font-medium ${groupBy === g ? "bg-ink text-paper" : "text-ink-muted hover:bg-paper"}`}
+            >
+              {t(`group.${g}`)}
+            </Link>
+          ))}
+        </div>
+      )}
       {!isTrash && <FilterBar types={types} clients={clientOpts} />}
 
       {sectionData.length ? (

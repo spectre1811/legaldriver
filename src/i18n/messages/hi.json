@@ -928,6 +928,14 @@
       "whyEmail": "ईमेल से आया",
       "whyParty": "{party} का उल्लेख"
     },
+    "group": {
+      "by": "समूह",
+      "category": "श्रेणी",
+      "client": "मुवक्किल",
+      "case": "मुकदमा",
+      "noClient": "कोई मुवक्किल नहीं",
+      "noCase": "कोई मुकदमा नहीं"
+    },
     "summary": {
       "count": "{docs, plural, one {# दस्तावेज़} other {# दस्तावेज़}} {categories, plural, one {# श्रेणी में} other {# श्रेणियों में}}",
       "filtered": "फ़िल्टर किया गया"
