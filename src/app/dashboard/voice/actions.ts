@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
@@ -27,21 +28,22 @@ const CALL_SUMMARY_SCHEMA = {
 // Upload an audio recording to the private 'documents' bucket under voice/.
 // Consent is REQUIRED before anything is stored.
 export async function uploadRecording(formData: FormData): Promise<ActionResult> {
+  const t = await getTranslations("voice");
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
-  if (!tenantId) return { ok: false, message: "No tenant." };
+  if (!tenantId) return { ok: false, message: t("errors.noTenant") };
 
   // Consent gate — refuse to store audio without disclosed consent (one-party
   // consent + DPDP). The checkbox must be checked.
   const consent = String(formData.get("consent_disclosed") ?? "");
   if (consent !== "on" && consent !== "true") {
-    return { ok: false, message: "Consent is required: confirm the recording was made with disclosed consent before uploading." };
+    return { ok: false, message: t("errors.consentRequired") };
   }
 
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Choose an audio file to upload." };
-  if (!(file.type || "").startsWith("audio/")) return { ok: false, message: "Only audio files are accepted." };
-  if (file.size > MAX_AUDIO_BYTES) return { ok: false, message: "File too large (max 50 MB)." };
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: t("errors.chooseFile") };
+  if (!(file.type || "").startsWith("audio/")) return { ok: false, message: t("errors.audioOnly") };
+  if (file.size > MAX_AUDIO_BYTES) return { ok: false, message: t("errors.fileTooLarge") };
 
   const clientId = String(formData.get("client_id") ?? "").trim() || null;
   const fromNumber = String(formData.get("from_number") ?? "").trim() || null;
@@ -52,7 +54,7 @@ export async function uploadRecording(formData: FormData): Promise<ActionResult>
   const { error: upErr } = await admin.storage
     .from("documents")
     .upload(path, buffer, { contentType: file.type || "audio/mpeg", upsert: true });
-  if (upErr) return { ok: false, message: `Upload failed: ${upErr.message}` };
+  if (upErr) return { ok: false, message: t("errors.uploadFailed", { message: upErr.message }) };
 
   const { error: insErr } = await admin.from("voice_recording").insert({
     tenant_id: tenantId,
@@ -63,20 +65,21 @@ export async function uploadRecording(formData: FormData): Promise<ActionResult>
     client_id: clientId,
     from_number: fromNumber,
   });
-  if (insErr) return { ok: false, message: `Could not save recording: ${insErr.message}` };
+  if (insErr) return { ok: false, message: t("errors.saveFailed", { message: insErr.message }) };
 
   await logActivity(supabase, tenantId, { type: "voice.uploaded", summary: `Recording “${file.name}” uploaded` });
   revalidatePath("/dashboard/voice");
-  return { ok: true, message: `Uploaded “${file.name}”.` };
+  return { ok: true, message: t("uploaded", { name: file.name }) };
 }
 
 // Transcribe a recording via the configured STT provider. If none is configured
 // the service returns null → status 'failed' with a clear, actionable message
 // (manual transcript entry still works). On success, optionally summarize.
 export async function transcribeRecording(id: string): Promise<ActionResult> {
+  const t = await getTranslations("voice");
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
-  if (!tenantId) return { ok: false, message: "No tenant." };
+  if (!tenantId) return { ok: false, message: t("errors.noTenant") };
 
   // RLS scopes this read to the caller's tenant.
   const { data: rec } = await supabase
@@ -84,7 +87,7 @@ export async function transcribeRecording(id: string): Promise<ActionResult> {
     .select("id, storage_path, language")
     .eq("id", id)
     .maybeSingle();
-  if (!rec) return { ok: false, message: "Recording not found." };
+  if (!rec) return { ok: false, message: t("errors.notFound") };
 
   const admin = createAdminClient();
   await admin.from("voice_recording").update({ status: "transcribing" }).eq("id", id).eq("tenant_id", tenantId);
@@ -98,7 +101,7 @@ export async function transcribeRecording(id: string): Promise<ActionResult> {
       .eq("id", id)
       .eq("tenant_id", tenantId);
     revalidatePath("/dashboard/voice");
-    return { ok: false, message: "No STT provider configured — enter the transcript manually instead." };
+    return { ok: false, message: t("errors.noProvider") };
   }
 
   // transcript is sensitive PII — store it, never log it.
@@ -126,14 +129,15 @@ export async function transcribeRecording(id: string): Promise<ActionResult> {
 
   await logActivity(supabase, tenantId, { type: "voice.transcribed", summary: "Recording transcribed" });
   revalidatePath("/dashboard/voice");
-  return { ok: true, message: raw ? "Transcribed and summarized." : "Transcribed." };
+  return { ok: true, message: raw ? t("transcribedSummarized") : t("transcribed") };
 }
 
 // Re-file a recording onto a client and/or matter.
 export async function tagRecording(id: string, clientId: string | null, matterId: string | null): Promise<ActionResult> {
+  const t = await getTranslations("voice");
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
-  if (!tenantId) return { ok: false, message: "No tenant." };
+  if (!tenantId) return { ok: false, message: t("errors.noTenant") };
 
   // RLS lets the caller update only their own tenant's rows.
   const { error } = await supabase
@@ -144,17 +148,18 @@ export async function tagRecording(id: string, clientId: string | null, matterId
 
   await logActivity(supabase, tenantId, { matterId, type: "voice.tagged", summary: "Recording re-filed" });
   revalidatePath("/dashboard/voice");
-  return { ok: true, message: "Recording tagged." };
+  return { ok: true, message: t("tagged") };
 }
 
 // Save a manually-typed transcript (the keyless path when no STT is configured).
 export async function saveManualTranscript(id: string, transcript: string): Promise<ActionResult> {
+  const t = await getTranslations("voice");
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
-  if (!tenantId) return { ok: false, message: "No tenant." };
+  if (!tenantId) return { ok: false, message: t("errors.noTenant") };
 
   const text = transcript.trim();
-  if (!text) return { ok: false, message: "Enter a transcript." };
+  if (!text) return { ok: false, message: t("errors.enterTranscript") };
 
   // transcript is PII — saved, never logged.
   const { error } = await supabase
@@ -165,5 +170,5 @@ export async function saveManualTranscript(id: string, transcript: string): Prom
 
   await logActivity(supabase, tenantId, { type: "voice.transcribed", summary: "Transcript entered manually" });
   revalidatePath("/dashboard/voice");
-  return { ok: true, message: "Transcript saved." };
+  return { ok: true, message: t("transcriptSaved") };
 }

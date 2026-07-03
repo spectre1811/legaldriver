@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PageHeader, Card, Badge, EmptyState, Disclaimer, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { judgmentPdfUrl, courtLabel, caseDetailByCnr } from "@/lib/court/corpus-athena";
@@ -42,6 +43,7 @@ export default async function JudgmentReaderPage({
   };
 }) {
   const { cnr, src, court, year, pdf, title, judge, citation, date, disposal } = searchParams;
+  const t = await getTranslations("research");
 
   const pdfUrl = judgmentPdfUrl(pdf, court, year, src);
   const cacheKey = cnr || pdf || title || "";
@@ -74,11 +76,11 @@ export default async function JudgmentReaderPage({
         className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline"
       >
         <Icon name="back" className="h-4 w-4" />
-        Back to research
+        {t("backToResearch")}
       </Link>
 
       <PageHeader
-        title={caseNumber ?? title ?? "Judgment"}
+        title={caseNumber ?? title ?? t("judgmentFallback")}
         subtitle={parties ?? undefined}
       />
 
@@ -104,19 +106,19 @@ export default async function JudgmentReaderPage({
           className="inline-flex items-center gap-2 rounded-xl border border-line bg-paper/60 px-4 py-2.5 text-sm font-medium text-brand-700 transition hover:bg-paper hover:shadow-lift"
         >
           <Icon name="external" className="h-4 w-4" />
-          Open original PDF (CC-BY open data)
+          {t("openPdf")}
         </a>
       )}
 
       {hasDetail && detail && (
         <Card className="p-5">
-          <div className="mb-3 flex items-center gap-2"><Icon name="scale" className="h-4 w-4 text-brand-600" /><h2 className="text-base font-medium">Advocates &amp; acts</h2></div>
+          <div className="mb-3 flex items-center gap-2"><Icon name="scale" className="h-4 w-4 text-brand-600" /><h2 className="text-base font-medium">{t("advocatesActs")}</h2></div>
           <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-            {detail.pet_advocate && <div><dt className="label">Petitioner advocate</dt><dd><Link href={`/api/court/advocate?name=${encodeURIComponent(detail.pet_advocate)}`} className="text-brand-600 hover:underline">{detail.pet_advocate}</Link></dd></div>}
-            {detail.res_advocate && <div><dt className="label">Respondent advocate</dt><dd><Link href={`/api/court/advocate?name=${encodeURIComponent(detail.res_advocate)}`} className="text-brand-600 hover:underline">{detail.res_advocate}</Link></dd></div>}
-            {detail.acts && <div className="sm:col-span-2"><dt className="label">Acts &amp; sections</dt><dd className="text-ink">{detail.acts}</dd></div>}
-            {detail.fir_no && <div><dt className="label">FIR</dt><dd className="text-ink">{detail.fir_no}{detail.fir_year ? `/${detail.fir_year}` : ""}</dd></div>}
-            {detail.lower_court && <div><dt className="label">Lower court</dt><dd className="text-ink">{detail.lower_court}</dd></div>}
+            {detail.pet_advocate && <div><dt className="label">{t("petitionerAdvocate")}</dt><dd><Link href={`/api/court/advocate?name=${encodeURIComponent(detail.pet_advocate)}`} className="text-brand-600 hover:underline">{detail.pet_advocate}</Link></dd></div>}
+            {detail.res_advocate && <div><dt className="label">{t("respondentAdvocate")}</dt><dd><Link href={`/api/court/advocate?name=${encodeURIComponent(detail.res_advocate)}`} className="text-brand-600 hover:underline">{detail.res_advocate}</Link></dd></div>}
+            {detail.acts && <div className="sm:col-span-2"><dt className="label">{t("actsSections")}</dt><dd className="text-ink">{detail.acts}</dd></div>}
+            {detail.fir_no && <div><dt className="label">{t("fir")}</dt><dd className="text-ink">{detail.fir_no}{detail.fir_year ? `/${detail.fir_year}` : ""}</dd></div>}
+            {detail.lower_court && <div><dt className="label">{t("lowerCourt")}</dt><dd className="text-ink">{detail.lower_court}</dd></div>}
           </dl>
         </Card>
       )}
@@ -125,8 +127,8 @@ export default async function JudgmentReaderPage({
         <Card className="p-0">
           <div className="flex items-center gap-1.5 border-b border-line bg-paper/60 px-5 py-3 text-xs text-ink-faint">
             <Icon name="documents" className="h-3.5 w-3.5" />
-            Full text extracted from the open-data PDF
-            {result?.cached ? " · cached" : " · freshly extracted"}
+            {t("fullTextExtracted")}
+            {result?.cached ? ` · ${t("cached")}` : ` · ${t("freshlyExtracted")}`}
           </div>
           <div className="max-h-[70vh] overflow-auto px-6 py-6 sm:px-8">
             <article className="whitespace-pre-wrap font-serif text-[0.95rem] leading-7 text-ink">
@@ -137,15 +139,15 @@ export default async function JudgmentReaderPage({
       ) : (
         <EmptyState
           icon="alert"
-          title={extractError ? "Couldn't load this judgment's text" : "Text not available"}
-          body="This judgment's text couldn't be extracted (it may be a scanned image). Open the original PDF above."
+          title={extractError ? t("loadErrorTitle") : t("textNotAvailableTitle")}
+          body={t("textNotAvailableBody")}
         />
       )}
 
       <Disclaimer />
       <p className="flex items-start gap-1.5 text-xs text-ink-faint">
         <Icon name="alert" className="mt-px h-3.5 w-3.5 shrink-0" />
-        Source: Indian Court Judgments (AWS Open Data, CC-BY 4.0). Reference only — not legal advice; verify against the certified copy.
+        {t("sourceJudgment")}
       </p>
     </div>
   );

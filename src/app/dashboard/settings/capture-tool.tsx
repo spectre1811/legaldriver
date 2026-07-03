@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { generateCaptureToken } from "./capture-actions";
 
@@ -14,6 +15,7 @@ function bookmarklet(token: string, baseUrl: string): string {
 }
 
 export function CaptureTool({ token, baseUrl }: { token: string | null; baseUrl: string }) {
+  const t = useTranslations("settings");
   const [pending, start] = useTransition();
   const [copied, setCopied] = useState(false);
   const linkRef = useRef<HTMLAnchorElement>(null);
@@ -28,8 +30,7 @@ export function CaptureTool({ token, baseUrl }: { token: string | null; baseUrl:
   return (
     <div className="space-y-3 text-sm">
       <p className="text-ink-muted">
-        Get fresh case data without any scraping: <b>you</b> log into the official eCourts portal and solve the CAPTCHA,
-        open a case, then click this button — we parse the page into the case. We never automate or bypass the CAPTCHA.
+        {t.rich("capture.intro", { b: (c) => <b>{c}</b> })}
       </p>
       {token ? (
         <>
@@ -41,25 +42,25 @@ export function CaptureTool({ token, baseUrl }: { token: string | null; baseUrl:
               onClick={(e) => e.preventDefault()}
               draggable
               className="inline-flex cursor-grab items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 font-medium text-brand-700"
-              title="Drag me to your bookmarks bar"
+              title={t("capture.dragTitle")}
             >
-              <Icon name="scale" className="h-4 w-4" /> Capture to LexDriver
+              <Icon name="scale" className="h-4 w-4" /> {t("capture.buttonLabel")}
             </a>
-            <span className="text-xs text-ink-faint">← drag to your bookmarks bar</span>
+            <span className="text-xs text-ink-faint">{t("capture.dragHint")}</span>
             <button onClick={() => { navigator.clipboard?.writeText(href); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="text-xs text-brand-600 hover:text-brand-700">
-              {copied ? "Copied" : "Copy link"}
+              {copied ? t("capture.copied") : t("capture.copyLink")}
             </button>
-            <button onClick={regen} disabled={pending} className="text-xs text-ink-faint hover:text-ink">{pending ? "…" : "Regenerate"}</button>
+            <button onClick={regen} disabled={pending} className="text-xs text-ink-faint hover:text-ink">{pending ? "…" : t("capture.regenerate")}</button>
           </div>
           <ol className="list-decimal space-y-1 pl-5 text-xs text-ink-faint">
-            <li>Drag <b>Capture to LexDriver</b> to your browser&apos;s bookmarks bar (once).</li>
-            <li>Open <span className="text-ink-soft">services.ecourts.gov.in</span>, solve the CAPTCHA, and view a <b>case-details</b> page <i>or</i> a <b>cause list</b>.</li>
-            <li>Click the bookmark — a case-details page files the case (parties, next hearing, acts); a cause list matches listed cases to yours and updates hearing dates.</li>
-            <li className="text-amber-700">Updated the tool recently? Click <b>Regenerate</b> and re-drag to get the latest.</li>
+            <li>{t.rich("capture.step1", { b: (c) => <b>{c}</b> })}</li>
+            <li>{t.rich("capture.step2", { url: (c) => <span className="text-ink-soft">{c}</span>, b: (c) => <b>{c}</b>, i: (c) => <i>{c}</i> })}</li>
+            <li>{t("capture.step3")}</li>
+            <li className="text-amber-700">{t.rich("capture.step4", { b: (c) => <b>{c}</b> })}</li>
           </ol>
         </>
       ) : (
-        <button onClick={regen} disabled={pending} className="btn-primary px-3 py-1.5 text-sm">{pending ? "…" : "Set up the capture tool"}</button>
+        <button onClick={regen} disabled={pending} className="btn-primary px-3 py-1.5 text-sm">{pending ? "…" : t("capture.setup")}</button>
       )}
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { transcribeRecording, saveManualTranscript, tagRecording } from "./actions";
 
@@ -24,6 +25,7 @@ export function RowActions({
   clients: Opt[];
   matters: Opt[];
 }) {
+  const t = useTranslations("voice");
   const [mode, setMode] = useState<"none" | "manual" | "tag">("none");
   const [text, setText] = useState("");
   const [c, setC] = useState(clientId ?? "");
@@ -46,17 +48,17 @@ export function RowActions({
           onClick={() => run(() => transcribeRecording(id), false)}
           disabled={pending}
           className="btn-secondary !px-3 !py-1.5 text-xs"
-          title="Transcribe via the configured STT provider"
+          title={t("actions.transcribeTitle")}
         >
           <Icon name="sparkles" className="h-3.5 w-3.5" />
-          {pending ? "Working…" : "Transcribe"}
+          {pending ? t("actions.working") : t("actions.transcribe")}
         </button>
         <button onClick={() => setMode(mode === "manual" ? "none" : "manual")} className="btn-ghost !px-3 !py-1.5 text-xs">
           <Icon name="clip" className="h-3.5 w-3.5" />
-          {hasTranscript ? "Edit transcript" : "Enter transcript"}
+          {hasTranscript ? t("actions.editTranscript") : t("actions.enterTranscript")}
         </button>
         <button onClick={() => setMode(mode === "tag" ? "none" : "tag")} className="btn-ghost !px-3 !py-1.5 text-xs">
-          Re-file
+          {t("actions.refile")}
         </button>
         {msg && <span className="text-xs text-ink-muted">{msg}</span>}
       </div>
@@ -67,11 +69,11 @@ export function RowActions({
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={4}
-            placeholder="Type the transcript… (sensitive — handled as PII)"
+            placeholder={t("actions.transcriptPlaceholder")}
             className="input"
           />
           <button onClick={() => run(() => saveManualTranscript(id, text))} disabled={pending} className="btn-primary !px-3 !py-1.5 text-xs">
-            Save transcript
+            {t("actions.saveTranscript")}
           </button>
         </div>
       )}
@@ -79,15 +81,15 @@ export function RowActions({
       {mode === "tag" && (
         <div className="flex flex-wrap items-center gap-2">
           <select value={c} onChange={(e) => setC(e.target.value)} className="input max-w-[12rem]">
-            <option value="">— no client —</option>
+            <option value="">{t("actions.noClientOption")}</option>
             {clients.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
           </select>
           <select value={m} onChange={(e) => setM(e.target.value)} className="input max-w-[12rem]">
-            <option value="">— no case —</option>
+            <option value="">{t("actions.noCaseOption")}</option>
             {matters.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
           </select>
           <button onClick={() => run(() => tagRecording(id, c || null, m || null))} disabled={pending} className="btn-primary !px-3 !py-1.5 text-xs">
-            Save
+            {t("actions.save")}
           </button>
         </div>
       )}

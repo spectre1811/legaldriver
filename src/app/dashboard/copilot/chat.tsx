@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { askAgentAction } from "./actions";
 
@@ -17,6 +18,7 @@ export function Chat({
   matterId?: string | null;
   clientId?: string | null;
 }) {
+  const t = useTranslations("copilot");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLFormElement>(null);
@@ -56,8 +58,8 @@ export function Chat({
             required
             rows={2}
             disabled={pending}
-            placeholder="Ask about a case, a section (IPC↔BNS / CrPC↔BNSS), limitation, or next steps…"
-            aria-label="Ask the agent"
+            placeholder={t("placeholder")}
+            aria-label={t("askAria")}
             className="input min-h-[2.75rem] flex-1 resize-y"
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -68,15 +70,15 @@ export function Chat({
           />
           <button disabled={pending} className="btn-primary shrink-0">
             {pending ? (
-              "Thinking…"
+              t("thinking")
             ) : (
               <span className="flex items-center gap-1.5">
-                <Icon name="sparkles" className="h-4 w-4" /> Ask
+                <Icon name="sparkles" className="h-4 w-4" /> {t("ask")}
               </span>
             )}
           </button>
         </div>
-        {pending && <p className="text-xs text-ink-faint">Thinking… retrieving grounded sources.</p>}
+        {pending && <p className="text-xs text-ink-faint">{t("thinkingSources")}</p>}
         {error && <p className="text-xs text-red-600">{error}</p>}
       </form>
     </div>

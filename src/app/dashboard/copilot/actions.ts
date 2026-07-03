@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { askAgent } from "@/lib/services/agent/agent";
@@ -13,8 +14,9 @@ export type AskResult =
 // and either answers now or queues a pending assistant turn for the worker.
 // Everything is RLS/tenant-scoped via the server client — never log PII here.
 export async function askAgentAction(formData: FormData): Promise<AskResult> {
+  const t = await getTranslations("copilot");
   const question = String(formData.get("question") ?? "").trim();
-  if (!question) return { ok: false, message: "Type a question." };
+  if (!question) return { ok: false, message: t("errorTypeQuestion") };
 
   const matterId = (String(formData.get("matterId") ?? "").trim() || null) as string | null;
   const clientId = (String(formData.get("clientId") ?? "").trim() || null) as string | null;
@@ -22,7 +24,7 @@ export async function askAgentAction(formData: FormData): Promise<AskResult> {
 
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
-  if (!tenantId) return { ok: false, message: "No tenant." };
+  if (!tenantId) return { ok: false, message: t("errorNoTenant") };
 
   const {
     data: { user },
