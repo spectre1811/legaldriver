@@ -5,8 +5,8 @@ jurisdiction-aware deadlines + the advocate cause list on one calendar, run lega
 escalation with reminders, and ingest Gmail so emails + attachments are auto-filed and
 parsed against the right client/case. Full spec in `legal-mvp-build-brief.md`.
 
-## Peshi — operating rules (always in force, even without the kickoff prompt)
-This repo is part of **Peshi** (Indian legal-tech). The full ruleset + current work live in the exec
+## Mukadma — operating rules (always in force, even without the kickoff prompt)
+This repo is part of **Mukadma** (Indian legal-tech). The full ruleset + current work live in the exec
 pack at `~/personal/legalmarketplace/plan/exec/`: **`00-OPERATING-PROTOCOL.md`** (governs everything),
 `TRACKER.md` (in-flight), `BACKLOG.md` §A (what to pull next), `KICKOFF.md`, **`LEARNINGS.md`**
 (cross-agent gotchas — read before non-trivial work). Facts/numbers come **only** from
