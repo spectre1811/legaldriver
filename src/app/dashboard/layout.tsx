@@ -5,6 +5,7 @@ import { Icon } from "@/components/icons";
 import { NavLinks } from "./nav";
 import { MobileNav } from "./mobile-nav";
 import { CommandPalette } from "@/components/command-palette";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { brand } from "@/lib/brand";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -42,6 +43,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
 
         <div className="mt-4 border-t border-ec-hair pt-4">
+          <div className="mb-3 px-1"><LanguageSwitcher /></div>
           <div className="flex items-center gap-3 px-1">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ec-indigo text-sm font-semibold text-white">
               {initial}

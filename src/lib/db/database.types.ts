@@ -242,6 +242,65 @@ export type Database = {
           },
         ]
       }
+      ai_usage_event: {
+        Row: {
+          backend: string | null
+          cache_hit: boolean
+          cost_usd: number
+          created_at: string
+          estimated: boolean
+          id: string
+          model: string | null
+          ok: boolean
+          task: string
+          tenant_id: string
+          tier: string | null
+          tokens_in: number
+          tokens_out: number
+          trace_id: string | null
+        }
+        Insert: {
+          backend?: string | null
+          cache_hit?: boolean
+          cost_usd?: number
+          created_at?: string
+          estimated?: boolean
+          id?: string
+          model?: string | null
+          ok?: boolean
+          task: string
+          tenant_id: string
+          tier?: string | null
+          tokens_in?: number
+          tokens_out?: number
+          trace_id?: string | null
+        }
+        Update: {
+          backend?: string | null
+          cache_hit?: boolean
+          cost_usd?: number
+          created_at?: string
+          estimated?: boolean
+          id?: string
+          model?: string | null
+          ok?: boolean
+          task?: string
+          tenant_id?: string
+          tier?: string | null
+          tokens_in?: number
+          tokens_out?: number
+          trace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_event_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_event: {
         Row: {
           action: string
@@ -2419,6 +2478,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          locale: string | null
           rate_minor: number | null
           role: string
           tenant_id: string
@@ -2427,6 +2487,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          locale?: string | null
           rate_minor?: number | null
           role?: string
           tenant_id: string
@@ -2435,6 +2496,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          locale?: string | null
           rate_minor?: number | null
           role?: string
           tenant_id?: string
@@ -2659,6 +2721,26 @@ export type Database = {
       }
     }
     Views: {
+      ai_usage_monthly: {
+        Row: {
+          cache_hits: number | null
+          calls: number | null
+          cost_usd: number | null
+          month: string | null
+          tenant_id: string | null
+          tokens_in: number | null
+          tokens_out: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_event_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communication_log: {
         Row: {
           channel: string | null

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { brand } from "@/lib/brand";
 import { Icon } from "@/components/icons";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 // Public marketing landing (WO-03 Wave 4), from design/ui-concept.html Mockup A.
 // NOTE: pricing figures + tier limits below mirror the design concept and must be
@@ -32,6 +33,7 @@ export async function Landing() {
           <a href="#pricing" className="rounded-ec-s px-3 py-1.5 text-sm font-medium text-ec-ink-2 hover:bg-ec-paper-3 hover:text-ec-ink">{t("nav.pricing")}</a>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <LanguageSwitcher className="hidden sm:inline-flex" />
           <Link href="/login" className="rounded-ec-s px-3 py-1.5 text-sm font-medium text-ec-ink-2 hover:bg-ec-paper-3">{t("nav.login")}</Link>
           <Link href="/login" className="ec-btn ec-btn-ink">{t("nav.startFree")}</Link>
         </div>
