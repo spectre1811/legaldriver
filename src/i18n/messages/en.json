@@ -127,6 +127,17 @@
       "title": "Inbox review",
       "body": "emails waiting to be filed to a client or case.",
       "open": "Open inbox"
+    },
+    "firstRun": {
+      "eyebrow": "Get started",
+      "title": "Let's bring in your practice",
+      "body": "Add your advocate name and Bar registration number — we'll fetch your entire caseload from the public court record automatically. Cases, hearings and deadlines, on one calendar. No manual entry.",
+      "step1": "Add your advocate + Bar number",
+      "step2": "We pull your cases & hearing dates",
+      "step3": "Get tomorrow's cause list on WhatsApp",
+      "primaryCta": "Set up my practice",
+      "secondaryCta": "Add a case by CNR",
+      "foot": "Takes about 2 minutes · Sourced from public eCourts records."
     }
   },
   "causeList": {
