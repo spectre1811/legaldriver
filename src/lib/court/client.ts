@@ -2,6 +2,7 @@ import type {
   AdvocateQuery,
   CaseSearchResult,
   CauseListItem,
+  CauseListListing,
   CauseListQuery,
   CourtOrder,
   NormalizedCase,
@@ -21,6 +22,10 @@ export interface CourtDataClient {
 
   /** Date-wise cause list for an advocate (the "what's on my plate" feature). */
   getCauseList(q: CauseListQuery): Promise<CauseListItem[]>;
+
+  /** Which of the given tracked CNRs are listed on `date` — powers the daily cause-list alert.
+   *  Optional: only the LegalDriver internal API supports the CNR-keyed lookup (mock/ecourtsindia omit it). */
+  getCauseListByCNRs?(cnrs: string[], date: string): Promise<CauseListListing[]>;
 
   /** Force a live refresh of tracked cases. Bulk providers cap at 50 per call. */
   refreshCases(cnrs: string[]): Promise<NormalizedCase[]>;
