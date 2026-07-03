@@ -77,7 +77,6 @@ export function ReviewInbox({ docs, clients, matters }: { docs: ReviewDoc[]; cli
       {visible.map((d, i) => {
         const sel = pick[d.id] ?? { c: "", m: "" };
         const isActive = i === active;
-        const conf = d.confidence != null ? Math.round(d.confidence * 100) : null;
         return (
           <div
             key={d.id}
@@ -93,7 +92,6 @@ export function ReviewInbox({ docs, clients, matters }: { docs: ReviewDoc[]; cli
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
                   {d.docType && <Badge>{d.docType}</Badge>}
                   <span>{d.sourceLabel}</span>
-                  {conf != null && <span className={conf >= 80 ? "text-emerald-700" : "text-amber-700"}>{t("confidence", { percent: conf })}</span>}
                 </div>
               </div>
             </div>

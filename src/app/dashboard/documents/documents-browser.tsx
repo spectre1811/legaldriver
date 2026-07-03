@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui";
 import { DocActions } from "@/components/doc-actions";
 import { rangeIds, toggle } from "@/lib/select-range";
 import {
-  bulkDeleteDocuments, restoreDocuments, purgeDocuments, bulkRefileDocuments, bulkDownloadUrls,
+  bulkDeleteDocuments, restoreDocuments, purgeDocuments, bulkFileToClient, bulkFileToCase, bulkDownloadUrls,
 } from "./actions";
 
 export type DocRow = {
@@ -81,9 +81,13 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
     const r = await bulkDownloadUrls([...sel]);
     r.files.forEach((f) => window.open(f.url, "_blank"));
   }
-  async function onRefile(matterId: string) {
+  async function onFileClient(clientId: string) {
+    if (!clientId) return;
+    const ids = [...sel]; await run(() => bulkFileToClient(ids, clientId)); clear();
+  }
+  async function onFileCase(matterId: string) {
     if (!matterId) return;
-    const ids = [...sel]; await run(() => bulkRefileDocuments(ids, matterId, null)); clear();
+    const ids = [...sel]; await run(() => bulkFileToCase(ids, matterId)); clear();
   }
 
   const btn = "rounded-full px-3 py-1 text-sm font-medium hover:bg-paper/20 disabled:opacity-50";
@@ -183,13 +187,23 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
           ) : (
             <>
               <button onClick={onDownload} disabled={busy} className={btn}>{t("bulk.download")}</button>
+              {/* Client-first: file to a client, or tag to a case. */}
               <select
-                onChange={(e) => { onRefile(e.target.value); e.currentTarget.selectedIndex = 0; }}
+                onChange={(e) => { onFileClient(e.target.value); e.currentTarget.selectedIndex = 0; }}
                 disabled={busy} defaultValue=""
                 className="rounded-full bg-paper/15 px-3 py-1 text-sm text-paper focus:outline-none"
-                aria-label={t("bulk.moveTo")}
+                aria-label={t("bulk.toClient")}
               >
-                <option value="" className="text-ink">{t("bulk.moveTo")}</option>
+                <option value="" className="text-ink">{t("bulk.toClient")}</option>
+                {clientOpts.map((c) => <option key={c.id} value={c.id} className="text-ink">{c.label}</option>)}
+              </select>
+              <select
+                onChange={(e) => { onFileCase(e.target.value); e.currentTarget.selectedIndex = 0; }}
+                disabled={busy} defaultValue=""
+                className="rounded-full bg-paper/15 px-3 py-1 text-sm text-paper focus:outline-none"
+                aria-label={t("bulk.toCase")}
+              >
+                <option value="" className="text-ink">{t("bulk.toCase")}</option>
                 {matterOpts.map((m) => <option key={m.id} value={m.id} className="text-ink">{m.label}</option>)}
               </select>
               <button onClick={onDelete} disabled={busy} className={`${btn} text-red-300`}>{t("bulk.delete")}</button>
