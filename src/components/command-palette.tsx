@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 
 interface Hit { type: string; label: string; sub: string; href: string }
@@ -9,6 +10,7 @@ interface Hit { type: string; label: string; sub: string; href: string }
 // Global ⌘K / Ctrl-K search across cases, clients, documents, invoices, notices.
 // Rendered once in the dashboard layout; a visible trigger sits in the sidebar.
 export function CommandPalette() {
+  const t = useTranslations("shell");
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
@@ -61,16 +63,16 @@ export function CommandPalette() {
                 if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
                 if (e.key === "Enter" && hits[active]) go(hits[active]);
               }}
-              placeholder="Search cases, clients, documents, invoices, notices…"
+              placeholder={t("commandPalette.placeholder")}
               className="flex-1 bg-transparent py-3.5 text-sm outline-none placeholder:text-ink-faint"
             />
             <kbd className="rounded border border-line px-1.5 py-0.5 text-[0.65rem] text-ink-faint">esc</kbd>
           </div>
           <div className="max-h-[52vh] overflow-y-auto py-1">
             {q.trim().length < 2 ? (
-              <p className="px-4 py-6 text-center text-sm text-ink-faint">Type to search across your practice.</p>
+              <p className="px-4 py-6 text-center text-sm text-ink-faint">{t("commandPalette.hint")}</p>
             ) : loading && !hits.length ? (
-              <p className="px-4 py-6 text-center text-sm text-ink-faint">Searching…</p>
+              <p className="px-4 py-6 text-center text-sm text-ink-faint">{t("commandPalette.searching")}</p>
             ) : hits.length ? (
               hits.map((h, i) => (
                 <button key={h.href + i} onClick={() => go(h)} onMouseEnter={() => setActive(i)}
@@ -81,7 +83,7 @@ export function CommandPalette() {
                 </button>
               ))
             ) : (
-              <p className="px-4 py-6 text-center text-sm text-ink-faint">No matches.</p>
+              <p className="px-4 py-6 text-center text-sm text-ink-faint">{t("commandPalette.noMatches")}</p>
             )}
           </div>
         </div>
@@ -91,10 +93,11 @@ export function CommandPalette() {
 }
 
 function CommandTrigger({ onClick }: { onClick: () => void }) {
+  const t = useTranslations("shell");
   return (
     <button onClick={onClick} className="mb-3 flex w-full items-center gap-2 rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink-faint transition hover:border-brand-300 hover:text-ink">
       <Icon name="search" className="h-4 w-4" />
-      <span className="flex-1 text-left">Search…</span>
+      <span className="flex-1 text-left">{t("commandPalette.trigger")}</span>
       <kbd className="rounded border border-line px-1.5 py-0.5 text-[0.65rem]">⌘K</kbd>
     </button>
   );

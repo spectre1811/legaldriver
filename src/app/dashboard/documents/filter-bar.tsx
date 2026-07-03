@@ -2,12 +2,14 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
-import { CATEGORIES, CATEGORY_LABEL } from "@/lib/docs/categories";
+import { CATEGORIES } from "@/lib/docs/categories";
 
 type Opt = { id: string; label: string };
 
 export function FilterBar({ types, clients }: { types: string[]; clients: Opt[] }) {
+  const t = useTranslations("documents");
   const router = useRouter();
   const sp = useSearchParams();
   const [q, setQ] = useState(sp.get("q") ?? "");
@@ -25,30 +27,30 @@ export function FilterBar({ types, clients }: { types: string[]; clients: Opt[] 
         className="relative min-w-[14rem] flex-1"
       >
         <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search documents (filename + contents)…" className="input pl-9" aria-label="Search documents" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("filter.searchPlaceholder")} className="input pl-9" aria-label={t("filter.searchAria")} />
       </form>
-      <select value={sp.get("client") ?? ""} onChange={(e) => setParam("client", e.target.value)} className="input max-w-[12rem]" aria-label="Client">
-        <option value="">All clients</option>
+      <select value={sp.get("client") ?? ""} onChange={(e) => setParam("client", e.target.value)} className="input max-w-[12rem]" aria-label={t("filter.clientAria")}>
+        <option value="">{t("filter.allClients")}</option>
         {clients.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
       </select>
-      <select value={sp.get("category") ?? ""} onChange={(e) => setParam("category", e.target.value)} className="input max-w-[12rem]" aria-label="Category">
-        <option value="">All categories</option>
-        {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{CATEGORY_LABEL[c.key]}</option>)}
+      <select value={sp.get("category") ?? ""} onChange={(e) => setParam("category", e.target.value)} className="input max-w-[12rem]" aria-label={t("filter.categoryAria")}>
+        <option value="">{t("filter.allCategories")}</option>
+        {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{t(`filter.category.${c.key}`)}</option>)}
       </select>
-      <select value={sp.get("source") ?? ""} onChange={(e) => setParam("source", e.target.value)} className="input max-w-[10rem]" aria-label="Source">
-        <option value="">All sources</option>
-        <option value="gmail">Gmail</option>
-        <option value="upload">Upload</option>
-        <option value="court_order">Court order</option>
+      <select value={sp.get("source") ?? ""} onChange={(e) => setParam("source", e.target.value)} className="input max-w-[10rem]" aria-label={t("filter.sourceAria")}>
+        <option value="">{t("filter.allSources")}</option>
+        <option value="gmail">{t("filter.source.gmail")}</option>
+        <option value="upload">{t("filter.source.upload")}</option>
+        <option value="court_order">{t("filter.source.court_order")}</option>
       </select>
-      <select value={sp.get("type") ?? ""} onChange={(e) => setParam("type", e.target.value)} className="input max-w-[11rem]" aria-label="Type">
-        <option value="">All types</option>
-        {types.map((t) => <option key={t} value={t}>{t}</option>)}
+      <select value={sp.get("type") ?? ""} onChange={(e) => setParam("type", e.target.value)} className="input max-w-[11rem]" aria-label={t("filter.typeAria")}>
+        <option value="">{t("filter.allTypes")}</option>
+        {types.map((t2) => <option key={t2} value={t2}>{t2}</option>)}
       </select>
-      <select value={sp.get("filed") ?? ""} onChange={(e) => setParam("filed", e.target.value)} className="input max-w-[9rem]" aria-label="Filed">
-        <option value="">All</option>
-        <option value="filed">Filed</option>
-        <option value="unfiled">Unfiled</option>
+      <select value={sp.get("filed") ?? ""} onChange={(e) => setParam("filed", e.target.value)} className="input max-w-[9rem]" aria-label={t("filter.filedAria")}>
+        <option value="">{t("filter.all")}</option>
+        <option value="filed">{t("filter.filed")}</option>
+        <option value="unfiled">{t("filter.unfiled")}</option>
       </select>
     </div>
   );

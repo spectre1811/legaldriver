@@ -3,6 +3,7 @@
 import { useState, useRef, useTransition, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { relinkDocument, deleteDocument, toggleDocShare } from "@/app/dashboard/documents/actions";
 
@@ -34,6 +35,7 @@ export function DocActions({
   const [pending, start] = useTransition();
   const btnRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
+  const t = useTranslations("documents");
 
   const close = () => { setOpen(false); setMode("menu"); };
 
@@ -52,10 +54,10 @@ export function DocActions({
 
   return (
     <div className="inline-flex items-center gap-2">
-      <a href={`/api/documents/${documentId}/download`} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:text-brand-700" title="Open">
+      <a href={`/api/documents/${documentId}/download`} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:text-brand-700" title={t("docActions.open")}>
         <Icon name="external" className="h-4 w-4" />
       </a>
-      <button ref={btnRef} onClick={() => setOpen((v) => !v)} className="rounded-md px-1.5 text-ink-faint hover:bg-paper hover:text-ink" aria-label="More" aria-haspopup="true">⋯</button>
+      <button ref={btnRef} onClick={() => setOpen((v) => !v)} className="rounded-md px-1.5 text-ink-faint hover:bg-paper hover:text-ink" aria-label={t("docActions.more")} aria-haspopup="true">⋯</button>
 
       {open && pos && typeof document !== "undefined" && createPortal(
         <>
@@ -64,42 +66,42 @@ export function DocActions({
             {mode === "menu" && (
               <div className="flex flex-col">
                 <button onClick={() => setMode("refile")} className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-soft hover:bg-paper">
-                  <Icon name="cases" className="h-4 w-4" /> {matterId ? "Edit filing" : "Tag to a case / edit"}
+                  <Icon name="cases" className="h-4 w-4" /> {matterId ? t("docActions.editFiling") : t("docActions.tagToCase")}
                 </button>
                 <button onClick={() => start(async () => { await toggleDocShare(documentId, !shared); close(); router.refresh(); })} className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-soft hover:bg-paper">
-                  <Icon name={shared ? "check" : "inbox"} className="h-4 w-4" /> {shared ? "Unshare from client" : "Share with client"}
+                  <Icon name={shared ? "check" : "inbox"} className="h-4 w-4" /> {shared ? t("docActions.unshare") : t("docActions.share")}
                 </button>
                 <button onClick={() => setMode("delete")} className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50">
-                  <Icon name="alert" className="h-4 w-4" /> Delete
+                  <Icon name="alert" className="h-4 w-4" /> {t("docActions.delete")}
                 </button>
               </div>
             )}
             {mode === "refile" && (
               <div className="space-y-2 p-1">
-                <p className="label">Client</p>
-                <select value={c} onChange={(e) => setC(e.target.value)} className="input py-1.5 text-xs" aria-label="Client">
-                  <option value="">— client —</option>
+                <p className="label">{t("docActions.client")}</p>
+                <select value={c} onChange={(e) => setC(e.target.value)} className="input py-1.5 text-xs" aria-label={t("docActions.client")}>
+                  <option value="">{t("docActions.clientOption")}</option>
                   {clients.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
-                <p className="label">Case <span className="font-normal normal-case text-ink-faint">(optional)</span></p>
-                <select value={m} onChange={(e) => setM(e.target.value)} className="input py-1.5 text-xs" aria-label="Case">
-                  <option value="">— no case —</option>
+                <p className="label">{t("docActions.case")} <span className="font-normal normal-case text-ink-faint">{t("docActions.optional")}</span></p>
+                <select value={m} onChange={(e) => setM(e.target.value)} className="input py-1.5 text-xs" aria-label={t("docActions.case")}>
+                  <option value="">{t("docActions.noCaseOption")}</option>
                   {matters.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
-                <p className="label">Type</p>
-                <input value={dt} onChange={(e) => setDt(e.target.value)} placeholder="e.g. notice, agreement, order" className="input py-1.5 text-xs" aria-label="Document type" />
+                <p className="label">{t("docActions.type")}</p>
+                <input value={dt} onChange={(e) => setDt(e.target.value)} placeholder={t("docActions.typePlaceholder")} className="input py-1.5 text-xs" aria-label={t("docActions.documentType")} />
                 <div className="flex gap-2">
-                  <button disabled={pending} onClick={() => start(async () => { await relinkDocument(documentId, m || null, c || null, dt); close(); router.refresh(); })} className="btn-primary px-3 py-1.5 text-xs">{pending ? "…" : "Apply"}</button>
-                  <button onClick={() => setMode("menu")} className="btn-ghost px-2 py-1.5 text-xs">Back</button>
+                  <button disabled={pending} onClick={() => start(async () => { await relinkDocument(documentId, m || null, c || null, dt); close(); router.refresh(); })} className="btn-primary px-3 py-1.5 text-xs">{pending ? "…" : t("docActions.apply")}</button>
+                  <button onClick={() => setMode("menu")} className="btn-ghost px-2 py-1.5 text-xs">{t("docActions.back")}</button>
                 </div>
               </div>
             )}
             {mode === "delete" && (
               <div className="space-y-2 p-1">
-                <p className="text-xs text-ink-soft">Delete this document and its file permanently?</p>
+                <p className="text-xs text-ink-soft">{t("docActions.deleteConfirm")}</p>
                 <div className="flex gap-2">
-                  <button disabled={pending} onClick={() => start(async () => { await deleteDocument(documentId); close(); router.refresh(); })} className="btn px-3 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700">{pending ? "…" : "Delete"}</button>
-                  <button onClick={() => setMode("menu")} className="btn-ghost px-2 py-1.5 text-xs">Cancel</button>
+                  <button disabled={pending} onClick={() => start(async () => { await deleteDocument(documentId); close(); router.refresh(); })} className="btn px-3 py-1.5 text-xs bg-red-600 text-white hover:bg-red-700">{pending ? "…" : t("docActions.delete")}</button>
+                  <button onClick={() => setMode("menu")} className="btn-ghost px-2 py-1.5 text-xs">{t("docActions.cancel")}</button>
                 </div>
               </div>
             )}
