@@ -119,6 +119,20 @@ async function main() {
   );
   check("schema match (required 'summary' present) → ok", r8b.ok === true && r8b.output != null);
   check("trace carries the estimated flag", typeof t8b[0].estimated === "boolean");
+  check("no provider usage → tokens estimated (fallback)", r8b.tokens.estimated === true);
+
+  // 9. Real provider usage (WO-32): when exec reports usage, meter ACTUAL tokens (estimated=false).
+  const usageExec: ExecFn = async ({ schema }) =>
+    schema
+      ? { json: { summary: "ok" }, text: null, usage: { input: 123, output: 45 } }
+      : { text: "ok", json: null, usage: { input: 123, output: 45 } };
+  const t9: TraceEvent[] = [];
+  const r9 = await runCore(
+    { task: "summary.case", input: "x", schema: { type: "object" }, tenantId: "T", scope: { kind: "tenant", tenantId: "T" } },
+    deps(usageExec, t9),
+  );
+  check("real usage → actual tokens metered, not estimated",
+    r9.tokens.input === 123 && r9.tokens.output === 45 && r9.tokens.total === 168 && r9.tokens.estimated === false && t9[0].estimated === false);
 
   console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
   process.exit(failures === 0 ? 0 : 1);

@@ -105,6 +105,8 @@ export interface ExecCall {
 export interface ExecResult {
   text: string | null;
   json: unknown | null;
+  /** Real provider token counts when the backend reports them (WO-32); else absent → estimate. */
+  usage?: { input: number; output: number } | null;
 }
 export type ExecFn = (call: ExecCall) => Promise<ExecResult>;
 
@@ -206,6 +208,7 @@ export async function runCore<T = unknown>(
   let json: unknown | null = null;
   let usedBackend: OaiBackend | undefined;
   let usedModel: string | undefined;
+  let usage: { input: number; output: number } | null = null;
   let ok = false;
 
   for (const choice of backendChain(route)) {
@@ -224,6 +227,7 @@ export async function runCore<T = unknown>(
       json = r.json;
       usedBackend = choice.backend;
       usedModel = choice.model;
+      usage = r.usage ?? null;
       ok = true;
       break;
     }
@@ -235,7 +239,11 @@ export async function runCore<T = unknown>(
       ? JSON.stringify(json).length
       : 0
     : text?.length ?? 0;
-  const tokens = estimateTokens(req.input.length, outputChars);
+  // Prefer the provider's REAL token counts (WO-32); fall back to the ~4-chars/token
+  // estimate only when the backend didn't report usage (e.g. the keyless CLI path).
+  const tokens = usage
+    ? { input: usage.input, output: usage.output, total: usage.input + usage.output, estimated: false as const }
+    : estimateTokens(req.input.length, outputChars);
   const model = usedModel ?? "(router-default)";
   const cost = estimateCostUsd(tokens, deps.prices?.[model]);
 
