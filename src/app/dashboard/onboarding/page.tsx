@@ -4,7 +4,7 @@ import { PageHeader, Card, Badge, Stat, fmtDate } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
-import { RunOnboardingButton } from "./onboarding-ui";
+import { RunOnboardingButton, DeleteOnboardingButton } from "./onboarding-ui";
 import { AdvocateForm } from "../settings/advocate-form";
 
 export const dynamic = "force-dynamic";
@@ -60,6 +60,7 @@ export default async function OnboardingPage() {
                     <div className="flex items-center gap-3">
                       {run && <Badge tone={run.status === "done" ? "green" : run.status === "error" ? "red" : "amber"}>{run.status === "running" ? run.stage : (t.has(`runStatus.${run.status}`) ? t(`runStatus.${run.status}`) : run.status)}</Badge>}
                       <RunOnboardingButton advocateId={a.id} label={run ? t("rerun") : t("run")} />
+                      <DeleteOnboardingButton advocateId={a.id} label={t("remove")} confirmText={t("removeConfirm", { name: a.name })} />
                     </div>
                   </div>
                   {run && (

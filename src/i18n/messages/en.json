@@ -1269,7 +1269,9 @@
       "cta": "Go to Settings"
     },
     "footer": "After a run: open cases (with hearings + reminders) are on your <calendar>Calendar</calendar>, matters are in <cases>Cases</cases> with AI briefings, and closed cases by name are in <research>Research</research>.",
-    "addAnother": "Add another advocate"
+    "addAnother": "Add another advocate",
+    "remove": "Remove",
+    "removeConfirm": "Remove {name} and their onboarded cases? This can’t be undone."
   },
   "settings": {
     "title": "Settings",
