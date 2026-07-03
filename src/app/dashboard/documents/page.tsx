@@ -1,21 +1,22 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card, Badge, EmptyState, fmtDate, fmtSize } from "@/components/ui";
-import { Icon, type IconName } from "@/components/icons";
-import { DocActions } from "@/components/doc-actions";
+import { PageHeader, EmptyState, fmtDate, fmtSize } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { CATEGORIES, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/docs/categories";
 import { FilterBar } from "./filter-bar";
 import { DocumentsUpload } from "./documents-upload";
+import { DocumentsBrowser, type DocRow } from "./documents-browser";
 
 const CATEGORY_ICON: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.icon]));
 
 export default async function DocumentsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; source?: string; type?: string; filed?: string; client?: string; category?: string };
+  searchParams: { q?: string; source?: string; type?: string; filed?: string; client?: string; category?: string; trash?: string };
 }) {
   const t = await getTranslations("documents");
+  const isTrash = searchParams.trash === "1";
   const SOURCE: Record<string, string> = {
     gmail: t("source.gmail"),
     upload: t("source.upload"),
@@ -48,11 +49,16 @@ export default async function DocumentsPage({
       ? query.or(`client_id.eq.${client},matter_id.in.(${matterIds.join(",")})`)
       : query.eq("client_id", client);
   }
+  // WO-27 Wave 2 — soft-delete: the main list hides trashed docs; the Trash view shows only them.
+  query = isTrash
+    ? query.not("extracted->>deletedAt", "is", null)
+    : query.filter("extracted->>deletedAt", "is", null);
 
-  const [{ data: docs }, { data: clients }, { data: typeRows }] = await Promise.all([
+  const [{ data: docs }, { data: clients }, { data: typeRows }, { count: trashCount }] = await Promise.all([
     query,
     supabase.from("client").select("id, name"),
     supabase.from("document").select("doc_type").not("doc_type", "is", null).limit(1000),
+    supabase.from("document").select("id", { count: "exact", head: true }).not("extracted->>deletedAt", "is", null),
   ]);
 
   const clientName = new Map((clients ?? []).map((c) => [c.id, c.name]));
@@ -75,83 +81,54 @@ export default async function DocumentsPage({
     if (!groups.has(key)) groups.set(key, bucket);
     bucket.push(d);
   }
-  const sections = CATEGORY_ORDER.filter((k) => groups.has(k)).map((k) => [k, groups.get(k)!] as const);
+  // Resolve display fields server-side (client-first: direct client, else via the tagged case's
+  // client) into serialisable rows for the client-side selectable browser.
+  const toRow = (d: Doc): DocRow => {
+    const resolvedClientId = d.client_id ?? (d.matter_id ? matterClient.get(d.matter_id) ?? null : null);
+    const clientLabel = resolvedClientId ? clientName.get(resolvedClientId) ?? null : null;
+    const caseLabel = d.matter_id ? matterName.get(d.matter_id) ?? null : null;
+    return {
+      id: d.id, filename: d.filename ?? "—", docType: d.doc_type,
+      primary: clientLabel ?? caseLabel, secondary: clientLabel ? caseLabel : null,
+      sourceLabel: SOURCE[d.source] ?? d.source, sizeLabel: fmtSize(d.size_bytes), dateLabel: fmtDate(d.created_at),
+      matterId: d.matter_id, clientId: d.client_id, shared: d.portal_shared,
+    };
+  };
+  const sectionData = CATEGORY_ORDER.filter((k) => groups.has(k)).map((k) => ({
+    cat: k, label: CATEGORY_LABEL[k], icon: CATEGORY_ICON[k] ?? "documents",
+    rows: groups.get(k)!.map(toRow),
+  }));
+  const orderedIds = sectionData.flatMap((s) => s.rows.map((r) => r.id));
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <div className="flex items-start justify-between gap-3">
+        <PageHeader title={isTrash ? t("trash.title") : t("title")} subtitle={isTrash ? t("trash.subtitle") : t("subtitle")} />
+        <Link href={isTrash ? "/dashboard/documents" : "/dashboard/documents?trash=1"} className="btn-ghost shrink-0 text-sm">
+          <Icon name={isTrash ? "back" : "trash"} className="h-4 w-4" />
+          <span className="ml-1.5">{isTrash ? t("trash.back") : t("trash.link", { n: trashCount ?? 0 })}</span>
+        </Link>
+      </div>
 
-      <DocumentsUpload />
+      {!isTrash && <DocumentsUpload />}
+      {!isTrash && <FilterBar types={types} clients={clientOpts} />}
 
-      <FilterBar types={types} clients={clientOpts} />
-
-      {docs && docs.length ? (
-        <div className="space-y-6">
+      {sectionData.length ? (
+        <>
           <div className="text-xs text-ink-faint">
-            {t("summary.count", { docs: docs.length, categories: sections.length })}{activeFilters ? ` · ${t("summary.filtered")}` : ""}
+            {isTrash
+              ? t("trash.count", { docs: (docs ?? []).length })
+              : t("summary.count", { docs: (docs ?? []).length, categories: sectionData.length })}
+            {activeFilters ? ` · ${t("summary.filtered")}` : ""}
           </div>
-          {sections.map(([cat, rows]) => (
-            <Card key={cat} className="overflow-hidden">
-              <div className="flex items-center gap-2.5 border-b border-line bg-paper/60 px-5 py-3">
-                <Icon name={(CATEGORY_ICON[cat] as IconName) ?? "documents"} className="h-4 w-4 text-brand-600" />
-                <h2 className="text-sm font-semibold text-ink">{CATEGORY_LABEL[cat]}</h2>
-                <span className="text-xs text-ink-faint">{rows.length}</span>
-              </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-line text-left">
-                    <th className="px-5 py-3 label">{t("field.file")}</th>
-                    <th className="hidden px-5 py-3 label sm:table-cell">{t("field.type")}</th>
-                    <th className="px-5 py-3 label">{t("field.filedUnder")}</th>
-                    <th className="hidden px-5 py-3 label md:table-cell">{t("field.source")}</th>
-                    <th className="hidden px-5 py-3 label lg:table-cell">{t("field.size")}</th>
-                    <th className="hidden px-5 py-3 label lg:table-cell">{t("field.added")}</th>
-                    <th className="px-5 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((d) => {
-                    // Client-first: resolve directly, else via the tagged case's client.
-                    const resolvedClientId = d.client_id ?? (d.matter_id ? matterClient.get(d.matter_id) ?? null : null);
-                    const clientLabel = resolvedClientId ? clientName.get(resolvedClientId) ?? null : null;
-                    const caseLabel = d.matter_id ? matterName.get(d.matter_id) ?? null : null;
-                    const primary = clientLabel ?? caseLabel;
-                    const secondary = clientLabel ? caseLabel : null;
-                    return (
-                      <tr key={d.id} className="border-b border-line last:border-0 hover:bg-paper">
-                        <td className="px-5 py-3.5">
-                          <Link href={`/dashboard/documents/${d.id}`} className="flex items-center gap-2.5 group">
-                            <Icon name="documents" className="h-4 w-4 shrink-0 text-ink-faint" />
-                            <span className="font-medium text-ink group-hover:text-brand-700 group-hover:underline">{d.filename ?? "—"}</span>
-                          </Link>
-                        </td>
-                        <td className="hidden px-5 py-3.5 sm:table-cell">{d.doc_type ? <Badge>{d.doc_type}</Badge> : <span className="text-ink-faint">—</span>}</td>
-                        <td className="px-5 py-3.5 text-ink-muted">
-                          {primary ? (
-                            <span className="flex flex-col leading-tight">
-                              <span className="font-medium text-ink">{primary}</span>
-                              {secondary && <span className="mt-0.5 text-xs text-ink-faint">{secondary}</span>}
-                            </span>
-                          ) : (
-                            <span className="text-amber-600">{t("unfiled")}</span>
-                          )}
-                        </td>
-                        <td className="hidden px-5 py-3.5 text-xs text-ink-faint md:table-cell">{SOURCE[d.source] ?? d.source}</td>
-                        <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtSize(d.size_bytes)}</td>
-                        <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtDate(d.created_at)}</td>
-                        <td className="px-5 py-3.5 text-right">
-                          <DocActions documentId={d.id} matterId={d.matter_id} clientId={d.client_id} matters={matterOpts} clients={clientOpts} shared={d.portal_shared} docType={d.doc_type} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </Card>
-          ))}
-        </div>
+          <DocumentsBrowser sections={sectionData} orderedIds={orderedIds} matterOpts={matterOpts} clientOpts={clientOpts} trash={isTrash} />
+        </>
       ) : (
-        <EmptyState icon="documents" title={activeFilters ? t("empty.filteredTitle") : t("empty.emptyTitle")} body={activeFilters ? t("empty.filteredBody") : t("empty.emptyBody")} />
+        <EmptyState
+          icon={isTrash ? "trash" : "documents"}
+          title={isTrash ? t("trash.emptyTitle") : activeFilters ? t("empty.filteredTitle") : t("empty.emptyTitle")}
+          body={isTrash ? t("trash.emptyBody") : activeFilters ? t("empty.filteredBody") : t("empty.emptyBody")}
+        />
       )}
 
       <p className="text-xs text-ink-faint">{t("storageNote")}</p>

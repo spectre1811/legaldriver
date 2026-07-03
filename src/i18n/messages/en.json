@@ -344,11 +344,6 @@
     },
     "documents": {
       "title": "Documents",
-      "upload": {
-        "cta": "Upload documents",
-        "hint": "Drop files here or click — we read, type, and file each one to the right case.",
-        "uploading": "Uploading & filing…"
-      },
       "empty": "No documents yet — upload one above, or they'll arrive auto-filed from Gmail."
     },
     "billing": {
@@ -886,6 +881,32 @@
   "documents": {
     "title": "Documents",
     "subtitle": "Every document, organised by category and client. A case is an optional tag — file by client first, link to a case when it matters.",
+    "upload": {
+      "cta": "Upload documents",
+      "hint": "Drop files here or click — we read, type, and file each one to the right case.",
+      "uploading": "Uploading & filing…"
+    },
+    "bulk": {
+      "selected": "{n} selected",
+      "selectAll": "Select all",
+      "download": "Download",
+      "moveTo": "Move to case…",
+      "delete": "Delete",
+      "restore": "Restore",
+      "purge": "Delete forever",
+      "purgeConfirm": "Permanently delete {n} document(s)? This cannot be undone.",
+      "undo": "Undo",
+      "clear": "Clear selection"
+    },
+    "trash": {
+      "title": "Trash",
+      "subtitle": "Deleted documents are kept here and can be restored. Empty them permanently anytime.",
+      "link": "Trash ({n})",
+      "back": "Back to Documents",
+      "count": "{docs} in Trash",
+      "emptyTitle": "Trash is empty",
+      "emptyBody": "Deleted documents will appear here, and can be restored."
+    },
     "summary": {
       "count": "{docs, plural, one {# document} other {# documents}} in {categories, plural, one {# category} other {# categories}}",
       "filtered": "filtered"

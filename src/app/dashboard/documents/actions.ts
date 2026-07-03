@@ -77,6 +77,91 @@ export async function toggleDocShare(documentId: string, shared: boolean): Promi
   return { ok: true, message: shared ? "Shared with client." : "Unshared." };
 }
 
+// ── WO-27 Wave 2 · bulk + reversible delete ───────────────────────────────────────────────
+// Reversible delete uses a soft-delete flag in `extracted.deletedAt` (no schema migration): the
+// main list hides flagged rows, the Trash view shows them, restore clears the flag, and a hard
+// purge (storage + row) only happens from Trash. This keeps delete UNDOABLE without a founder-gated
+// migration.
+
+async function setDeletedAt(supabase: ReturnType<typeof createClient>, ids: string[], value: string | null) {
+  const { data: rows } = await supabase.from("document").select("id, extracted").in("id", ids); // RLS-scoped
+  let n = 0;
+  for (const r of rows ?? []) {
+    const ex = { ...((r.extracted as Record<string, unknown>) ?? {}) };
+    if (value) ex.deletedAt = value; else delete ex.deletedAt;
+    const { error } = await supabase.from("document").update({ extracted: ex as never }).eq("id", r.id);
+    if (!error) n++;
+  }
+  return n;
+}
+
+// Soft-delete N documents (reversible). Returns the count so the UI can offer Undo.
+export async function bulkDeleteDocuments(ids: string[]): Promise<DocResult & { count: number }> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant.", count: 0 };
+  if (!ids.length) return { ok: false, message: "Nothing selected.", count: 0 };
+  const n = await setDeletedAt(supabase, ids, new Date().toISOString());
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "document.trash", entity: "document", after: { count: n } });
+  revalidatePath("/dashboard/documents");
+  return { ok: n > 0, message: `${n} moved to Trash.`, count: n };
+}
+
+// Restore soft-deleted documents (the Undo action + the Trash "Restore" button).
+export async function restoreDocuments(ids: string[]): Promise<DocResult & { count: number }> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant.", count: 0 };
+  const n = await setDeletedAt(supabase, ids, null);
+  revalidatePath("/dashboard/documents");
+  return { ok: n > 0, message: `${n} restored.`, count: n };
+}
+
+// Permanently remove documents — storage object + row. Only reachable from the Trash view.
+export async function purgeDocuments(ids: string[]): Promise<DocResult & { count: number }> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant.", count: 0 };
+  const { data: rows } = await supabase.from("document").select("id, storage_path").in("id", ids);
+  const admin = createAdminClient();
+  let n = 0;
+  for (const r of rows ?? []) {
+    if (r.storage_path) await admin.storage.from("documents").remove([r.storage_path]);
+    const { error } = await supabase.from("document").delete().eq("id", r.id);
+    if (!error) n++;
+  }
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "document.purge", entity: "document", after: { count: n } });
+  revalidatePath("/dashboard/documents");
+  return { ok: n > 0, message: `${n} permanently deleted.`, count: n };
+}
+
+// Move N documents to a case and/or client at once (bulk refile).
+export async function bulkRefileDocuments(ids: string[], matterId: string | null, clientId: string | null): Promise<DocResult & { count: number }> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant.", count: 0 };
+  const { error, count } = await supabase.from("document").update({ matter_id: matterId, client_id: clientId }, { count: "exact" }).in("id", ids);
+  if (error) return { ok: false, message: error.message, count: 0 };
+  revalidatePath("/dashboard/documents");
+  return { ok: true, message: `${count ?? ids.length} refiled.`, count: count ?? ids.length };
+}
+
+// Signed URLs for a bulk download (short-lived). The client opens each.
+export async function bulkDownloadUrls(ids: string[]): Promise<{ ok: boolean; files: { filename: string; url: string }[] }> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, files: [] };
+  const { data: rows } = await supabase.from("document").select("filename, storage_path").in("id", ids);
+  const admin = createAdminClient();
+  const files: { filename: string; url: string }[] = [];
+  for (const r of rows ?? []) {
+    if (!r.storage_path) continue;
+    const { data: signed } = await admin.storage.from("documents").createSignedUrl(r.storage_path, 120);
+    if (signed?.signedUrl) files.push({ filename: r.filename ?? "document", url: signed.signedUrl });
+  }
+  return { ok: true, files };
+}
+
 // Delete a document — removes the storage object then the row (tenant-scoped).
 export async function deleteDocument(documentId: string): Promise<DocResult> {
   const supabase = createClient();
