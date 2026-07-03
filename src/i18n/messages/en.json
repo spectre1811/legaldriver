@@ -1199,11 +1199,12 @@
     },
     "lastRun": "Last run {date}",
     "empty": {
-      "title": "No advocates yet",
-      "body": "Add an advocate (with their bar number) in Settings, then run onboarding here.",
+      "title": "Add your first advocate",
+      "body": "Enter your advocate's name and Bar registration number below — then run onboarding to auto-fetch their entire caseload from the court record.",
       "cta": "Go to Settings"
     },
-    "footer": "After a run: open cases (with hearings + reminders) are on your <calendar>Calendar</calendar>, matters are in <cases>Cases</cases> with AI briefings, and closed cases by name are in <research>Research</research>."
+    "footer": "After a run: open cases (with hearings + reminders) are on your <calendar>Calendar</calendar>, matters are in <cases>Cases</cases> with AI briefings, and closed cases by name are in <research>Research</research>.",
+    "addAnother": "Add another advocate"
   },
   "settings": {
     "title": "Settings",
