@@ -4,6 +4,7 @@ import type {
   SendResult,
   VerifyWebhookParams,
 } from "./types";
+import { isDemoMode } from "@/lib/demo";
 
 // The single seam for all messaging I/O. Swapping providers = swapping the impl
 // returned by getMessagingClient(). Mirrors the CourtDataClient seam: an
@@ -29,6 +30,13 @@ let cached: MessagingClient | null = null;
 // to "whatsapp_bsp" AND all required BSP keys are present. Missing config falls
 // back to the mock so local dev / unconfigured deploys never crash.
 export function getMessagingClient(): MessagingClient {
+  // DEMO_MODE first (before the cache) — force the mock client, never the live
+  // BSP, regardless of configured keys or a runtime toggle (WO-08).
+  if (isDemoMode()) {
+    const { MockMessagingClient } = require("./mock") as typeof import("./mock");
+    cached = new MockMessagingClient();
+    return cached;
+  }
   if (cached) return cached;
 
   const provider = process.env.MESSAGING_PROVIDER ?? "mock";
