@@ -156,15 +156,26 @@ export async function purgeDocuments(ids: string[]): Promise<DocResult & { count
   return { ok: n > 0, message: `${n} permanently deleted.`, count: n };
 }
 
-// Move N documents to a case and/or client at once (bulk refile).
-export async function bulkRefileDocuments(ids: string[], matterId: string | null, clientId: string | null): Promise<DocResult & { count: number }> {
+// File N documents to a CLIENT at once (client-first bulk filing; leaves any case tag intact).
+export async function bulkFileToClient(ids: string[], clientId: string): Promise<DocResult & { count: number }> {
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
-  if (!tenantId) return { ok: false, message: "No tenant.", count: 0 };
-  const { error, count } = await supabase.from("document").update({ matter_id: matterId, client_id: clientId }, { count: "exact" }).in("id", ids);
+  if (!tenantId || !clientId) return { ok: false, message: "No tenant/client.", count: 0 };
+  const { error, count } = await supabase.from("document").update({ client_id: clientId }, { count: "exact" }).in("id", ids);
   if (error) return { ok: false, message: error.message, count: 0 };
   revalidatePath("/dashboard/documents");
-  return { ok: true, message: `${count ?? ids.length} refiled.`, count: count ?? ids.length };
+  return { ok: true, message: `${count ?? ids.length} filed to client.`, count: count ?? ids.length };
+}
+
+// Tag N documents to a CASE at once (leaves the client as-is; the case→client join resolves display).
+export async function bulkFileToCase(ids: string[], matterId: string): Promise<DocResult & { count: number }> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId || !matterId) return { ok: false, message: "No tenant/case.", count: 0 };
+  const { error, count } = await supabase.from("document").update({ matter_id: matterId }, { count: "exact" }).in("id", ids);
+  if (error) return { ok: false, message: error.message, count: 0 };
+  revalidatePath("/dashboard/documents");
+  return { ok: true, message: `${count ?? ids.length} filed to case.`, count: count ?? ids.length };
 }
 
 // Signed URLs for a bulk download (short-lived). The client opens each.
