@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { googleConfigured } from "@/lib/mail/oauth";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
@@ -7,6 +8,7 @@ import { ReviewItem } from "./review-item";
 import { DisconnectButton, LoadEarlierButton } from "./connect-controls";
 
 export default async function InboxPage({ searchParams }: { searchParams: { connected?: string; error?: string } }) {
+  const t = await getTranslations("inbox");
   const supabase = createClient();
   const [{ data: conn }, { data: clients }, { data: matters }, { data: emails }] = await Promise.all([
     supabase.from("oauth_connection").select("id, status").eq("provider", "google").eq("status", "active").maybeSingle(),
@@ -25,16 +27,16 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
 
   const groups = new Map<string, typeof filed>();
   for (const e of filed) {
-    const key = e.classified_matter_id ? `Case: ${matterName.get(e.classified_matter_id) ?? "—"}`
-      : e.classified_client_id ? `Client: ${clientName.get(e.classified_client_id) ?? "—"}` : "Unassigned";
+    const key = e.classified_matter_id ? `${t("group.case")}: ${matterName.get(e.classified_matter_id) ?? "—"}`
+      : e.classified_client_id ? `${t("group.client")}: ${clientName.get(e.classified_client_id) ?? "—"}` : t("group.unassigned");
     (groups.get(key) ?? groups.set(key, []).get(key)!).push(e);
   }
 
   return (
     <div className="space-y-7">
-      <PageHeader title="Inbox" subtitle="Connect Gmail to auto-file emails & attachments against the right client or case." />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
-      {searchParams.connected && <p className="rounded-xl bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-700">Gmail connected.</p>}
+      {searchParams.connected && <p className="rounded-xl bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-700">{t("connected")}</p>}
       {searchParams.error && <p className="rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800">{searchParams.error}</p>}
 
       <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
@@ -44,7 +46,7 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
           </span>
           <div className="text-sm">
             <p className="font-medium text-ink">Gmail</p>
-            <p className="text-ink-muted">{conn ? "Connected — syncing every 30 min." : googleConfigured() ? "Not connected." : "OAuth not configured."}</p>
+            <p className="text-ink-muted">{conn ? t("state.connected") : googleConfigured() ? t("state.notConnected") : t("state.oauthNotConfigured")}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -52,7 +54,7 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
             <><LoadEarlierButton /><DisconnectButton /></>
           ) : (
             <a href="/api/google/connect" aria-disabled={!googleConfigured()} className={googleConfigured() ? "btn-primary" : "btn-primary pointer-events-none opacity-50"}>
-              <Icon name="gmail" className="h-4 w-4" /> Connect Gmail
+              <Icon name="gmail" className="h-4 w-4" /> {t("connectGmail")}
             </a>
           )}
           <IngestButton />
@@ -62,7 +64,7 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
       {review.length > 0 && (
         <Card className="overflow-hidden border-amber-200">
           <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm font-medium text-amber-800">
-            <Icon name="alert" className="h-4 w-4" /> Needs review ({review.length}) — confirm the client/case
+            <Icon name="alert" className="h-4 w-4" /> {t("needsReview", { count: review.length })}
           </div>
           <ul className="divide-y divide-line">
             {review.map((e) => (
@@ -78,9 +80,9 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
       )}
 
       <section className="space-y-4">
-        <h2 className="text-base font-medium">Filed — by client / case</h2>
+        <h2 className="text-base font-medium">{t("filedHeading")}</h2>
         {groups.size === 0 ? (
-          <EmptyState icon="inbox" title="Nothing filed yet" body="Connect Gmail or run the demo ingest above — emails get filed under the right client and case." />
+          <EmptyState icon="inbox" title={t("empty.title")} body={t("empty.body")} />
         ) : (
           [...groups.entries()].map(([group, items]) => (
             <Card key={group} className="overflow-hidden">
@@ -90,7 +92,7 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
               <ul className="divide-y divide-line">
                 {items.map((e) => (
                   <li key={e.id} className="px-5 py-3 text-sm">
-                    <p className="font-medium text-ink">{e.subject || "(no subject)"}</p>
+                    <p className="font-medium text-ink">{e.subject || t("noSubject")}</p>
                     <p className="text-xs text-ink-faint">{e.from_addr} · {e.received_at ? new Date(e.received_at).toLocaleString("en-IN") : ""}</p>
                   </li>
                 ))}
@@ -100,7 +102,7 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
         )}
       </section>
 
-      <p className="text-xs text-ink-faint">gmail.readonly · refresh token stored encrypted in Supabase Vault · email bodies are never logged.</p>
+      <p className="text-xs text-ink-faint">{t("footer")}</p>
     </div>
   );
 }

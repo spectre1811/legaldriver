@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, EmptyState, fmtAgo } from "@/components/ui";
 import { Icon } from "@/components/icons";
@@ -5,10 +6,10 @@ import { Composer } from "./composer";
 import { SuggestedReply } from "./suggested-reply";
 
 const CHANNELS = [
-  { key: "", label: "All" },
-  { key: "whatsapp", label: "WhatsApp" },
-  { key: "sms", label: "SMS" },
-  { key: "email", label: "Email" },
+  { key: "", labelKey: "all" },
+  { key: "whatsapp", labelKey: "whatsapp" },
+  { key: "sms", labelKey: "sms" },
+  { key: "email", labelKey: "email" },
 ] as const;
 
 const CHANNEL_TONE: Record<string, "green" | "brand" | "neutral"> = {
@@ -18,6 +19,7 @@ const CHANNEL_TONE: Record<string, "green" | "brand" | "neutral"> = {
 };
 
 export default async function MessagesPage({ searchParams }: { searchParams: { channel?: string } }) {
+  const t = await getTranslations("messages");
   const supabase = createClient();
   const channel = searchParams.channel;
 
@@ -49,8 +51,8 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
   return (
     <div className="space-y-7">
       <PageHeader
-        title="Messages"
-        subtitle="WhatsApp/SMS threads, auto-filed to the right client or case. AI routing is assistive — verify before relying on it. Send only from the firm's Business number, with the recipient's consent (DPDP)."
+        title={t("title")}
+        subtitle={t("subtitle")}
       />
 
       <Composer />
@@ -62,7 +64,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
             href={c.key ? `/dashboard/messages?channel=${c.key}` : "/dashboard/messages"}
             className={`badge ${channel === c.key || (!channel && !c.key) ? "bg-brand-50 text-brand-700" : "bg-paper text-ink-muted border border-line"}`}
           >
-            {c.label}
+            {t(`channel.${c.labelKey}`)}
           </a>
         ))}
       </div>
@@ -70,8 +72,8 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
       {threads.size === 0 ? (
         <EmptyState
           icon="inbox"
-          title="No messages yet"
-          body="Inbound WhatsApp messages land here once the webhook is configured. You can also start a thread with the composer above."
+          title={t("empty.title")}
+          body={t("empty.body")}
         />
       ) : (
         <div className="space-y-4">
@@ -91,13 +93,13 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
                     {counterpart}
                   </span>
                   <span className="flex items-center gap-2 text-xs text-ink-faint">
-                    <Badge tone={CHANNEL_TONE[latest.channel] ?? "neutral"}>{latest.channel}</Badge>
+                    <Badge tone={CHANNEL_TONE[latest.channel] ?? "neutral"}>{t(`channel.${latest.channel}`)}</Badge>
                     {linked ? (
                       <span className="text-ink-muted">
-                        {latest.matter_id ? "Case" : "Client"}: {linked}
+                        {latest.matter_id ? t("linked.case") : t("linked.client")}: {linked}
                       </span>
                     ) : (
-                      <span className="text-amber-600">unfiled</span>
+                      <span className="text-amber-600">{t("unfiled")}</span>
                     )}
                   </span>
                 </div>
@@ -107,14 +109,14 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
                       <div className="flex items-center justify-between gap-2">
                         <span className="flex items-center gap-2 text-xs text-ink-faint">
                           <Icon name="dot" className={`h-3 w-3 ${m.direction === "out" ? "text-brand-500" : "text-emerald-500"}`} />
-                          {m.direction === "out" ? `You → ${m.to_addr ?? "—"}` : `${m.from_addr ?? "—"} → you`}
+                          {m.direction === "out" ? t("direction.out", { addr: m.to_addr ?? "—" }) : t("direction.in", { addr: m.from_addr ?? "—" })}
                           {m.direction === "out" && m.status !== "sent" && (
-                            <Badge tone={m.status === "failed" ? "red" : "amber"}>{m.status}</Badge>
+                            <Badge tone={m.status === "failed" ? "red" : "amber"}>{t(`status.${m.status}`)}</Badge>
                           )}
                         </span>
                         <span className="text-xs text-ink-faint">{fmtAgo(m.created_at)}</span>
                       </div>
-                      <p className="mt-1 text-ink">{m.body ? truncate(m.body) : <span className="text-ink-faint">(media / no text)</span>}</p>
+                      <p className="mt-1 text-ink">{m.body ? truncate(m.body) : <span className="text-ink-faint">{t("noText")}</span>}</p>
                       {m.direction === "in" && m.suggested_reply && <SuggestedReply text={m.suggested_reply} />}
                     </li>
                   ))}
@@ -126,8 +128,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
       )}
 
       <p className="text-xs text-ink-faint">
-        Provenance: each row records its provider and direction. Inbound messages are classified by AI and filed
-        deterministically; low-confidence routing leaves a message unfiled. Message bodies are never logged.
+        {t("provenance")}
       </p>
     </div>
   );

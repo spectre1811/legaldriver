@@ -299,5 +299,198 @@
   "pages": {
     "backHome": "Home",
     "draftNotice": "This is a working draft; the final version is under legal review. A translated version will follow."
+  },
+  "calendar": {
+    "title": "Calendar",
+    "subtitle": "Hearings, cause list, deadlines and your own entries — on one planning surface.",
+    "statsCoverage": "Stats cover the next 7 days.",
+    "more": "+{count} more",
+    "upcoming": "Upcoming",
+    "next30Days": "Next 30 days",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "hearingFallback": "Hearing",
+    "causeListTitle": "Cause list: {cnr}",
+    "caseFallback": "case",
+    "itemMeta": "Item {n}",
+    "ipRenewalTitle": "IP renewal: {title}",
+    "deleteAria": "Delete {title}",
+    "deleteEntry": "Delete entry",
+    "deleteConfirm": "Delete?",
+    "yes": "Yes",
+    "no": "No",
+    "emptyTitle": "Nothing upcoming",
+    "emptyBody": "No hearings, deadlines or entries in the next 30 days for the selected types.",
+    "stats": {
+      "hearingsLabel": "Hearings",
+      "deadlinesLabel": "Deadlines",
+      "remindersLabel": "Reminders",
+      "next30": "{count} in next 30 days",
+      "next30WithIp": "{count} in next 30 days · incl. IP renewals"
+    },
+    "weekday": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    }
+  },
+  "clients": {
+    "title": "Clients",
+    "subtitle": "Add clients with a built-in conflict-of-interest check before you open the file.",
+    "newIntake": "New client intake",
+    "colClient": "Client",
+    "colType": "Type",
+    "colContact": "Contact",
+    "colCases": "Cases",
+    "emptyTitle": "No clients yet",
+    "emptyBody": "Add your first client above — we'll flag any conflicts against existing clients and parties.",
+    "backToClients": "Clients",
+    "deleteClient": "Delete client",
+    "deleteNote": "Cases & documents are kept (unlinked)",
+    "clientPortal": "Client portal",
+    "casesHeading": "Cases",
+    "noCases": "No cases for this client yet.",
+    "nextPrefix": "next",
+    "documentsHeading": "Documents",
+    "colFile": "File",
+    "colFiledUnder": "Filed under",
+    "colSize": "Size",
+    "colAdded": "Added",
+    "filedCase": "case",
+    "filedClient": "client",
+    "noDocuments": "No documents for this client yet. Upload files above, or they'll appear here as email is filed.",
+    "messagesHeading": "Messages",
+    "noMessages": "No messages yet."
+  },
+  "notices": {
+    "title": "Notices",
+    "subtitle": "Create a notice, set a response-due date, and let the escalation timer advance it automatically.",
+    "table": {
+      "notice": "Notice",
+      "case": "Case",
+      "due": "Due",
+      "state": "State"
+    },
+    "state": {
+      "draft": "draft",
+      "sent": "sent",
+      "awaiting_response": "awaiting response",
+      "escalated_1": "escalated 1",
+      "escalated_2": "escalated 2",
+      "responded": "responded",
+      "closed": "closed"
+    },
+    "empty": {
+      "title": "No notices yet",
+      "body": "Create a notice above — the escalation timer advances it if there's no response by the due date."
+    }
+  },
+  "inbox": {
+    "title": "Inbox",
+    "subtitle": "Connect Gmail to auto-file emails & attachments against the right client or case.",
+    "connected": "Gmail connected.",
+    "state": {
+      "connected": "Connected — syncing every 30 min.",
+      "notConnected": "Not connected.",
+      "oauthNotConfigured": "OAuth not configured."
+    },
+    "connectGmail": "Connect Gmail",
+    "needsReview": "Needs review ({count}) — confirm the client/case",
+    "group": {
+      "case": "Case",
+      "client": "Client",
+      "unassigned": "Unassigned"
+    },
+    "filedHeading": "Filed — by client / case",
+    "empty": {
+      "title": "Nothing filed yet",
+      "body": "Connect Gmail or run the demo ingest above — emails get filed under the right client and case."
+    },
+    "noSubject": "(no subject)",
+    "footer": "gmail.readonly · refresh token stored encrypted in Supabase Vault · email bodies are never logged."
+  },
+  "messages": {
+    "title": "Messages",
+    "subtitle": "WhatsApp/SMS threads, auto-filed to the right client or case. AI routing is assistive — verify before relying on it. Send only from the firm's Business number, with the recipient's consent (DPDP).",
+    "channel": {
+      "all": "All",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "email": "Email"
+    },
+    "empty": {
+      "title": "No messages yet",
+      "body": "Inbound WhatsApp messages land here once the webhook is configured. You can also start a thread with the composer above."
+    },
+    "linked": {
+      "case": "Case",
+      "client": "Client"
+    },
+    "unfiled": "unfiled",
+    "direction": {
+      "out": "You → {addr}",
+      "in": "{addr} → you"
+    },
+    "status": {
+      "sent": "sent",
+      "delivered": "delivered",
+      "read": "read",
+      "failed": "failed"
+    },
+    "noText": "(media / no text)",
+    "provenance": "Provenance: each row records its provider and direction. Inbound messages are classified by AI and filed deterministically; low-confidence routing leaves a message unfiled. Message bodies are never logged."
+  },
+  "documents": {
+    "title": "Documents",
+    "subtitle": "Every document, organised by category and client. A case is an optional tag — file by client first, link to a case when it matters.",
+    "summary": {
+      "count": "{docs, plural, one {# document} other {# documents}} in {categories, plural, one {# category} other {# categories}}",
+      "filtered": "filtered"
+    },
+    "field": {
+      "file": "File",
+      "type": "Type",
+      "filedUnder": "Filed under",
+      "source": "Source",
+      "size": "Size",
+      "added": "Added",
+      "category": "Category"
+    },
+    "unfiled": "unfiled",
+    "empty": {
+      "filteredTitle": "No matching documents",
+      "emptyTitle": "No documents yet",
+      "filteredBody": "Try a different search or clear the filters.",
+      "emptyBody": "Connect Gmail or upload to a case — everything is parsed and searchable here."
+    },
+    "storageNote": "Files are stored in a private bucket; downloads use short-lived signed URLs scoped to your tenant.",
+    "source": {
+      "gmail": "Gmail",
+      "upload": "Upload",
+      "courtOrder": "Court order"
+    },
+    "category": {
+      "other": "Other"
+    },
+    "back": "Back to Documents",
+    "untitled": "Untitled document",
+    "via": "via {source}",
+    "download": "Download",
+    "summaryHeading": "Summary",
+    "summaryDisclaimer": "AI-generated from this document — informational, not legal advice.",
+    "extractedHeading": "Extracted text",
+    "extracted": {
+      "parsed": "Parsed contents used for search",
+      "showingFirst": " — showing the first {count} characters",
+      "truncatedNote": "Text truncated for display. Download the file to read it in full.",
+      "empty": "No text was extracted from this document."
+    },
+    "footer": {
+      "added": "added"
+    }
   }
 }

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "./icons";
 
 export function PageHeader({
@@ -90,10 +91,13 @@ export function EmptyState({
 }
 
 export function Disclaimer() {
+  // next-intl's useTranslations works in both Server and Client Components, so the
+  // shared Disclaimer stays usable everywhere without pulling next-intl/server in.
+  const t = useTranslations("common");
   return (
     <p className="flex items-center gap-1.5 text-xs text-ink-faint">
       <Icon name="alert" className="h-3.5 w-3.5" />
-      Not legal advice. Court data is informational — verify against the official record.
+      {t("disclaimer")}
     </p>
   );
 }

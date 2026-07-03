@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Card, Badge, Disclaimer, fmtDate, fmtSize } from "@/components/ui";
 import { Icon } from "@/components/icons";
@@ -12,6 +13,7 @@ import { CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/docs/categories";
 import { deleteClient } from "./actions";
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
+  const t = await getTranslations("clients");
   const supabase = createClient();
   const { data: client } = await supabase.from("client").select("*").eq("id", params.id).maybeSingle();
   if (!client) notFound();
@@ -56,7 +58,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   return (
     <div className="space-y-7">
       <Link href="/dashboard/clients" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline">
-        <Icon name="back" className="h-4 w-4" /> Clients
+        <Icon name="back" className="h-4 w-4" /> {t("backToClients")}
       </Link>
 
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -68,37 +70,37 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
             {client.phones?.[0] && <span>· {client.phones[0]}</span>}
           </div>
         </div>
-        <ConfirmDelete action={deleteClient} id={client.id} label="Delete client" confirmLabel="Delete client" note="Cases & documents are kept (unlinked)" redirectTo="/dashboard/clients" size="md" />
+        <ConfirmDelete action={deleteClient} id={client.id} label={t("deleteClient")} confirmLabel={t("deleteClient")} note={t("deleteNote")} redirectTo="/dashboard/clients" size="md" />
       </header>
 
       {/* Portal access */}
       <Card className="p-5">
         <div className="mb-3 flex items-center gap-2">
           <Icon name="inbox" className="h-4 w-4 text-brand-600" />
-          <h2 className="text-base font-medium">Client portal</h2>
+          <h2 className="text-base font-medium">{t("clientPortal")}</h2>
         </div>
         <PortalInvite clientId={client.id} portalUserId={portal?.id ?? null} />
       </Card>
 
       {/* Matters */}
       <Card className="overflow-hidden">
-        <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Cases <span className="text-ink-faint">({matters?.length ?? 0})</span></h2></div>
+        <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">{t("casesHeading")} <span className="text-ink-faint">({matters?.length ?? 0})</span></h2></div>
         {matters && matters.length ? (
           <ul className="divide-y divide-line">
             {matters.map((m) => (
               <li key={m.id} className="flex items-center justify-between px-5 py-3 text-sm">
                 <Link href={`/dashboard/cases/${m.id}`} className="font-medium text-ink hover:text-brand-600">{m.title}</Link>
-                <span className="text-xs text-ink-muted">{m.cnr ?? "—"} · next {fmtDate(m.next_hearing_date)}</span>
+                <span className="text-xs text-ink-muted">{m.cnr ?? "—"} · {t("nextPrefix")} {fmtDate(m.next_hearing_date)}</span>
               </li>
             ))}
           </ul>
-        ) : <p className="px-5 py-8 text-center text-sm text-ink-faint">No cases for this client yet.</p>}
+        ) : <p className="px-5 py-8 text-center text-sm text-ink-faint">{t("noCases")}</p>}
       </Card>
 
       {/* Document library — everything filed under this client or its cases */}
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3">
-          <h2 className="text-base font-medium">Documents <span className="text-ink-faint">({docs?.length ?? 0})</span></h2>
+          <h2 className="text-base font-medium">{t("documentsHeading")} <span className="text-ink-faint">({docs?.length ?? 0})</span></h2>
           <ClientDocUpload clientId={client.id} />
         </div>
         {docGroups.length ? (
@@ -112,17 +114,17 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-line text-left">
-                      <th className="px-5 py-3 label">File</th>
-                      <th className="hidden px-5 py-3 label sm:table-cell">Type</th>
-                      <th className="px-5 py-3 label">Filed under</th>
-                      <th className="hidden px-5 py-3 label lg:table-cell">Size</th>
-                      <th className="hidden px-5 py-3 label lg:table-cell">Added</th>
+                      <th className="px-5 py-3 label">{t("colFile")}</th>
+                      <th className="hidden px-5 py-3 label sm:table-cell">{t("colType")}</th>
+                      <th className="px-5 py-3 label">{t("colFiledUnder")}</th>
+                      <th className="hidden px-5 py-3 label lg:table-cell">{t("colSize")}</th>
+                      <th className="hidden px-5 py-3 label lg:table-cell">{t("colAdded")}</th>
                       <th className="px-5 py-3"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {g.docs.map((d) => {
-                      const filedName = d.matter_id ? matterName.get(d.matter_id) ?? "case" : "client";
+                      const filedName = d.matter_id ? matterName.get(d.matter_id) ?? t("filedCase") : t("filedClient");
                       return (
                         <tr key={d.id} className="border-b border-line last:border-0 hover:bg-paper">
                           <td className="px-5 py-3.5">
@@ -146,7 +148,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               </section>
             ))}
           </div>
-        ) : <p className="px-5 py-8 text-center text-sm text-ink-faint">No documents for this client yet. Upload files above, or they’ll appear here as email is filed.</p>}
+        ) : <p className="px-5 py-8 text-center text-sm text-ink-faint">{t("noDocuments")}</p>}
       </Card>
 
       {/* Communications timeline (email + WhatsApp/SMS filed to this client) */}
@@ -154,13 +156,13 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
 
       {/* Secure messaging (same thread the client sees in the portal) */}
       <Card className="overflow-hidden">
-        <div className="border-b border-line px-5 py-3"><h2 className="text-base font-medium">Messages</h2></div>
+        <div className="border-b border-line px-5 py-3"><h2 className="text-base font-medium">{t("messagesHeading")}</h2></div>
         <ul className="max-h-72 space-y-2 overflow-y-auto px-5 py-4">
           {messages && messages.length ? messages.map((m) => (
             <li key={m.id} className={`flex ${m.sender === "firm" ? "justify-end" : "justify-start"}`}>
               <span className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${m.sender === "firm" ? "bg-brand-600 text-white" : "bg-paper text-ink-soft"}`}>{m.body}</span>
             </li>
-          )) : <li className="py-6 text-center text-sm text-ink-faint">No messages yet.</li>}
+          )) : <li className="py-6 text-center text-sm text-ink-faint">{t("noMessages")}</li>}
         </ul>
         <div className="border-t border-line px-5 py-3"><FirmComposer clientId={client.id} /></div>
       </Card>

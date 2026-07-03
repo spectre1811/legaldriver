@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
 import { ClientIntake } from "./client-intake";
 
 export default async function ClientsPage() {
+  const t = await getTranslations("clients");
   const supabase = createClient();
   const [{ data: clients }, { data: areas }, { data: matters }] = await Promise.all([
     supabase.from("client").select("id, name, type, emails, phones").order("name"),
@@ -15,10 +17,10 @@ export default async function ClientsPage() {
 
   return (
     <div className="space-y-7">
-      <PageHeader title="Clients" subtitle="Add clients with a built-in conflict-of-interest check before you open the file." />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <Card className="p-5">
-        <h2 className="mb-4 text-base font-medium">New client intake</h2>
+        <h2 className="mb-4 text-base font-medium">{t("newIntake")}</h2>
         <ClientIntake practiceAreas={areas ?? []} />
       </Card>
 
@@ -27,10 +29,10 @@ export default async function ClientsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left">
-                <th className="px-5 py-3 label">Client</th>
-                <th className="hidden px-5 py-3 label sm:table-cell">Type</th>
-                <th className="hidden px-5 py-3 label md:table-cell">Contact</th>
-                <th className="px-5 py-3 label">Cases</th>
+                <th className="px-5 py-3 label">{t("colClient")}</th>
+                <th className="hidden px-5 py-3 label sm:table-cell">{t("colType")}</th>
+                <th className="hidden px-5 py-3 label md:table-cell">{t("colContact")}</th>
+                <th className="px-5 py-3 label">{t("colCases")}</th>
               </tr>
             </thead>
             <tbody>
@@ -46,7 +48,7 @@ export default async function ClientsPage() {
           </table>
         </Card>
       ) : (
-        <EmptyState icon="cases" title="No clients yet" body="Add your first client above — we'll flag any conflicts against existing clients and parties." />
+        <EmptyState icon="cases" title={t("emptyTitle")} body={t("emptyBody")} />
       )}
     </div>
   );

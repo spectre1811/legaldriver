@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Stat, Disclaimer } from "@/components/ui";
 import { Icon } from "@/components/icons";
@@ -33,7 +34,7 @@ function parseTypes(raw: string | undefined): Kind[] {
 
 // Map raw rows for a date range into normalized events. Used for both the month
 // grid window and the rolling 30-day agenda window.
-async function loadEvents(supabase: ReturnType<typeof createClient>, start: string, end: string): Promise<CalEvent[]> {
+async function loadEvents(supabase: ReturnType<typeof createClient>, start: string, end: string, t: Awaited<ReturnType<typeof getTranslations>>): Promise<CalEvent[]> {
   const [{ data: hearings }, { data: causeList }, { data: deadlines }, { data: events }, { data: ip }] = await Promise.all([
     supabase.from("hearing").select("id, date, purpose, matter:matter_id (id, title)").gte("date", start).lte("date", end),
     supabase.from("cause_list_entry").select("id, list_date, item_no, cnr, matter_id").gte("list_date", start).lte("list_date", end),
@@ -45,22 +46,23 @@ async function loadEvents(supabase: ReturnType<typeof createClient>, start: stri
   return [
     ...(hearings ?? []).map((h): CalEvent => {
       const m = h.matter as unknown as { id: string; title: string } | null;
-      return { id: `h-${h.id}`, date: h.date, title: m?.title ?? "Hearing", kind: "hearing", href: m ? `/dashboard/cases/${m.id}` : null, meta: h.purpose ?? undefined, deletable: false };
+      return { id: `h-${h.id}`, date: h.date, title: m?.title ?? t("hearingFallback"), kind: "hearing", href: m ? `/dashboard/cases/${m.id}` : null, meta: h.purpose ?? undefined, deletable: false };
     }),
-    ...(causeList ?? []).map((c): CalEvent => ({ id: `c-${c.id}`, date: c.list_date, title: `Cause list: ${c.cnr ?? "case"}`, kind: "causelist", href: c.matter_id ? `/dashboard/cases/${c.matter_id}` : "/dashboard/cases", meta: c.item_no ? `Item ${c.item_no}` : undefined, deletable: false })),
+    ...(causeList ?? []).map((c): CalEvent => ({ id: `c-${c.id}`, date: c.list_date, title: t("causeListTitle", { cnr: c.cnr ?? t("caseFallback") }), kind: "causelist", href: c.matter_id ? `/dashboard/cases/${c.matter_id}` : "/dashboard/cases", meta: c.item_no ? t("itemMeta", { n: c.item_no }) : undefined, deletable: false })),
     ...(deadlines ?? []).map((d): CalEvent => ({ id: `d-${d.id}`, date: d.due_date, title: d.kind, kind: "deadline", href: d.matter_id ? `/dashboard/cases/${d.matter_id}` : null, deletable: false })),
     ...(events ?? []).map((e): CalEvent => ({ id: e.id, date: e.event_date, title: e.title, kind: "event", href: e.matter_id ? `/dashboard/cases/${e.matter_id}` : null, meta: e.kind, deletable: true })),
-    ...(ip ?? []).filter((a) => a.renewal_date).map((a): CalEvent => ({ id: `i-${a.id}`, date: a.renewal_date as string, title: `IP renewal: ${a.title}`, kind: "iprenewal", href: "/dashboard/ip", meta: a.type ?? undefined, deletable: false })),
+    ...(ip ?? []).filter((a) => a.renewal_date).map((a): CalEvent => ({ id: `i-${a.id}`, date: a.renewal_date as string, title: t("ipRenewalTitle", { title: a.title }), kind: "iprenewal", href: "/dashboard/ip", meta: a.type ?? undefined, deletable: false })),
   ].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function relativeLabel(ds: string, todayStr: string, tomorrowStr: string) {
-  if (ds === todayStr) return "Today";
-  if (ds === tomorrowStr) return "Tomorrow";
+function relativeLabel(ds: string, todayStr: string, tomorrowStr: string, t: Awaited<ReturnType<typeof getTranslations>>) {
+  if (ds === todayStr) return t("today");
+  if (ds === tomorrowStr) return t("tomorrow");
   return new Date(`${ds}T00:00:00Z`).toLocaleDateString("en-IN", { weekday: "long", timeZone: "UTC" });
 }
 
 export default async function CalendarPage({ searchParams }: { searchParams: { month?: string; types?: string } }) {
+  const t = await getTranslations("calendar");
   const now = new Date();
   const month = searchParams.month ?? now.toISOString().slice(0, 7);
   const { start, end, label, prev, next } = monthBounds(month);
@@ -80,8 +82,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: { m
   // Grid uses the viewed-month window; the agenda + stats use a rolling 30-day
   // window from today regardless of which month is on screen.
   const [gridEvents, upcomingAll, { data: matters }] = await Promise.all([
-    loadEvents(supabase, start, end),
-    loadEvents(supabase, todayStr, horizonStr),
+    loadEvents(supabase, start, end, t),
+    loadEvents(supabase, todayStr, horizonStr, t),
     supabase.from("matter").select("id, title").order("title"),
   ]);
 
@@ -113,7 +115,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: { m
   for (const e of upcoming) (groupMap.get(e.date) ?? groupMap.set(e.date, []).get(e.date)!).push(e);
   const groups = [...groupMap.entries()].map(([date, evs]) => ({
     date,
-    relative: relativeLabel(date, todayStr, tomorrowStr),
+    relative: relativeLabel(date, todayStr, tomorrowStr, t),
     label: new Date(`${date}T00:00:00Z`).toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" }),
     events: evs,
   }));
@@ -124,7 +126,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: { m
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Calendar" subtitle="Hearings, cause list, deadlines and your own entries — on one planning surface.">
+      <PageHeader title={t("title")} subtitle={t("subtitle")}>
         <div className="relative flex items-center gap-1.5">
           <Link href={`/dashboard/calendar?month=${prev}${searchParams.types ? `&types=${searchParams.types}` : ""}`} className="btn-secondary px-2.5"><Icon name="back" className="h-4 w-4" /></Link>
           <span className="min-w-36 text-center text-sm font-medium">{label}</span>
@@ -134,20 +136,20 @@ export default async function CalendarPage({ searchParams }: { searchParams: { m
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Hearings" icon="scale" value={stats.hearings7} hint={`${stats.hearings30} in next 30 days`} />
-        <Stat label="Deadlines" icon="clock" value={stats.deadlines7} hint={`${stats.deadlines30} in next 30 days · incl. IP renewals`} />
-        <Stat label="Reminders" icon="bell" value={stats.events7} hint={`${stats.events30} in next 30 days`} />
+        <Stat label={t("stats.hearingsLabel")} icon="scale" value={stats.hearings7} hint={t("stats.next30", { count: stats.hearings30 })} />
+        <Stat label={t("stats.deadlinesLabel")} icon="clock" value={stats.deadlines7} hint={t("stats.next30WithIp", { count: stats.deadlines30 })} />
+        <Stat label={t("stats.remindersLabel")} icon="bell" value={stats.events7} hint={t("stats.next30", { count: stats.events30 })} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FilterChips active={activeTypes} />
-        <span className="text-xs text-ink-faint">Stats cover the next 7 days.</span>
+        <span className="text-xs text-ink-faint">{t("statsCoverage")}</span>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <Card className="overflow-hidden p-0">
           <div className="grid grid-cols-7 border-b border-line bg-paper">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            {[t("weekday.sun"), t("weekday.mon"), t("weekday.tue"), t("weekday.wed"), t("weekday.thu"), t("weekday.fri"), t("weekday.sat")].map((d) => (
               <div key={d} className="px-2 py-2.5 text-center text-[0.7rem] font-semibold uppercase tracking-wider text-ink-faint">{d}</div>
             ))}
           </div>
@@ -172,7 +174,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: { m
                         <span key={j} title={`${e.title}${e.meta ? " · " + e.meta : ""}`} className="block">{chip}</span>
                       );
                     })}
-                    {dayEvents.length > 3 && <p className="px-1 text-[0.7rem] text-ink-faint">+{dayEvents.length - 3} more</p>}
+                    {dayEvents.length > 3 && <p className="px-1 text-[0.7rem] text-ink-faint">{t("more", { count: dayEvents.length - 3 })}</p>}
                   </div>
                 </div>
               );
@@ -182,8 +184,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: { m
 
         <Card className="flex flex-col overflow-hidden p-0">
           <div className="flex items-center justify-between border-b border-line px-5 py-3">
-            <h2 className="text-base font-medium">Upcoming</h2>
-            <span className="text-xs text-ink-faint">Next 30 days</span>
+            <h2 className="text-base font-medium">{t("upcoming")}</h2>
+            <span className="text-xs text-ink-faint">{t("next30Days")}</span>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <Agenda groups={groups} />
