@@ -97,7 +97,7 @@ export async function regenerateDraft(draftId: string, opts?: { templateId?: str
     tenantId, template, sections, language, sourceText: doc.parsed_text ?? "",
     sourceLabel: `${doc.filename ?? "document"} (${doc.doc_type ?? "?"})`, matterId: doc.matter_id,
   });
-  const result = await synthesizeDraft(grounding);
+  const result = await synthesizeDraft(grounding, { tenantId, matterId: doc.matter_id });
   const nextVersion = await nextVersionNo(supabase, draftId);
 
   await supabase.from("draft").update({ template_id: template.id, sections, language, produces_doc_type: template.produces_doc_type, status: result ? "draft" : "pending", updated_at: new Date().toISOString() }).eq("id", draftId);

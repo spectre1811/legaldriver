@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
-import { completeJson } from "@/lib/ai/complete";
+import { aiGateway } from "@/lib/ai/gateway";
 import { retrieve } from "./retrieve";
 
 type DB = SupabaseClient<Database>;
@@ -37,8 +37,16 @@ ${ctx || "(no case context found)"}
 
 CLIENT MESSAGE: ${input.question}`;
 
-  const useDeepseek = process.env.AGENT_BACKEND === "deepseek" && Boolean(process.env.DEEPSEEK_API_KEY);
-  const raw = await completeJson(prompt, REPLY_SCHEMA as unknown as Record<string, unknown>, useDeepseek ? { backend: "deepseek", maxTokens: 400 } : { maxTokens: 400 });
+  // Client-bot reply — scope is the client's own matters ONLY (04-AI §3.5), computed
+  // from the caller's identity; retrieval already ran with it, and the gateway never
+  // widens it. Route (cheap model + maxTokens) is config in the route table.
+  const { output: raw } = await aiGateway.run({
+    task: "agent.reply",
+    input: prompt,
+    schema: REPLY_SCHEMA as unknown as Record<string, unknown>,
+    tenantId: input.tenantId,
+    scope: { kind: "client-matter", tenantId: input.tenantId, matterIds: input.matterId ? [input.matterId] : undefined },
+  });
   const r = raw as { reply?: string } | null;
   return r?.reply?.trim() || null;
 }

@@ -88,6 +88,7 @@ export async function ingestMail(
         docTextOrSnippet: text || `${email.subject}\n${email.snippet}`,
         clients: clientList,
         matters: matterList,
+        tenantId,
       });
       pending.push({ att, path, text, needsOcr, extractError, cls, contentHash });
     }
@@ -98,6 +99,7 @@ export async function ingestMail(
       docTextOrSnippet: `${email.subject}\n${email.body}`,
       clients: clientList,
       matters: matterList,
+      tenantId,
     });
     const best = [emailCls, ...pending.map((p) => p.cls)].sort((a, b) => b.confidence - a.confidence)[0];
 

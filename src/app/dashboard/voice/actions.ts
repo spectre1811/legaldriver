@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
 import { logActivity } from "@/lib/activity";
-import { completeJson } from "@/lib/ai/complete";
+import { aiGateway } from "@/lib/ai/gateway";
 import { getVoiceService } from "@/lib/services/voice/service";
 import type { Database } from "@/lib/db/database.types";
 
@@ -109,10 +109,13 @@ export async function transcribeRecording(id: string): Promise<ActionResult> {
     .eq("tenant_id", tenantId);
 
   // Optional: short AI summary of the call (LLM infers, code files it).
-  const raw = await completeJson(
-    `Summarize this phone call transcript for a legal practice. Be concise and factual.\n\nTRANSCRIPT:\n${result.text}`,
-    CALL_SUMMARY_SCHEMA as unknown as Record<string, unknown>,
-  );
+  const { output: raw } = await aiGateway.run({
+    task: "classify.voice",
+    input: `Summarize this phone call transcript for a legal practice. Be concise and factual.\n\nTRANSCRIPT:\n${result.text}`,
+    schema: CALL_SUMMARY_SCHEMA as unknown as Record<string, unknown>,
+    tenantId,
+    scope: { kind: "tenant", tenantId },
+  });
   if (raw) {
     await admin
       .from("voice_recording")

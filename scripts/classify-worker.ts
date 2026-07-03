@@ -26,7 +26,7 @@ const THRESHOLD = Number(process.env.CONFIDENCE_THRESHOLD ?? "0.7");
 
 async function main() {
   const { createAdminClient } = await import("../src/lib/supabase/admin");
-  const { completeJson } = await import("../src/lib/ai/complete");
+  const { aiGateway } = await import("../src/lib/ai/gateway");
   const { buildClassifyPrompt, CLASSIFY_SCHEMA, normalizeClassification } = await import("../src/lib/docs/classify-core");
   const { resolveFiling } = await import("../src/lib/docs/autofile");
   const { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } = await import("../src/lib/docs/case-summary");
@@ -133,7 +133,7 @@ async function main() {
       const meta = (v.meta ?? {}) as { grounding?: unknown };
       if (!meta.grounding) continue;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await synthesizeDraft(meta.grounding as any);
+      const result = await synthesizeDraft(meta.grounding as any, { tenantId: v.tenant_id });
       if (!result) continue; // no answer this tick — retry next loop
       await admin.from("draft_version").update({
         body: result.body, assumptions: result.assumptions, presumptions: result.presumptions,
@@ -178,7 +178,7 @@ async function main() {
         hits = hits.filter((h: any) => { const k = h.snippet || h.ref; if (seen.has(k)) return false; seen.add(k); return true; });
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const ans = await synthesize(meta.question, hits as any);
+      const ans = await synthesize(meta.question, hits as any, { tenantId: t.tenant_id });
       if (!ans) continue; // no answer this tick — retry next loop
       await admin
         .from("agent_turn")
@@ -211,7 +211,17 @@ async function main() {
         title: mt.title, cnr: mt.cnr, court: mt.court, caseType: mt.case_type, stage: mt.stage,
         status: mt.status, nextHearingDate: mt.next_hearing_date, parties, hearings: hearings ?? [], documents: docs ?? [],
       });
-      const summary = normalizeCaseSummary(await completeJson(prompt, CASE_SUMMARY_SCHEMA as unknown as Record<string, unknown>));
+      const summary = normalizeCaseSummary(
+        (
+          await aiGateway.run({
+            task: "summary.case",
+            input: prompt,
+            schema: CASE_SUMMARY_SCHEMA as unknown as Record<string, unknown>,
+            tenantId: mt.tenant_id,
+            scope: { kind: "tenant", tenantId: mt.tenant_id },
+          })
+        ).output,
+      );
       if (summary) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await admin.from("matter").update({ ai_summary: summary as any }).eq("id", mt.id);
@@ -260,7 +270,15 @@ async function main() {
         matters: sl.matters,
       };
 
-      const raw = await completeJson(buildClassifyPrompt(input), CLASSIFY_SCHEMA as unknown as Record<string, unknown>);
+      const raw = (
+        await aiGateway.run({
+          task: "classify.doc",
+          input: buildClassifyPrompt(input),
+          schema: CLASSIFY_SCHEMA as unknown as Record<string, unknown>,
+          tenantId: em.tenant_id,
+          scope: { kind: "tenant", tenantId: em.tenant_id },
+        })
+      ).output;
       const cls = normalizeClassification(raw, input);
       const filing = await resolveFiling(admin, em.tenant_id, cls, { email: em.from_addr });
       if (filing.createdClient && cls.suggested_client_name) { sl.clients.push({ id: filing.clientId!, name: cls.suggested_client_name }); created++; }

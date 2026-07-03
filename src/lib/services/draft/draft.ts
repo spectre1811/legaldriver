@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
-import { completeJson } from "@/lib/ai/complete";
+import { aiGateway } from "@/lib/ai/gateway";
 import { categoryOf } from "@/lib/docs/categories";
 import { resolveSections } from "@/lib/docs/draft/sections";
 import { buildGrounding } from "./retrieve";
@@ -11,7 +11,9 @@ import type { Citation } from "../agent/types";
 type DB = SupabaseClient<Database>;
 type Json = Database["public"]["Tables"]["draft_version"]["Insert"]["meta"];
 
-const DRAFT_MODEL = process.env.DRAFT_MODEL ?? "claude-sonnet-4-6";
+// Tenant/scope for the gateway call — computed by the caller from the session
+// (drafting reads the tenant's own docs). matterId narrows the trace scope.
+export type DraftContext = { tenantId: string; matterId?: string | null };
 
 // CONTEXT ordering in the prompt = references, then deadlines, then precedent.
 // Rebuild the citable list in that exact order so `used` indices map back.
@@ -27,13 +29,23 @@ function citationsFor(g: DraftGrounding, used: number[]): Citation[] {
 
 // Synthesize the structured draft from grounding. Returns null ONLY when no AI
 // backend is available (keyless prod without the worker) → the caller queues it.
-export async function synthesizeDraft(g: DraftGrounding): Promise<DraftResult | null> {
-  const useDeepseek = process.env.AGENT_BACKEND === "deepseek" && Boolean(process.env.DEEPSEEK_API_KEY);
-  const opts = useDeepseek ? { backend: "deepseek" as const, maxTokens: 3500 } : { model: DRAFT_MODEL, maxTokens: 3500 };
+export async function synthesizeDraft(g: DraftGrounding, ctx: DraftContext): Promise<DraftResult | null> {
   const prompt = buildDraftPrompt(g);
+  // task→model (DeepSeek, Sonnet keyless fallback) + maxTokens live in the route
+  // table; feature code just names the task. Scope is tenant-only (own docs).
+  const runOnce = async () =>
+    (
+      await aiGateway.run({
+        task: "draft.document",
+        input: prompt,
+        schema: DRAFT_SCHEMA as unknown as Record<string, unknown>,
+        tenantId: ctx.tenantId,
+        scope: { kind: "tenant", tenantId: ctx.tenantId, matterIds: ctx.matterId ? [ctx.matterId] : undefined },
+      })
+    ).output;
   // One retry: long structured output occasionally comes back as malformed JSON.
-  let raw = await completeJson(prompt, DRAFT_SCHEMA as unknown as Record<string, unknown>, opts);
-  if (!raw || typeof raw !== "object") raw = await completeJson(prompt, DRAFT_SCHEMA as unknown as Record<string, unknown>, opts);
+  let raw = await runOnce();
+  if (!raw || typeof raw !== "object") raw = await runOnce();
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Partial<DraftResult> & { used?: number[] };
   if (typeof r.body !== "string" || !r.body.trim()) return null;
@@ -134,7 +146,7 @@ export async function generateDraft(sb: DB, input: GenerateDraftInput): Promise<
     sourceLabel: `${doc.filename ?? "document"} (${doc.doc_type ?? "?"})`, matterId: doc.matter_id,
   });
 
-  const result = await synthesizeDraft(grounding);
+  const result = await synthesizeDraft(grounding, { tenantId: input.tenantId, matterId: doc.matter_id });
 
   const { data: draftRow } = await sb.from("draft").insert({
     tenant_id: input.tenantId,

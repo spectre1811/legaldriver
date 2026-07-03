@@ -14,7 +14,7 @@ async function main() {
   const hits = await retrieve(sb as any, { tenantId: "smoke", question: q });
   console.log("RETRIEVED:", hits.map((h) => `${h.source}:${h.ref}`).join(" | ") || "(none)");
 
-  const ans = await synthesize(q, hits);
+  const ans = await synthesize(q, hits, { tenantId: "smoke" });
   if (!ans) {
     console.log("\nsynthesize returned null (no AI backend available here).");
     console.log("AGENT SMOKE: INCONCLUSIVE (would queue to worker on prod)");

@@ -1,0 +1,21 @@
+# LiteLLM proxy route config (local dev). Maps the friendly model names the app's
+# route table (src/lib/ai/gateway/routes.ts) requests to concrete providers.
+# Providers read their keys from the PROXY's env — never from product code.
+# Adding/rotating a provider or model is a change HERE, not in the app.
+model_list:
+  - model_name: cheap
+    litellm_params:
+      model: deepseek/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+  - model_name: frontier
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+litellm_settings:
+  drop_params: true
+  # Zero-retention / no-train posture is enforced at the gateway (04-AI §8.4);
+  # provider contracts must set the equivalent flags.
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

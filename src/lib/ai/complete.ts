@@ -14,7 +14,7 @@ let sdk: Anthropic | null = null;
 const getSdk = (): Anthropic => (sdk ??= new Anthropic());
 
 type Schema = Record<string, unknown>;
-export type Backend = "deepseek" | "custom";
+export type Backend = "deepseek" | "custom" | "litellm";
 export type CompleteOpts = { model?: string; maxTokens?: number; backend?: Backend };
 
 // ── OpenAI-compatible (DeepSeek / OpenAI / Together / Groq / Ollama / vLLM / …) ──
@@ -31,9 +31,19 @@ function customCfg(model?: string): OaiCfg | null {
   if (!apiKey || !baseUrl) return null;
   return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, model: model ?? process.env.LLM_MODEL ?? "gpt-4o-mini" };
 }
+// LiteLLM proxy (OpenAI-compatible surface) — the AI gateway's self-hosted route
+// hub (04-AI §0, 12-CLOUD ADR-C8). Enabled only when LITELLM_BASE_URL + key are
+// set; otherwise callers requesting "litellm" degrade to the keyless router below.
+function litellmCfg(model?: string): OaiCfg | null {
+  const apiKey = process.env.LITELLM_API_KEY;
+  const baseUrl = process.env.LITELLM_BASE_URL;
+  if (!apiKey || !baseUrl) return null;
+  return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, model: model ?? process.env.LITELLM_MODEL ?? "cheap" };
+}
 function cfgFor(backend: Backend | undefined, model?: string): OaiCfg | null {
   if (backend === "custom") return customCfg(model);
   if (backend === "deepseek") return deepseekCfg(model);
+  if (backend === "litellm") return litellmCfg(model);
   return null;
 }
 // Global default backend when a call doesn't specify one (env-driven agnosticism).
@@ -116,10 +126,20 @@ export function classifierBackend(): "api" | "cli" | "off" {
   return claudeCliEnabled() ? "cli" : "off";
 }
 
+// An EXPLICITLY-requested backend (opts.backend) that isn't configured must return
+// null — NOT silently degrade to the default Claude model — so the AI gateway's
+// route chain advances to its next choice (e.g. a keyless-Sonnet fallback). A
+// backend inferred from LLM_PROVIDER (env default) still falls through to the
+// classifier router, preserving the whole-app env-override behaviour.
+function explicitBackendUnconfigured(opts?: CompleteOpts): boolean {
+  return Boolean(opts?.backend) && cfgFor(opts?.backend, opts?.model) === null;
+}
+
 // Structured JSON completion (validated by the caller against `schema`).
 export async function completeJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
   const backend = opts?.backend ?? defaultBackend();
   if (backend) { const cfg = cfgFor(backend, opts?.model); if (cfg) return oaiCompleteJson(cfg, prompt, schema, opts); }
+  if (explicitBackendUnconfigured(opts)) return null;
   const router = classifierBackend();
   if (router === "off") return null;
   if (router === "api") return apiCompleteJson(prompt, schema, opts);
@@ -130,6 +150,7 @@ export async function completeJson(prompt: string, schema: Schema, opts?: Comple
 export async function completeText(prompt: string, opts?: CompleteOpts): Promise<string | null> {
   const backend = opts?.backend ?? defaultBackend();
   if (backend) { const cfg = cfgFor(backend, opts?.model); if (cfg) return oaiChat(cfg, prompt, { maxTokens: opts?.maxTokens ?? 2000 }); }
+  if (explicitBackendUnconfigured(opts)) return null;
   const router = classifierBackend();
   if (router === "off") return null;
   if (router === "api") return apiCompleteText(prompt, opts);

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
 import type { InboundMessage } from "./types";
-import { completeJson } from "@/lib/ai/complete";
+import { aiGateway } from "@/lib/ai/gateway";
 import {
   buildClassifyPrompt,
   CLASSIFY_SCHEMA,
@@ -72,7 +72,15 @@ export async function ingestInbound(
       matters: matterList,
     };
     const raw = msg.body
-      ? await completeJson(buildClassifyPrompt(input), CLASSIFY_SCHEMA as unknown as Record<string, unknown>)
+      ? (
+          await aiGateway.run({
+            task: "classify.message",
+            input: buildClassifyPrompt(input),
+            schema: CLASSIFY_SCHEMA as unknown as Record<string, unknown>,
+            tenantId,
+            scope: { kind: "tenant", tenantId },
+          })
+        ).output
       : null;
     const cls = raw ? normalizeClassification(raw, input) : FALLBACK;
 
