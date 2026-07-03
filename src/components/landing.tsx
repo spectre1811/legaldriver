@@ -15,6 +15,12 @@ const TIERS = [
   { id: "enterprise", price: "Custom", per: false, features: ["tenants", "audit", "pooled", "support"], cta: "talk", hot: false },
 ] as const;
 
+const FOOTER_LINKS = {
+  product: { a: "/#features", b: "/#pricing", c: "/for-clients" },
+  company: { a: "/about", b: "/why-us", c: "/contact" },
+  legal: { a: "/privacy", b: "/terms", c: "/data-corrections" },
+} as const;
+
 const MINI = [
   { item: "14", title: "Patel v. State of Gujarat", court: "Gujarat HC · Court 7", stage: "Final hearing" },
   { item: "42", title: "Shah Traders v. Mehta Buildcon", court: "City Civil, Ahmedabad · Court 3", stage: "Evidence" },
@@ -103,7 +109,8 @@ export async function Landing() {
       {/* pricing */}
       <section id="pricing" className="mx-auto max-w-6xl px-6 pb-20">
         <h2 className="text-center font-display text-3xl font-medium">{t("pricing.title")}</h2>
-        <p className="mb-8 mt-2 text-center text-sm text-ec-ink-3">{t("pricing.note")}</p>
+        <p className="mt-2 text-center text-sm text-ec-ink-3">{t("pricing.note")}</p>
+        <p className="mb-8 mt-1 text-center text-[13px] font-medium text-ec-brass-deep">{t("pricing.founding")}</p>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {TIERS.map((tier) => (
             <div key={tier.id} className={`relative flex flex-col rounded-ec-m border bg-ec-paper p-6 ${tier.hot ? "border-ec-brass shadow-ec-2" : "border-ec-hair"}`}>
@@ -113,6 +120,7 @@ export async function Landing() {
                 <span className="num">{tier.price}</span>
                 {tier.per && <span className="text-xs font-medium text-ec-ink-3">/mo</span>}
               </p>
+              {tier.id === "enterprise" && <p className="mt-0.5 text-xs font-medium text-ec-ink-3">{t("pricing.fromSeat")}</p>}
               <ul className="my-5 flex-1 space-y-0">
                 {tier.features.map((feat) => (
                   <li key={feat} className="border-t border-ec-hair py-2 text-[13px] text-ec-ink-2 first:border-t-0">{t(`pricing.tier.${tier.id}.f.${feat}`)}</li>
@@ -132,11 +140,11 @@ export async function Landing() {
             <p className="mt-3 text-[13px] leading-relaxed text-ec-ink-3">{t("footer.tagline")}</p>
           </div>
           <div className="ml-auto flex gap-12">
-            {["product", "company", "legal"].map((col) => (
+            {(["product", "company", "legal"] as const).map((col) => (
               <div key={col}>
                 <p className="ec-label mb-2">{t(`footer.col.${col}.h`)}</p>
-                {["a", "b", "c"].map((it) => (
-                  <span key={it} className="block py-0.5 text-[13px] text-ec-ink-2">{t(`footer.col.${col}.${it}`)}</span>
+                {(["a", "b", "c"] as const).map((it) => (
+                  <Link key={it} href={FOOTER_LINKS[col][it]} className="block py-0.5 text-[13px] text-ec-ink-2 hover:text-ec-brass-deep">{t(`footer.col.${col}.${it}`)}</Link>
                 ))}
               </div>
             ))}

@@ -275,6 +275,8 @@
     "pricing": {
       "title": "Priced like one consultation.",
       "note": "Per lawyer / month, billed annually · monthly +25%",
+      "founding": "Founding members: Pro at ₹399/mo for your first 12 months.",
+      "fromSeat": "from ₹2,000/seat",
       "mostChosen": "Most chosen",
       "tier": {
         "free": { "name": "Free", "f": { "cases": "25 tracked cases", "digest": "Daily WhatsApp digest", "clients": "10 clients & matters", "search": "Search 18.6M judgments" } },
@@ -293,5 +295,9 @@
       },
       "compliance": "Case data is sourced from public court records and refreshed daily. Peshi is practice software and a neutral directory; it does not rank, recommend or endorse advocates. © 2026 Peshi."
     }
+  },
+  "pages": {
+    "backHome": "Home",
+    "draftNotice": "This is a working draft; the final version is under legal review. A translated version will follow."
   }
 }
