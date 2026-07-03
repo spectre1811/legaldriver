@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { PageHeader, Card, Badge, Stat, EmptyState, fmtDate } from "@/components/ui";
-import { Icon } from "@/components/icons";
+import { getTranslations } from "next-intl/server";
+import { PageHeader, Card, Stat, EmptyState, fmtDate } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 
@@ -10,11 +10,10 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 const plusDays = (n: number) => { const x = new Date(); x.setUTCDate(x.getUTCDate() + n); return iso(x); };
 const daysBetween = (a: string, b: string) => Math.round((new Date(a).getTime() - new Date(b).getTime()) / 86400000);
 
-// Firm-wide "managing partner" view — turns per-case court data into portfolio risk:
-// upcoming hearings, cases at risk (hearing soon + nothing filed lately), deadlines
-// nearing limitation, past-due next dates, and cases needing a refresh.
+// Firm-wide "managing partner" view — turns per-case court data into portfolio risk.
 export default async function PortfolioPage() {
   const supabase = createClient();
+  const t = await getTranslations("portfolio");
   const tenantId = await getTenantId(supabase);
   const today = iso(new Date());
 
@@ -37,7 +36,7 @@ export default async function PortfolioPage() {
   const pastDue = open.filter((m) => { const e = eff(m); return e && e < today; }).sort((a, b) => (eff(b)! < eff(a)! ? -1 : 1));
   const needsRefresh = open.filter((m) => m.cnr && (!m.last_synced_at || daysBetween(today, m.last_synced_at.slice(0, 10)) > 10));
 
-  const card = (title: string, hint: string, tone: "amber" | "red" | "brand" | "neutral", children: React.ReactNode) => (
+  const card = (title: string, hint: string, children: React.ReactNode) => (
     <Card>
       <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">{title}</h2><p className="mt-0.5 text-xs text-ink-faint">{hint}</p></div>
       {children}
@@ -52,39 +51,39 @@ export default async function PortfolioPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Portfolio" subtitle="Firm-wide risk at a glance — upcoming hearings, at-risk cases, deadlines nearing limitation, and cases needing attention." />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        <Stat label="Open cases" value={String(open.length)} />
-        <Stat label="Hearings ≤7d" value={String(upcoming.filter((m) => daysBetween(eff(m)!, today) <= 7).length)} />
-        <Stat label="At risk" value={String(atRisk.length)} />
-        <Stat label="Deadlines ≤15d" value={String((deadlines ?? []).length)} />
-        <Stat label="Past-due dates" value={String(pastDue.length)} />
+        <Stat label={t("stat.openCases")} value={String(open.length)} />
+        <Stat label={t("stat.hearings7d")} value={String(upcoming.filter((m) => daysBetween(eff(m)!, today) <= 7).length)} />
+        <Stat label={t("stat.atRisk")} value={String(atRisk.length)} />
+        <Stat label={t("stat.deadlines15d")} value={String((deadlines ?? []).length)} />
+        <Stat label={t("stat.pastDue")} value={String(pastDue.length)} />
       </section>
 
-      {card("⚠️ At-risk cases", "Hearing within 7 days and nothing filed in the last 14 — prepare now.", "red",
-        atRisk.length ? <ul className="divide-y divide-line">{atRisk.map((m) => row(m.id, m.title, `hearing ${fmtDate(eff(m))}`, "red"))}</ul>
-          : <EmptyState icon="check" title="Nothing at risk" body="No imminent hearings without a recent filing." />)}
+      {card(t("cards.atRisk.title"), t("cards.atRisk.hint"),
+        atRisk.length ? <ul className="divide-y divide-line">{atRisk.map((m) => row(m.id, m.title, t("hearingOn", { date: fmtDate(eff(m)) }), "red"))}</ul>
+          : <EmptyState icon="check" title={t("empty.atRisk.title")} body={t("empty.atRisk.body")} />)}
 
-      {card("📅 Upcoming hearings (30 days)", "Effective next-hearing date (your diary override wins over the court date).", "brand",
-        upcoming.length ? <ul className="divide-y divide-line">{upcoming.slice(0, 40).map((m) => { const dd = daysBetween(eff(m)!, today); return row(m.id, <>{m.title}{m.cnr ? <span className="ml-2 font-mono text-xs text-ink-faint">{m.cnr}</span> : null}</>, `${fmtDate(eff(m))} · ${dd === 0 ? "today" : `in ${dd}d`}`, dd <= 3 ? "amber" : undefined); })}</ul>
-          : <EmptyState icon="calendar" title="No upcoming hearings" body="Nothing listed in the next 30 days." />)}
+      {card(t("cards.upcoming.title"), t("cards.upcoming.hint"),
+        upcoming.length ? <ul className="divide-y divide-line">{upcoming.slice(0, 40).map((m) => { const dd = daysBetween(eff(m)!, today); return row(m.id, <>{m.title}{m.cnr ? <span className="ml-2 font-mono text-xs text-ink-faint">{m.cnr}</span> : null}</>, `${fmtDate(eff(m))} · ${dd === 0 ? t("today") : t("inDays", { d: dd })}`, dd <= 3 ? "amber" : undefined); })}</ul>
+          : <EmptyState icon="calendar" title={t("empty.upcoming.title")} body={t("empty.upcoming.body")} />)}
 
-      {card("⏳ Deadlines nearing limitation (15 days)", "Confirmed statutory/procedural deadlines due soon.", "amber",
-        (deadlines ?? []).length ? <ul className="divide-y divide-line">{(deadlines ?? []).map((d) => row(d.matter_id ?? "", <>{d.kind.replace(/_/g, " ")} — {titleOf.get(d.matter_id ?? "") ?? "case"}{d.jurisdiction_rule ? <span className="text-ink-faint"> · {d.jurisdiction_rule}</span> : null}</>, `${fmtDate(d.due_date)} · in ${daysBetween(d.due_date, today)}d`, daysBetween(d.due_date, today) <= 3 ? "red" : "amber"))}</ul>
-          : <EmptyState icon="check" title="No deadlines within 15 days" />)}
+      {card(t("cards.deadlines.title"), t("cards.deadlines.hint"),
+        (deadlines ?? []).length ? <ul className="divide-y divide-line">{(deadlines ?? []).map((d) => row(d.matter_id ?? "", <>{d.kind.replace(/_/g, " ")} — {titleOf.get(d.matter_id ?? "") ?? t("caseFallback")}{d.jurisdiction_rule ? <span className="text-ink-faint"> · {d.jurisdiction_rule}</span> : null}</>, `${fmtDate(d.due_date)} · ${t("inDays", { d: daysBetween(d.due_date, today) })}`, daysBetween(d.due_date, today) <= 3 ? "red" : "amber"))}</ul>
+          : <EmptyState icon="check" title={t("empty.deadlines.title")} />)}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {card("🔁 Past-due next dates", "The listed hearing date has passed — verify re-listing / refresh.", "amber",
-          pastDue.length ? <ul className="divide-y divide-line">{pastDue.slice(0, 25).map((m) => row(m.id, m.title, `was ${fmtDate(eff(m))}`, "amber"))}</ul>
-            : <EmptyState icon="check" title="All next-dates are current" />)}
+        {card(t("cards.pastDue.title"), t("cards.pastDue.hint"),
+          pastDue.length ? <ul className="divide-y divide-line">{pastDue.slice(0, 25).map((m) => row(m.id, m.title, t("wasOn", { date: fmtDate(eff(m)) }), "amber"))}</ul>
+            : <EmptyState icon="check" title={t("empty.pastDue.title")} />)}
 
-        {card("🕓 Needs refresh", "Not synced from the court source in 10+ days.", "neutral",
-          needsRefresh.length ? <ul className="divide-y divide-line">{needsRefresh.slice(0, 25).map((m) => row(m.id, m.title, m.last_synced_at ? `${daysBetween(today, m.last_synced_at.slice(0, 10))}d ago` : "never"))}</ul>
-            : <EmptyState icon="check" title="Everything is fresh" />)}
+        {card(t("cards.needsRefresh.title"), t("cards.needsRefresh.hint"),
+          needsRefresh.length ? <ul className="divide-y divide-line">{needsRefresh.slice(0, 25).map((m) => row(m.id, m.title, m.last_synced_at ? t("daysAgo", { d: daysBetween(today, m.last_synced_at.slice(0, 10)) }) : t("never")))}</ul>
+            : <EmptyState icon="check" title={t("empty.needsRefresh.title")} />)}
       </div>
 
-      <p className="text-xs text-ink-faint">Risk signals are computed from tracked cases + court data — indicative, not legal advice. Verify against the official record.</p>
+      <p className="text-xs text-ink-faint">{t("footer")}</p>
     </div>
   );
 }
