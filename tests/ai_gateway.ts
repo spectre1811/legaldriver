@@ -85,6 +85,23 @@ async function main() {
   // 6. cacheHit is false in Wave 1 (response cache is Wave 3).
   check("cacheHit=false in Wave 1", r1.cacheHit === false && tA[0].cacheHit === false);
 
+  // 7. Regression guard (reviewer BLOCKER): reproduce the transport contract — an
+  // unconfigured OAI backend returns null; only the keyless choice (backend
+  // undefined) serves, with the model the route set on it. Quality tasks MUST end
+  // up on Sonnet, never silently degrade to the Haiku classifier default.
+  const degradeExec: ExecFn = async ({ backend, schema }) => {
+    if (backend) return { text: null, json: null }; // deepseek/litellm unconfigured → null
+    return schema ? { json: { body: "x", answer: "x" }, text: "x" } : { text: "x", json: null };
+  };
+  for (const task of ["draft.document", "agent.lawyer"] as const) {
+    const tr: TraceEvent[] = [];
+    const r = await runCore(
+      { task, input: "p", schema: { type: "object" }, tenantId: "T", scope: { kind: "tenant", tenantId: "T" } },
+      deps(degradeExec, tr),
+    );
+    check(`${task} keyless-serves on Sonnet, not a downgrade`, r.ok && r.model === "claude-sonnet-4-6");
+  }
+
   console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
   process.exit(failures === 0 ? 0 : 1);
 }

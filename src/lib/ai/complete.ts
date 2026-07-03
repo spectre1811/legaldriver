@@ -126,10 +126,20 @@ export function classifierBackend(): "api" | "cli" | "off" {
   return claudeCliEnabled() ? "cli" : "off";
 }
 
+// An EXPLICITLY-requested backend (opts.backend) that isn't configured must return
+// null — NOT silently degrade to the default Claude model — so the AI gateway's
+// route chain advances to its next choice (e.g. a keyless-Sonnet fallback). A
+// backend inferred from LLM_PROVIDER (env default) still falls through to the
+// classifier router, preserving the whole-app env-override behaviour.
+function explicitBackendUnconfigured(opts?: CompleteOpts): boolean {
+  return Boolean(opts?.backend) && cfgFor(opts?.backend, opts?.model) === null;
+}
+
 // Structured JSON completion (validated by the caller against `schema`).
 export async function completeJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
   const backend = opts?.backend ?? defaultBackend();
   if (backend) { const cfg = cfgFor(backend, opts?.model); if (cfg) return oaiCompleteJson(cfg, prompt, schema, opts); }
+  if (explicitBackendUnconfigured(opts)) return null;
   const router = classifierBackend();
   if (router === "off") return null;
   if (router === "api") return apiCompleteJson(prompt, schema, opts);
@@ -140,6 +150,7 @@ export async function completeJson(prompt: string, schema: Schema, opts?: Comple
 export async function completeText(prompt: string, opts?: CompleteOpts): Promise<string | null> {
   const backend = opts?.backend ?? defaultBackend();
   if (backend) { const cfg = cfgFor(backend, opts?.model); if (cfg) return oaiChat(cfg, prompt, { maxTokens: opts?.maxTokens ?? 2000 }); }
+  if (explicitBackendUnconfigured(opts)) return null;
   const router = classifierBackend();
   if (router === "off") return null;
   if (router === "api") return apiCompleteText(prompt, opts);
