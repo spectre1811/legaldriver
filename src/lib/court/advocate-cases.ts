@@ -26,6 +26,22 @@ export interface FetchedAdvocateCase {
 
 export interface AdvocateQuery { name: string; barNumber?: string | null; stateCode?: string | null }
 
+// eCourts CNRs begin with the 2-letter state code (GJHC… = Gujarat, UPHC… = UP).
+// When an advocate is identified by an exact bar id + state, that state is the
+// ground truth; a case from another state is a different (name-collision) advocate.
+function cnrState(cnr?: string | null): string | null {
+  return cnr && cnr.length >= 2 ? cnr.slice(0, 2).toUpperCase() : null;
+}
+
+// Whether a fetched case should count as THIS bar-identified advocate's. The
+// authoritative `legaldriver` bar lookup always passes; fuzzy name-only rows pass
+// only when their CNR's state prefix matches the advocate's state. `stateGuard` is
+// null when the advocate isn't pinned by bar+state (name-only search) → keep all.
+export function passesStateGuard(c: { source: string; cnr?: string | null }, stateGuard: string | null): boolean {
+  if (!stateGuard || c.source === "legaldriver") return true;
+  return cnrState(c.cnr) === stateGuard;
+}
+
 interface AdvocateCaseProvider {
   source: string;
   enabled(): boolean;
@@ -158,13 +174,25 @@ export function enabledAdvocateProviders(): string[] {
 }
 
 // Fetch + merge across all enabled providers, de-duped by CNR (then case-number/title).
+//
+// STATE GUARD: when the advocate is pinned by an exact bar id + state (e.g. a Gujarat
+// High Court bar), the `legaldriver` bar lookup is the AUTHORITATIVE roster for that
+// exact advocate. The other providers (corpus, Indian Kanoon) only fuzzy-match on
+// NAME, so for a common name ("… Patel") they pull NAMESAKES from other states — this
+// is what silently seeded 59 Allahabad (UP) cases onto a Gujarat HC advocate. So when
+// a bar id + state are given, name-only rows are kept only if their CNR's state prefix
+// matches; cross-state / unverifiable (no-CNR) rows are dropped rather than seeded as
+// this advocate's. (No bar id → name-only search → unchanged: keep everything.)
 export async function fetchAdvocateCases(q: AdvocateQuery): Promise<FetchedAdvocateCase[]> {
   if (!q.name || q.name.trim().length < 3) return [];
   const results = await Promise.all(PROVIDERS.filter((p) => p.enabled()).map((p) => p.fetchByAdvocate(q).catch(() => [])));
+  const stateGuard = q.barNumber && q.stateCode ? q.stateCode.trim().toUpperCase() : null;
   const merged: FetchedAdvocateCase[] = [];
   const seen = new Set<string>();
   for (const list of results) {
     for (const c of list) {
+      // Authoritative bar-lookup rows always pass; fuzzy name rows must match the state.
+      if (!passesStateGuard(c, stateGuard)) continue;
       const key = (c.cnr || c.caseNumber || c.title || "").trim().toUpperCase();
       if (!key || seen.has(key)) continue;
       seen.add(key);
