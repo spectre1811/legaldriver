@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCourtDataClient } from "@/lib/court/client";
 import type { Database } from "@/lib/db/database.types";
+import { track } from "@/lib/analytics/track";
+import { sizeBucket } from "@/lib/analytics/events";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -111,6 +113,10 @@ export async function GET(request: NextRequest) {
         digests++;
       }
     }
+
+    // Product analytics (WO-15): a cause-list actually matched this tenant's cases — the core
+    // "the product delivered value today" signal. Size BUCKET only (never which cases). Per tenant.
+    if (matched.length) track("cause_list_alert", tenantId, { bucket: sizeBucket(matched.length) });
   }
 
   return NextResponse.json({ ok: true, source: court.source, date, listed, alerted, digests });
