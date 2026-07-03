@@ -114,7 +114,20 @@
       "filteredTitle": "No matching cases",
       "filteredBody": "Try a different search or clear the filters."
     },
-    "add": { "cta": "Add case", "fetching": "Fetching…", "placeholder": "Add a case by CNR — e.g. MHPU010012342022", "aria": "CNR number" }
+    "add": { "cta": "Add case", "fetching": "Fetching…", "placeholder": "Add a case by CNR — e.g. MHPU010012342022", "aria": "CNR number" },
+    "console": {
+      "searchPlaceholder": "Search cases — title, CNR, court, parties…",
+      "searchAria": "Search cases",
+      "court": "Court", "allCourts": "All courts",
+      "caseType": "Case type", "allTypes": "All types",
+      "stage": "Stage", "allStages": "All stages",
+      "status": "Status", "allStatuses": "All statuses", "open": "Open", "disposed": "Disposed",
+      "advocate": "Advocate", "allAdvocates": "All advocates",
+      "act": "Act / Section", "allActs": "All acts / sections",
+      "nextHearing": "Next hearing", "anyHearing": "Any hearing", "overdue": "Overdue", "next7": "Next 7 days", "next30": "Next 30 days", "noHearing": "No hearing set",
+      "sort": "Sort", "sortNext": "Next hearing ↑", "sortRecent": "Recently added", "sortTitle": "Title A–Z",
+      "deleteView": "Delete view {name}", "viewName": "View name", "save": "Save", "cancel": "Cancel", "saveView": "Save this view"
+    }
   },
   "caseDetail": {
     "back": "Cases",
@@ -212,7 +225,15 @@
     "draft": "Draft",
     "due": "due {date}",
     "overdue": "overdue",
-    "empty": { "title": "No invoices yet", "body": "Open a case, log billable time/expenses, then click “Create invoice”." }
+    "empty": { "title": "No invoices yet", "body": "Open a case, log billable time/expenses, then click “Create invoice”." },
+    "detail": {
+      "draftInvoice": "Draft invoice",
+      "taxSettings": "Tax settings",
+      "lineItems": "Line items",
+      "th": { "description": "Description", "sac": "SAC", "qty": "Qty", "rate": "Rate", "amount": "Amount" },
+      "subtotal": "Subtotal", "cgst": "CGST", "sgst": "SGST", "igst": "IGST", "total": "Total",
+      "reverseCharge": "Reverse charge: GST payable by the recipient under RCM — not added to this invoice."
+    }
   },
   "portal": {
     "title": "Your matters",
@@ -225,7 +246,8 @@
     "messages": { "title": "Messages", "empty": "No messages yet. Say hello to your firm." },
     "footer": "Secure client portal · you only see your own matters. Not legal advice.",
     "headerLabel": "Client portal",
-    "yourMatters": "your matters"
+    "yourMatters": "your matters",
+    "composer": { "send": "Send", "placeholder": "Message your firm…", "aria": "Message" }
   },
   "landing": {
     "nav": { "features": "Features", "pricing": "Pricing", "login": "Login", "startFree": "Start free" },
