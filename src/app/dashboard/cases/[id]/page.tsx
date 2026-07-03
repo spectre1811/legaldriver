@@ -15,6 +15,7 @@ import { Communications } from "@/components/communications";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deleteMatter } from "../actions";
 import { DeadlineRuleForm } from "./deadline-rules";
+import { OrdersPanel } from "./orders-panel";
 
 type Party = { name?: string; side?: string; advocate?: string };
 
@@ -422,34 +423,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         )}
       </div>
 
-      {orders && orders.length > 0 && (
-        <div className="ec-card">
-          <div className="border-b border-ec-hair px-5 py-4">
-            <h2 className="font-display text-base font-medium">{t("orders.title")} <span className="text-ec-ink-3">({orders.length})</span></h2>
-          </div>
-          <ul className="divide-y divide-ec-hair">
-            {orders.map((o) => (
-              <li key={o.id} className="flex items-center gap-3 px-5 py-3 text-sm">
-                <Icon name="notices" className="h-4 w-4 shrink-0 text-ec-ink-3" />
-                <span className="num w-24 shrink-0 text-ec-ink-3">{fmtDate(o.order_date)}</span>
-                {(o.raw as { order_id?: unknown } | null)?.order_id ? (
-                  <a href={`/api/court/order-pdf?order=${o.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-ec-brass-deep hover:text-ec-brass">
-                    <span className="truncate">{o.title}</span>
-                    <Icon name="external" className="h-3.5 w-3.5 shrink-0" />
-                  </a>
-                ) : o.url ? (
-                  <a href={o.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-ec-brass-deep hover:text-ec-brass">
-                    <span className="truncate">{o.title}</span>
-                    <Icon name="external" className="h-3.5 w-3.5 shrink-0" />
-                  </a>
-                ) : (
-                  <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{o.title}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <OrdersPanel orders={orders ?? []} />
 
       {processes.length > 0 && (
         <div className="ec-card">
