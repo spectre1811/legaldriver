@@ -105,6 +105,10 @@ export interface ExecCall {
 export interface ExecResult {
   text: string | null;
   json: unknown | null;
+  /** Real provider token usage when available (OAI/Anthropic paths); null → estimate. */
+  usage?: { tokensIn: number; tokensOut: number } | null;
+  /** The model the provider actually served (more accurate than the route choice). */
+  model?: string | null;
 }
 export type ExecFn = (call: ExecCall) => Promise<ExecResult>;
 
@@ -122,6 +126,8 @@ export interface TraceEvent {
   inputChars: number;
   outputChars: number;
   tokens: { input: number; output: number; total: number };
+  /** true when tokens/cost are estimated (no provider usage, e.g. the keyless CLI). */
+  estimated: boolean;
   costUsd: number;
   cacheHit: boolean;
   ok: boolean;
@@ -186,7 +192,9 @@ export async function runCore<T = unknown>(
   let text: string | null = null;
   let json: unknown | null = null;
   let usedBackend: OaiBackend | undefined;
-  let usedModel: string | undefined;
+  let usedChoiceModel: string | undefined;
+  let usedUsage: { tokensIn: number; tokensOut: number } | null = null;
+  let usedServedModel: string | null = null;
   let ok = false;
 
   for (const choice of backendChain(route)) {
@@ -204,7 +212,9 @@ export async function runCore<T = unknown>(
       text = r.text;
       json = r.json;
       usedBackend = choice.backend;
-      usedModel = choice.model;
+      usedChoiceModel = choice.model;
+      usedUsage = r.usage ?? null;
+      usedServedModel = r.model ?? null;
       ok = true;
       break;
     }
@@ -216,8 +226,14 @@ export async function runCore<T = unknown>(
       ? JSON.stringify(json).length
       : 0
     : text?.length ?? 0;
-  const tokens = estimateTokens(req.input.length, outputChars);
-  const model = usedModel ?? "(router-default)";
+
+  // Prefer REAL provider usage (OAI/Anthropic); fall back to a char estimate
+  // (e.g. the keyless CLI reports no tokens). `estimated` records which it is.
+  const estimated = usedUsage == null;
+  const tokens = usedUsage
+    ? { input: usedUsage.tokensIn, output: usedUsage.tokensOut, total: usedUsage.tokensIn + usedUsage.tokensOut, estimated: false as const }
+    : estimateTokens(req.input.length, outputChars);
+  const model = usedServedModel ?? usedChoiceModel ?? "(router-default)";
   const cost = estimateCostUsd(tokens, deps.prices?.[model]);
 
   const result: AiGatewayResult<T> = {
@@ -226,7 +242,7 @@ export async function runCore<T = unknown>(
     model,
     backend: usedBackend ?? "keyless-router",
     tokens,
-    // cacheHit is always false in Wave 1 — the response cache is Wave 3.
+    // cacheHit is always false until the response cache lands (04-AI §5).
     cost,
     cacheHit: false,
     traceId,
@@ -245,6 +261,7 @@ export async function runCore<T = unknown>(
     inputChars: req.input.length,
     outputChars,
     tokens: { input: tokens.input, output: tokens.output, total: tokens.total },
+    estimated,
     costUsd: cost.usd,
     cacheHit: false,
     ok,

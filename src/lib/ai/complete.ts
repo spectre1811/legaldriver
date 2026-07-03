@@ -54,7 +54,16 @@ function defaultBackend(): Backend | undefined {
   return undefined;
 }
 
-async function oaiChat(cfg: OaiCfg, prompt: string, opts?: { json?: boolean; maxTokens?: number; system?: string }): Promise<string | null> {
+// Real provider token usage + served model, surfaced so the AI gateway can meter
+// actual tokens/cost instead of estimating. `usage` is null when the provider
+// gives no counts (e.g. the keyless CLI) → the gateway falls back to an estimate.
+export interface LlmUsage { tokensIn: number; tokensOut: number }
+export interface CompleteJsonResult { value: unknown | null; usage: LlmUsage | null; model: string | null }
+export interface CompleteTextResult { value: string | null; usage: LlmUsage | null; model: string | null }
+const NO_JSON: CompleteJsonResult = { value: null, usage: null, model: null };
+const NO_TEXT: CompleteTextResult = { value: null, usage: null, model: null };
+
+async function oaiChat(cfg: OaiCfg, prompt: string, opts?: { json?: boolean; maxTokens?: number; system?: string }): Promise<CompleteTextResult> {
   try {
     const messages: { role: string; content: string }[] = [];
     if (opts?.system) messages.push({ role: "system", content: opts.system });
@@ -66,23 +75,30 @@ async function oaiChat(cfg: OaiCfg, prompt: string, opts?: { json?: boolean; max
       headers: { Authorization: `Bearer ${cfg.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return NO_TEXT;
     const data = await res.json();
     const content = data?.choices?.[0]?.message?.content;
-    return typeof content === "string" ? content : null;
+    const u = data?.usage;
+    const usage = u && typeof u.prompt_tokens === "number"
+      ? { tokensIn: u.prompt_tokens ?? 0, tokensOut: u.completion_tokens ?? 0 }
+      : null;
+    return { value: typeof content === "string" ? content : null, usage, model: typeof data?.model === "string" ? data.model : cfg.model };
   } catch {
-    return null;
+    return NO_TEXT;
   }
 }
-async function oaiCompleteJson(cfg: OaiCfg, prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
+async function oaiCompleteJson(cfg: OaiCfg, prompt: string, schema: Schema, opts?: CompleteOpts): Promise<CompleteJsonResult> {
   const augmented = `${prompt}\n\nReturn ONLY a JSON object conforming to this JSON Schema (no markdown, no prose):\n${JSON.stringify(schema)}`;
-  const txt = await oaiChat(cfg, augmented, { json: true, maxTokens: opts?.maxTokens ?? 1500 });
-  if (!txt) return null;
-  try { return JSON.parse(txt); } catch { return null; }
+  const r = await oaiChat(cfg, augmented, { json: true, maxTokens: opts?.maxTokens ?? 1500 });
+  if (!r.value) return { value: null, usage: r.usage, model: r.model };
+  try { return { value: JSON.parse(r.value), usage: r.usage, model: r.model }; } catch { return { value: null, usage: r.usage, model: r.model }; }
 }
 
 // ── Anthropic + CLI ──
-async function apiCompleteJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
+function apiUsage(res: Anthropic.Messages.Message): LlmUsage | null {
+  return res.usage ? { tokensIn: res.usage.input_tokens ?? 0, tokensOut: res.usage.output_tokens ?? 0 } : null;
+}
+async function apiCompleteJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<CompleteJsonResult> {
   try {
     const res = await getSdk().messages.create({
       model: opts?.model ?? MODEL,
@@ -90,31 +106,35 @@ async function apiCompleteJson(prompt: string, schema: Schema, opts?: CompleteOp
       output_config: { format: { type: "json_schema", schema } },
       messages: [{ role: "user", content: prompt }],
     } as Anthropic.Messages.MessageCreateParamsNonStreaming);
-    if (res.stop_reason === "refusal") return null;
+    const usage = apiUsage(res); const model = res.model ?? opts?.model ?? MODEL;
+    if (res.stop_reason === "refusal") return { value: null, usage, model };
     const block = res.content.find((b) => b.type === "text");
-    return block && block.type === "text" ? JSON.parse(block.text) : null;
-  } catch { return null; }
+    return { value: block && block.type === "text" ? JSON.parse(block.text) : null, usage, model };
+  } catch { return NO_JSON; }
 }
-async function apiCompleteText(prompt: string, opts?: CompleteOpts): Promise<string | null> {
+async function apiCompleteText(prompt: string, opts?: CompleteOpts): Promise<CompleteTextResult> {
   try {
     const res = await getSdk().messages.create({
       model: opts?.model ?? MODEL,
       max_tokens: opts?.maxTokens ?? 2000,
       messages: [{ role: "user", content: prompt }],
     } as Anthropic.Messages.MessageCreateParamsNonStreaming);
-    if (res.stop_reason === "refusal") return null;
+    const usage = apiUsage(res); const model = res.model ?? opts?.model ?? MODEL;
+    if (res.stop_reason === "refusal") return { value: null, usage, model };
     const block = res.content.find((b) => b.type === "text");
-    return block && block.type === "text" ? block.text : null;
-  } catch { return null; }
+    return { value: block && block.type === "text" ? block.text : null, usage, model };
+  } catch { return NO_TEXT; }
 }
-async function cliCompleteJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
+async function cliCompleteJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<CompleteJsonResult> {
   const augmented = `${prompt}\n\nReturn ONLY a JSON object conforming to this JSON Schema (no markdown, no prose):\n${JSON.stringify(schema)}`;
   // Long structured output (e.g. a full draft) needs more than the 90s default —
   // scale the CLI timeout with the requested token budget.
   const timeoutMs = opts?.maxTokens && opts.maxTokens > 2000 ? 300_000 : 120_000;
-  const raw = await claudeCliJson(augmented, { model: opts?.model ?? MODEL, timeoutMs });
-  if (!raw) return null;
-  try { return JSON.parse(raw); } catch { return null; }
+  const model = opts?.model ?? MODEL;
+  const raw = await claudeCliJson(augmented, { model, timeoutMs });
+  // The keyless CLI reports no token counts → usage null (gateway records an estimate).
+  if (!raw) return { value: null, usage: null, model };
+  try { return { value: JSON.parse(raw), usage: null, model }; } catch { return { value: null, usage: null, model }; }
 }
 
 export function classifierBackend(): "api" | "cli" | "off" {
@@ -135,24 +155,26 @@ function explicitBackendUnconfigured(opts?: CompleteOpts): boolean {
   return Boolean(opts?.backend) && cfgFor(opts?.backend, opts?.model) === null;
 }
 
-// Structured JSON completion (validated by the caller against `schema`).
-export async function completeJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
+// Structured JSON completion (validated by the caller against `schema`). Returns
+// the parsed value + real provider token usage + served model when available.
+export async function completeJson(prompt: string, schema: Schema, opts?: CompleteOpts): Promise<CompleteJsonResult> {
   const backend = opts?.backend ?? defaultBackend();
   if (backend) { const cfg = cfgFor(backend, opts?.model); if (cfg) return oaiCompleteJson(cfg, prompt, schema, opts); }
-  if (explicitBackendUnconfigured(opts)) return null;
+  if (explicitBackendUnconfigured(opts)) return NO_JSON;
   const router = classifierBackend();
-  if (router === "off") return null;
+  if (router === "off") return NO_JSON;
   if (router === "api") return apiCompleteJson(prompt, schema, opts);
   return cliCompleteJson(prompt, schema, opts);
 }
 
-// Prose / long-form completion (drafting, summaries). Returns text or null.
-export async function completeText(prompt: string, opts?: CompleteOpts): Promise<string | null> {
+// Prose / long-form completion (drafting, summaries). Returns text + usage/model.
+export async function completeText(prompt: string, opts?: CompleteOpts): Promise<CompleteTextResult> {
   const backend = opts?.backend ?? defaultBackend();
   if (backend) { const cfg = cfgFor(backend, opts?.model); if (cfg) return oaiChat(cfg, prompt, { maxTokens: opts?.maxTokens ?? 2000 }); }
-  if (explicitBackendUnconfigured(opts)) return null;
+  if (explicitBackendUnconfigured(opts)) return NO_TEXT;
   const router = classifierBackend();
-  if (router === "off") return null;
+  if (router === "off") return NO_TEXT;
   if (router === "api") return apiCompleteText(prompt, opts);
-  return claudeCliText(prompt, { model: opts?.model, timeoutMs: opts?.maxTokens && opts.maxTokens > 2000 ? 240_000 : 180_000 });
+  const value = await claudeCliText(prompt, { model: opts?.model, timeoutMs: opts?.maxTokens && opts.maxTokens > 2000 ? 240_000 : 180_000 });
+  return { value, usage: null, model: opts?.model ?? MODEL };
 }

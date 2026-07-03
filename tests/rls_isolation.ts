@@ -15,6 +15,7 @@ const svc = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const TENANT_TABLES = [
   "advocate", "client", "matter", "hearing", "deadline", "cause_list_entry",
   "notice", "notification", "email_message", "document", "oauth_connection", "audit_event",
+  "ai_usage_event",
 ];
 
 async function main() {
@@ -32,6 +33,17 @@ async function main() {
   const { data: someEmail } = await admin.from("email_message").select("id, tenant_id").limit(1).maybeSingle();
   const otherTenant = someDoc?.tenant_id ?? someEmail?.tenant_id;
   console.log("probing against other tenant:", otherTenant, "| sample doc:", someDoc?.id, "| sample email:", someEmail?.id);
+
+  // Seed one ai_usage_event for the OTHER tenant so the isolation check probes real
+  // data, then clean it up at the end (WO-02 Wave 3 metering ledger).
+  let probeUsageId: string | null = null;
+  if (otherTenant) {
+    const { data: pu } = await admin
+      .from("ai_usage_event")
+      .insert({ tenant_id: otherTenant, task: "summary.case", tokens_in: 1, tokens_out: 1, cost_usd: 0, trace_id: "rls-probe" })
+      .select("id").maybeSingle();
+    probeUsageId = pu?.id ?? null;
+  }
 
   // Sign in as the new user with the ANON key → RLS enforced.
   const sb = createClient(url, anon);
@@ -61,12 +73,19 @@ async function main() {
     if (!ok) pass = false;
     console.log(`  ${ok ? "✓" : "✗ LEAK"} cannot read other tenant's email by id`);
   }
+  if (probeUsageId) {
+    const { data } = await sb.from("ai_usage_event").select("id").eq("id", probeUsageId).maybeSingle();
+    const ok = data === null;
+    if (!ok) pass = false;
+    console.log(`  ${ok ? "✓" : "✗ LEAK"} cannot read other tenant's ai_usage_event by id`);
+  }
 
   // 3) The new user CAN see their own tenant (sanity — they get an isolated workspace).
   const { data: ownTenant } = await sb.from("tenant").select("id, name");
   console.log(`  ✓ own tenant visible: ${ownTenant?.length === 1 ? "yes (1)" : JSON.stringify(ownTenant)}`);
 
   // cleanup
+  if (probeUsageId) await admin.from("ai_usage_event").delete().eq("id", probeUsageId);
   await admin.from("profile").delete().eq("id", newUserId);
   await admin.auth.admin.deleteUser(newUserId);
   // delete the auto-created tenant for the temp user
