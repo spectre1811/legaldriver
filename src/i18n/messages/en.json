@@ -111,5 +111,71 @@
       "filteredTitle": "No matching cases",
       "filteredBody": "Try a different search or clear the filters."
     }
+  },
+  "caseDetail": {
+    "back": "Cases",
+    "delete": "Delete",
+    "deleteConfirm": "Delete case",
+    "deleteNote": "Documents stay in the client's library",
+    "via": "via {source}",
+    "tab": { "overview": "Overview", "court": "Court record", "documents": "Documents", "billing": "Billing", "comms": "Communications" },
+    "ai": {
+      "title": "AI briefing",
+      "posture": "Procedural posture",
+      "keyPoints": "Key points",
+      "nextSteps": "Suggested next steps",
+      "watch": "Watch",
+      "arguments": "Arguments — for & against",
+      "present": "What to present at the next hearing",
+      "disclaimer": "AI-generated from this case record — informational, not legal advice.",
+      "empty": "Generate a plain-language briefing with suggested next steps and risk flags from everything on this case."
+    },
+    "info": { "court": "Court", "caseType": "Case type", "stage": "Stage", "client": "Client", "next": "Next hearing", "judge": "Judge", "yourDiary": "(your diary)" },
+    "source": {
+      "line": "Source {source} · last refreshed {time}",
+      "never": "never",
+      "note": "Court data is fetched from the official eCourts record via our licensed pipeline — it can lag or contain errors.",
+      "verify": "Always verify against the official record; not legal advice.",
+      "diaryHint": "Set your own diary date above if the court record is wrong or stale."
+    },
+    "details": { "title": "Case details" },
+    "detail": {
+      "registrationNo": "Registration no.",
+      "filingNo": "Filing no.",
+      "registrationDate": "Registration date",
+      "filingDate": "Filing date",
+      "district": "District",
+      "state": "State",
+      "coram": "Coram",
+      "decidedOn": "Decided on",
+      "firNo": "FIR no.",
+      "policeStation": "Police station"
+    },
+    "acts": { "title": "Acts & Sections" },
+    "deadlines": {
+      "title": "Statutory deadlines",
+      "help": "Apply a limitation/procedural rule from a base date — it computes the due date and adds it to your calendar. Assistive; verify against the bare act.",
+      "proposed": "Proposed — confirm to add to your calendar",
+      "proposedNote": "Computed from a rule — verify against the bare act before confirming.",
+      "empty": "No deadlines yet. Apply a statutory rule below.",
+      "overdue": "overdue"
+    },
+    "parties": { "title": "Parties", "empty": "No party details on record." },
+    "hearings": { "title": "Hearing history", "fallback": "Hearing", "empty": "No hearings on record yet." },
+    "similar": {
+      "title": "Similar cases",
+      "help": "Matches by shared parties, advocates, judges, or acts — verify relevance.",
+      "next": "Next {date}",
+      "emptyTitle": "No related cases yet",
+      "emptyBody": "Similarity grows as you track more matters."
+    },
+    "reason": { "party": "party", "advocate": "advocate", "judge": "judge", "act": "act" },
+    "orders": { "title": "Orders & Judgments" },
+    "processes": { "title": "Processes", "help": "Warrants / summons / notices on the court record.", "fallback": "Process" },
+    "documents": { "title": "Documents", "empty": "No documents yet — upload one above, or they'll arrive auto-filed from Gmail." },
+    "billing": { "title": "Time & expenses", "time": "Time", "unbilled": "Unbilled", "entryFallback": "Time entry", "nonBillable": "non-billable" },
+    "invoices": { "title": "Invoices", "draft": "Draft" },
+    "notices": { "title": "Notices", "due": "due {date}" },
+    "activity": { "title": "Activity", "empty": "No activity yet." }
   }
 }

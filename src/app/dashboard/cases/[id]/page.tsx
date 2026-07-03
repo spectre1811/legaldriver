@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Badge, EmptyState, Disclaimer, fmtDate, fmtAgo, fmtSize, fmtMoney, fmtHours } from "@/components/ui";
+import { fmtDate, fmtAgo, fmtSize, fmtMoney, fmtHours } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
 import { LogTimeExpense } from "./time-expense";
@@ -9,14 +10,6 @@ import type { CaseSummary } from "@/lib/docs/case-summary";
 import { findSimilarCases } from "@/lib/court/similar";
 import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm, ProposedDeadlineActions, MatterDiaryDate } from "./case-actions";
 import { CaseTabs, CaseTabPanel } from "./case-tabs";
-
-const CASE_TAB_DEFS = [
-  { id: "overview", label: "Overview", icon: "sparkles" as const },
-  { id: "court", label: "Court record", icon: "scale" as const },
-  { id: "documents", label: "Documents", icon: "documents" as const },
-  { id: "billing", label: "Billing", icon: "clock" as const },
-  { id: "comms", label: "Communications", icon: "inbox" as const },
-];
 import { CreateInvoiceButton } from "../../invoices/invoices-ui";
 import { Communications } from "@/components/communications";
 import { ConfirmDelete } from "@/components/confirm-delete";
@@ -25,13 +18,26 @@ import { DeadlineRuleForm } from "./deadline-rules";
 
 type Party = { name?: string; side?: string; advocate?: string };
 
-const STATUS_TONE: Record<string, "green" | "amber" | "neutral"> = { active: "green", disposed: "neutral" };
+const STATUS_TONE: Record<string, string> = { active: "green", disposed: "neutral" };
+// tone → ec chip class
+const chip = (tone: string) =>
+  `ec-chip ${({ green: "ec-chip-success", amber: "ec-chip-warn", red: "ec-chip-danger", brand: "ec-chip-hot", neutral: "" } as Record<string, string>)[tone] ?? ""}`;
 
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 const truncate = (s: string, n = 32) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 
+const CASE_TAB_DEFS = [
+  { id: "overview", label: "overview", icon: "sparkles" as const },
+  { id: "court", label: "court", icon: "scale" as const },
+  { id: "documents", label: "documents", icon: "documents" as const },
+  { id: "billing", label: "billing", icon: "clock" as const },
+  { id: "comms", label: "comms", icon: "inbox" as const },
+];
+
 export default async function CaseDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
+  const t = await getTranslations("caseDetail");
+  const tc = await getTranslations("common");
   const { data: matter } = await supabase.from("matter").select("*").eq("id", params.id).maybeSingle();
   if (!matter) notFound();
 
@@ -52,8 +58,8 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     supabase.from("invoice").select("id, number, status, issue_date, total_minor").eq("matter_id", matter.id).order("created_at", { ascending: false }),
     supabase.from("notice").select("id, type, escalation_state, response_due").eq("matter_id", matter.id).order("created_at", { ascending: false }),
   ]);
-  const totalMinutes = (timeEntries ?? []).reduce((s, t) => s + t.minutes, 0);
-  const billableTime = (timeEntries ?? []).filter((t) => t.billable).reduce((s, t) => s + Math.round((t.minutes / 60) * t.rate_minor), 0);
+  const totalMinutes = (timeEntries ?? []).reduce((s, t2) => s + t2.minutes, 0);
+  const billableTime = (timeEntries ?? []).filter((t2) => t2.billable).reduce((s, t2) => s + Math.round((t2.minutes / 60) * t2.rate_minor), 0);
   const billableExp = (expenses ?? []).filter((e) => e.billable).reduce((s, e) => s + e.amount_minor, 0);
   const wip = billableTime + billableExp;
 
@@ -76,46 +82,45 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const detail = (matter.detail ?? {}) as Record<string, unknown>;
 
   const caseDetails: [string, string | null][] = [
-    ["Registration no.", str(detail.registrationNumber)],
-    ["Filing no.", str(detail.filingNumber)],
-    ["Registration date", detail.registrationDate ? fmtDate(str(detail.registrationDate)) : null],
-    ["Filing date", detail.filingDate ? fmtDate(str(detail.filingDate)) : null],
-    ["District", str(detail.district)],
-    ["State", str(detail.state)],
-    ["Coram", str(detail.coram)],
-    ["Decided on", detail.decisionDate ? fmtDate(str(detail.decisionDate)) : null],
-    ["FIR no.", detail.firNo ? `${str(detail.firNo)}${detail.firYear ? `/${str(detail.firYear)}` : ""}` : null],
-    ["Police station", str(detail.policeStation)],
+    [t("detail.registrationNo"), str(detail.registrationNumber)],
+    [t("detail.filingNo"), str(detail.filingNumber)],
+    [t("detail.registrationDate"), detail.registrationDate ? fmtDate(str(detail.registrationDate)) : null],
+    [t("detail.filingDate"), detail.filingDate ? fmtDate(str(detail.filingDate)) : null],
+    [t("detail.district"), str(detail.district)],
+    [t("detail.state"), str(detail.state)],
+    [t("detail.coram"), str(detail.coram)],
+    [t("detail.decidedOn"), detail.decisionDate ? fmtDate(str(detail.decisionDate)) : null],
+    [t("detail.firNo"), detail.firNo ? `${str(detail.firNo)}${detail.firYear ? `/${str(detail.firYear)}` : ""}` : null],
+    [t("detail.policeStation"), str(detail.policeStation)],
   ].filter(([, v]) => v) as [string, string | null][];
 
-  // LD extras: court processes (warrants/summons) — legally significant, surfaced distinctly.
   const processes = (Array.isArray(detail.processes) ? detail.processes : []) as { process_id?: string; process_date?: string; title?: string }[];
-  // Advocate bar-ids (name→code) → link each advocate to their caseload; regional (Gujarati) names.
   const advocateBars = (detail.advocateBars ?? {}) as Record<string, string>;
   const regional = (detail.regional ?? {}) as { pet_name?: string | null; res_name?: string | null };
 
   const info: [string, string | null][] = [
-    ["Court", matter.court],
-    ["Case type", matter.case_type],
-    ["Stage", matter.stage],
-    ["Client", client?.name ?? null],
-    ["Next hearing", matter.next_hearing_override ? `${fmtDate(matter.next_hearing_override)} (your diary)` : fmtDate(matter.next_hearing_date)],
-    ["Judge", hearings?.find((h) => h.judge)?.judge ?? null],
+    [t("info.court"), matter.court],
+    [t("info.caseType"), matter.case_type],
+    [t("info.stage"), matter.stage],
+    [t("info.client"), client?.name ?? null],
+    [t("info.next"), matter.next_hearing_override ? `${fmtDate(matter.next_hearing_override)} ${t("info.yourDiary")}` : fmtDate(matter.next_hearing_date)],
+    [t("info.judge"), hearings?.find((h) => h.judge)?.judge ?? null],
   ];
+  const refreshed = matter.last_synced_at ? new Date(matter.last_synced_at).toLocaleString("en-IN") : t("source.never");
 
   return (
-    <div className="space-y-7">
-      <Link href="/dashboard/cases" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline">
-        <Icon name="back" className="h-4 w-4" /> Cases
+    <div className="space-y-6 text-ec-ink">
+      <Link href="/dashboard/cases" className="inline-flex items-center gap-1.5 text-sm font-medium text-ec-brass-deep hover:text-ec-brass">
+        <Icon name="back" className="h-4 w-4" /> {t("back")}
       </Link>
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[1.7rem] font-semibold leading-tight">{matter.title}</h1>
+          <h1 className="font-display text-[1.7rem] font-medium leading-tight tracking-tight">{matter.title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            {matter.cnr && <Badge tone="brand"><Icon name="cases" className="h-3 w-3" /> {matter.cnr}</Badge>}
-            <Badge tone={STATUS_TONE[matter.status] ?? "neutral"}>{matter.status}</Badge>
-            {matter.source && <span className="text-xs text-ink-faint">via {matter.source}</span>}
+            {matter.cnr && <span className={`num ${chip("brand")} inline-flex items-center gap-1`}><Icon name="cases" className="h-3 w-3" /> {matter.cnr}</span>}
+            <span className={chip(STATUS_TONE[matter.status] ?? "neutral")}>{matter.status}</span>
+            {matter.source && <span className="text-xs text-ec-ink-3">{t("via", { source: matter.source })}</span>}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -127,40 +132,40 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             }}
           />
           {matter.cnr && <RefreshButton matterId={matter.id} />}
-          <ConfirmDelete action={deleteMatter} id={matter.id} label="Delete" confirmLabel="Delete case" note="Documents stay in the client's library" redirectTo="/dashboard/cases" size="md" />
+          <ConfirmDelete action={deleteMatter} id={matter.id} label={t("delete")} confirmLabel={t("deleteConfirm")} note={t("deleteNote")} redirectTo="/dashboard/cases" size="md" />
         </div>
       </header>
 
-      <CaseTabs tabs={CASE_TAB_DEFS}>
+      <CaseTabs tabs={CASE_TAB_DEFS.map((d) => ({ ...d, label: t(`tab.${d.label}`) }))}>
       <CaseTabPanel id="overview">
 
-      {/* AI summary */}
-      <Card className="overflow-hidden">
-        <div className="flex items-center justify-between border-b border-line bg-brand-50/40 px-5 py-3.5">
+      {/* AI briefing */}
+      <div className="ec-card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-ec-hair bg-ec-brass-tint/30 px-5 py-3.5">
           <div className="flex items-center gap-2">
-            <Icon name="sparkles" className="h-4 w-4 text-brand-600" />
-            <h2 className="text-base font-medium">AI briefing</h2>
-            {ai?.generated_at && <span className="text-xs text-ink-faint">· {fmtAgo(ai.generated_at)}</span>}
+            <Icon name="sparkles" className="h-4 w-4 text-ec-brass-deep" />
+            <h2 className="font-display text-base font-medium">{t("ai.title")}</h2>
+            {ai?.generated_at && <span className="text-xs text-ec-ink-3">· {fmtAgo(ai.generated_at)}</span>}
           </div>
           <GenerateSummaryButton matterId={matter.id} has={!!ai} />
         </div>
         <div className="px-5 py-5">
           {ai ? (
             <div className="space-y-5">
-              <p className="text-[0.95rem] leading-relaxed text-ink-soft">{ai.summary}</p>
+              <p className="font-display text-[0.98rem] leading-relaxed text-ec-ink-2">{ai.summary}</p>
               {ai.posture && (
-                <div className="rounded-xl bg-paper px-4 py-3">
-                  <p className="label mb-1">Procedural posture</p>
-                  <p className="text-sm text-ink-soft">{ai.posture}</p>
+                <div className="rounded-ec-m bg-ec-paper-3 px-4 py-3">
+                  <p className="ec-label mb-1">{t("ai.posture")}</p>
+                  <p className="text-sm text-ec-ink-2">{ai.posture}</p>
                 </div>
               )}
               {ai.key_points && ai.key_points.length > 0 && (
                 <div>
-                  <p className="label mb-2">Key points</p>
+                  <p className="ec-label mb-2">{t("ai.keyPoints")}</p>
                   <ul className="space-y-1.5">
                     {ai.key_points.map((s, i) => (
-                      <li key={i} className="flex gap-2.5 text-sm text-ink-soft">
-                        <Icon name="dot" className="mt-1 h-2 w-2 shrink-0 text-ink-faint" /> {s}
+                      <li key={i} className="flex gap-2.5 text-sm text-ec-ink-2">
+                        <Icon name="dot" className="mt-1 h-2 w-2 shrink-0 text-ec-ink-3" /> {s}
                       </li>
                     ))}
                   </ul>
@@ -168,23 +173,23 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               )}
               {ai.next_steps.length > 0 && (
                 <div>
-                  <p className="label mb-2">Suggested next steps</p>
+                  <p className="ec-label mb-2">{t("ai.nextSteps")}</p>
                   <ul className="space-y-1.5">
                     {ai.next_steps.map((s, i) => (
-                      <li key={i} className="flex gap-2.5 text-sm text-ink-soft">
-                        <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" /> {s}
+                      <li key={i} className="flex gap-2.5 text-sm text-ec-ink-2">
+                        <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-ec-brass-deep" /> {s}
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
               {ai.risk_flags.length > 0 && (
-                <div className="rounded-xl bg-amber-50 px-4 py-3">
-                  <p className="label mb-1.5 text-amber-700">Watch</p>
+                <div className="rounded-ec-m bg-ec-warn-t px-4 py-3">
+                  <p className="ec-label mb-1.5 text-ec-warn">{t("ai.watch")}</p>
                   <ul className="space-y-1">
                     {ai.risk_flags.map((s, i) => (
-                      <li key={i} className="flex gap-2 text-sm text-amber-800">
-                        <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {s}
+                      <li key={i} className="flex gap-2 text-sm text-ec-ink-2">
+                        <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ec-warn" /> {s}
                       </li>
                     ))}
                   </ul>
@@ -192,11 +197,11 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               )}
               {ai.arguments && ai.arguments.length > 0 && (
                 <div>
-                  <p className="label mb-2">Arguments — for &amp; against</p>
+                  <p className="ec-label mb-2">{t("ai.arguments")}</p>
                   <ul className="space-y-1.5">
                     {ai.arguments.map((s, i) => (
-                      <li key={i} className="flex gap-2.5 text-sm text-ink-soft">
-                        <Icon name="scale" className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" /> {s}
+                      <li key={i} className="flex gap-2.5 text-sm text-ec-ink-2">
+                        <Icon name="scale" className="mt-0.5 h-4 w-4 shrink-0 text-ec-brass-deep" /> {s}
                       </li>
                     ))}
                   </ul>
@@ -204,82 +209,74 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               )}
               {ai.what_to_present && ai.what_to_present.length > 0 && (
                 <div>
-                  <p className="label mb-2">What to present at the next hearing</p>
+                  <p className="ec-label mb-2">{t("ai.present")}</p>
                   <ul className="space-y-1.5">
                     {ai.what_to_present.map((s, i) => (
-                      <li key={i} className="flex gap-2.5 text-sm text-ink-soft">
-                        <Icon name="documents" className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" /> {s}
+                      <li key={i} className="flex gap-2.5 text-sm text-ec-ink-2">
+                        <Icon name="documents" className="mt-0.5 h-4 w-4 shrink-0 text-ec-brass-deep" /> {s}
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
-              <p className="text-xs text-ink-faint">AI-generated from this case record — informational, not legal advice.</p>
+              <p className="text-xs text-ec-ink-3">{t("ai.disclaimer")}</p>
             </div>
           ) : (
-            <p className="text-sm text-ink-muted">
-              Generate a plain-language briefing with suggested next steps and risk flags from everything on this case.
-            </p>
+            <p className="text-sm text-ec-ink-3">{t("ai.empty")}</p>
           )}
         </div>
-      </Card>
+      </div>
 
       {/* Info grid */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {info.map(([label, value]) => (
-          <div key={label} className="card p-4">
-            <p className="label">{label}</p>
-            <p className="mt-1.5 text-sm text-ink">{value ?? "—"}</p>
+          <div key={label} className="ec-card p-4">
+            <p className="ec-label">{label}</p>
+            <p className="mt-1.5 text-sm text-ec-ink">{value ?? "—"}</p>
           </div>
         ))}
       </section>
 
-      <Card className="px-5 py-4">
+      <div className="ec-card px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-ink-muted">
-            Source <span className="font-medium text-ink-soft">{matter.source ?? "manual"}</span> · last refreshed{" "}
-            {matter.last_synced_at ? new Date(matter.last_synced_at).toLocaleString("en-IN") : "never"}
-          </p>
+          <p className="num text-sm text-ec-ink-3">{t("source.line", { source: matter.source ?? "manual", time: refreshed })}</p>
           <MatterDiaryDate matterId={matter.id} synced={matter.next_hearing_date} override={matter.next_hearing_override ?? null} />
         </div>
-        <p className="mt-2 text-xs text-ink-faint">Court data is fetched from the official eCourts record via our licensed pipeline — it can lag or contain errors. <span className="font-medium">Always verify against the official record; not legal advice.</span> Set your own diary date above if the court record is wrong or stale.</p>
-      </Card>
+        <p className="mt-2 text-xs text-ec-ink-3">{t("source.note")} <span className="font-medium text-ec-ink-2">{t("source.verify")}</span> {t("source.diaryHint")}</p>
+      </div>
 
       </CaseTabPanel>
       <CaseTabPanel id="court">
 
-      {/* Case details */}
       {caseDetails.length > 0 && (
-        <Card>
-          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Case details</h2></div>
+        <div className="ec-card">
+          <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium">{t("details.title")}</h2></div>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-5 py-5 sm:grid-cols-3">
             {caseDetails.map(([label, value]) => (
               <div key={label}>
-                <dt className="label">{label}</dt>
-                <dd className="mt-1 text-sm text-ink">{value}</dd>
+                <dt className="ec-label">{label}</dt>
+                <dd className="mt-1 text-sm text-ec-ink">{value}</dd>
               </div>
             ))}
           </dl>
-        </Card>
+        </div>
       )}
 
-      {/* Acts & Sections */}
       {acts.length > 0 && (
-        <Card>
-          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Acts &amp; Sections</h2></div>
+        <div className="ec-card">
+          <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium">{t("acts.title")}</h2></div>
           <div className="flex flex-wrap gap-2 px-5 py-5">
             {acts.map((a, i) => (
-              <Badge key={i} tone="brand">{a}</Badge>
+              <span key={i} className={chip("brand")}>{a}</span>
             ))}
           </div>
-        </Card>
+        </div>
       )}
 
-      {/* Statutory deadlines (jurisdiction-aware, from the seeded rules) */}
-      <Card>
-        <div className="border-b border-line px-5 py-4">
-          <h2 className="text-base font-medium">Statutory deadlines</h2>
-          <p className="mt-0.5 text-xs text-ink-faint">Apply a limitation/procedural rule from a base date — it computes the due date and adds it to your calendar. Assistive; verify against the bare act.</p>
+      <div className="ec-card">
+        <div className="border-b border-ec-hair px-5 py-4">
+          <h2 className="font-display text-base font-medium">{t("deadlines.title")}</h2>
+          <p className="mt-0.5 text-xs text-ec-ink-3">{t("deadlines.help")}</p>
         </div>
         <div className="space-y-4 px-5 py-5">
           {(() => {
@@ -288,20 +285,20 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             return (
               <>
                 {proposed.length > 0 && (
-                  <div className="rounded-xl bg-amber-50 px-4 py-3">
-                    <p className="label mb-2 text-amber-700">Proposed — confirm to add to your calendar</p>
+                  <div className="rounded-ec-m bg-ec-warn-t px-4 py-3">
+                    <p className="ec-label mb-2 text-ec-warn">{t("deadlines.proposed")}</p>
                     <ul className="space-y-2">
                       {proposed.map((d) => (
                         <li key={d.id} className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-sm text-amber-900">
-                            {d.kind.replace(/_/g, " ")} · <span className="font-medium">{fmtDate(d.due_date)}</span>
-                            {d.basis ? <span className="block text-xs text-amber-700">{d.basis}</span> : null}
+                          <span className="text-sm text-ec-ink">
+                            {d.kind.replace(/_/g, " ")} · <span className="num font-medium">{fmtDate(d.due_date)}</span>
+                            {d.basis ? <span className="block text-xs text-ec-warn">{d.basis}</span> : null}
                           </span>
                           <ProposedDeadlineActions deadlineId={d.id} />
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-2 text-xs text-amber-700">Computed from a rule — verify against the bare act before confirming.</p>
+                    <p className="mt-2 text-xs text-ec-warn">{t("deadlines.proposedNote")}</p>
                   </div>
                 )}
                 {firm.length > 0 ? (
@@ -310,41 +307,41 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                       const overdue = d.status === "open" && d.due_date < new Date().toISOString().slice(0, 10);
                       return (
                         <li key={d.id} className="flex items-center justify-between gap-2">
-                          <span className="text-ink">{d.kind.replace(/_/g, " ")}{d.jurisdiction_rule ? <span className="text-ink-faint"> — {d.jurisdiction_rule}</span> : null}</span>
-                          <span className={`shrink-0 text-xs ${overdue ? "font-medium text-amber-700" : "text-ink-faint"}`}>{fmtDate(d.due_date)}{d.status !== "open" ? ` · ${d.status}` : overdue ? " · overdue" : ""}</span>
+                          <span className="text-ec-ink">{d.kind.replace(/_/g, " ")}{d.jurisdiction_rule ? <span className="text-ec-ink-3"> — {d.jurisdiction_rule}</span> : null}</span>
+                          <span className={`num shrink-0 text-xs ${overdue ? "font-medium text-ec-warn" : "text-ec-ink-3"}`}>{fmtDate(d.due_date)}{d.status !== "open" ? ` · ${d.status}` : overdue ? ` · ${t("deadlines.overdue")}` : ""}</span>
                         </li>
                       );
                     })}
                   </ul>
                 ) : proposed.length === 0 ? (
-                  <p className="text-sm text-ink-faint">No deadlines yet. Apply a statutory rule below.</p>
+                  <p className="text-sm text-ec-ink-3">{t("deadlines.empty")}</p>
                 ) : null}
               </>
             );
           })()}
           <DeadlineRuleForm matterId={matter.id} rules={deadlineRules ?? []} />
         </div>
-      </Card>
+      </div>
 
       {/* Parties + hearings */}
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card>
-          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Parties</h2></div>
+        <div className="ec-card">
+          <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium">{t("parties.title")}</h2></div>
           {parties.length ? (
-            <ul className="divide-y divide-line">
+            <ul className="divide-y divide-ec-hair">
               {parties.map((p, i) => {
                 const reg = p.side === "petitioner" ? regional.pet_name : p.side === "respondent" ? regional.res_name : null;
                 const bar = p.advocate ? advocateBars[p.advocate] : undefined;
                 return (
                   <li key={i} className="flex items-start justify-between gap-3 px-5 py-3 text-sm">
                     <span className="min-w-0">
-                      <span className="font-medium text-ink">{p.name}</span>
-                      {reg && reg !== p.name && reg !== "XXXXXXX" && <span className="block text-xs text-ink-faint">{reg}</span>}
+                      <span className="font-medium text-ec-ink">{p.name}</span>
+                      {reg && reg !== p.name && reg !== "XXXXXXX" && <span className="block text-xs text-ec-ink-3">{reg}</span>}
                     </span>
-                    <span className="shrink-0 text-right text-xs text-ink-faint">
+                    <span className="shrink-0 text-right text-xs text-ec-ink-3">
                       {p.side}
                       {p.advocate && (bar
-                        ? <> · <Link href={`/dashboard/advocate/${bar}`} className="text-brand-600 hover:underline">{p.advocate}</Link></>
+                        ? <> · <Link href={`/dashboard/advocate/${bar}`} className="text-ec-brass-deep hover:text-ec-brass">{p.advocate}</Link></>
                         : ` · ${p.advocate}`)}
                     </span>
                   </li>
@@ -352,59 +349,59 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               })}
             </ul>
           ) : (
-            <p className="px-5 py-8 text-center text-sm text-ink-faint">No party details on record.</p>
+            <p className="px-5 py-8 text-center text-sm text-ec-ink-3">{t("parties.empty")}</p>
           )}
-        </Card>
+        </div>
 
-        <Card>
-          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Hearing history</h2></div>
+        <div className="ec-card">
+          <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium">{t("hearings.title")}</h2></div>
           {hearings && hearings.length ? (
-            <ul className="divide-y divide-line">
+            <ul className="divide-y divide-ec-hair">
               {hearings.map((h) => (
                 <li key={h.id} className="flex items-center gap-3 px-5 py-3 text-sm">
-                  <span className="w-20 shrink-0 text-ink-muted">{fmtDate(h.date)}</span>
-                  <span className="flex-1 text-ink">{h.purpose ?? "Hearing"}</span>
-                  <span className="text-xs text-ink-faint">{h.judge ? <Link href={`/api/court/judge?name=${encodeURIComponent(h.judge)}`} className="hover:text-brand-600 hover:underline">{h.judge}</Link> : ""}</span>
+                  <span className="num w-20 shrink-0 text-ec-ink-3">{fmtDate(h.date)}</span>
+                  <span className="flex-1 text-ec-ink">{h.purpose ?? t("hearings.fallback")}</span>
+                  <span className="text-xs text-ec-ink-3">{h.judge ? <Link href={`/api/court/judge?name=${encodeURIComponent(h.judge)}`} className="hover:text-ec-brass-deep">{h.judge}</Link> : ""}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="px-5 py-8 text-center text-sm text-ink-faint">No hearings on record yet.</p>
+            <p className="px-5 py-8 text-center text-sm text-ec-ink-3">{t("hearings.empty")}</p>
           )}
-        </Card>
+        </div>
       </div>
 
       {/* Similar cases */}
-      <Card>
-        <div className="border-b border-line px-5 py-4">
-          <h2 className="text-base font-medium">Similar cases</h2>
-          <p className="mt-1 text-xs text-ink-faint">Matches by shared parties, advocates, judges, or acts — verify relevance.</p>
+      <div className="ec-card">
+        <div className="border-b border-ec-hair px-5 py-4">
+          <h2 className="font-display text-base font-medium">{t("similar.title")}</h2>
+          <p className="mt-1 text-xs text-ec-ink-3">{t("similar.help")}</p>
         </div>
         {similar.length ? (
-          <ul className="divide-y divide-line">
+          <ul className="divide-y divide-ec-hair">
             {similar.map((s) => {
-              const reasons: { tone: "brand" | "green" | "amber" | "neutral"; label: string }[] = [
-                ...s.shared.parties.map((v) => ({ tone: "brand" as const, label: `party · ${truncate(v)}` })),
-                ...s.shared.advocates.map((v) => ({ tone: "green" as const, label: `advocate · ${truncate(v)}` })),
-                ...s.shared.judges.map((v) => ({ tone: "neutral" as const, label: `judge · ${truncate(v)}` })),
-                ...s.shared.acts.map((v) => ({ tone: "amber" as const, label: `act · ${truncate(v)}` })),
+              const reasons: { tone: string; label: string }[] = [
+                ...s.shared.parties.map((v) => ({ tone: "brand", label: `${t("reason.party")} · ${truncate(v)}` })),
+                ...s.shared.advocates.map((v) => ({ tone: "green", label: `${t("reason.advocate")} · ${truncate(v)}` })),
+                ...s.shared.judges.map((v) => ({ tone: "neutral", label: `${t("reason.judge")} · ${truncate(v)}` })),
+                ...s.shared.acts.map((v) => ({ tone: "amber", label: `${t("reason.act")} · ${truncate(v)}` })),
               ];
               return (
-                <li key={s.id} className="px-5 py-3.5">
+                <li key={s.id} className="ec-row px-5 py-3.5">
                   <Link href={`/dashboard/cases/${s.id}`} className="group block">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink group-hover:text-brand-700">
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-ec-ink group-hover:text-ec-brass-deep">
                         {s.title}
-                        {s.cnr && <span className="ml-2 text-xs font-normal text-ink-faint">{s.cnr}</span>}
+                        {s.cnr && <span className="num ml-2 text-xs font-normal text-ec-ink-3">{s.cnr}</span>}
                       </span>
-                      <span className="shrink-0 text-xs text-ink-faint">{s.court ?? "—"}</span>
+                      <span className="shrink-0 text-xs text-ec-ink-3">{s.court ?? "—"}</span>
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                       {s.next_hearing_date && (
-                        <span className="mr-1 text-xs text-ink-muted">Next {fmtDate(s.next_hearing_date)}</span>
+                        <span className="num mr-1 text-xs text-ec-ink-3">{t("similar.next", { date: fmtDate(s.next_hearing_date) })}</span>
                       )}
                       {reasons.map((r, i) => (
-                        <Badge key={i} tone={r.tone}>{r.label}</Badge>
+                        <span key={i} className={chip(r.tone)}>{r.label}</span>
                       ))}
                     </div>
                   </Link>
@@ -413,188 +410,184 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             })}
           </ul>
         ) : (
-          <EmptyState
-            icon="cases"
-            title="No related cases yet"
-            body="Similarity grows as you track more matters."
-          />
-        )}
-      </Card>
-
-      {/* Orders & Judgments */}
-      {orders && orders.length > 0 && (
-        <Card>
-          <div className="border-b border-line px-5 py-4">
-            <h2 className="text-base font-medium">Orders &amp; Judgments <span className="text-ink-faint">({orders.length})</span></h2>
+          <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+            <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-ec-m bg-ec-brass-tint text-ec-brass-deep">
+              <Icon name="cases" className="h-5 w-5" />
+            </span>
+            <h3 className="font-display text-base font-medium text-ec-ink">{t("similar.emptyTitle")}</h3>
+            <p className="mt-1 text-sm text-ec-ink-3">{t("similar.emptyBody")}</p>
           </div>
-          <ul className="divide-y divide-line">
+        )}
+      </div>
+
+      {orders && orders.length > 0 && (
+        <div className="ec-card">
+          <div className="border-b border-ec-hair px-5 py-4">
+            <h2 className="font-display text-base font-medium">{t("orders.title")} <span className="text-ec-ink-3">({orders.length})</span></h2>
+          </div>
+          <ul className="divide-y divide-ec-hair">
             {orders.map((o) => (
               <li key={o.id} className="flex items-center gap-3 px-5 py-3 text-sm">
-                <Icon name="notices" className="h-4 w-4 shrink-0 text-ink-faint" />
-                <span className="w-24 shrink-0 text-ink-muted">{fmtDate(o.order_date)}</span>
+                <Icon name="notices" className="h-4 w-4 shrink-0 text-ec-ink-3" />
+                <span className="num w-24 shrink-0 text-ec-ink-3">{fmtDate(o.order_date)}</span>
                 {(o.raw as { order_id?: unknown } | null)?.order_id ? (
-                  <a href={`/api/court/order-pdf?order=${o.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-brand-600 hover:underline">
+                  <a href={`/api/court/order-pdf?order=${o.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-ec-brass-deep hover:text-ec-brass">
                     <span className="truncate">{o.title}</span>
                     <Icon name="external" className="h-3.5 w-3.5 shrink-0" />
                   </a>
                 ) : o.url ? (
-                  <a href={o.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-brand-600 hover:underline">
+                  <a href={o.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-ec-brass-deep hover:text-ec-brass">
                     <span className="truncate">{o.title}</span>
                     <Icon name="external" className="h-3.5 w-3.5 shrink-0" />
                   </a>
                 ) : (
-                  <span className="min-w-0 flex-1 truncate font-medium text-ink">{o.title}</span>
+                  <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{o.title}</span>
                 )}
               </li>
             ))}
           </ul>
-        </Card>
+        </div>
       )}
 
-      {/* Court processes — warrants, summons, notices issued (from the court record) */}
       {processes.length > 0 && (
-        <Card>
-          <div className="border-b border-line px-5 py-4">
-            <h2 className="text-base font-medium">Processes <span className="text-ink-faint">({processes.length})</span></h2>
-            <p className="mt-0.5 text-xs text-ink-faint">Warrants / summons / notices on the court record.</p>
+        <div className="ec-card">
+          <div className="border-b border-ec-hair px-5 py-4">
+            <h2 className="font-display text-base font-medium">{t("processes.title")} <span className="text-ec-ink-3">({processes.length})</span></h2>
+            <p className="mt-0.5 text-xs text-ec-ink-3">{t("processes.help")}</p>
           </div>
-          <ul className="divide-y divide-line">
+          <ul className="divide-y divide-ec-hair">
             {processes.map((p, i) => (
               <li key={p.process_id ?? i} className="flex items-center gap-3 px-5 py-3 text-sm">
-                <Icon name="alert" className="h-4 w-4 shrink-0 text-amber-500" />
-                <span className="w-24 shrink-0 text-ink-muted">{fmtDate(p.process_date)}</span>
-                <span className="min-w-0 flex-1 truncate font-medium text-ink">{p.title ?? "Process"}</span>
+                <Icon name="alert" className="h-4 w-4 shrink-0 text-ec-warn" />
+                <span className="num w-24 shrink-0 text-ec-ink-3">{fmtDate(p.process_date)}</span>
+                <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{p.title ?? t("processes.fallback")}</span>
               </li>
             ))}
           </ul>
-        </Card>
+        </div>
       )}
 
       </CaseTabPanel>
       <CaseTabPanel id="documents">
 
-      {/* Documents linked to this case */}
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
-          <h2 className="text-base font-medium">Documents <span className="text-ink-faint">({docs?.length ?? 0})</span></h2>
+      <div className="ec-card">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ec-hair px-5 py-4">
+          <h2 className="font-display text-base font-medium">{t("documents.title")} <span className="text-ec-ink-3">({docs?.length ?? 0})</span></h2>
           <AddDocumentForm matterId={matter.id} />
         </div>
         {docs && docs.length ? (
-          <ul className="divide-y divide-line">
+          <ul className="divide-y divide-ec-hair">
             {docs.map((d) => (
               <li key={d.id} className="flex items-center gap-3 px-5 py-3 text-sm">
-                <Icon name="documents" className="h-4 w-4 shrink-0 text-ink-faint" />
-                <span className="min-w-0 flex-1 truncate font-medium text-ink">{d.filename}</span>
-                <Badge>{d.doc_type ?? d.source}</Badge>
-                <span className="hidden text-xs text-ink-faint sm:inline">{fmtSize(d.size_bytes)}</span>
+                <Icon name="documents" className="h-4 w-4 shrink-0 text-ec-ink-3" />
+                <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{d.filename}</span>
+                <span className={chip("neutral")}>{d.doc_type ?? d.source}</span>
+                <span className="num hidden text-xs text-ec-ink-3 sm:inline">{fmtSize(d.size_bytes)}</span>
                 <DocActions documentId={d.id} matterId={d.matter_id} clientId={d.client_id} matters={matterOpts} clients={clientOpts} shared={d.portal_shared} />
               </li>
             ))}
           </ul>
         ) : (
-          <p className="px-5 py-8 text-center text-sm text-ink-faint">No documents yet — upload one above, or they&apos;ll arrive auto-filed from Gmail.</p>
+          <p className="px-5 py-8 text-center text-sm text-ec-ink-3">{t("documents.empty")}</p>
         )}
-      </Card>
+      </div>
 
       </CaseTabPanel>
       <CaseTabPanel id="billing">
 
-      {/* Time & expenses */}
-      <Card className="overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
-          <h2 className="text-base font-medium">Time &amp; expenses</h2>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-ink-muted">Time <span className="font-medium text-ink">{fmtHours(totalMinutes)}</span></span>
-            <span className="text-ink-muted">Unbilled <span className="font-medium text-ink">{fmtMoney(wip)}</span></span>
+      <div className="ec-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ec-hair px-5 py-4">
+          <h2 className="font-display text-base font-medium">{t("billing.title")}</h2>
+          <div className="num flex items-center gap-4 text-sm">
+            <span className="text-ec-ink-3">{t("billing.time")} <span className="font-medium text-ec-ink">{fmtHours(totalMinutes)}</span></span>
+            <span className="text-ec-ink-3">{t("billing.unbilled")} <span className="font-medium text-ec-ink">{fmtMoney(wip)}</span></span>
             <CreateInvoiceButton matterId={matter.id} />
           </div>
         </div>
         <LogTimeExpense matterId={matter.id} />
         {((timeEntries?.length ?? 0) + (expenses?.length ?? 0)) > 0 && (
-          <ul className="divide-y divide-line border-t border-line">
-            {(timeEntries ?? []).map((t) => (
-              <li key={t.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
-                <Icon name="clock" className="h-4 w-4 shrink-0 text-ink-faint" />
-                <span className="w-20 shrink-0 text-ink-muted">{fmtDate(t.entry_date)}</span>
-                <span className="flex-1 truncate text-ink-soft">{t.narrative ?? "Time entry"}</span>
-                {!t.billable && <Badge>non-billable</Badge>}
-                <span className="text-ink-muted">{fmtHours(t.minutes)}</span>
-                <span className="w-20 text-right font-medium text-ink">{fmtMoney(Math.round((t.minutes / 60) * t.rate_minor))}</span>
+          <ul className="divide-y divide-ec-hair border-t border-ec-hair">
+            {(timeEntries ?? []).map((t2) => (
+              <li key={t2.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
+                <Icon name="clock" className="h-4 w-4 shrink-0 text-ec-ink-3" />
+                <span className="num w-20 shrink-0 text-ec-ink-3">{fmtDate(t2.entry_date)}</span>
+                <span className="flex-1 truncate text-ec-ink-2">{t2.narrative ?? t("billing.entryFallback")}</span>
+                {!t2.billable && <span className={chip("neutral")}>{t("billing.nonBillable")}</span>}
+                <span className="num text-ec-ink-3">{fmtHours(t2.minutes)}</span>
+                <span className="num w-20 text-right font-medium text-ec-ink">{fmtMoney(Math.round((t2.minutes / 60) * t2.rate_minor))}</span>
               </li>
             ))}
             {(expenses ?? []).map((e) => (
               <li key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
-                <Icon name="notices" className="h-4 w-4 shrink-0 text-ink-faint" />
-                <span className="w-20 shrink-0 text-ink-muted">{fmtDate(e.entry_date)}</span>
-                <span className="flex-1 truncate text-ink-soft">{e.notes ?? e.category} <span className="text-ink-faint">· {e.category}</span></span>
-                {!e.billable && <Badge>non-billable</Badge>}
-                <span className="w-20 text-right font-medium text-ink">{fmtMoney(e.amount_minor)}</span>
+                <Icon name="notices" className="h-4 w-4 shrink-0 text-ec-ink-3" />
+                <span className="num w-20 shrink-0 text-ec-ink-3">{fmtDate(e.entry_date)}</span>
+                <span className="flex-1 truncate text-ec-ink-2">{e.notes ?? e.category} <span className="text-ec-ink-3">· {e.category}</span></span>
+                {!e.billable && <span className={chip("neutral")}>{t("billing.nonBillable")}</span>}
+                <span className="num w-20 text-right font-medium text-ec-ink">{fmtMoney(e.amount_minor)}</span>
               </li>
             ))}
           </ul>
         )}
-      </Card>
+      </div>
 
-      {/* Invoices for this case */}
       {caseInvoices && caseInvoices.length > 0 && (
-        <Card>
-          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Invoices <span className="text-ink-faint">({caseInvoices.length})</span></h2></div>
-          <ul className="divide-y divide-line">
+        <div className="ec-card">
+          <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium">{t("invoices.title")} <span className="text-ec-ink-3">({caseInvoices.length})</span></h2></div>
+          <ul className="divide-y divide-ec-hair">
             {caseInvoices.map((inv) => (
               <li key={inv.id}>
-                <Link href={`/dashboard/invoices/${inv.id}`} className="flex items-center justify-between px-5 py-3 text-sm hover:bg-paper">
-                  <span className="font-medium text-brand-600">{inv.number ?? "Draft"} · {fmtDate(inv.issue_date)}</span>
-                  <span className="flex items-center gap-3"><span className="font-medium text-ink">{fmtMoney(inv.total_minor)}</span><Badge tone={inv.status === "paid" ? "green" : inv.status === "sent" ? "amber" : "neutral"}>{inv.status}</Badge></span>
+                <Link href={`/dashboard/invoices/${inv.id}`} className="ec-row flex items-center justify-between px-5 py-3 text-sm">
+                  <span className="num font-medium text-ec-brass-deep">{inv.number ?? t("invoices.draft")} · {fmtDate(inv.issue_date)}</span>
+                  <span className="flex items-center gap-3"><span className="num font-medium text-ec-ink">{fmtMoney(inv.total_minor)}</span><span className={chip(inv.status === "paid" ? "green" : inv.status === "sent" ? "amber" : "neutral")}>{inv.status}</span></span>
                 </Link>
               </li>
             ))}
           </ul>
-        </Card>
+        </div>
       )}
 
       </CaseTabPanel>
       <CaseTabPanel id="comms">
 
-      {/* Notices for this case */}
       {caseNotices && caseNotices.length > 0 && (
-        <Card>
-          <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Notices <span className="text-ink-faint">({caseNotices.length})</span></h2></div>
-          <ul className="divide-y divide-line">
+        <div className="ec-card">
+          <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium">{t("notices.title")} <span className="text-ec-ink-3">({caseNotices.length})</span></h2></div>
+          <ul className="divide-y divide-ec-hair">
             {caseNotices.map((n) => (
               <li key={n.id} className="flex items-center justify-between px-5 py-3 text-sm">
-                <Link href="/dashboard/notices" className="font-medium capitalize text-brand-600">{n.type.replace(/_/g, " ")}</Link>
-                <span className="flex items-center gap-3">{n.response_due && <span className="text-xs text-ink-faint">due {fmtDate(n.response_due)}</span>}<Badge tone={/escalat/.test(n.escalation_state) ? "red" : ["responded", "closed"].includes(n.escalation_state) ? "green" : "amber"}>{n.escalation_state.replace(/_/g, " ")}</Badge></span>
+                <Link href="/dashboard/notices" className="font-medium capitalize text-ec-brass-deep">{n.type.replace(/_/g, " ")}</Link>
+                <span className="flex items-center gap-3">{n.response_due && <span className="num text-xs text-ec-ink-3">{t("notices.due", { date: fmtDate(n.response_due) })}</span>}<span className={chip(/escalat/.test(n.escalation_state) ? "red" : ["responded", "closed"].includes(n.escalation_state) ? "green" : "amber")}>{n.escalation_state.replace(/_/g, " ")}</span></span>
               </li>
             ))}
           </ul>
-        </Card>
+        </div>
       )}
 
-      {/* Communications timeline (email + WhatsApp/SMS) */}
       <Communications matterId={matter.id} />
 
-      {/* Activity timeline */}
-      <Card>
-        <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">Activity</h2></div>
+      <div className="ec-card">
+        <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium">{t("activity.title")}</h2></div>
         {activity && activity.length ? (
           <ul className="px-5 py-2">
             {activity.map((a) => (
               <li key={a.id} className="flex gap-3 py-2.5 text-sm">
-                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-300" />
-                <span className="flex-1 text-ink-soft">{a.summary}</span>
-                <span className="shrink-0 text-xs text-ink-faint">{fmtAgo(a.created_at)}</span>
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-ec-brass" />
+                <span className="flex-1 text-ec-ink-2">{a.summary}</span>
+                <span className="shrink-0 text-xs text-ec-ink-3">{fmtAgo(a.created_at)}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="px-5 py-8 text-center text-sm text-ink-faint">No activity yet.</p>
+          <p className="px-5 py-8 text-center text-sm text-ec-ink-3">{t("activity.empty")}</p>
         )}
-      </Card>
+      </div>
 
       </CaseTabPanel>
       </CaseTabs>
 
-      <Disclaimer />
+      <p className="flex items-center gap-1.5 text-xs text-ec-ink-3">
+        <Icon name="alert" className="h-3.5 w-3.5" /> {tc("disclaimer")}
+      </p>
     </div>
   );
 }

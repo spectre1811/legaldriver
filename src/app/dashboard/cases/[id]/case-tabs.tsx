@@ -14,16 +14,16 @@ export function CaseTabs({ tabs, children }: { tabs: { id: string; label: string
   return (
     <TabCtx.Provider value={{ active, setActive }}>
       <div className="space-y-6">
-        <div className="sticky top-0 z-10 -mx-1 flex gap-1 overflow-x-auto border-b border-line bg-paper/80 px-1 py-1 backdrop-blur">
+        <div className="sticky top-0 z-10 -mx-1 flex gap-1 overflow-x-auto border-b border-ec-hair bg-ec-paper/80 px-1 py-1 backdrop-blur">
           {tabs.map((t) => {
             const on = active === t.id;
             return (
               <button
                 key={t.id}
                 onClick={() => setActive(t.id)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition ${on ? "bg-brand-600 text-white shadow-sm" : "text-ink-soft hover:bg-white hover:text-ink"}`}
+                className={`flex shrink-0 items-center gap-1.5 rounded-ec-s px-3 py-1.5 text-sm transition ${on ? "bg-ec-ink font-medium text-ec-paper" : "text-ec-ink-2 hover:bg-ec-paper-3 hover:text-ec-ink"}`}
               >
-                <Icon name={t.icon} className={`h-4 w-4 ${on ? "text-white" : "text-ink-faint"}`} /> {t.label}
+                <Icon name={t.icon} className={`h-4 w-4 ${on ? "text-ec-paper" : "text-ec-ink-3"}`} /> {t.label}
               </button>
             );
           })}

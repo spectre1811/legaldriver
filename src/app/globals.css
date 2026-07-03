@@ -81,6 +81,9 @@
     border-radius: 99px; padding: 3px 10px; background: var(--paper);
   }
   .ec-chip-hot { border-color: var(--brass); color: var(--brass-deep); background: var(--brass-tint); }
+  .ec-chip-success { border-color: color-mix(in srgb, var(--success) 40%, transparent); color: var(--success); background: var(--success-t); }
+  .ec-chip-warn { border-color: color-mix(in srgb, var(--warn) 40%, transparent); color: var(--warn); background: var(--warn-t); }
+  .ec-chip-danger { border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: var(--danger); background: var(--danger-t); }
 
   /* small-caps section label */
   .ec-label { font-size: 11px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-3); }
