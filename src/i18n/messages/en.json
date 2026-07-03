@@ -174,6 +174,25 @@
     "empty": {
       "title": "No cause list parsed yet",
       "body": "Upload the daily cause list you received from the court. We read it, match the CNRs to your cases, and update their next-hearing dates. You supply the file."
+    },
+    "board": {
+      "heading": "Your cases listed today & tomorrow",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "th": {
+        "item": "Item no.",
+        "matter": "Case / matter",
+        "court": "Court",
+        "cnr": "CNR"
+      },
+      "unknownCase": "Unknown case",
+      "empty": {
+        "title": "No listings for today or tomorrow",
+        "body": "When the daily cause list is uploaded and your cases are matched, they appear here grouped by date."
+      }
+    },
+    "uploader": {
+      "heading": "Upload cause list"
     }
   },
   "cases": {
@@ -820,7 +839,12 @@
       "noLinkedCase": "No linked case",
       "submit": "Create notice",
       "submitPending": "Creating…"
-    }
+    },
+    "stepperAria": "Notice escalation timeline",
+    "dueDate": "Due {date}",
+    "escalatesAt": "Escalates {date}",
+    "openNoticeDoc": "Open notice document",
+    "noticeDoc": "Notice doc"
   },
   "inbox": {
     "title": "Inbox",
@@ -1359,7 +1383,15 @@
     "loadErrorTitle": "Couldn't load this judgment's text",
     "textNotAvailableTitle": "Text not available",
     "textNotAvailableBody": "This judgment's text couldn't be extracted (it may be a scanned image). Open the original PDF above.",
-    "sourceJudgment": "Source: Indian Court Judgments (AWS Open Data, CC-BY 4.0). Reference only — not legal advice; verify against the certified copy."
+    "sourceJudgment": "Source: Indian Court Judgments (AWS Open Data, CC-BY 4.0). Reference only — not legal advice; verify against the certified copy.",
+    "judgePlaceholder": "Filter by judge name…",
+    "judgeAria": "Judge",
+    "disposalAria": "Disposition",
+    "allDisposals": "All dispositions",
+    "petAdvCol": "Pet. advocate",
+    "resAdvCol": "Res. advocate",
+    "relatedToMatter": "Related: {matter}",
+    "filterByDisposal": "Filter by this disposition"
   },
   "copilot": {
     "title": "Copilot",
