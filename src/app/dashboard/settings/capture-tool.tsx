@@ -4,13 +4,14 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
+import { brand } from "@/lib/brand";
 import { generateCaptureToken } from "./capture-actions";
 
 // Builds the bookmarklet. The advocate (logged into eCourts, having solved the
 // CAPTCHA as a human) clicks it on a case page; it POSTs the rendered text to our
 // token-authed endpoint. We never touch the CAPTCHA.
 function bookmarklet(token: string, baseUrl: string): string {
-  const code = `(function(){var t='${token}',b='${baseUrl}';fetch(b+'/api/court/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:t,url:location.href,text:document.body.innerText})}).then(function(r){return r.json()}).then(function(d){var m=d.ok?(d.kind==='causelist'?('LexDriver \\u2713 cause list: '+d.captured+' listed, '+d.matched+' of your cases'+(d.updated?(' \\u00b7 '+d.updated+' dates updated'):'')):('LexDriver \\u2713 captured '+(d.cnr||'case')+(d.nextHearingDate?(' \\u00b7 next '+d.nextHearingDate):''))):('LexDriver: '+(d.error||'failed'));alert(m)}).catch(function(e){alert('LexDriver: '+e)})})();`;
+  const code = `(function(){var t='${token}',b='${baseUrl}';fetch(b+'/api/court/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:t,url:location.href,text:document.body.innerText})}).then(function(r){return r.json()}).then(function(d){var m=d.ok?(d.kind==='causelist'?('${brand.name} \\u2713 cause list: '+d.captured+' listed, '+d.matched+' of your cases'+(d.updated?(' \\u00b7 '+d.updated+' dates updated'):'')):('${brand.name} \\u2713 captured '+(d.cnr||'case')+(d.nextHearingDate?(' \\u00b7 next '+d.nextHearingDate):''))):('${brand.name}: '+(d.error||'failed'));alert(m)}).catch(function(e){alert('${brand.name}: '+e)})})();`;
   return "javascript:" + encodeURIComponent(code);
 }
 

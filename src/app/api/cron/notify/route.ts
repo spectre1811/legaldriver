@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMailer } from "@/lib/notify/mailer";
 import { logOutboundEmail } from "@/lib/notify/log";
+import { brand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -87,11 +88,11 @@ function subjectFor(kind: string, p: { title?: string; eventDate?: string; count
     const n = p.count ?? 0;
     return `Cause list: ${n} case${n === 1 ? "" : "s"} listed ${p.eventDate ?? "tomorrow"}`;
   }
-  return `Legaldriver notification`;
+  return `${brand.name} notification`;
 }
 function htmlFor(kind: string, p: { title?: string; eventDate?: string; body?: string; count?: number; cases?: DigestCase[] }) {
   const esc = (s?: string) => (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  let inner = `<p>${esc(p.body) || "Open Legaldriver to view details."}</p>`;
+  let inner = `<p>${esc(p.body) || `Open ${brand.name} to view details.`}</p>`;
   if (kind === "cause_list_digest" && p.cases?.length) {
     const rows = p.cases.map((c) => `<li style="margin:6px 0">
         <strong>${esc(c.title) || esc(c.cnr) || "Case"}</strong>${c.cnr ? ` <span style="color:#64748b">(${esc(c.cnr)})</span>` : ""}
