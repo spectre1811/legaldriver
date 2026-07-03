@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/db/database.types";
 import { extractText } from "./extract";
 import { classifyDocument } from "./classify";
+import { classificationFromCache } from "./classification-cache";
 import { sha256Hex } from "./hash";
 import { decideFiling } from "./filing-decision";
 
@@ -60,13 +61,28 @@ export async function fileUploadedDocument(opts: {
     admin.from("matter").select("id, title, cnr").eq("tenant_id", tenantId).limit(500),
   ]);
 
-  const cls = await classifyDocument({
-    filename,
-    docTextOrSnippet: text || filename,
-    clients: (clients ?? []).map((c) => ({ id: c.id, name: c.name })),
-    matters: (matters ?? []).map((m) => ({ id: m.id, title: m.title, cnr: m.cnr })),
-    tenantId,
-  });
+  // Classification cache (WO-33): if this EXACT content was already read for the tenant, reuse the
+  // extraction and SKIP the paid LLM call — the biggest AI-cost lever (research §7). The stale
+  // client/matter MATCH is deliberately NOT reused (it was for another time/context); the filing is
+  // re-decided from `context` below, so a case/client upload still files correctly.
+  const { data: cached } = await admin
+    .from("document")
+    .select("doc_type, category, extracted")
+    .eq("tenant_id", tenantId)
+    .eq("content_hash", contentHash)
+    .not("doc_type", "is", null)
+    .limit(1)
+    .maybeSingle();
+
+  const cls = cached?.doc_type
+    ? classificationFromCache(cached)
+    : await classifyDocument({
+        filename,
+        docTextOrSnippet: text || filename,
+        clients: (clients ?? []).map((c) => ({ id: c.id, name: c.name })),
+        matters: (matters ?? []).map((m) => ({ id: m.id, title: m.title, cnr: m.cnr })),
+        tenantId,
+      });
 
   const { clientId, matterId, status } = decideFiling(cls, context);
 
@@ -91,6 +107,7 @@ export async function fileUploadedDocument(opts: {
         summary: cls.summary,
         needsOcr: needsOcr ?? false,
         confidence: cls.confidence,
+        isLegal: cls.is_legal,
         status,
         ...(cls.suggested_client_name ? { suggestedClientName: cls.suggested_client_name } : {}),
         ...(cls.suggested_matter_title ? { suggestedMatterTitle: cls.suggested_matter_title } : {}),
