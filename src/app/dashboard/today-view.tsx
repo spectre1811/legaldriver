@@ -56,9 +56,9 @@ export async function TodayView({ now, week, hearings, courts, syncedAt, filings
             }`}
           >
             <div className={`text-[10px] font-semibold uppercase tracking-wider ${d.isToday ? "text-white" : "text-ec-ink-3"}`}>
-              {wd(d.iso, { weekday: "short" })}
+              {wd(d.iso, { weekday: "short", timeZone: "UTC" })}
             </div>
-            <div className="text-base font-semibold">{new Date(d.iso).getDate()}</div>
+            <div className="text-base font-semibold">{Number(d.iso.slice(8, 10))}</div>
             <div className={`text-[10px] ${d.isToday ? "text-white/85" : "text-ec-ink-3"}`}>
               {d.count > 0 ? t("listed", { count: d.count }) : "—"}
             </div>
@@ -83,8 +83,8 @@ export async function TodayView({ now, week, hearings, courts, syncedAt, filings
                   return (
                     <li key={h.id} className="ec-row grid grid-cols-1 gap-2 border-b border-ec-hair px-2 py-3.5 sm:grid-cols-[64px_1.1fr_1.4fr_120px] sm:items-center sm:gap-4">
                       <div className="num text-ec-brass-deep">
-                        <span className="text-2xl font-semibold leading-none">{new Date(h.date).getDate()}</span>
-                        <span className="ml-1 text-xs font-semibold uppercase">{wd(h.date, { month: "short" })}</span>
+                        <span className="text-2xl font-semibold leading-none">{Number(h.date.slice(8, 10))}</span>
+                        <span className="ml-1 text-xs font-semibold uppercase">{wd(h.date, { month: "short", timeZone: "UTC" })}</span>
                       </div>
                       <div className="min-w-0">
                         <b className="block text-[13px] font-semibold leading-snug text-ec-ink">

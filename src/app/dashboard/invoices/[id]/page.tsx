@@ -15,6 +15,8 @@ const TONE: Record<string, string> = { draft: "", sent: "ec-chip-warn", paid: "e
 export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
   const t = await getTranslations("invoices");
+  const te = await getTranslations("enum");
+  const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
   const tenantId = await getTenantId(supabase);
   if (!tenantId) notFound();
 
@@ -33,7 +35,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
           <h1 className="num font-display text-[1.5rem] font-medium leading-tight tracking-tight">{inv.number ?? t("detail.draftInvoice")}</h1>
           <p className="num mt-1 text-sm text-ec-ink-3">{client?.name ?? "—"}{matter?.id ? <> · <Link href={`/dashboard/cases/${matter.id}`} className="text-ec-brass-deep hover:text-ec-brass">{matter.title}</Link></> : null} · {fmtDate(inv.issue_date)}</p>
         </div>
-        <span className={`ec-chip ${TONE[inv.status] ?? ""}`}>{inv.status}</span>
+        <span className={`ec-chip ${TONE[inv.status] ?? ""}`}>{st(inv.status)}</span>
       </div>
 
       <div className="ec-card"><div className="px-5 py-4"><InvoiceActions invoiceId={inv.id} status={inv.status} finalised={!!inv.number} /></div></div>

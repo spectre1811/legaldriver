@@ -27,7 +27,11 @@
     "openNav": "Open menu",
     "closeNav": "Close menu"
   },
+  "enum": {
+    "status": { "active": "Active", "disposed": "Disposed", "open": "Open", "draft": "Draft", "sent": "Sent", "paid": "Paid", "cancelled": "Cancelled" }
+  },
   "nav": {
+    "ariaMain": "Navigation",
     "heading": {
       "practice": "Practice",
       "workflow": "Workflow",

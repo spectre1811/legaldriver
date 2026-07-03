@@ -54,7 +54,7 @@ export function NavLinks() {
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
   return (
-    <nav className="flex flex-col gap-6" aria-label={t("heading.practice")}>
+    <nav className="flex flex-col gap-6" aria-label={t("ariaMain")}>
       {SECTIONS.map((section) => (
         <div key={section.heading}>
           <p className="ec-label mb-2 px-3">{t(`heading.${section.heading}`)}</p>

@@ -29,6 +29,8 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const supabase = createClient();
   const t = await getTranslations("cases");
   const tc = await getTranslations("common");
+  const te = await getTranslations("enum");
+  const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
   const { q, court, case_type, stage, status, advocate, act, next, sort } = searchParams;
   const today = isoDay(new Date());
 
@@ -155,7 +157,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
                     <td className="hidden px-5 py-3.5 text-ec-ink-2 md:table-cell">{m.court ?? "—"}</td>
                     <td className="hidden px-5 py-3.5 sm:table-cell">{m.stage ? <span className="ec-chip">{m.stage}</span> : <span className="text-ec-ink-3">—</span>}</td>
                     <td className="hidden px-5 py-3.5 sm:table-cell">
-                      {m.status ? <span className={`ec-chip ${m.status === "disposed" ? "" : "ec-chip-hot"}`}>{m.status}</span> : <span className="text-ec-ink-3">—</span>}
+                      {m.status ? <span className={`ec-chip ${m.status === "disposed" ? "" : "ec-chip-hot"}`}>{st(m.status)}</span> : <span className="text-ec-ink-3">—</span>}
                     </td>
                     <td className="num px-5 py-3.5">
                       {eff ? <span className={overdue ? "font-medium text-ec-danger" : "text-ec-ink-2"}>{fmtDate(eff)}{m.next_hearing_override ? ` · ${t("diary")}` : ""}{overdue ? ` · ${t("past")}` : ""}</span> : <span className="text-xs text-ec-ink-3">{t("noDate")}</span>}

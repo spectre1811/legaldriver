@@ -7,6 +7,8 @@ import { Composer } from "./composer";
 export default async function PortalHome() {
   const supabase = createClient();
   const t = await getTranslations("portal");
+  const te = await getTranslations("enum");
+  const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
   const today = new Date().toISOString().slice(0, 10);
 
   // All RLS-scoped to this portal user's single client.
@@ -36,7 +38,7 @@ export default async function PortalHome() {
               </p>
             </div>
             <div className="text-right text-sm">
-              <span className={`ec-chip ${m.status === "active" ? "ec-chip-success" : ""}`}>{m.status}</span>
+              <span className={`ec-chip ${m.status === "active" ? "ec-chip-success" : ""}`}>{st(m.status)}</span>
               <p className="num mt-1 text-xs text-ec-ink-3">{t("nextHearing", { date: fmtDate(m.next_hearing_date) })}</p>
             </div>
           </div>

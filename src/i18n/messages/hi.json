@@ -27,7 +27,11 @@
     "openNav": "मेन्यू खोलें",
     "closeNav": "मेन्यू बंद करें"
   },
+  "enum": {
+    "status": { "active": "सक्रिय", "disposed": "निस्तारित", "open": "खुला", "draft": "प्रारूप", "sent": "भेजा गया", "paid": "भुगतान", "cancelled": "रद्द" }
+  },
   "nav": {
+    "ariaMain": "मुख्य नेविगेशन",
     "heading": {
       "practice": "प्रैक्टिस",
       "workflow": "कार्यप्रवाह",

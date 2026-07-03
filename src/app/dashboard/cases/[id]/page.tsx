@@ -38,6 +38,8 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const supabase = createClient();
   const t = await getTranslations("caseDetail");
   const tc = await getTranslations("common");
+  const te = await getTranslations("enum");
+  const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
   const { data: matter } = await supabase.from("matter").select("*").eq("id", params.id).maybeSingle();
   if (!matter) notFound();
 
@@ -119,7 +121,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <h1 className="font-display text-[1.7rem] font-medium leading-tight tracking-tight">{matter.title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {matter.cnr && <span className={`num ${chip("brand")} inline-flex items-center gap-1`}><Icon name="cases" className="h-3 w-3" /> {matter.cnr}</span>}
-            <span className={chip(STATUS_TONE[matter.status] ?? "neutral")}>{matter.status}</span>
+            <span className={chip(STATUS_TONE[matter.status] ?? "neutral")}>{st(matter.status)}</span>
             {matter.source && <span className="text-xs text-ec-ink-3">{t("via", { source: matter.source })}</span>}
           </div>
         </div>

@@ -13,6 +13,8 @@ const TONE: Record<string, string> = { draft: "", sent: "ec-chip-warn", paid: "e
 export default async function InvoicesPage() {
   const supabase = createClient();
   const t = await getTranslations("invoices");
+  const te = await getTranslations("enum");
+  const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
   const tenantId = await getTenantId(supabase);
   const { data: invoices } = tenantId
     ? await supabase.from("invoice").select("id, number, status, issue_date, due_date, total_minor, client:client_id(name)").order("created_at", { ascending: false }).limit(100)
@@ -53,7 +55,7 @@ export default async function InvoicesPage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       <span className="num text-sm font-medium text-ec-ink">{rupees(i.total_minor)}</span>
-                      <span className={`ec-chip ${TONE[i.status] ?? ""}`}>{i.status}</span>
+                      <span className={`ec-chip ${TONE[i.status] ?? ""}`}>{st(i.status)}</span>
                       <Icon name="chevron" className="h-4 w-4 text-ec-ink-3" />
                     </div>
                   </Link>
