@@ -671,5 +671,47 @@
       "title": "No IP assets yet",
       "body": "Add a trademark or patent above — renewal reminders schedule automatically."
     }
+  },
+  "onboarding": {
+    "title": "Advocate onboarding",
+    "subtitle": "Enter once, and we assemble your practice: cases on the calendar, inbox filed, closed cases by name, and AI briefings.",
+    "howHeading": "How this works — honestly",
+    "intro1": "We <b>auto-fetch your cases by your name</b> from compliant sources — no manual upload. Active sources: <b>{providers}</b>. The free <b>open judgments corpus</b> covers High Courts + the Supreme Court (mostly decided cases); adding a licensed key (Indian Kanoon / Vakeel360) broadens coverage to live orders automatically.",
+    "intro2": "What we <i>don't</i> do: scrape eCourts or solve its CAPTCHA. India has no compliant API for an advocate's full live open-case roster by bar number, so for live status we also use your <b>cause list</b>, cases you <b>add by CNR</b>, and <b>HITL refresh</b>. Everything is marked with its source; <b>not legal advice</b>.",
+    "providersNone": "none configured",
+    "provider": {
+      "corpus": "open corpus (free)",
+      "indiankanoon": "Indian Kanoon",
+      "vakeel360": "Vakeel360"
+    },
+    "yourAdvocates": "Your advocates",
+    "bar": "Bar {n}",
+    "noBar": "no bar number",
+    "runStatus": {
+      "done": "done",
+      "error": "error",
+      "queued": "queued",
+      "pending": "pending"
+    },
+    "rerun": "Re-run",
+    "run": "Run onboarding",
+    "stat": {
+      "causelist": "Cause-list",
+      "casesFetched": "Cases fetched",
+      "mattersSeeded": "Matters seeded",
+      "enriched": "Enriched",
+      "deadlinesProposed": "Deadlines proposed",
+      "emailsFiled": "Emails filed",
+      "docsFiled": "Docs auto-filed",
+      "closedFound": "Closed found",
+      "briefingsQueued": "Briefings queued"
+    },
+    "lastRun": "Last run {date}",
+    "empty": {
+      "title": "No advocates yet",
+      "body": "Add an advocate (with their bar number) in Settings, then run onboarding here.",
+      "cta": "Go to Settings"
+    },
+    "footer": "After a run: open cases (with hearings + reminders) are on your <calendar>Calendar</calendar>, matters are in <cases>Cases</cases> with AI briefings, and closed cases by name are in <research>Research</research>."
   }
 }
