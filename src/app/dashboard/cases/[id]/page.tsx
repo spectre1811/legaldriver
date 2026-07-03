@@ -155,6 +155,11 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         <div className="px-5 py-5">
           {ai ? (
             <div className="space-y-5">
+              {matter.last_synced_at && ai.generated_at && matter.last_synced_at > ai.generated_at && (
+                <div className="flex items-center gap-2 rounded-ec-m border border-ec-brass bg-ec-brass-tint px-4 py-2.5 text-sm text-ec-brass-deep">
+                  <Icon name="alert" className="h-4 w-4 shrink-0" /> {t("ai.stale")}
+                </div>
+              )}
               <p className="font-display text-[0.98rem] leading-relaxed text-ec-ink-2">{ai.summary}</p>
               {ai.posture && (
                 <div className="rounded-ec-m bg-ec-paper-3 px-4 py-3">
@@ -220,6 +225,16 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+              {ai.sources && ai.sources.length > 0 && (
+                <div>
+                  <p className="ec-label mb-2">{t("ai.sources")}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ai.sources.map((s, i) => (
+                      <span key={i} className="ec-chip text-[11px]">{s}</span>
+                    ))}
+                  </div>
                 </div>
               )}
               <p className="text-xs text-ec-ink-3">{t("ai.disclaimer")}</p>

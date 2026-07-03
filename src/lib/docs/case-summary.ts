@@ -23,6 +23,8 @@ export interface CaseSummary {
   risk_flags: string[];
   arguments: string[];
   what_to_present: string[];
+  /** The specific record items this briefing was grounded in (hearings, orders, docs). */
+  sources: string[];
   generated_at?: string;
 }
 
@@ -34,6 +36,7 @@ export const FALLBACK: CaseSummary = {
   risk_flags: [],
   arguments: [],
   what_to_present: [],
+  sources: [],
 };
 
 export const CASE_SUMMARY_SCHEMA = {
@@ -47,6 +50,7 @@ export const CASE_SUMMARY_SCHEMA = {
     risk_flags: { type: "array", items: { type: "string" }, description: "deadlines, limitation/statutory-compliance risks, missing documents or data, and stale-record warnings; empty if genuinely none" },
     arguments: { type: "array", items: { type: "string" }, description: "the legal arguments to advance for this client AND the likely arguments from the other side to anticipate/rebut — grounded in the record + well-settled law; each as a crisp point" },
     what_to_present: { type: "array", items: { type: "string" }, description: "what to actually present/submit at the next hearing — specific documents, submissions, authorities to cite, and the prayer/relief to seek; empty if not enough on record" },
+    sources: { type: "array", items: { type: "string" }, description: "the SPECIFIC record items this briefing was grounded in — e.g. 'Hearing 2024-03-12: arguments', 'Order dated 2024-01-05', 'Doc: demand-notice.pdf'. So the advocate can verify each claim against the record." },
   },
   required: ["summary", "posture", "key_points", "next_steps", "risk_flags", "arguments", "what_to_present"],
 } as const;
@@ -73,6 +77,7 @@ COVER (across the structured fields):
 5. risk_flags — deadlines, limitation/statutory-notice compliance, missing documents or data, stale court record, and anything that could prejudice the client.
 6. arguments — the legal arguments to advance for this client, and the likely opposing arguments to anticipate and rebut; ground them in the record + well-settled Indian law (cite the provision/principle, not invented case-law).
 7. what_to_present — exactly what to bring/submit at the next hearing: documents, written submissions, authorities to cite, and the prayer/relief to seek. If the record is too thin, say what's needed first rather than inventing.
+8. sources — list the SPECIFIC record items you grounded this briefing in (hearings by date, orders by date, documents by name), so the advocate can verify each claim. Only list items that actually appear in the record below.
 
 CASE: ${c.title}
 CNR: ${c.cnr ?? "—"} | Court: ${c.court ?? "—"} | Type: ${c.caseType ?? "—"} | Stage: ${c.stage ?? "—"} | Status: ${c.status ?? "—"} | Next hearing: ${c.nextHearingDate ?? "—"}
@@ -100,6 +105,7 @@ export function normalizeCaseSummary(raw: unknown): CaseSummary | null {
     risk_flags: list(r.risk_flags),
     arguments: list(r.arguments),
     what_to_present: list(r.what_to_present),
+    sources: list(r.sources),
     generated_at: new Date().toISOString(),
   };
 }
