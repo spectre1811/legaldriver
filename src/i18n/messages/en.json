@@ -1042,5 +1042,99 @@
     "emptyTitle": "No cases on record",
     "emptyBody": "The API returned no caseload for this bar code.",
     "sourceNote": "Source: Peshi / eCourts. Coverage is Gujarat (HC + district), expanding. Not legal advice — verify against the official record."
+  },
+  "privacy": {
+    "title": "Privacy",
+    "subtitle": "How Peshi handles your data — the account and client information you give us, and the court records we surface.",
+    "twoKindsHeading": "Two kinds of data",
+    "yourDataItem": "<b>Your data</b> — your account, your clients, matters, documents and messages. We are a Data Fiduciary for this under the Digital Personal Data Protection Act, 2023, and it is isolated to your workspace.",
+    "courtRecordsItem": "<b>Court records</b> — cases, hearings, orders, judges and advocates sourced from public court records. Our position is that this is personal data made publicly available by or under law (DPDP §3(c)(ii)).",
+    "collectHeading": "What we collect and why",
+    "collectBody": "Account details (name, email) to run your workspace; the case, client and billing information you enter; and technical logs to keep the service secure and reliable. We do not sell your data, and we do not log document contents, message bodies or credentials.",
+    "rightsHeading": "Your rights",
+    "rightsBody": "You can access, correct, export or delete your workspace data from within the product, or by contacting us. For court records about you, see <corrections>Data corrections & takedowns</corrections>. You may raise a grievance with our grievance officer at <email>grievance@peshi.app</email>.",
+    "securityHeading": "Security & retention",
+    "securityBody": "Data is encrypted in transit and at rest; access is tenant-isolated. Third-party credentials (e.g. Gmail) are stored encrypted and never in plaintext. We retain your data for as long as your account is active and as required for legal and accountability obligations.",
+    "aiHeading": "AI",
+    "aiBody": "AI features are assistive and always attributed and disclaimered. AI output is informational, not legal advice — verify against the official record."
+  },
+  "terms": {
+    "title": "Terms of use",
+    "subtitle": "The terms on which Peshi is provided. By using Peshi you agree to these.",
+    "whatHeading": "What Peshi is",
+    "whatBody": "Peshi is practice software for advocates and firms, and a neutral directory built on public court records. It helps you track cases by CNR, see your cause list and deadlines, and run billing and client communication.",
+    "notAdviceHeading": "Not legal advice",
+    "notAdviceBody": "Everything Peshi shows — court data, deadlines, AI output — is <b>informational, not legal advice</b>. Court data can lag or contain errors; always verify against the official record before relying on it.",
+    "directoryHeading": "A neutral directory",
+    "directoryBody": "Peshi does not rank, recommend or endorse advocates, and carries no ratings or “best lawyer” claims. Directory information is drawn from the public record and from details an advocate chooses to claim.",
+    "acceptableHeading": "Acceptable use",
+    "acceptableBody": "Use Peshi lawfully and only for your own practice and clients. Do not attempt to access other tenants’ data, scrape the service, or misuse court data. Tenant data is isolated; you are responsible for the accuracy of what you enter.",
+    "subscriptionsHeading": "Subscriptions & payment",
+    "subscriptionsBody": "Paid plans are billed per lawyer as described on our <pricing>pricing</pricing>. Taxes apply as required. You can cancel; access continues to the end of the paid period.",
+    "liabilityHeading": "Liability & governing law",
+    "liabilityBody": "Peshi is provided “as is” to the extent permitted by law; we are not liable for actions taken in reliance on informational data. These terms are governed by the laws of India, with courts at Ahmedabad, Gujarat having jurisdiction. We may update these terms; material changes will be notified."
+  },
+  "dataCorrections": {
+    "title": "Data corrections & takedowns",
+    "subtitle": "Case data on Peshi comes from public court records and can lag or contain errors. If something about you or a matter is wrong, here’s how to have it corrected or removed.",
+    "whatYouCanRequest": {
+      "heading": "What you can request",
+      "correction": "<b>Correction</b> — a case, party, advocate or date shown on Peshi is inaccurate.",
+      "takedown": "<b>Takedown / suppression</b> — a record should not be shown (e.g. a sensitive matter, a wrong identity match, or a court/government order to remove it)."
+    },
+    "howToRaise": {
+      "heading": "How to raise a request",
+      "body": "Email <email>grievance@peshi.app</email> with the CNR (or a link to the record), what is wrong, and — for a takedown — the reason. If you are the person named, please tell us so; if you act on someone’s behalf, say in what capacity."
+    },
+    "whatHappensNext": {
+      "heading": "What happens next — and by when",
+      "acknowledgement": "<b>Acknowledgement</b> within 48 hours.",
+      "action": "<b>Action</b> — 7 days for standard requests; within 24 hours for urgent (P0) cases such as a court order or a clear identity-harm.",
+      "resolution": "<b>Resolution notice</b> — a written outcome, with an appeal path, within 2 days of action."
+    },
+    "howWeAct": {
+      "heading": "How we act on a takedown",
+      "body": "We <b>suppress rather than delete</b>: the record is hidden from search, the product and any API, but retained with its provenance for audit and possible reinstatement, and the suppression is propagated to downstream consumers. Every request is logged in a takedown register."
+    },
+    "grievanceOfficer": {
+      "heading": "Grievance officer",
+      "body": "Concerns about how we handle personal data or a request can be sent to our grievance officer at <email>grievance@peshi.app</email>. Peshi does not rank, recommend or endorse advocates; corrections do not affect any ranking because there is none."
+    }
+  },
+  "about": {
+    "title": "About Peshi",
+    "subtitle": "The operating system for India’s lawyers — and the marketplace where India finds them.",
+    "intro": "India’s courts are public, but scattered. We turn that public record into software a lawyer can run their whole practice on, and into a place any citizen can find the right advocate with clarity and trust.",
+    "whyHeading": "Why we’re building it",
+    "whyBody": "A missed hearing shouldn’t be a professional disaster. Finding a lawyer shouldn’t be a shot in the dark. The data to fix both is already public — we make it usable.",
+    "howHeading": "How we work",
+    "trust": "<b>Trust is the product.</b> Provenance on every record, “verify against the official record”, AI always attributed and disclaimered, tenant data kept sacred.",
+    "lawyerFirst": "<b>Lawyer-first, citizen-honest.</b> Built for the working advocate; fair and clear to the citizen. No dark patterns, no fake urgency, no “best lawyer” theatre.",
+    "bilingual": "<b>Bilingual by default.</b> English and the litigant’s language, first-class — India’s courts are multilingual, and so are we."
+  },
+  "whyUs": {
+    "title": "Why Peshi",
+    "subtitle": "Built for how Indian litigation actually runs — the daily cause list, the CNR, WhatsApp, two languages.",
+    "item1": "<b>Tomorrow’s peshi, before 8 pm.</b> Your full cause list for the next day reaches your WhatsApp every evening — no portal logins, no calls to the clerk.",
+    "item2": "<b>CNR-native.</b> Add a case once; hearings, orders and next dates keep themselves current from the court record.",
+    "item3": "<b>One daily driver.</b> Cases, clients, deadlines, documents and GST invoicing in one place, instead of five.",
+    "item4": "<b>Bilingual by default.</b> The whole product works in English and Hindi, with Gujarati following — first-class, not bolted on.",
+    "item5": "<b>Trust, designed in.</b> Every court record shows its source and a “verify against the official record” note; AI is always attributed. We are a neutral directory — no rankings, no “best lawyer” claims."
+  },
+  "contact": {
+    "title": "Contact",
+    "subtitle": "We read everything. The fastest way to reach us is email.",
+    "support": "<b>General & support</b> — <mail>hello@peshi.app</mail>",
+    "grievances": "<b>Data corrections & grievances</b> — <mail>grievance@peshi.app</mail> (see <corrections>corrections & takedowns</corrections>)",
+    "member": "<b>Already a member?</b> Use in-app support from your dashboard.",
+    "advocate": "If you’re an advocate, the quickest way to see Peshi is to <login>start free</login> and add a case by CNR."
+  },
+  "forClients": {
+    "title": "For clients",
+    "subtitle": "Finding the right advocate — and following your own case — shouldn’t be a shot in the dark.",
+    "today": "Today, Peshi is where advocates run their practice. Many already use it to keep their clients updated — case status, next hearing dates and documents, in plain language, on WhatsApp.",
+    "comingNextHeading": "Coming next",
+    "comingNext": "We’re building a place where any citizen can find the right advocate with clarity and trust — drawn from the public court record, never rankings or “best lawyer” claims. If you’d like to be told when it opens, write to <email>hello@peshi.app</email>.",
+    "portal": "Already working with an advocate on Peshi? Ask them to share your case portal."
   }
 }
