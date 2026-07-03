@@ -262,7 +262,7 @@
       "watch": "Watch",
       "arguments": "Arguments — for & against",
       "present": "What to present at the next hearing",
-      "disclaimer": "AI-generated from this case record — informational, not legal advice.",
+      "disclaimer": "AI-generated from this case record — informational, not legal advice. Verify against the official record.",
       "empty": "Generate a plain-language briefing with suggested next steps and risk flags from everything on this case."
     },
     "info": {

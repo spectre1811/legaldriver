@@ -126,6 +126,8 @@ export interface TraceEvent {
   cacheHit: boolean;
   ok: boolean;
   latencyMs: number;
+  /** tokens/cost are estimated (~4 chars/token) vs read from the provider. */
+  estimated: boolean;
 }
 export type TraceSink = (e: TraceEvent) => void;
 
@@ -168,6 +170,23 @@ export function estimateCostUsd(
   return { usd: Number(usd.toFixed(6)), estimated: true as const };
 }
 
+// Lightweight structured-output guard: in schema mode we require the parsed JSON
+// to actually MATCH the schema's shape (object with its `required` keys present, or
+// an array when the schema is an array) — not merely "parseable". This closes the
+// hole where a wrong-but-parseable object was returned as ok:true. (Not full
+// JSON-Schema validation — no AJV dep — but catches the real failure modes: wrong
+// top-level type, missing required fields.)
+export function validatesSchema(json: unknown, schema: Record<string, unknown>): boolean {
+  if (json == null) return false;
+  if ((schema as { type?: string }).type === "array") return Array.isArray(json);
+  if (typeof json !== "object" || Array.isArray(json)) return false;
+  const required = (schema as { required?: unknown }).required;
+  if (Array.isArray(required)) {
+    for (const k of required) if (!(k in (json as Record<string, unknown>))) return false;
+  }
+  return true;
+}
+
 // ── The gateway core ─────────────────────────────────────────────────────────
 export async function runCore<T = unknown>(
   req: AiGatewayRequest,
@@ -198,7 +217,7 @@ export async function runCore<T = unknown>(
       schema: req.schema,
     });
     const success = req.schema
-      ? r.json != null
+      ? r.json != null && validatesSchema(r.json, req.schema)
       : typeof r.text === "string" && r.text.trim().length > 0;
     if (success) {
       text = r.text;
@@ -249,6 +268,7 @@ export async function runCore<T = unknown>(
     cacheHit: false,
     ok,
     latencyMs: deps.now() - startedAt,
+    estimated: tokens.estimated,
   });
 
   return result;

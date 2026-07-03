@@ -52,7 +52,26 @@ export async function synthesize(
   if (!raw || typeof raw !== "object") return null;
   const r = raw as { answer?: string; used?: number[]; abstained?: boolean };
   if (typeof r.answer !== "string" || !r.answer.trim()) return null;
-  return { answer: r.answer, citations: toCitations(hits, r.used ?? []), abstained: Boolean(r.abstained) };
+
+  const DISCLAIMER = "Not legal advice — verify against the official record and the bare act.";
+  // SERVER-ENFORCED cite-or-abstain (don't trust the model's self-report): a
+  // non-abstaining answer MUST actually cite — real `used` indices AND `[n]` markers
+  // present in the text. If it claims grounded but didn't cite, treat it as ungrounded
+  // and abstain rather than surface an uncited "confident" answer.
+  const used = (r.used ?? []).filter((n) => n >= 1 && n <= hits.length);
+  const cited = used.length > 0 && /\[\d+\]/.test(r.answer);
+  if (!r.abstained && !cited) {
+    return {
+      answer:
+        "I couldn't ground a cited answer in your records for that. Add the case (by CNR) or its documents, or ask about a specific matter, and I'll answer with citations.\n\n" +
+        DISCLAIMER,
+      citations: [],
+      abstained: true,
+    };
+  }
+  // Guarantee the disclaimer server-side (don't rely on the model to include it).
+  const answer = /not legal advice/i.test(r.answer) ? r.answer : `${r.answer.trim()}\n\n${DISCLAIMER}`;
+  return { answer, citations: toCitations(hits, used), abstained: Boolean(r.abstained) };
 }
 
 // Full interactive ask: ensures a thread, records the user turn, retrieves, and

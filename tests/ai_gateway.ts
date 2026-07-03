@@ -102,6 +102,24 @@ async function main() {
     check(`${task} keyless-serves on Sonnet, not a downgrade`, r.ok && r.model === "claude-sonnet-4-6");
   }
 
+  // 8. Structured-output validation (grounding hardening): a parseable-but-schema-
+  // mismatched object is NOT accepted as success — closes the "wrong-but-parseable
+  // returned as ok:true" hole. Missing a required key → fail; present → ok.
+  const badJson: ExecFn = async () => ({ json: { wrong: 1 }, text: null });
+  const t8: TraceEvent[] = [];
+  const r8 = await runCore(
+    { task: "summary.case", input: "x", schema: { type: "object", required: ["summary"] }, tenantId: "T", scope: { kind: "tenant", tenantId: "T" } },
+    deps(badJson, t8),
+  );
+  check("schema mismatch (missing required 'summary') → not ok", r8.ok === false && r8.output === null);
+  const t8b: TraceEvent[] = [];
+  const r8b = await runCore(
+    { task: "summary.case", input: "x", schema: { type: "object", required: ["summary"] }, tenantId: "T", scope: { kind: "tenant", tenantId: "T" } },
+    deps(okJson, t8b),
+  );
+  check("schema match (required 'summary' present) → ok", r8b.ok === true && r8b.output != null);
+  check("trace carries the estimated flag", typeof t8b[0].estimated === "boolean");
+
   console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
   process.exit(failures === 0 ? 0 : 1);
 }

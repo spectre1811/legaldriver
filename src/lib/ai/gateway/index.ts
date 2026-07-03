@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { completeJson, completeText, type Backend } from "@/lib/ai/complete";
 import { runCore } from "./core";
-import type { AiGatewayRequest, AiGatewayResult, ExecFn } from "./core";
+import type { AiGatewayRequest, AiGatewayResult, ExecFn, TraceSink } from "./core";
 import { ROUTES, PRICES } from "./routes";
 import { defaultTraceSink } from "./trace";
+import { supabaseMeterSink } from "./meter";
 
 // The single AI gateway seam (04-AI §0, ADR-AI1). Product code calls
 // `aiGateway.run({ task, ... })` and never touches a provider SDK. This file is the
@@ -19,7 +20,12 @@ const completeExec: ExecFn = async ({ backend, model, maxTokens, prompt, schema 
   return { text: await completeText(prompt, opts), json: null };
 };
 
-const sink = defaultTraceSink();
+// Trace (jsonLog + optional Langfuse) AND the per-tenant metering ledger.
+const base = defaultTraceSink();
+const sink: TraceSink = (e) => {
+  base(e);
+  supabaseMeterSink(e);
+};
 
 export const aiGateway = {
   run<T = unknown>(req: AiGatewayRequest): Promise<AiGatewayResult<T>> {
