@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
-import { completeJson } from "@/lib/ai/complete";
+import { aiGateway } from "@/lib/ai/gateway";
 import { retrieve } from "./retrieve";
 import { buildAgentPrompt, AGENT_SCHEMA } from "./prompt";
 import type { AgentAnswer, AskInput, Citation, RetrievalHit } from "./types";
@@ -8,8 +8,9 @@ import type { AgentAnswer, AskInput, Citation, RetrievalHit } from "./types";
 type DB = SupabaseClient<Database>;
 type Json = Database["public"]["Tables"]["agent_turn"]["Insert"]["meta"];
 
-// The Lawyer Agent deserves stronger reasoning than the haiku classifier default.
-const AGENT_MODEL = process.env.AGENT_MODEL ?? "claude-sonnet-4-6";
+// Tenant scope for the gateway call — the lawyer agent sees its own tenant's docs
+// (retrieval already ran; scope is passed for metering/provenance, never widened).
+export type AgentContext = { tenantId: string };
 
 function toCitations(hits: RetrievalHit[], used: number[]): Citation[] {
   const idx = used?.length ? used : hits.map((_, i) => i + 1);
@@ -27,6 +28,7 @@ function toCitations(hits: RetrievalHit[], used: number[]): Citation[] {
 export async function synthesize(
   question: string,
   hits: RetrievalHit[],
+  ctx: AgentContext,
   history?: { role: string; content: string }[],
 ): Promise<AgentAnswer | null> {
   if (!hits.length) {
@@ -37,15 +39,16 @@ export async function synthesize(
       abstained: true,
     };
   }
-  // Reasoning LLM selection: DeepSeek (when AGENT_BACKEND=deepseek + key) answers
-  // synchronously via HTTP — no worker queue needed; otherwise the AI router
-  // (Claude API, or the keyless CLI/worker) handles it.
-  const useDeepseek = process.env.AGENT_BACKEND === "deepseek" && Boolean(process.env.DEEPSEEK_API_KEY);
-  const raw = await completeJson(
-    buildAgentPrompt(question, hits, history),
-    AGENT_SCHEMA as unknown as Record<string, unknown>,
-    useDeepseek ? { backend: "deepseek", maxTokens: 1500 } : { model: AGENT_MODEL, maxTokens: 1500 },
-  );
+  // task→model (frontier; Sonnet keyless fallback) + maxTokens are config in the
+  // route table. Scope = tenant; matterIds reflect what retrieval already returned.
+  const matterIds = [...new Set(hits.map((h) => h.matterId).filter(Boolean))] as string[];
+  const { output: raw } = await aiGateway.run({
+    task: "agent.lawyer",
+    input: buildAgentPrompt(question, hits, history),
+    schema: AGENT_SCHEMA as unknown as Record<string, unknown>,
+    tenantId: ctx.tenantId,
+    scope: { kind: "tenant", tenantId: ctx.tenantId, matterIds: matterIds.length ? matterIds : undefined },
+  });
   if (!raw || typeof raw !== "object") return null;
   const r = raw as { answer?: string; used?: number[]; abstained?: boolean };
   if (typeof r.answer !== "string" || !r.answer.trim()) return null;
@@ -97,7 +100,7 @@ export async function askAgent(sb: DB, input: AskInput): Promise<{ threadId: str
     const matterIds = [...new Set(hits.map((h) => h.matterId).filter(Boolean))] as string[];
     if (matterIds.length === 1) await sb.from("agent_thread").update({ matter_id: matterIds[0] }).eq("id", threadId);
   }
-  const ans = await synthesize(input.question, hits, (hist ?? []).map((h) => ({ role: h.role, content: h.content })));
+  const ans = await synthesize(input.question, hits, { tenantId: input.tenantId }, (hist ?? []).map((h) => ({ role: h.role, content: h.content })));
 
   if (ans) {
     await sb.from("agent_turn").insert({

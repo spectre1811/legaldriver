@@ -1,7 +1,7 @@
 # AI Gateway — the one seam every AI call goes through (ADR-AI1 realized)
 
 - **Date:** 2026-07-03
-- **Status:** Accepted (Wave 1 landed) · interface frozen with founder (WO-02)
+- **Status:** Accepted (Waves 1–2 landed) · interface frozen with founder (WO-02)
 - **Work order:** WO-02 · **Plan refs:** 04-AI §0, §4.5, §5, §9; 12-CLOUD ADR-C8
 - **Supersedes/extends:** the ad-hoc `src/lib/ai/complete.ts` transport (kept as a backend)
 
@@ -35,9 +35,14 @@ must be reconciled with the repo's keyless-in-process reality.
    `task` is the ONLY provider-facing thing feature code names.
 
 3. **Route table = config, not code** (`src/lib/ai/gateway/routes.ts`): `task →
-   { tier, backend?, model?, maxTokens, fallback[] }`. Changing a task's model/provider
-   is a one-line edit here. Initial map: summaries/classify → cheap (LiteLLM→DeepSeek
-   fallback→keyless); `draft.document` → DeepSeek (founder-fixed); agent → frontier.
+   { tier, maxTokens, chain: BackendChoice[] }`, where each `BackendChoice` is
+   `{ backend?, model? }` tried in order until one answers. **Model names are
+   per-backend** (a DeepSeek model name is meaningless to the keyless Claude path), so
+   the chain holds choices rather than one shared model; the keyless-quality model
+   (Sonnet for drafting/agent) is set on its own keyless choice, preserving
+   pre-gateway behaviour. Initial map: summaries/classify → cheap (LiteLLM→DeepSeek
+   →keyless-Haiku); `draft.document` → DeepSeek→keyless-Sonnet (founder-fixed);
+   `agent.lawyer` → LiteLLM-frontier→keyless-Sonnet.
 
 4. **Fallback chain always terminates in the keyless router**, guaranteeing a working
    local/Vercel path even when every configured provider fails.
@@ -74,8 +79,14 @@ feature code ── aiGateway.run({task, ...}) ──▶ gateway core (pure: rou
 - **Wave 1:** `summary.case` routed through the gateway with identical behavior (null →
   existing background-worker queue path preserved). No provider SDK called directly in
   that path. Migrations: none. Auth/billing/RLS: untouched.
-- **Wave 2+:** migrate drafting, classify, agent, messaging, voice; remove remaining
-  direct `completeJson`/`completeText` calls.
+- **Wave 2 (done):** all remaining AI features routed through the gateway —
+  `draft.document`, `classify.doc`/`classify.message`/`classify.voice`, `agent.lawyer`,
+  `agent.reply`, plus the background worker's case-summary + email-classify loops.
+  `tenantId`+`scope` are threaded from each caller's session (drafting/agent = `tenant`;
+  the client bot = `client-matter`, i.e. that client's own matters only, 04-AI §3.5).
+  Per-backend model selection moved out of feature code into the route table. **No
+  feature calls `completeJson`/`completeText` or a provider SDK directly anymore**
+  (grep-clean; only the transport + gateway do). Migrations/auth/billing/RLS: untouched.
 - **Known Wave-1 limitations (resolved in Wave 3):** tokens/cost are ESTIMATES
   (~4 chars/token + illustrative price table); `cacheHit` is always `false` (no cache
   yet); the trace `backend` label is the *routed/requested* backend, so when a request

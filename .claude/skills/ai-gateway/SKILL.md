@@ -36,15 +36,21 @@ backend failed — handle `null` exactly like the old `completeJson` null (e.g. 
 
 ## Route a task to a different model/provider
 
-Edit **config only** — `src/lib/ai/gateway/routes.ts`:
+Edit **config only** — `src/lib/ai/gateway/routes.ts`. Each route is an ordered
+`chain` of backend choices, tried until one answers:
 ```ts
-"draft.document": { tier: "frontier", maxTokens: 3500, backend: "deepseek" },
+"draft.document": {
+  tier: "frontier",
+  maxTokens: 3500,
+  chain: [{ backend: "deepseek" }, { model: "claude-sonnet-4-6" }], // then keyless-Sonnet
+},
 ```
-`backend` is the PREFERRED OpenAI-compatible provider (`litellm` | `deepseek` |
-`custom`). If its key is unset, the transport **degrades to the keyless router** (local
-Claude CLI). The chain always ends in keyless, so local/Vercel works with no infra.
-Add a new `task` to the `AiTask` union in `core.ts` + a row in `ROUTES` (a test asserts
-every task resolves).
+Backends: `litellm` | `deepseek` | `custom` (OpenAI-compatible) — or omit `backend`
+for the keyless router (Claude api/cli). **Model names are per-backend**, so a
+DeepSeek model name means nothing to the keyless Claude path — set the keyless-quality
+model (e.g. Sonnet) on its own choice. The chain always ends in a keyless choice, so
+local/Vercel works with no infra. Add a new `task` to the `AiTask` union + `AI_TASKS`
+in `core.ts` and a row in `ROUTES` (a test asserts every task resolves).
 
 ## Guardrails (do not break)
 

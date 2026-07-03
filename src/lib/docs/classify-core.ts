@@ -8,6 +8,8 @@ export interface ClassifyInput {
   docTextOrSnippet: string;
   clients: { id: string; name: string }[];
   matters: { id: string; title: string; cnr?: string | null }[];
+  /** Owning tenant — passed to the AI gateway for metering/trace scoping. */
+  tenantId?: string;
 }
 
 import { categoryOf, DOC_TYPES } from "./categories";

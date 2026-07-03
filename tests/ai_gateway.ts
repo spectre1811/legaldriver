@@ -42,14 +42,19 @@ async function main() {
     check(`route resolves: ${t}`, ok);
   }
   check("summary.case is cheap tier", ROUTES["summary.case"].tier === "cheap");
-  check("draft.document routes to DeepSeek", ROUTES["draft.document"].backend === "deepseek");
+  check("draft.document tries DeepSeek first", ROUTES["draft.document"].chain[0].backend === "deepseek");
+  check(
+    "quality tasks keep Sonnet on the keyless fallback",
+    ROUTES["draft.document"].chain.some((c) => c.backend === undefined && c.model === "claude-sonnet-4-6") &&
+      ROUTES["agent.lawyer"].chain.some((c) => c.backend === undefined && c.model === "claude-sonnet-4-6"),
+  );
 
-  // 2. The backend chain always terminates in the keyless router (undefined).
-  check("chain ends in keyless fallback", backendChain(ROUTES["summary.case"]).includes(undefined));
+  // 2. The backend chain always terminates in a keyless choice (backend undefined).
+  check("chain ends in keyless fallback", backendChain(ROUTES["summary.case"]).some((c) => c.backend === undefined));
 
   // 3. Fallback: when the primary backend yields null, the next candidate serves.
   const seen: (string | undefined)[] = [];
-  const primary = ROUTES["summary.case"].backend;
+  const primary = ROUTES["summary.case"].chain[0].backend;
   const flaky: ExecFn = async ({ backend, schema }) => {
     seen.push(backend);
     if (backend === primary) return { text: null, json: null }; // simulate 5xx / empty

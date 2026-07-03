@@ -35,15 +35,22 @@ export const AI_TASKS: AiTask[] = [
 export type OaiBackend = "deepseek" | "custom" | "litellm";
 export type Tier = "cheap" | "frontier" | "vision";
 
+// One candidate in a route's fallback chain. `model` is backend-specific (a
+// DeepSeek model name means nothing to the keyless Claude path), so each candidate
+// carries its own — this is why the chain holds choices, not a single model.
+export interface BackendChoice {
+  /** OpenAI-compatible backend; `undefined` = the keyless router (Claude api/cli). */
+  backend?: OaiBackend;
+  /** Model name FOR THIS backend (omit → that backend's configured default). */
+  model?: string;
+}
+
 export interface Route {
   tier: Tier;
-  /** Preferred OpenAI-compatible backend; degrades to keyless if unconfigured. */
-  backend?: OaiBackend;
-  /** Model override for the chosen backend. */
-  model?: string;
   maxTokens: number;
-  /** Extra candidates tried, in order, when the primary yields null. */
-  fallback?: OaiBackend[];
+  /** Tried in order until one yields output; should end at a keyless choice so the
+   *  local/Vercel path always terminates the chain (backendChain enforces this). */
+  chain: BackendChoice[];
 }
 
 // Retrieval scope is computed from the AUTHENTICATED SESSION before the call
@@ -138,12 +145,11 @@ export function resolveRoute(task: AiTask, table: Record<AiTask, Route>): Route 
   return r;
 }
 
-// Primary → configured fallbacks → keyless router (undefined) as the final safety
-// net, so the chain ALWAYS terminates in the keyless local/Vercel path.
-export function backendChain(route: Route): (OaiBackend | undefined)[] {
-  const chain: (OaiBackend | undefined)[] = [route.backend, ...(route.fallback ?? [])];
-  if (!chain.includes(undefined)) chain.push(undefined);
-  return chain;
+// The ordered candidate list, guaranteed to end in a keyless choice (backend
+// undefined) so the local/Vercel keyless path always terminates the chain.
+export function backendChain(route: Route): BackendChoice[] {
+  const hasKeyless = route.chain.some((c) => c.backend === undefined);
+  return hasKeyless ? route.chain : [...route.chain, {}];
 }
 
 export function estimateTokens(promptChars: number, outputChars: number) {
@@ -180,12 +186,13 @@ export async function runCore<T = unknown>(
   let text: string | null = null;
   let json: unknown | null = null;
   let usedBackend: OaiBackend | undefined;
+  let usedModel: string | undefined;
   let ok = false;
 
-  for (const backend of backendChain(route)) {
+  for (const choice of backendChain(route)) {
     const r = await deps.exec({
-      backend,
-      model: route.model,
+      backend: choice.backend,
+      model: choice.model,
       maxTokens: route.maxTokens,
       prompt: req.input,
       schema: req.schema,
@@ -196,7 +203,8 @@ export async function runCore<T = unknown>(
     if (success) {
       text = r.text;
       json = r.json;
-      usedBackend = backend;
+      usedBackend = choice.backend;
+      usedModel = choice.model;
       ok = true;
       break;
     }
@@ -209,7 +217,7 @@ export async function runCore<T = unknown>(
       : 0
     : text?.length ?? 0;
   const tokens = estimateTokens(req.input.length, outputChars);
-  const model = route.model ?? "(router-default)";
+  const model = usedModel ?? "(router-default)";
   const cost = estimateCostUsd(tokens, deps.prices?.[model]);
 
   const result: AiGatewayResult<T> = {

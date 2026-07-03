@@ -12,7 +12,7 @@ export interface DraftTemplate {
   language: string;
 }
 
-// The structured draft the LLM returns (provider-agnostic via completeJson).
+// The structured draft the LLM returns (provider-agnostic via the AI gateway).
 export interface DraftResult {
   body: string;                // the draft prose (markdown)
   assumptions: string[];
