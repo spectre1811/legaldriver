@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { PageHeader, Card, Badge, EmptyState, Stat, fmtDate } from "@/components/ui";
+import { PageHeader, Card, Badge, Stat, fmtDate } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
 import { RunOnboardingButton } from "./onboarding-ui";
+import { AdvocateForm } from "../settings/advocate-form";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export default async function OnboardingPage() {
       <Card>
         <div className="border-b border-line px-5 py-4"><p className="font-medium">{t("yourAdvocates")}</p></div>
         {advocates && advocates.length > 0 ? (
+          <>
           <ul className="divide-y divide-line">
             {advocates.map((a) => {
               const run = latestByAdvocate.get(a.id);
@@ -80,10 +82,17 @@ export default async function OnboardingPage() {
               );
             })}
           </ul>
+          <div className="border-t border-line px-5 py-5">
+            <p className="mb-3 text-sm font-medium text-ink">{t("addAnother")}</p>
+            <AdvocateForm />
+          </div>
+          </>
         ) : (
-          <EmptyState icon="scale" title={t("empty.title")} body={t("empty.body")}>
-            <Link href="/dashboard/settings" className="btn-primary">{t("empty.cta")}</Link>
-          </EmptyState>
+          <div className="px-5 py-6">
+            <p className="font-medium text-ink">{t("empty.title")}</p>
+            <p className="mb-4 mt-1 text-sm text-ink-muted">{t("empty.body")}</p>
+            <AdvocateForm />
+          </div>
         )}
       </Card>
 

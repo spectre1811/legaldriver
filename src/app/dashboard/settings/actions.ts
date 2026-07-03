@@ -36,6 +36,7 @@ export async function addAdvocate(_prev: ActionResult, formData: FormData): Prom
   });
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard/onboarding"); // WO-16: advocate can be added/removed inline on the onboarding screen
   return { ok: true, message: t("form.added", { name: `${name}${bar ? ` (${bar})` : ""}` }) };
 }
 
@@ -57,5 +58,6 @@ export async function deleteAdvocate(id: string): Promise<ActionResult> {
   });
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard/onboarding"); // WO-16: advocate can be added/removed inline on the onboarding screen
   return { ok: true, message: t("form.deleted") };
 }
