@@ -30,15 +30,14 @@ let cached: MessagingClient | null = null;
 // to "whatsapp_bsp" AND all required BSP keys are present. Missing config falls
 // back to the mock so local dev / unconfigured deploys never crash.
 export function getMessagingClient(): MessagingClient {
-  if (cached) return cached;
-
-  // DEMO_MODE: force the mock client — a demo session must never WhatsApp a real
-  // number, regardless of configured BSP keys (WO-08).
+  // DEMO_MODE first (before the cache) — force the mock client, never the live
+  // BSP, regardless of configured keys or a runtime toggle (WO-08).
   if (isDemoMode()) {
     const { MockMessagingClient } = require("./mock") as typeof import("./mock");
     cached = new MockMessagingClient();
     return cached;
   }
+  if (cached) return cached;
 
   const provider = process.env.MESSAGING_PROVIDER ?? "mock";
   const apiKey = process.env.WHATSAPP_BSP_API_KEY;

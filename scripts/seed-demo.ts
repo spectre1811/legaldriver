@@ -47,7 +47,13 @@ export async function seedDemo(admin: Admin): Promise<string> {
   const { data: sp } = await admin.from("profile").select("tenant_id").eq("id", seniorId).single();
   const tenantId = sp!.tenant_id as string;
 
+  // Move the junior into the firm and clean up their abandoned auto-tenant (the
+  // signup trigger makes one per user). Idempotent: on re-run they already point
+  // at the firm, so nothing to delete.
+  const { data: jp } = await admin.from("profile").select("tenant_id").eq("id", juniorId).single();
+  const juniorOldTenant = jp?.tenant_id as string | undefined;
   await admin.from("profile").update({ tenant_id: tenantId, full_name: "Adv. Priya Shah", role: "member" }).eq("id", juniorId);
+  if (juniorOldTenant && juniorOldTenant !== tenantId) await admin.from("tenant").delete().eq("id", juniorOldTenant);
   await admin.from("profile").update({ full_name: "Adv. Nirav Desai", role: "owner" }).eq("id", seniorId);
   await admin.from("tenant").update({ name: FIRM_NAME, plan: "pro" }).eq("id", tenantId);
   console.log(`Firm tenant ${tenantId} · ${FIRM_NAME} · 2 advocates`);
@@ -203,7 +209,7 @@ export async function seedDemo(admin: Admin): Promise<string> {
   });
 
   console.log(`\n✓ Demo tenant seeded: ${FIRM_NAME} · 2 advocates · ${clientDefs.length} clients · ${matters.length} matters · ${invDefs.length} invoices · ${docDefs.length} docs · 1 agent thread.`);
-  console.log(`  Sign in: ${SENIOR_EMAIL} / ${DEMO_PASSWORD}`);
+  console.log(`  Sign in: ${SENIOR_EMAIL} (password = $DEMO_PASSWORD)`);
   return tenantId;
 }
 

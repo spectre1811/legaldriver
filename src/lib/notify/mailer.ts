@@ -55,11 +55,12 @@ class ConsoleMailer implements Mailer {
 
 let cached: Mailer | null = null;
 export function getMailer(): Mailer {
+  // DEMO_MODE first (before the cache) — never hit Resend in a demo session,
+  // regardless of keys, and immune to a runtime toggle defeating the cache.
+  if (isDemoMode()) return (cached = new ConsoleMailer());
   if (cached) return cached;
   const key = process.env.RESEND_API_KEY;
   const from = process.env.FROM_EMAIL ?? "onboarding@resend.dev";
-  // DEMO_MODE: never hit Resend — a demo session must not email a real person.
-  if (isDemoMode()) { cached = new ConsoleMailer(); return cached; }
   cached = key ? new ResendMailer(key, from) : new ConsoleMailer();
   return cached;
 }
