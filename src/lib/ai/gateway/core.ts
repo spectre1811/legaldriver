@@ -7,6 +7,8 @@
 // fallback, and scope-guard logic is unit-testable without network or CLI. The
 // wiring to the real transport lives in `index.ts`.
 
+import { localeDirective } from "./locale";
+
 // ── Task taxonomy — the ONLY vocabulary feature code uses ─────────────────────
 export type AiTask =
   | "summary.case"
@@ -189,6 +191,12 @@ export async function runCore<T = unknown>(
   // `input` or model output.
   const scope = Object.freeze({ ...req.scope });
 
+  // Multilingual (04-AI §9): the gateway appends a locale directive so prose tasks
+  // answer in the user's language — no per-feature work. English/unknown/structured
+  // tasks are untouched (localeDirective returns null).
+  const directive = localeDirective(req.task, req.locale);
+  const prompt = directive ? `${req.input}\n\n${directive}` : req.input;
+
   let text: string | null = null;
   let json: unknown | null = null;
   let usedBackend: OaiBackend | undefined;
@@ -202,7 +210,7 @@ export async function runCore<T = unknown>(
       backend: choice.backend,
       model: choice.model,
       maxTokens: route.maxTokens,
-      prompt: req.input,
+      prompt,
       schema: req.schema,
     });
     const success = req.schema
@@ -232,7 +240,7 @@ export async function runCore<T = unknown>(
   const estimated = usedUsage == null;
   const tokens = usedUsage
     ? { input: usedUsage.tokensIn, output: usedUsage.tokensOut, total: usedUsage.tokensIn + usedUsage.tokensOut, estimated: false as const }
-    : estimateTokens(req.input.length, outputChars);
+    : estimateTokens(prompt.length, outputChars);
   const model = usedServedModel ?? usedChoiceModel ?? "(router-default)";
   const cost = estimateCostUsd(tokens, deps.prices?.[model]);
 
@@ -258,7 +266,7 @@ export async function runCore<T = unknown>(
     backend: result.backend,
     model,
     tier: route.tier,
-    inputChars: req.input.length,
+    inputChars: prompt.length,
     outputChars,
     tokens: { input: tokens.input, output: tokens.output, total: tokens.total },
     estimated,

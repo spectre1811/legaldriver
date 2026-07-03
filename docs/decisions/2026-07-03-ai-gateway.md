@@ -1,7 +1,7 @@
 # AI Gateway — the one seam every AI call goes through (ADR-AI1 realized)
 
 - **Date:** 2026-07-03
-- **Status:** Accepted (Waves 1–2 merged; Wave 3 metering landed) · interface frozen with founder (WO-02)
+- **Status:** Accepted (Waves 1–3 merged; Wave 5 multilingual landed; Wave 4 deferred) · interface frozen with founder (WO-02)
 - **Work order:** WO-02 · **Plan refs:** 04-AI §0, §4.5, §5, §9; 12-CLOUD ADR-C8
 - **Supersedes/extends:** the ad-hoc `src/lib/ai/complete.ts` transport (kept as a backend)
 
@@ -100,8 +100,30 @@ feature code ── aiGateway.run({task, ...}) ──▶ gateway core (pure: rou
   Cost panel at `/dashboard/ai-usage` (RLS-scoped). Cross-tenant isolation proven on
   the live DB (`tests/rls_isolation.ts` now covers `ai_usage_event`). Migration was
   founder-approved and applied via the Management API (additive/expand-only).
-- **Remaining (later waves):** exact-hash + provider prompt cache (`cacheHit` still
-  false); Wave 4 orchestration seam (AI-SDK vs LangGraph.js); Wave 5 multilingual.
+- **Wave 5 (multilingual) — landed:** `locale.ts` makes the plumbed `locale` param
+  act — the gateway appends a "respond in <language>" directive for PROSE tasks
+  (`summary.case`, `draft.document`, `agent.lawyer`, `agent.reply`), keeping citations/
+  section numbers/CNRs/terms-of-art in English with a gloss (04-AI §9). Classification/
+  extraction stays English (stable enums). `localeMode()` is the native-vs-bridge seam
+  (stub: all `native`; an eval table decides per (task,locale) later, §9.2/§9.5).
+  **Caller-wiring handoff:** callers pass `locale` from the user's locale once WO-03's
+  cookie/`getLocale` seam (and the gated `profile.locale` column) merge — the gateway
+  is already locale-ready; no gateway change needed then.
+- **Wave 4 (orchestration) — DEFERRED (re-verified 2026-07-03):** the WO envisioned
+  porting an agent loop to a framework, but the lawyer agent is today **single-shot
+  retrieve-then-synthesize** (one gateway call), not a multi-step tool-calling loop —
+  there is nothing to orchestrate. Adopting a framework now = abstraction tax + a
+  dependency for zero benefit, against ADR-AI3's own "first real resumable workflow
+  triggers adoption, not before." Landscape re-verify (mid-2026): **Mastra** is now the
+  strongest TS-native, Vercel-compatible option (durable workflows + memory + evals,
+  reuses AI SDK for streaming); **LangGraph Platform is not Vercel-compatible**, which
+  weakens ADR-AI3's "LangGraph.js for durable workflows" pick. **Recommendation for the
+  founder:** when the agent-tools work order (§4 typed tool registry) builds a real
+  multi-step loop, revisit ADR-AI3 favouring Mastra over AI-SDK+LangGraph; whichever is
+  chosen points at the LiteLLM gateway's OpenAI-compatible endpoint (frameworks never
+  hold keys, §0). Adds a package.json dependency → founder-flagged at that time.
+- **Remaining ops:** exact-hash + provider prompt cache (`cacheHit` still false) —
+  deferred (marginal on serverless without a shared cache store; revisit with cost data).
 - **Known Wave-1 limitations (partly resolved in Wave 3):** tokens/cost were ESTIMATES
   (~4 chars/token + illustrative price table); `cacheHit` is always `false` (no cache
   yet); the trace `backend` label is the *routed/requested* backend, so when a request
