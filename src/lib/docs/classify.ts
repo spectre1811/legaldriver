@@ -7,6 +7,7 @@ import {
   type ClassifyInput,
   type Classification,
 } from "./classify-core";
+import { groundCnrs } from "./grounding";
 
 // doc-classify-claude: classify a document/email against the tenant's clients &
 // matters, and extract key fields. Routes through the AI gateway (04-AI §0) — the
@@ -27,5 +28,9 @@ export async function classifyDocument(input: ClassifyInput): Promise<Classifica
     scope: { kind: "tenant", tenantId: input.tenantId ?? SYSTEM_TENANT },
   });
   if (!output) return FALLBACK;
-  return normalizeClassification(output, input);
+  const cls = normalizeClassification(output, input);
+  // Grounding guard (WO-33 W3): keep only CNRs that literally appear in the document text/filename —
+  // so a hallucinated case number can never auto-create or attach to the wrong matter downstream.
+  cls.extracted = { ...cls.extracted, cnrs: groundCnrs(cls.extracted.cnrs, `${input.docTextOrSnippet} ${input.filename ?? ""}`) };
+  return cls;
 }
