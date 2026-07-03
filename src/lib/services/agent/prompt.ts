@@ -1,4 +1,5 @@
 import type { RetrievalHit } from "./types";
+import { brand } from "@/lib/brand";
 
 // Structured output: the answer text, which context indices it relied on, and
 // whether it had to abstain. Indices map back to citation objects deterministically.
@@ -24,7 +25,7 @@ export function buildAgentPrompt(
     .map((t) => `${t.role.toUpperCase()}: ${t.content}`)
     .join("\n");
 
-  return `You are the Lawyer Agent inside Legaldriver, assisting an advocate who practises litigation in India.
+  return `You are the Lawyer Agent inside ${brand.name}, assisting an advocate who practises litigation in India.
 
 RULES:
 - You are ASSISTIVE. Your output is a suggestion the advocate will verify — it is not legal advice. End every answer with: "Not legal advice — verify against the official record and the bare act."

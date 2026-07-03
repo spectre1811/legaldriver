@@ -14,7 +14,7 @@ for (const line of readFileSync(".env", "utf8").split("\n")) {
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const svc = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const DEMO_EMAIL = process.env.DEMO_EMAIL ?? "demo@lexdriver.test";
+const DEMO_EMAIL = process.env.DEMO_EMAIL ?? "demo@mukadma.in";
 
 function isoIn(days: number) {
   const d = new Date();
