@@ -5,6 +5,22 @@ jurisdiction-aware deadlines + the advocate cause list on one calendar, run lega
 escalation with reminders, and ingest Gmail so emails + attachments are auto-filed and
 parsed against the right client/case. Full spec in `legal-mvp-build-brief.md`.
 
+## Peshi — operating rules (always in force, even without the kickoff prompt)
+This repo is part of **Peshi** (Indian legal-tech). The full ruleset + current work live in the exec
+pack at `~/personal/legalmarketplace/plan/exec/`: **`00-OPERATING-PROTOCOL.md`** (governs everything),
+`TRACKER.md` (in-flight), `BACKLOG.md` §A (what to pull next), `KICKOFF.md`, **`LEARNINGS.md`**
+(cross-agent gotchas — read before non-trivial work). Facts/numbers come **only** from
+`plan/context/00-INPUTS.md` — never invent them.
+- **Plan-linked work only** — every task ties to a work order + a `TRACKER.md` row; claim it (🟡 + session id) before editing.
+- **Founder-gated → STOP + present before merge:** DB migrations, RLS/tenancy, auth, billing/payments.
+- **Gates before "done":** `npm run typecheck` + `lint` + `build` + the relevant `tests/*.ts` — all green. No "done" with red/skipped.
+- **Tests + types + docs in the SAME change;** update `TRACKER.md` + append `SESSION-LOG.md` per wave; promote reusable gotchas to `LEARNINGS.md`.
+- **Small, reviewed, in waves** — branch per work order (`wt/<id>`); a second agent reviews (author never self-approves).
+- **Cheapest capable model** — Sonnet by default; Opus only for schema/RLS/security/product-wide-interface (say so).
+- **No hacks** — diagnose the root cause; never disable a gate, swallow an error, or silently degrade.
+- **Deploy discipline:** `main` does **NOT** auto-deploy to Vercel yet (WO-09 pending) → run `vercel deploy --prod --token=$VERCEL_TOKEN` after merging, or the change isn't live. Env/crons are on the Vercel project.
+- **Parallel sessions run concurrently** — touch only your work order's files; edit only your own TRACKER/SESSION-LOG rows; flag shared-config (package.json/CI) changes first.
+
 ## Stack
 
 Next.js 14 (App Router, TS) · Supabase (Postgres + RLS, Auth, Storage) · eCourtsIndia behind
