@@ -22,7 +22,10 @@
   },
   "shell": {
     "workspace": "Workspace",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "nav": "Navigation",
+    "openNav": "Open menu",
+    "closeNav": "Close menu"
   },
   "nav": {
     "heading": {

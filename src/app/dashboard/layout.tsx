@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
 import { NavLinks } from "./nav";
+import { MobileNav } from "./mobile-nav";
 import { CommandPalette } from "@/components/command-palette";
 import { brand } from "@/lib/brand";
 
@@ -58,6 +59,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       <main className="min-w-0 flex-1">
+        <MobileNav email={user.email ?? ""} tenantName={tenantName} initial={initial} />
         <div className="mx-auto max-w-6xl animate-fade-in px-5 py-8 sm:px-8 lg:py-10">{children}</div>
       </main>
     </div>

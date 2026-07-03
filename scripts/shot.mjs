@@ -18,6 +18,10 @@ for (const [w, h, bp] of [[1440, 900, "1440"], [768, 1024, "768"], [390, 844, "3
   await page.setViewportSize({ width: w, height: h });
   await page.goto(base + path, { waitUntil: "networkidle" });
   await page.waitForTimeout(400);
+  if (process.env.CLICK) {
+    await page.click(process.env.CLICK).catch(() => {});
+    await page.waitForTimeout(300);
+  }
   await page.screenshot({ path: `/tmp/wo03_${tag}_${bp}.png`, fullPage: true });
   await page.close();
 }

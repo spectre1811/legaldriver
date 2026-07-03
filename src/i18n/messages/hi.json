@@ -22,7 +22,10 @@
   },
   "shell": {
     "workspace": "कार्यक्षेत्र",
-    "signOut": "साइन आउट"
+    "signOut": "साइन आउट",
+    "nav": "नेविगेशन",
+    "openNav": "मेन्यू खोलें",
+    "closeNav": "मेन्यू बंद करें"
   },
   "nav": {
     "heading": {
