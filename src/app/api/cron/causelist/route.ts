@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
 
   let listed = 0;
   let alerted = 0;
+  let digests = 0;
   for (const [tenantId, ms] of byTenant) {
     const byCnr = new Map(ms.map((m) => [m.cnr.toUpperCase(), m]));
     let hits;
@@ -66,10 +67,12 @@ export async function GET(request: NextRequest) {
       .eq("payload->>eventDate", date);
     const alreadyAlerted = new Set((prior ?? []).map((p) => (p.payload as { ref?: string })?.ref).filter(Boolean));
 
+    const matched: { title: string; cnr: string; itemNo?: string; type?: string; judge?: string }[] = [];
     for (const h of hits) {
       const m = byCnr.get(h.cnr.toUpperCase());
       if (!m) continue;
       listed++;
+      matched.push({ title: m.title, cnr: m.cnr, itemNo: h.itemNo, type: h.type, judge: h.judge });
       const ref = `causelist:${m.id}:${date}`;
       if (alreadyAlerted.has(ref)) continue;
       alreadyAlerted.add(ref);
@@ -87,7 +90,28 @@ export async function GET(request: NextRequest) {
       });
       alerted++;
     }
+
+    // One email DIGEST per tenant per date — the actual "your cases tomorrow" morning email
+    // (the notify cron renders + sends it via Resend). Guarded so re-runs don't re-send.
+    if (matched.length) {
+      const { data: existingDigest } = await supabase
+        .from("notification")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("kind", "cause_list_digest")
+        .eq("payload->>eventDate", date)
+        .limit(1)
+        .maybeSingle();
+      if (!existingDigest) {
+        await supabase.from("notification").insert({
+          tenant_id: tenantId, channel: "email", kind: "cause_list_digest", status: "pending",
+          scheduled_for: new Date().toISOString(),
+          payload: { ref: `causelist-digest:${tenantId}:${date}`, eventDate: date, count: matched.length, cases: matched } as Database["public"]["Tables"]["notification"]["Insert"]["payload"],
+        });
+        digests++;
+      }
+    }
   }
 
-  return NextResponse.json({ ok: true, source: court.source, date, listed, alerted });
+  return NextResponse.json({ ok: true, source: court.source, date, listed, alerted, digests });
 }

@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   let sent = 0;
   let failed = 0;
   for (const n of due ?? []) {
-    const payload = (n.payload ?? {}) as { ref?: string; title?: string; eventDate?: string; body?: string };
+    const payload = (n.payload ?? {}) as { ref?: string; title?: string; eventDate?: string; body?: string; count?: number; cases?: DigestCase[] };
     let ok = true;
 
     if (n.channel === "email") {
@@ -76,17 +76,33 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ ok: true, channel: mailer.channel, considered: due?.length ?? 0, sent, failed });
 }
 
-function subjectFor(kind: string, p: { title?: string; eventDate?: string }) {
+type DigestCase = { title?: string; cnr?: string; itemNo?: string; type?: string; judge?: string };
+
+function subjectFor(kind: string, p: { title?: string; eventDate?: string; count?: number }) {
   if (kind === "hearing_reminder") return `Hearing reminder: ${p.title ?? "case"} on ${p.eventDate ?? ""}`;
   if (kind === "deadline_reminder") return `Deadline: ${p.title ?? ""} due ${p.eventDate ?? ""}`;
   if (kind === "notice_escalation") return `Notice escalated: ${p.title ?? ""}`;
   if (kind === "case_update") return `Case update: ${p.title ?? "your case"}`;
+  if (kind === "cause_list_digest") {
+    const n = p.count ?? 0;
+    return `Cause list: ${n} case${n === 1 ? "" : "s"} listed ${p.eventDate ?? "tomorrow"}`;
+  }
   return `Legaldriver notification`;
 }
-function htmlFor(kind: string, p: { title?: string; eventDate?: string; body?: string }) {
+function htmlFor(kind: string, p: { title?: string; eventDate?: string; body?: string; count?: number; cases?: DigestCase[] }) {
+  const esc = (s?: string) => (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  let inner = `<p>${esc(p.body) || "Open Legaldriver to view details."}</p>`;
+  if (kind === "cause_list_digest" && p.cases?.length) {
+    const rows = p.cases.map((c) => `<li style="margin:6px 0">
+        <strong>${esc(c.title) || esc(c.cnr) || "Case"}</strong>${c.cnr ? ` <span style="color:#64748b">(${esc(c.cnr)})</span>` : ""}
+        <br><span style="color:#475569;font-size:13px">${c.itemNo ? `Item ${esc(c.itemNo)}` : ""}${c.type ? ` · ${esc(c.type)}` : ""}${c.judge ? ` · ${esc(c.judge)}` : ""}</span>
+      </li>`).join("");
+    inner = `<p>These tracked cases are listed on <strong>${esc(p.eventDate) || "the next court day"}</strong>:</p>
+      <ul style="padding-left:18px;list-style:disc">${rows}</ul>`;
+  }
   return `<div style="font-family:system-ui,sans-serif">
     <h2 style="color:#0f172a">${subjectFor(kind, p)}</h2>
-    <p>${p.body ?? "Open Legaldriver to view details."}</p>
+    ${inner}
     <p style="color:#94a3b8;font-size:12px">Not legal advice. Verify against the official record.</p>
   </div>`;
 }
