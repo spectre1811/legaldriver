@@ -180,5 +180,27 @@
     "invoices": { "title": "Invoices", "draft": "Draft" },
     "notices": { "title": "Notices", "due": "due {date}" },
     "activity": { "title": "Activity", "empty": "No activity yet." }
+  },
+  "auth": {
+    "brand": {
+      "headline": "Your practice, on a single daily driver.",
+      "sub": "Track cases by CNR, surface your cause list and deadlines, escalate notices, and let your inbox file itself — built for advocates and firms.",
+      "footnote": "Court data from the public court record · not legal advice · verify against the official record."
+    },
+    "trust": {
+      "cases": "Every case, hearing & deadline in one calendar",
+      "inbox": "Gmail auto-filed against the right client & case",
+      "notices": "Legal-notice escalation that runs itself"
+    },
+    "welcome": "Welcome back",
+    "subtitle": "Sign in to your workspace, or create a new one.",
+    "fullName": "Full name",
+    "fullNameHint": "(sign up)",
+    "email": "Email",
+    "password": "Password",
+    "ph": { "fullName": "Adv. Meera Joshi", "email": "you@firm.in" },
+    "signIn": "Sign in",
+    "createWorkspace": "Create a workspace",
+    "disclaimer": "By continuing you agree this is informational only and not legal advice."
   }
 }

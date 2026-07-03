@@ -1,109 +1,89 @@
+import { getTranslations } from "next-intl/server";
 import { signIn, signUp } from "./actions";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
+import { brand } from "@/lib/brand";
 
-const TRUST = [
-  ["cases", "Every case, hearing & deadline in one calendar"],
-  ["inbox", "Gmail auto-filed against the right client & case"],
-  ["notices", "Legal-notice escalation that runs itself"],
+const TRUST: [IconName, string][] = [
+  ["cases", "cases"],
+  ["gmail", "inbox"],
+  ["notices", "notices"],
 ];
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
   searchParams: { error?: string; message?: string };
 }) {
+  const t = await getTranslations("auth");
   return (
-    <main className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
-      {/* Brand panel */}
-      <section className="relative hidden flex-col justify-between overflow-hidden bg-brand-900 p-12 text-white lg:flex">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-30"
-          style={{ background: "radial-gradient(700px circle at 20% 10%, #4A4FD6 0%, transparent 55%), radial-gradient(600px circle at 90% 90%, #2E32A0 0%, transparent 50%)" }}
-        />
-        <div className="relative flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
-            <Icon name="scale" className="h-5 w-5 text-brass-400" />
-          </span>
-          <span className="font-serif text-xl font-medium">
-            <span lang="gu" className="text-brass-400">કાનૂની</span>driver
-          </span>
+    <main className="grid min-h-screen bg-ec-paper lg:grid-cols-[1.1fr_1fr]">
+      {/* Brand panel — ink plate, one line of brass. No gradients. */}
+      <section className="relative hidden flex-col justify-between overflow-hidden bg-ec-ink p-12 text-ec-paper lg:flex">
+        <div className="relative">
+          <span className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight text-ec-paper">{brand.name}</span>
         </div>
 
         <div className="relative max-w-md">
-          <p lang="gu" className="mb-3 font-serif text-6xl font-medium leading-none text-white/10">કાનૂની</p>
-          <h1 className="font-serif text-4xl font-medium leading-[1.15] text-white">
-            Your practice, on a single daily driver.
-          </h1>
-          <p className="mt-4 text-white/70">
-            Track cases by CNR, surface your cause list and deadlines, escalate notices, and let
-            your inbox file itself — built for advocates and firms.
-          </p>
+          <p lang="gu" className="mb-3 font-display text-7xl font-medium leading-none text-ec-paper/10">પેશી</p>
+          <h1 className="font-display text-4xl font-medium leading-[1.15] text-ec-paper">{t("brand.headline")}</h1>
+          <p className="mt-4 text-ec-paper/70">{t("brand.sub")}</p>
           <ul className="mt-8 space-y-3">
-            {TRUST.map(([icon, text]) => (
-              <li key={text} className="flex items-center gap-3 text-sm text-white/85">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-brass-400">
-                  <Icon name={icon as never} className="h-4 w-4" />
+            {TRUST.map(([icon, key]) => (
+              <li key={key} className="flex items-center gap-3 text-sm text-ec-paper/85">
+                <span className="flex h-8 w-8 items-center justify-center rounded-ec-s bg-ec-paper/10 text-ec-brass">
+                  <Icon name={icon} className="h-4 w-4" />
                 </span>
-                {text}
+                {t(`trust.${key}`)}
               </li>
             ))}
           </ul>
         </div>
 
-        <p className="relative text-xs text-white/40">
-          Court data via a licensed API · not legal advice · verify against the official record.
-        </p>
+        <p className="relative text-xs text-ec-paper/40">{t("brand.footnote")}</p>
       </section>
 
       {/* Auth panel */}
       <section className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm animate-fade-in">
           <div className="mb-8 lg:hidden">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white">
-                <Icon name="scale" className="h-5 w-5" />
-              </span>
-              <span className="font-serif text-xl font-medium">Legaldriver</span>
-            </div>
+            <span className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink">{brand.name}</span>
           </div>
 
-          <h2 className="text-2xl font-semibold">Welcome back</h2>
-          <p className="mt-1 text-sm text-ink-muted">Sign in to your workspace, or create a new one.</p>
+          <h2 className="font-display text-2xl font-medium text-ec-ink">{t("welcome")}</h2>
+          <p className="mt-1 text-sm text-ec-ink-3">{t("subtitle")}</p>
 
           {searchParams.error && (
-            <p role="alert" className="mt-5 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">
+            <p role="alert" className="mt-5 rounded-ec-s bg-ec-danger-t px-3.5 py-2.5 text-sm text-ec-danger">
               {searchParams.error}
             </p>
           )}
           {searchParams.message && (
-            <p className="mt-5 rounded-xl bg-brand-50 px-3.5 py-2.5 text-sm text-brand-700">
+            <p className="mt-5 rounded-ec-s bg-ec-brass-tint px-3.5 py-2.5 text-sm text-ec-brass-deep">
               {searchParams.message}
             </p>
           )}
 
           <form className="mt-6 space-y-4">
             <div>
-              <label className="label" htmlFor="full_name">Full name <span className="font-normal normal-case text-ink-faint">(sign up)</span></label>
-              <input id="full_name" name="full_name" autoComplete="name" className="input mt-1.5" placeholder="Adv. Meera Joshi" />
+              <label className="ec-label" htmlFor="full_name">{t("fullName")} <span className="font-normal normal-case text-ec-ink-3">{t("fullNameHint")}</span></label>
+              <input id="full_name" name="full_name" autoComplete="name" className="input mt-1.5" placeholder={t("ph.fullName")} />
             </div>
             <div>
-              <label className="label" htmlFor="email">Email</label>
-              <input id="email" name="email" type="email" required autoComplete="email" className="input mt-1.5" placeholder="you@firm.in" />
+              <label className="ec-label" htmlFor="email">{t("email")}</label>
+              <input id="email" name="email" type="email" required autoComplete="email" className="input mt-1.5" placeholder={t("ph.email")} />
             </div>
             <div>
-              <label className="label" htmlFor="password">Password</label>
+              <label className="ec-label" htmlFor="password">{t("password")}</label>
               <input id="password" name="password" type="password" required minLength={6} autoComplete="current-password" className="input mt-1.5" placeholder="••••••••" />
             </div>
 
             <div className="flex flex-col gap-2.5 pt-1">
-              <button formAction={signIn} className="btn-primary w-full">Sign in</button>
-              <button formAction={signUp} className="btn-secondary w-full">Create a workspace</button>
+              <button formAction={signIn} className="ec-btn ec-btn-ink w-full">{t("signIn")}</button>
+              <button formAction={signUp} className="ec-btn ec-btn-ghost w-full">{t("createWorkspace")}</button>
             </div>
           </form>
 
-          <p className="mt-8 text-center text-xs text-ink-faint">
-            By continuing you agree this is informational only and not legal advice.
-          </p>
+          <p className="mt-8 text-center text-xs text-ec-ink-3">{t("disclaimer")}</p>
         </div>
       </section>
     </main>
