@@ -39,6 +39,7 @@ const SECTIONS: { heading: string; items: { href: string; label: string; icon: I
     items: [
       { href: "/dashboard/copilot", label: "copilot", icon: "sparkles" },
       { href: "/dashboard/draft", label: "drafting", icon: "edit" },
+      { href: "/dashboard/ai-usage", label: "aiUsage", icon: "overview" },
     ],
   },
   {
