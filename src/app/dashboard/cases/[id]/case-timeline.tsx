@@ -58,7 +58,12 @@ export async function CaseTimeline({ events, hasCnr }: { events: TimelineEvent[]
     );
   }
 
-  const sorted = [...events].sort((a, b) => b.date.localeCompare(a.date));
+  // Reverse-chronological. On a SHARED date, an order/process follows the hearing that produced
+  // it, so it ranks as the later (higher, more-recent) event — never a hearing "after" its order.
+  const SEQ: Record<string, number> = { hearing: 1, process: 2, order: 3 };
+  const sorted = [...events].sort(
+    (a, b) => b.date.localeCompare(a.date) || (SEQ[b.type] ?? 0) - (SEQ[a.type] ?? 0),
+  );
 
   const typeLabel = (type: string) => {
     if (type === "hearing") return t("timeline.typeHearing");
@@ -98,7 +103,18 @@ export async function CaseTimeline({ events, hasCnr }: { events: TimelineEvent[]
                   <span className="num text-xs font-medium text-ec-ink-3">{fmtDate(ev.date)}</span>
                   <span className={chipClass}>{typeLabel(ev.type)}</span>
                 </div>
-                <p className="mt-1 text-sm text-ec-ink">{ev.detail ? decode(ev.detail) : t("timeline.noDetail")}</p>
+                {ev.type === "order" && ev.order_id ? (
+                  <a
+                    href={`/api/court/order-pdf?order=${ev.order_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-ec-brass-deep hover:text-ec-brass"
+                  >
+                    {ev.detail ? decode(ev.detail) : t("timeline.typeOrder")} ↗
+                  </a>
+                ) : (
+                  <p className="mt-1 text-sm text-ec-ink">{ev.detail ? decode(ev.detail) : t("timeline.noDetail")}</p>
+                )}
                 {ev.judge && (
                   <p className="mt-0.5 text-xs text-ec-ink-3">
                     {t("timeline.judgePrefix")}{" "}
