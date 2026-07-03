@@ -5,35 +5,36 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Warm-neutral "paper" surfaces + ink text for a premium, editorial legal feel.
-        paper: "#FBFAF8",
-        surface: "#FFFFFF",
+        // Legacy names REPOINTED to Editorial Chambers tokens (WO-03). The core
+        // screens moved to the `ec-*` scale; these legacy names are now used only
+        // by the not-yet-hand-converted screens, so pointing them at tokens brings
+        // the whole app onto the brand palette in one consistent step. Values live
+        // in tokens.css.
+        paper: "var(--paper)",
+        surface: "var(--paper-2)",
         ink: {
-          DEFAULT: "#15161A",
-          soft: "#3A3D46",
-          muted: "#6B6F7B",
-          faint: "#9AA0AD",
+          DEFAULT: "var(--ink)",
+          soft: "var(--ink-2)",
+          muted: "var(--ink-3)",
+          faint: "var(--n400)",
         },
-        line: "#E9E7E1",
-        // Deep legal indigo primary + warm brass accent.
+        line: "var(--hair)",
+        // Indigo primary + warm brass accent (from tokens).
         brand: {
-          50: "#EEF0FF",
-          100: "#E0E3FF",
-          200: "#C4CAFF",
-          500: "#4A4FD6",
-          600: "#3A3FC4",
-          700: "#2E32A0",
-          900: "#1B1E5C",
+          50: "var(--indigo-tint)",
+          100: "var(--indigo-tint)",
+          200: "var(--indigo-tint)",
+          500: "var(--indigo)",
+          600: "var(--indigo)",
+          700: "var(--indigo)",
+          900: "var(--ink)",
         },
-        brass: { 400: "#C9A24B", 500: "#B8902F", 600: "#9A7720" },
-        // Back-compat alias used by pages not yet migrated to the new system.
-        accent: "#3A3FC4",
+        brass: { 400: "var(--brass)", 500: "var(--brass)", 600: "var(--brass-deep)" },
+        accent: "var(--indigo)",
 
-        // ——— WO-03 "Editorial Chambers" token layer ———
-        // Single source = src/app/tokens.css. Legacy keys above are left
-        // untouched so un-reskinned screens don't shift; reskinned screens
-        // (Waves 2–3) consume these `ec-*` tokens. Repointing bare names →
-        // tokens is a tracked follow-up once every screen is migrated.
+        // ——— WO-03 "Editorial Chambers" token layer (single source = tokens.css) ———
+        // The `ec-*` scale is what the hand-converted core screens use directly;
+        // the legacy names above now also point at these same tokens.
         ec: {
           paper: "var(--paper)",
           "paper-2": "var(--paper-2)",
