@@ -26,8 +26,17 @@ const notoGuj = Noto_Sans_Gujarati({
 });
 
 export const metadata: Metadata = {
-  title: "Legaldriver — your legal daily driver",
-  description: "Cases, hearings, deadlines, notices and inbox for advocates — one daily driver.",
+  title: "Peshi — the operating system for Indian lawyers",
+  description:
+    "Track cases by CNR, get tomorrow's cause list on WhatsApp before 8pm, and run your whole practice — built for Indian courts.",
+  openGraph: {
+    title: "Peshi — the operating system for Indian lawyers",
+    description:
+      "Cause lists, cases, clients and invoices — synced from the court record by CNR. Built for Indian courts, free to begin.",
+    siteName: "Peshi",
+    locale: "en_IN",
+    type: "website",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

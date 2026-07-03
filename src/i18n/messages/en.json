@@ -223,6 +223,49 @@
     "hearingFallback": "Hearing",
     "docs": { "title": "Shared documents", "empty": "No documents shared yet." },
     "messages": { "title": "Messages", "empty": "No messages yet. Say hello to your firm." },
-    "footer": "Secure client portal · you only see your own matters. Not legal advice."
+    "footer": "Secure client portal · you only see your own matters. Not legal advice.",
+    "headerLabel": "Client portal",
+    "yourMatters": "your matters"
+  },
+  "landing": {
+    "nav": { "features": "Features", "pricing": "Pricing", "login": "Login", "startFree": "Start free" },
+    "hero": {
+      "overline": "आज की पेशी, कल की तैयारी।",
+      "title1": "Your entire practice.",
+      "title2": "One daily driver.",
+      "sub": "Cause lists, cases, clients and invoices — synced from the court record by CNR and delivered to your WhatsApp every evening. Built for Indian courts, free to begin.",
+      "ctaStart": "Start free — track 25 cases",
+      "ctaPricing": "See pricing",
+      "note": "No card. No clerk calls.",
+      "overline2": "आज की पेशी",
+      "miniFoot": "Tomorrow's list reaches WhatsApp before 8 pm"
+    },
+    "proof": { "hc": "Gujarat High Court", "district": "District courts across Gujarat", "judgments": "18.6M judgments indexed", "cnr": "CNR-native" },
+    "features": {
+      "evening": { "eyebrow": "the evening list", "title": "Tomorrow's peshi, on WhatsApp before 8 pm.", "body": "Every evening your full cause list for tomorrow — court, item number, stage — arrives where you already are. No portal logins, no calls to the clerk." },
+      "running": { "eyebrow": "the running file", "title": "Every case, auto-updated by CNR.", "body": "Add a CNR once. Hearings, orders and next dates keep themselves current from the court record — your diary maintains itself." },
+      "fee": { "eyebrow": "the fee book", "title": "Invoices that file themselves.", "body": "Hours become GST-ready invoices; clients pay by UPI, card or netbanking. The cash-and-diary fee book, respectfully retired." }
+    },
+    "pricing": {
+      "title": "Priced like one consultation.",
+      "note": "Per lawyer / month, billed annually · monthly +25%",
+      "mostChosen": "Most chosen",
+      "tier": {
+        "free": { "name": "Free", "f": { "cases": "25 tracked cases", "digest": "Daily WhatsApp digest", "clients": "10 clients & matters", "search": "Search 18.6M judgments" } },
+        "basic": { "name": "Basic", "f": { "cases": "200 tracked cases", "alerts": "Per-case WhatsApp alerts", "invoicing": "Invoicing + UPI collection", "credits": "100 AI credits / mo" } },
+        "pro": { "name": "Pro", "f": { "cases": "Unlimited cases + escalations", "credits": "500 AI credits / mo", "portal": "Client portal, unlimited seats", "marketplace": "Marketplace inquiry priority" } },
+        "enterprise": { "name": "Enterprise", "f": { "tenants": "Multi-lawyer tenants, SSO", "audit": "Audit logs & custom rules", "pooled": "Pooled AI credits", "support": "Dedicated support, SLA" } }
+      },
+      "cta": { "start": "Start free", "choose": "Choose plan", "talk": "Talk to us" }
+    },
+    "footer": {
+      "tagline": "Making Indian litigation legible — for the advocates who run it and the citizens who live through it.",
+      "col": {
+        "product": { "h": "Product", "a": "Features", "b": "Pricing", "c": "For clients" },
+        "company": { "h": "Company", "a": "About", "b": "Why us", "c": "Contact" },
+        "legal": { "h": "Legal", "a": "Privacy", "b": "Terms", "c": "Data corrections" }
+      },
+      "compliance": "Case data is sourced from public court records and refreshed daily. Peshi is practice software and a neutral directory; it does not rank, recommend or endorse advocates. © 2026 Peshi."
+    }
   }
 }

@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Icon } from "@/components/icons";
 import { CauseListUploader } from "./uploader";
 
-export const metadata = { title: "Cause list · Legaldriver" };
+export const metadata = { title: "Cause list · Peshi" };
 
 export default async function CauseListPage() {
   const t = await getTranslations("causeList");
