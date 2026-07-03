@@ -1,3 +1,5 @@
+import { isDemoMode } from "@/lib/demo";
+
 // Email delivery via Resend, behind a small interface so it's swappable/testable.
 // Free-tier note: Resend only delivers to arbitrary recipients from a *verified*
 // domain; until a domain is verified it sends from onboarding@resend.dev to the
@@ -56,6 +58,8 @@ export function getMailer(): Mailer {
   if (cached) return cached;
   const key = process.env.RESEND_API_KEY;
   const from = process.env.FROM_EMAIL ?? "onboarding@resend.dev";
+  // DEMO_MODE: never hit Resend — a demo session must not email a real person.
+  if (isDemoMode()) { cached = new ConsoleMailer(); return cached; }
   cached = key ? new ResendMailer(key, from) : new ConsoleMailer();
   return cached;
 }
