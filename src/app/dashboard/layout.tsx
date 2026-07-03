@@ -6,6 +6,7 @@ import { NavLinks } from "./nav";
 import { MobileNav } from "./mobile-nav";
 import { CommandPalette } from "@/components/command-palette";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { PeshiMark } from "@/components/peshi-mark";
 import { brand } from "@/lib/brand";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -27,8 +28,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="flex min-h-screen bg-ec-paper text-ec-ink">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-ec-hair bg-ec-paper px-4 py-5 md:flex">
         <div className="flex items-center gap-2.5 px-2">
-          {/* Typographic wordmark — the "date underline" motif. Name from the
-              swappable brand config (working name until B1 lands). */}
+          {/* Mark (the "p" tile) + typographic wordmark — the "date underline" motif. */}
+          <PeshiMark size={32} tone="dark" className="shrink-0" />
           <div className="leading-tight">
             <p className="ec-underline inline-block font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink">
               {brand.name}

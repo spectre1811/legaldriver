@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Peshi — logo usage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--paper:#FAF7F1;--paper2:#FFFDF8;--ink:#191926;--ink3:#7C7C90;--brass:#A8823C;--line:#DCDAE0}
+  *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto;padding:44px 40px 70px}
+  h1{font-family:Fraunces,serif;font-weight:600;font-size:28px;margin:0 0 2px}
+  .sub{color:var(--ink3);font-size:13px;margin:0 0 30px}
+  h2{font-family:Fraunces,serif;font-weight:600;font-size:16px;margin:30px 0 12px}
+  .row{display:flex;flex-wrap:wrap;gap:16px}
+  .card{background:var(--paper2);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px}
+  .cap{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink3)}
+  .lock{display:flex;align-items:center;gap:10px}
+  .wm{position:relative;font-family:Fraunces,serif;font-weight:600;font-size:30px;letter-spacing:-.02em;text-transform:lowercase;line-height:1}
+  .wm::after{content:"";position:absolute;left:1px;right:-.34em;bottom:-.14em;height:.07em;background:var(--brass);border-radius:2px}
+  .mark{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:Fraunces,serif;font-weight:600;position:relative}
+  .mark .p{font-size:34px;line-height:1;transform:translateY(2px)}
+  .mark .u{position:absolute;bottom:9px;left:12px;right:9px;height:3px;border-radius:2px;background:var(--brass)}
+  .mk-dark{background:var(--ink);color:var(--paper)}
+  .mk-light{background:var(--paper);color:var(--ink);border:1px solid rgba(25,25,38,.12)}
+  .swatches{display:flex;gap:12px}.sw{width:96px;height:60px;border-radius:10px;display:flex;align-items:flex-end;padding:8px;font-size:11px;color:#fff}
+  .dos{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .do,.dont{border-radius:12px;padding:14px 16px;font-size:13px;line-height:1.5}
+  .do{background:#E4EFE7;color:#245c3a}.dont{background:#F6E4E0;color:#8f3121}
+  .do b,.dont b{display:block;margin-bottom:4px}
+  .clear{position:relative;display:inline-flex;padding:22px;border:1px dashed var(--brass);border-radius:12px}
+  ul{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.6;color:#3a3a48}
+  code{background:#F3EEE3;padding:1px 5px;border-radius:4px;font-size:12px}
+</style></head>
+<body><div class="wrap">
+  <h1>Peshi — logo usage</h1>
+  <p class="sub">The “p” tile mark + wordmark. Working identity (WO-05) · palette-clean · <b>Route-A draft — human-refine + TM-search “Peshi” before external/print use.</b></p>
+
+  <h2>Lockups &amp; colourways</h2>
+  <div class="row">
+    <div class="card"><span class="cap">on light → dark tile</span><div class="lock"><span class="mark mk-dark"><span class="p">p</span><span class="u"></span></span><span class="wm">peshi</span></div></div>
+    <div class="card" style="background:var(--ink)"><span class="cap" style="color:#9C9CAC">on dark → light tile</span><div class="lock"><span class="mark mk-light"><span class="p">p</span><span class="u"></span></span><span class="wm" style="color:var(--paper)">peshi</span></div></div>
+    <div class="card"><span class="cap">mark only (avatar / favicon)</span><div class="lock"><span class="mark mk-dark" style="width:54px;height:54px"><span class="p" style="font-size:42px">p</span><span class="u" style="bottom:11px"></span></span></div></div>
+  </div>
+
+  <h2>Clearspace &amp; minimum size</h2>
+  <div class="row">
+    <div class="card"><span class="cap">clearspace = height of the “p”</span><span class="clear"><span class="mark mk-dark"><span class="p">p</span><span class="u"></span></span></span></div>
+    <div class="card"><span class="cap">min sizes (mark holds)</span><div class="lock" style="gap:16px;align-items:flex-end"><img src="../../public/icons/favicon-16.png" width="16" height="16"><img src="../../public/icons/favicon-32.png" width="32" height="32"><img src="../../public/icons/apple-icon.png" width="48" height="48"></div><span class="cap">16 · 32 · 48 px</span></div>
+  </div>
+
+  <h2>Palette (no other colours)</h2>
+  <div class="swatches">
+    <div class="sw" style="background:#191926">ink · #191926</div>
+    <div class="sw" style="background:#A8823C">brass · #A8823C</div>
+    <div class="sw" style="background:#FAF7F1;color:#191926">paper · #FAF7F1</div>
+  </div>
+
+  <h2>Do &amp; don’t</h2>
+  <div class="dos">
+    <div class="do"><b>Do</b>Use the dark tile on light surfaces, the light tile on dark. Keep the brass underline. Give it clearspace. Use the supplied favicon/PWA PNGs for icons.</div>
+    <div class="dont"><b>Don’t</b>Recolour outside ink/brass/paper. Stretch, rotate, add shadows/gradients/glow. Swap the font. Place on a busy photo. Re-type the “p” in a different serif.</div>
+  </div>
+
+  <h2>Files</h2>
+  <ul>
+    <li><b>In-app:</b> <code>&lt;PeshiMark tone="dark|light" size /&gt;</code> — renders live Fraunces via <code>var(--f-display)</code>. Wired into nav, marketing header/footer, landing, login.</li>
+    <li><b>Icons (reliable raster source):</b> <code>public/icons/{favicon-16,32,48, icon-192, icon-512, icon-maskable-512}.png</code> + <code>src/app/{icon,apple-icon}.png</code> + <code>src/app/manifest.ts</code>.</li>
+    <li><b>Masters:</b> <code>public/logo/peshi-mark-{dark,light,mono}.svg</code> — the “p” uses <code>font-family:Fraunces</code>; <b>outline the glyph</b> (fonttools/Illustrator) before any external handoff or print.</li>
+    <li><b>Wordmark:</b> Fraunces, lowercase, semibold, with the brass hearing-date underline (<code>.ec-underline</code>).</li>
+  </ul>
+</div></body></html>
