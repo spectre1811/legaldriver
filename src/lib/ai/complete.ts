@@ -14,7 +14,7 @@ let sdk: Anthropic | null = null;
 const getSdk = (): Anthropic => (sdk ??= new Anthropic());
 
 type Schema = Record<string, unknown>;
-export type Backend = "deepseek" | "custom";
+export type Backend = "deepseek" | "custom" | "litellm";
 export type CompleteOpts = { model?: string; maxTokens?: number; backend?: Backend };
 
 // ── OpenAI-compatible (DeepSeek / OpenAI / Together / Groq / Ollama / vLLM / …) ──
@@ -31,9 +31,19 @@ function customCfg(model?: string): OaiCfg | null {
   if (!apiKey || !baseUrl) return null;
   return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, model: model ?? process.env.LLM_MODEL ?? "gpt-4o-mini" };
 }
+// LiteLLM proxy (OpenAI-compatible surface) — the AI gateway's self-hosted route
+// hub (04-AI §0, 12-CLOUD ADR-C8). Enabled only when LITELLM_BASE_URL + key are
+// set; otherwise callers requesting "litellm" degrade to the keyless router below.
+function litellmCfg(model?: string): OaiCfg | null {
+  const apiKey = process.env.LITELLM_API_KEY;
+  const baseUrl = process.env.LITELLM_BASE_URL;
+  if (!apiKey || !baseUrl) return null;
+  return { baseUrl: baseUrl.replace(/\/$/, ""), apiKey, model: model ?? process.env.LITELLM_MODEL ?? "cheap" };
+}
 function cfgFor(backend: Backend | undefined, model?: string): OaiCfg | null {
   if (backend === "custom") return customCfg(model);
   if (backend === "deepseek") return deepseekCfg(model);
+  if (backend === "litellm") return litellmCfg(model);
   return null;
 }
 // Global default backend when a call doesn't specify one (env-driven agnosticism).

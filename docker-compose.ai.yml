@@ -1,0 +1,50 @@
+# Local AI-gateway backends for WO-02: LiteLLM proxy (OpenAI-compatible route hub)
+# + Langfuse (traces/evals). This is the LOCAL/DEV surface — the production Fargate
+# deploy of the ai-proxy service is founder-gated infra (12-CLOUD ADR-C8), applied
+# separately. The app talks to these only when the matching env vars are set;
+# otherwise it stays keyless (local Claude CLI) — see WO-02 decision B.
+#
+# Usage:
+#   docker compose -f docker-compose.ai.yml up -d
+# then in .env:
+#   LITELLM_BASE_URL=http://localhost:4000/v1
+#   LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#   LANGFUSE_HOST=http://localhost:3001
+#   LANGFUSE_PUBLIC_KEY=...   LANGFUSE_SECRET_KEY=...   (create a project in the Langfuse UI)
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    command: ["--config", "/app/litellm.config.yaml", "--port", "4000"]
+    ports:
+      - "4000:4000"
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-local-dev}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./scripts/litellm.config.yaml:/app/litellm.config.yaml:ro
+
+  langfuse-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse-db:/var/lib/postgresql/data
+
+  langfuse:
+    image: langfuse/langfuse:2
+    depends_on:
+      - langfuse-db
+    ports:
+      - "3001:3000"
+    environment:
+      DATABASE_URL: postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
+      NEXTAUTH_URL: http://localhost:3001
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-local-dev-secret}
+      SALT: ${LANGFUSE_SALT:-local-dev-salt}
+      TELEMETRY_ENABLED: "false"
+
+volumes:
+  langfuse-db:

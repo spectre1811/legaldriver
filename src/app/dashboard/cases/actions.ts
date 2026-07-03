@@ -7,7 +7,7 @@ import { getCaseCached } from "@/lib/court/gateway";
 import { getTenantId, upsertCase } from "@/lib/court/sync";
 import { extractText } from "@/lib/docs/extract";
 import { sha256Hex } from "@/lib/docs/hash";
-import { completeJson } from "@/lib/ai/complete";
+import { aiGateway } from "@/lib/ai/gateway";
 import { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } from "@/lib/docs/case-summary";
 import { logActivity } from "@/lib/activity";
 import { scheduleReminders } from "@/lib/notify/schedule";
@@ -85,8 +85,16 @@ export async function generateCaseSummary(matterId: string): Promise<ActionResul
     documents: docs ?? [],
   });
 
-  const raw = await completeJson(prompt, CASE_SUMMARY_SCHEMA as unknown as Record<string, unknown>);
-  const summary = normalizeCaseSummary(raw);
+  // AI only via the gateway (04-AI §0). Scope is computed from the session here
+  // (tenant-only for a summary) and passed in — the gateway never widens it.
+  const res = await aiGateway.run({
+    task: "summary.case",
+    input: prompt,
+    schema: CASE_SUMMARY_SCHEMA as unknown as Record<string, unknown>,
+    tenantId,
+    scope: { kind: "tenant", tenantId },
+  });
+  const summary = normalizeCaseSummary(res.output);
   if (!summary) {
     // No synchronous AI backend here (e.g. Vercel) — hand off to the background
     // worker (our Claude Code). Clearing ai_summary makes the worker pick it up.
