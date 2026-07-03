@@ -44,16 +44,20 @@ async function writeUsage(e: TraceEvent): Promise<void> {
   if (SOFT_WARN_USD > 0) await softWarn(sb, e.tenantId);
 }
 
+function currentMonthStartIso(): string {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
+
 async function softWarn(sb: ReturnType<typeof createAdminClient>, tenantId: string): Promise<void> {
-  // Latest month row for this tenant = month-to-date (the rollup view groups by month).
+  // Month-to-date only: filter to the CURRENT month so a tenant idle this month
+  // isn't warned on a stale prior-month total.
   const { data } = await sb
     .from("ai_usage_monthly")
     .select("cost_usd, month")
     .eq("tenant_id", tenantId)
-    .order("month", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const mtd = Number(data?.cost_usd ?? 0);
+    .gte("month", currentMonthStartIso());
+  const mtd = (data ?? []).reduce((s, r) => s + Number(r.cost_usd ?? 0), 0);
   if (mtd >= SOFT_WARN_USD) {
     console.warn(
       `[ai-gateway] soft-warn: tenant ${tenantId} month-to-date AI cost $${mtd.toFixed(2)} ≥ threshold $${SOFT_WARN_USD} (no hard cap — tiers/billing = WO-04)`,
