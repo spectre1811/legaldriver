@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { generateCaseSummary, addCaseDocument, updateCase, refreshCase, confirmDeadline, dismissDeadline, setDiaryDate } from "../actions";
 
@@ -10,11 +11,12 @@ export function MatterDiaryDate({ matterId, synced, override }: { matterId: stri
   const [editing, setEditing] = useState(false);
   const [pending, start] = useTransition();
   const router = useRouter();
+  const t = useTranslations("caseDetail");
   if (!editing) {
     return (
       <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1.5 text-xs text-brand-600 hover:underline">
         <Icon name="calendar" className="h-3.5 w-3.5" />
-        {override ? `Diary date: ${override} (overriding ${synced ?? "—"})` : "Set your diary date"}
+        {override ? t("actions.diaryDateOverride", { date: override, synced: synced ?? "—" }) : t("actions.setDiaryDate")}
       </button>
     );
   }
@@ -27,9 +29,9 @@ export function MatterDiaryDate({ matterId, synced, override }: { matterId: stri
           await setDiaryDate(matterId, v); setEditing(false); router.refresh();
         })}
         disabled={pending} className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700"
-      >Save</button>
-      {override && <button onClick={() => start(async () => { await setDiaryDate(matterId, ""); setEditing(false); router.refresh(); })} className="text-xs text-ink-faint hover:text-red-600">Clear</button>}
-      <button onClick={() => setEditing(false)} className="text-xs text-ink-faint">Cancel</button>
+      >{t("actions.save")}</button>
+      {override && <button onClick={() => start(async () => { await setDiaryDate(matterId, ""); setEditing(false); router.refresh(); })} className="text-xs text-ink-faint hover:text-red-600">{t("actions.clear")}</button>}
+      <button onClick={() => setEditing(false)} className="text-xs text-ink-faint">{t("actions.cancel")}</button>
     </div>
   );
 }
@@ -38,13 +40,14 @@ export function MatterDiaryDate({ matterId, synced, override }: { matterId: stri
 export function ProposedDeadlineActions({ deadlineId }: { deadlineId: string }) {
   const [pending, start] = useTransition();
   const router = useRouter();
+  const t = useTranslations("caseDetail");
   return (
     <span className="flex items-center gap-2">
       <button onClick={() => start(async () => { await confirmDeadline(deadlineId); router.refresh(); })} disabled={pending} className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50">
-        Confirm
+        {t("actions.confirm")}
       </button>
       <button onClick={() => start(async () => { await dismissDeadline(deadlineId); router.refresh(); })} disabled={pending} className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-red-600 disabled:opacity-50">
-        Dismiss
+        {t("actions.dismiss")}
       </button>
     </span>
   );
@@ -53,13 +56,14 @@ export function ProposedDeadlineActions({ deadlineId }: { deadlineId: string }) 
 export function RefreshButton({ matterId }: { matterId: string }) {
   const [pending, start] = useTransition();
   const router = useRouter();
+  const t = useTranslations("caseDetail");
   return (
     <button
       onClick={() => start(async () => { await refreshCase(matterId); router.refresh(); })}
       disabled={pending}
       className="btn-secondary"
     >
-      <Icon name="refresh" className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} /> {pending ? "Refreshing" : "Refresh"}
+      <Icon name="refresh" className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} /> {pending ? t("actions.refreshing") : t("actions.refresh")}
     </button>
   );
 }
@@ -68,6 +72,7 @@ export function GenerateSummaryButton({ matterId, has }: { matterId: string; has
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState("");
   const router = useRouter();
+  const t = useTranslations("caseDetail");
   return (
     <div className="flex items-center gap-3">
       <button
@@ -75,7 +80,7 @@ export function GenerateSummaryButton({ matterId, has }: { matterId: string; has
         disabled={pending}
         className="btn-primary"
       >
-        <Icon name="sparkles" className="h-4 w-4" /> {pending ? "Analysing…" : has ? "Regenerate" : "Generate AI summary"}
+        <Icon name="sparkles" className="h-4 w-4" /> {pending ? t("actions.analysing") : has ? t("actions.regenerate") : t("actions.generateSummary")}
       </button>
       {msg && <span className="max-w-xs text-xs text-ink-muted">{msg}</span>}
     </div>
@@ -87,6 +92,7 @@ export function AddDocumentForm({ matterId }: { matterId: string }) {
   const [msg, setMsg] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
+  const t = useTranslations("caseDetail");
   return (
     <form
       ref={formRef}
@@ -103,7 +109,7 @@ export function AddDocumentForm({ matterId }: { matterId: string }) {
     >
       <input type="file" name="file" required className="block max-w-xs text-sm text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100" />
       <button type="submit" disabled={pending} className="btn-secondary">
-        <Icon name="upload" className="h-4 w-4" /> {pending ? "Uploading…" : "Upload"}
+        <Icon name="upload" className="h-4 w-4" /> {pending ? t("actions.uploading") : t("actions.upload")}
       </button>
       {msg && <span className="text-xs text-ink-muted">{msg}</span>}
     </form>
@@ -120,10 +126,11 @@ export function EditCaseForm({
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const router = useRouter();
+  const t = useTranslations("caseDetail");
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} className="btn-secondary">
-        <Icon name="settings" className="h-4 w-4" /> Edit
+        <Icon name="settings" className="h-4 w-4" /> {t("actions.edit")}
       </button>
     );
   }
@@ -142,18 +149,18 @@ export function EditCaseForm({
       }}
       className="card w-full space-y-4 p-5"
     >
-      <h3 className="text-base font-medium">Edit case</h3>
+      <h3 className="text-base font-medium">{t("actions.editCaseTitle")}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
-        {field("title", "Title")}
-        {field("court", "Court")}
-        {field("case_type", "Case type")}
-        {field("stage", "Stage")}
-        {field("status", "Status")}
-        {field("next_hearing_date", "Next hearing", "date")}
+        {field("title", t("actions.fieldTitle"))}
+        {field("court", t("actions.fieldCourt"))}
+        {field("case_type", t("actions.fieldCaseType"))}
+        {field("stage", t("actions.fieldStage"))}
+        {field("status", t("actions.fieldStatus"))}
+        {field("next_hearing_date", t("actions.fieldNextHearing"), "date")}
       </div>
       <div className="flex gap-2">
-        <button type="submit" disabled={pending} className="btn-primary">{pending ? "Saving…" : "Save"}</button>
-        <button type="button" onClick={() => setOpen(false)} className="btn-ghost">Cancel</button>
+        <button type="submit" disabled={pending} className="btn-primary">{pending ? t("actions.saving") : t("actions.save")}</button>
+        <button type="button" onClick={() => setOpen(false)} className="btn-ghost">{t("actions.cancel")}</button>
       </div>
     </form>
   );

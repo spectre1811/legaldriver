@@ -1,24 +1,27 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 import { createNotice, type ActionResult } from "./actions";
 
 const initial: ActionResult = { ok: false, message: "" };
 
 function Submit() {
   const { pending } = useFormStatus();
-  return <button type="submit" disabled={pending} className="btn-primary">{pending ? "Creating…" : "Create notice"}</button>;
+  const t = useTranslations("notices");
+  return <button type="submit" disabled={pending} className="btn-primary">{pending ? t("form.submitPending") : t("form.submit")}</button>;
 }
 
 export function NoticeForm({ matters }: { matters: { id: string; title: string }[] }) {
+  const t = useTranslations("notices");
   const [state, action] = useFormState(createNotice, initial);
   return (
     <form action={action} className="space-y-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <input name="type" required placeholder="Type, e.g. Legal demand notice" className="input" aria-label="Notice type" />
-        <input name="response_due" required type="date" className="input" aria-label="Response due date" />
-        <select name="matter_id" className="input" aria-label="Linked case">
-          <option value="">No linked case</option>
+        <input name="type" required placeholder={t("form.typePlaceholder")} className="input" aria-label={t("form.typeLabel")} />
+        <input name="response_due" required type="date" className="input" aria-label={t("form.responseDueLabel")} />
+        <select name="matter_id" className="input" aria-label={t("form.linkedCaseLabel")}>
+          <option value="">{t("form.noLinkedCase")}</option>
           {matters.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
         </select>
       </div>

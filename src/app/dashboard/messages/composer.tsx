@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { sendMessage } from "./actions";
 import { Icon } from "@/components/icons";
 
@@ -13,6 +14,7 @@ export function Composer() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
+  const t = useTranslations("messages");
 
   function submit() {
     setMsg(null);
@@ -29,13 +31,13 @@ export function Composer() {
   return (
     <div className="card space-y-3 p-5">
       <div className="flex items-center gap-2 text-sm font-medium text-ink">
-        <Icon name="inbox" className="h-4 w-4 text-brand-500" /> New WhatsApp message
+        <Icon name="inbox" className="h-4 w-4 text-brand-500" /> {t("composer.title")}
       </div>
       <div className="grid gap-3 sm:grid-cols-[minmax(0,16rem)_1fr]">
         <input
           value={to}
           onChange={(e) => setTo(e.target.value)}
-          placeholder="Recipient number (e.g. 919876543210)"
+          placeholder={t("composer.recipientPlaceholder")}
           className="input"
           inputMode="tel"
           disabled={pending}
@@ -44,20 +46,19 @@ export function Composer() {
           value={body}
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !pending) submit(); }}
-          placeholder="Message…"
+          placeholder={t("composer.messagePlaceholder")}
           className="input"
           disabled={pending}
         />
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <button onClick={submit} disabled={pending || !to.trim() || !body.trim()} className="btn-primary">
-          <Icon name="external" className="h-4 w-4" /> {pending ? "Sending…" : "Send"}
+          <Icon name="external" className="h-4 w-4" /> {pending ? t("composer.sending") : t("composer.send")}
         </button>
         {msg && <span className={`text-xs ${msg.ok ? "text-emerald-600" : "text-amber-700"}`}>{msg.text}</span>}
       </div>
       <p className="text-xs text-ink-faint">
-        Messages are logged to the matter; AI routing is assistive. Send only from the firm&apos;s registered
-        Business number, and only with the recipient&apos;s consent (DPDP).
+        {t("composer.consentNote")}
       </p>
     </div>
   );
