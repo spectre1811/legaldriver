@@ -93,9 +93,9 @@
       "notifications": "सूचनाएँ",
       "copilot": "कोपायलट",
       "drafting": "प्रारूपण",
-      "settings": "सेटिंग्स"
-    },
-    "aiUsage": "AI उपयोग"
+      "settings": "सेटिंग्स",
+      "aiUsage": "AI उपयोग"
+    }
   },
   "today": {
     "overline": "Today's hearings",
