@@ -35,12 +35,15 @@ function parseTypes(raw: string | undefined): Kind[] {
 // Map raw rows for a date range into normalized events. Used for both the month
 // grid window and the rolling 30-day agenda window.
 async function loadEvents(supabase: ReturnType<typeof createClient>, start: string, end: string, t: Awaited<ReturnType<typeof getTranslations>>): Promise<CalEvent[]> {
-  const [{ data: hearings }, { data: causeList }, { data: deadlines }, { data: events }, { data: ip }] = await Promise.all([
+  const [{ data: hearings }, { data: causeList }, { data: deadlines }, { data: events }, { data: ip }, { data: listed }] = await Promise.all([
     supabase.from("hearing").select("id, date, purpose, matter:matter_id (id, title)").gte("date", start).lte("date", end),
     supabase.from("cause_list_entry").select("id, list_date, item_no, cnr, matter_id").gte("list_date", start).lte("list_date", end),
     supabase.from("deadline").select("id, due_date, kind, matter_id").eq("status", "open").gte("due_date", start).lte("due_date", end),
     supabase.from("calendar_event").select("id, event_date, title, kind, matter_id").gte("event_date", start).lte("event_date", end),
     supabase.from("ip_asset").select("id, title, type, renewal_date").gte("renewal_date", start).lte("renewal_date", end),
+    // Live cause-list alerts (the CNR-match cron writes activity_event type=case.listed; the list
+    // date is in meta.date). Surfaced under the "causelist" kind alongside advocate-upload entries.
+    supabase.from("activity_event").select("id, matter_id, meta, matter:matter_id (title)").eq("type", "case.listed").gte("meta->>date", start).lte("meta->>date", end),
   ]);
 
   return [
@@ -52,6 +55,11 @@ async function loadEvents(supabase: ReturnType<typeof createClient>, start: stri
     ...(deadlines ?? []).map((d): CalEvent => ({ id: `d-${d.id}`, date: d.due_date, title: d.kind, kind: "deadline", href: d.matter_id ? `/dashboard/cases/${d.matter_id}` : null, deletable: false })),
     ...(events ?? []).map((e): CalEvent => ({ id: e.id, date: e.event_date, title: e.title, kind: "event", href: e.matter_id ? `/dashboard/cases/${e.matter_id}` : null, meta: e.kind, deletable: true })),
     ...(ip ?? []).filter((a) => a.renewal_date).map((a): CalEvent => ({ id: `i-${a.id}`, date: a.renewal_date as string, title: t("ipRenewalTitle", { title: a.title }), kind: "iprenewal", href: "/dashboard/ip", meta: a.type ?? undefined, deletable: false })),
+    ...(listed ?? []).map((l): CalEvent => {
+      const meta = (l.meta ?? {}) as { date?: string; itemNo?: string | null; type?: string | null };
+      const m = l.matter as unknown as { title: string } | null;
+      return { id: `l-${l.id}`, date: meta.date ?? "", title: m?.title ?? t("causeListTitle", { cnr: t("caseFallback") }), kind: "causelist", href: l.matter_id ? `/dashboard/cases/${l.matter_id}` : null, meta: meta.itemNo ? t("itemMeta", { n: meta.itemNo }) : (meta.type ?? undefined), deletable: false };
+    }).filter((e) => e.date),
   ].sort((a, b) => a.date.localeCompare(b.date));
 }
 

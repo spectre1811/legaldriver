@@ -310,7 +310,12 @@
       "act": "act"
     },
     "orders": {
-      "title": "Orders & Judgments"
+      "title": "Orders & Judgments",
+      "viewText": "View full text",
+      "hideText": "Hide text",
+      "loading": "Loading text…",
+      "textNotAvailable": "Full text not available yet.",
+      "textError": "Couldn't load the text."
     },
     "processes": {
       "title": "Processes",
