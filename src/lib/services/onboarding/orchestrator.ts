@@ -107,12 +107,26 @@ export async function runOnboarding(
   await setRun(supabase, runId, { counts });
 
   // ── Stage 2: per-CNR enrich → upsertCase (puts hearings on calendar + reminders) ──
+  // Onboarding pulls each case LIVE from the source (eCourts read-through via the
+  // provider's refresh — POST /v1/cases/{cnr}/refresh) rather than serving our cache:
+  // a one-time onboarding should reflect the CURRENT record, not a stale copy. If the
+  // live refresh is unavailable (provider down / keyless), fall back to the cached read
+  // per CNR so enrichment still runs (resilience model: never fail the whole onboarding).
   await setRun(supabase, runId, { stage: "enrich" });
   const { data: matters } = await supabase.from("matter").select("cnr").eq("tenant_id", tenantId).eq("status", "active").not("cnr", "is", null).limit(ENRICH_CAP);
-  for (const m of matters ?? []) {
-    if (!m.cnr) continue;
+  const enrichCnrs = (matters ?? []).map((m) => m.cnr).filter((c): c is string => !!c);
+  let live: Awaited<ReturnType<typeof court.refreshCases>> = [];
+  try {
+    live = await court.refreshCases(enrichCnrs); // LIVE eCourts read-through
+  } catch { /* live refresh unavailable → cached fallback below */ }
+  const liveCnrs = new Set(live.map((c) => c.cnr));
+  for (const c of live) {
+    try { await upsertCase(supabase, tenantId, c); counts.enriched++; } catch { /* skip one */ }
+  }
+  for (const cnr of enrichCnrs) {
+    if (liveCnrs.has(cnr)) continue; // already live-refreshed above
     try {
-      const res = await getCaseCached(m.cnr);
+      const res = await getCaseCached(cnr);
       if (res.case) { await upsertCase(supabase, tenantId, res.case); counts.enriched++; }
     } catch { /* keep going; stays at cause-list depth, flagged for HITL */ }
   }

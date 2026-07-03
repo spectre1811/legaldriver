@@ -34,3 +34,37 @@ export async function startOnboarding(advocateId: string): Promise<OnboardingAct
     return { ok: false, runId: run.id, message: "Onboarding hit an error — partial progress saved; you can re-run." };
   }
 }
+
+// Delete (undo) an onboarding: remove the advocate, its onboarding runs, and the cases
+// that were onboarded FROM that advocate. Cases are attributed precisely by the
+// advocate's authoritative roster CNRs (re-fetched by bar id) — not by name-match — so
+// a namesake's cases are never touched. Deleting a matter cascades hearings/orders/etc.
+export async function deleteOnboarding(advocateId: string): Promise<OnboardingActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+
+  const { data: adv } = await supabase.from("advocate").select("name, bar_code, state_code").eq("id", advocateId).maybeSingle();
+  if (!adv) return { ok: false, message: "Advocate not found." };
+
+  let removed = 0;
+  try {
+    const { fetchAdvocateCases } = await import("@/lib/court/advocate-cases");
+    const roster = await fetchAdvocateCases({ name: adv.name, barNumber: adv.bar_code, stateCode: adv.state_code });
+    const cnrs = [...new Set(roster.map((c) => c.cnr).filter((c): c is string => !!c))];
+    for (let i = 0; i < cnrs.length; i += 100) {
+      const { data: del } = await supabase.from("matter").delete().in("cnr", cnrs.slice(i, i + 100)).select("id"); // RLS scopes to tenant
+      removed += del?.length ?? 0;
+    }
+  } catch { /* best-effort case cleanup; advocate + runs still removed below */ }
+
+  await supabase.from("onboarding_run").delete().eq("advocate_id", advocateId);
+  const { error } = await supabase.from("advocate").delete().eq("id", advocateId);
+  if (error) return { ok: false, message: error.message };
+
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "onboarding.delete", entity: "advocate", entity_id: advocateId });
+  revalidatePath("/dashboard/onboarding");
+  revalidatePath("/dashboard/cases");
+  revalidatePath("/dashboard/calendar");
+  return { ok: true, message: `Removed ${adv.name} and ${removed} onboarded case${removed === 1 ? "" : "s"}.` };
+}
