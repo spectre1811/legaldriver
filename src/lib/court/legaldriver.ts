@@ -11,7 +11,15 @@ import type { CourtDataClient } from "./client";
 
 const DEFAULT_BASE = "http://13.202.148.71:8080";
 
+// Sync contract (02-DATA §3): we consume the versioned /v1 surface and the provider stamps
+// every /v1 response with `schema_version`. We pin the MAJOR we were built against; a major
+// mismatch means a breaking provider change → warn loudly (once) so it surfaces in logs
+// without hard-failing a lawyer's add-case. Additive/minor changes are ignored by design.
+const SYNC_SCHEMA_MAJOR = 1;
+let warnedSchema = false;
+
 type RawCase = {
+  schema_version?: string;
   cnr: string; tier?: string; case_type?: string; status?: string;
   registration_number?: string | null; registration_year?: number | null; decision_date?: string | null;
   coram?: string | null; fir_no?: string | null; fir_year?: number | null; police_station?: string | null; source?: string;
@@ -77,6 +85,17 @@ function barPath(b: string): string { return b.split("/").map(encodeURIComponent
 export class LegalDriverClient implements CourtDataClient {
   readonly source = "legaldriver";
   constructor(private readonly apiKey: string, private readonly base: string = process.env.LD_API_BASE || DEFAULT_BASE) {}
+
+  // Soft schema-version guard for /v1 sync responses. Warns once per process on a MAJOR
+  // mismatch; never throws (a stale-but-usable payload still beats blocking the user).
+  private checkSchema(version?: string): void {
+    if (!version || warnedSchema) return;
+    const major = Number(String(version).split(".")[0]);
+    if (Number.isFinite(major) && major !== SYNC_SCHEMA_MAJOR) {
+      warnedSchema = true;
+      console.warn(`[court:legaldriver] sync API schema_version=${version} but client expects major ${SYNC_SCHEMA_MAJOR} — verify the /v1 contract (02-DATA §3).`);
+    }
+  }
 
   private async req<T>(path: string, init?: RequestInit): Promise<T | null> {
     try {
@@ -179,7 +198,8 @@ export class LegalDriverClient implements CourtDataClient {
   }
 
   async getCaseByCNR(cnr: string): Promise<NormalizedCase | null> {
-    const r = await this.req<RawCase>(`/case/${encodeURIComponent(cnr)}`);
+    const r = await this.req<RawCase>(`/v1/cases/${encodeURIComponent(cnr)}`);
+    this.checkSchema(r?.schema_version);
     return r && r.cnr ? this.map(r) : null;
   }
 
@@ -205,15 +225,17 @@ export class LegalDriverClient implements CourtDataClient {
     // searchByAdvocate for the caseload instead. Support the court-scoped form when given.
     const courtId = q.court;
     if (!courtId) return [];
-    const r = await this.req<{ items?: { court_id?: string; item_no?: string; cnr?: string; title?: string }[]; cases?: unknown[] }>(`/cause-list?court_id=${encodeURIComponent(courtId)}&date=${encodeURIComponent(q.date)}`);
-    const items = (r?.items ?? (Array.isArray(r?.cases) ? r?.cases : [])) as { item_no?: string; cnr?: string; title?: string }[];
-    return items.map((it) => ({ listDate: q.date, court: courtId, itemNo: it.item_no, cnr: it.cnr, title: it.title, raw: it }));
+    const r = await this.req<{ schema_version?: string; items?: { court_id?: string; item_no?: string; item_number?: string; cnr?: string; title?: string; parties?: string; advocate?: string }[]; cases?: unknown[] }>(`/v1/cause-lists?court_id=${encodeURIComponent(courtId)}&date=${encodeURIComponent(q.date)}`);
+    this.checkSchema(r?.schema_version);
+    const items = (r?.items ?? (Array.isArray(r?.cases) ? r?.cases : [])) as { item_no?: string; item_number?: string; cnr?: string; title?: string; parties?: string }[];
+    return items.map((it) => ({ listDate: q.date, court: courtId, itemNo: it.item_no ?? it.item_number, cnr: it.cnr, title: it.title ?? it.parties, raw: it }));
   }
 
   async refreshCases(cnrs: string[]): Promise<NormalizedCase[]> {
     const out: NormalizedCase[] = [];
     for (const cnr of cnrs.slice(0, 50)) {
-      const r = await this.req<RawCase>(`/case/${encodeURIComponent(cnr)}/refresh`, { method: "POST" });
+      const r = await this.req<RawCase>(`/v1/cases/${encodeURIComponent(cnr)}/refresh`, { method: "POST" });
+      this.checkSchema(r?.schema_version);
       if (r?.cnr) out.push(this.map(r));
     }
     return out;
@@ -223,7 +245,8 @@ export class LegalDriverClient implements CourtDataClient {
     // Per the API: PDFs are streamed durably via /order/{id}/pdf (our /api/court/order-pdf
     // proxy does this). This helper returns the stable stream path (never a presigned URL —
     // those expire) + extracted text. ?fetch=true pulls a missing district PDF live.
-    const data = await this.req<{ orders?: { order_id?: number | string; has_pdf?: boolean; pdf_stream?: string | null; text?: string | null }[] }>(`/case/${encodeURIComponent(cnr)}/orders?fetch=true&text=true`);
+    const data = await this.req<{ schema_version?: string; orders?: { order_id?: number | string; has_pdf?: boolean; pdf_stream?: string | null; text?: string | null }[] }>(`/v1/cases/${encodeURIComponent(cnr)}/orders?fetch=true&text=true`);
+    this.checkSchema(data?.schema_version);
     const o = (data?.orders ?? []).find((x) => String(x.order_id ?? "") === String(orderId));
     if (!o) return null;
     const streamPath = o.pdf_stream ?? (o.has_pdf ? `/order/${encodeURIComponent(orderId)}/pdf` : undefined);
