@@ -6,6 +6,7 @@ import { Card, Badge, Disclaimer, fmtDate, fmtSize } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
 import { DraftReplyButton } from "@/components/draft-reply-button";
+import { DocPreview } from "@/components/doc-preview";
 import { CATEGORY_LABEL } from "@/lib/docs/categories";
 
 const TEXT_LIMIT = 5000;
@@ -22,7 +23,7 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
   // RLS scopes this to the caller's tenant — they can only see their own docs.
   const { data: doc } = await supabase
     .from("document")
-    .select("id, filename, doc_type, category, source, client_id, matter_id, size_bytes, parsed_text, extracted, portal_shared, created_at")
+    .select("id, filename, doc_type, category, source, client_id, matter_id, mime, size_bytes, parsed_text, extracted, portal_shared, created_at")
     .eq("id", params.id)
     .maybeSingle();
   if (!doc) notFound();
@@ -119,6 +120,16 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
           </div>
         </div>
       </section>
+
+      {/* Inline file preview — the actual document, not just its extracted text. */}
+      <Card className="overflow-hidden">
+        <div className="border-b border-line px-5 py-4">
+          <h2 className="text-base font-medium">{t("preview.heading")}</h2>
+        </div>
+        <div className="p-4">
+          <DocPreview documentId={doc.id} mime={doc.mime} filename={doc.filename} />
+        </div>
+      </Card>
 
       {/* Summary */}
       {summary && (

@@ -7,13 +7,14 @@ import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "@/components/icons";
 import { Badge } from "@/components/ui";
 import { DocActions } from "@/components/doc-actions";
+import { DocPreview } from "@/components/doc-preview";
 import { rangeIds, toggle } from "@/lib/select-range";
 import {
-  bulkDeleteDocuments, restoreDocuments, purgeDocuments, bulkFileToClient, bulkFileToCase, bulkDownloadUrls,
+  bulkDeleteDocuments, restoreDocuments, purgeDocuments, bulkFileToClient, bulkFileToCase,
 } from "./actions";
 
 export type DocRow = {
-  id: string; filename: string; docType: string | null;
+  id: string; filename: string; docType: string | null; mime: string | null;
   primary: string | null; secondary: string | null;
   sourceLabel: string; sizeLabel: string; dateLabel: string;
   matterId: string | null; clientId: string | null; shared: boolean;
@@ -33,15 +34,30 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
   const [anchor, setAnchor] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [undo, setUndo] = useState<{ ids: string[]; label: string } | null>(null);
+  const [exportErr, setExportErr] = useState(false);
+  const [preview, setPreview] = useState<DocRow | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+
+  // When the quick-look opens, move focus into the dialog (a11y) and restore it to the trigger on close.
+  useEffect(() => {
+    if (!preview) return;
+    const prev = document.activeElement as HTMLElement | null;
+    closeBtnRef.current?.focus();
+    return () => prev?.focus?.();
+  }, [preview]);
 
   const clear = useCallback(() => { setSel(new Set()); setAnchor(null); }, []);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") clear(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (preview) setPreview(null); // close the quick-look first…
+      else clear();                  // …otherwise drop the selection
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [clear]);
+  }, [clear, preview]);
 
   function onRowClick(id: string, shift: boolean) {
     if (shift && anchor) {
@@ -77,9 +93,32 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
     if (!window.confirm(t("bulk.purgeConfirm", { n: sel.size }))) return;
     const ids = [...sel]; await run(() => purgeDocuments(ids)); clear();
   }
-  async function onDownload() {
-    const r = await bulkDownloadUrls([...sel]);
-    r.files.forEach((f) => window.open(f.url, "_blank"));
+  // Export the selection as ONE zip (files + an index.csv register) via the export route, instead
+  // of opening a signed URL per file in a new tab (which browsers block past the first).
+  async function onExport() {
+    setExportErr(false);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/documents/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [...sel] }),
+      });
+      if (!res.ok) { setExportErr(true); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "documents-export.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportErr(true);
+    } finally {
+      setBusy(false);
+    }
   }
   async function onFileClient(clientId: string) {
     if (!clientId) return;
@@ -162,7 +201,18 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
                         <td className="hidden px-4 py-3.5 text-xs text-ink-faint lg:table-cell">{d.sizeLabel}</td>
                         <td className="hidden px-4 py-3.5 text-xs text-ink-faint lg:table-cell">{d.dateLabel}</td>
                         <td className="px-4 py-3.5 text-right">
-                          <DocActions documentId={d.id} matterId={d.matterId} clientId={d.clientId} matters={matterOpts} clients={clientOpts} shared={d.shared} docType={d.docType} />
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setPreview(d)}
+                              className="rounded-lg p-1.5 text-ink-faint hover:bg-paper hover:text-ink"
+                              aria-label={t("preview.quickLook")}
+                              title={t("preview.quickLook")}
+                            >
+                              <Icon name="eye" className="h-4 w-4" />
+                            </button>
+                            <DocActions documentId={d.id} matterId={d.matterId} clientId={d.clientId} matters={matterOpts} clients={clientOpts} shared={d.shared} docType={d.docType} />
+                          </div>
                         </td>
                       </tr>
                     );
@@ -186,7 +236,7 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
             </>
           ) : (
             <>
-              <button onClick={onDownload} disabled={busy} className={btn}>{t("bulk.download")}</button>
+              <button onClick={onExport} disabled={busy} className={btn}>{busy ? t("bulk.exporting") : t("bulk.export")}</button>
               {/* Client-first: file to a client, or tag to a case. */}
               <select
                 onChange={(e) => { onFileClient(e.target.value); e.currentTarget.selectedIndex = 0; }}
@@ -218,6 +268,46 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
         <div className="fixed inset-x-0 bottom-24 z-50 mx-auto flex w-fit items-center gap-3 rounded-lg bg-ink px-4 py-2.5 text-paper shadow-xl">
           <span className="text-sm">{undo.label}</span>
           <button onClick={onUndo} className="text-sm font-semibold text-brand-200 underline">{t("bulk.undo")}</button>
+        </div>
+      )}
+
+      {/* Export failure toast. */}
+      {exportErr && (
+        <div className="fixed inset-x-0 bottom-24 z-50 mx-auto flex w-fit items-center gap-3 rounded-lg bg-red-600 px-4 py-2.5 text-paper shadow-xl">
+          <span className="text-sm">{t("bulk.exportFailed")}</span>
+          <button onClick={() => setExportErr(false)} className="text-sm font-semibold underline">{t("bulk.clear")}</button>
+        </div>
+      )}
+
+      {/* Quick-look preview modal — reuses the same viewer as the detail page. */}
+      {preview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={preview.filename}
+          onClick={() => setPreview(null)}
+        >
+          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <Icon name="documents" className="h-4 w-4 shrink-0 text-ink-faint" />
+                <span className="truncate font-medium text-ink">{preview.filename}</span>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <Link href={`/dashboard/documents/${preview.id}`} className="btn-ghost inline-flex items-center gap-1.5 text-sm" title={t("preview.open")}>
+                  <Icon name="external" className="h-4 w-4" />
+                  <span className="hidden sm:inline">{t("preview.open")}</span>
+                </Link>
+                <button ref={closeBtnRef} onClick={() => setPreview(null)} className="rounded-lg p-1.5 text-ink-faint hover:bg-paper hover:text-ink" aria-label={t("preview.close")}>
+                  <Icon name="close" className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto p-4">
+              <DocPreview documentId={preview.id} mime={preview.mime} filename={preview.filename} className="h-[70vh]" />
+            </div>
+          </div>
         </div>
       )}
     </>

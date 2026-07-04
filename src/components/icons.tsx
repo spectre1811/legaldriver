@@ -4,7 +4,7 @@ export type IconName =
   | "overview" | "cases" | "calendar" | "notices" | "bell" | "inbox" | "documents"
   | "settings" | "scale" | "plus" | "refresh" | "back" | "search" | "check" | "alert"
   | "sparkles" | "upload" | "clip" | "external" | "chevron" | "logout" | "gmail" | "clock" | "dot" | "edit"
-  | "menu" | "close" | "trash"
+  | "menu" | "close" | "trash" | "eye"
   | "clients" | "invoice" | "bulb" | "chart" | "chat" | "mic" | "gauge";
 
 const P: Record<IconName, React.ReactNode> = {
@@ -36,6 +36,7 @@ const P: Record<IconName, React.ReactNode> = {
   menu: <><path d="M3 6h18M3 12h18M3 18h18" /></>,
   close: <><path d="M18 6 6 18M6 6l12 12" /></>,
   trash: <><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" /><path d="M10 11v6M14 11v6" /></>,
+  eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></>,
   clients: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><path d="M16 5.2a3.5 3.5 0 0 1 0 6.6M15 20a6.5 6.5 0 0 0-2.8-5.3" /></>,
   invoice: <><path d="M6 2h9l3 3v15l-2.5-1.5L13 20l-2.5-1.5L8 20l-2-1.3V4a2 2 0 0 1 2-2z" /><path d="M9 8h6M9 12h4" /></>,
   bulb: <><path d="M9.5 18h5M10.5 21h3" /><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.2 1 2v.3h6v-.3c0-.8.4-1.5 1-2A7 7 0 0 0 12 2z" /></>,

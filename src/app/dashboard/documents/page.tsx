@@ -32,7 +32,7 @@ export default async function DocumentsPage({
 
   let query = supabase
     .from("document")
-    .select("id, filename, doc_type, category, source, client_id, matter_id, size_bytes, parsed_text, portal_shared, created_at")
+    .select("id, filename, doc_type, category, source, client_id, matter_id, mime, size_bytes, parsed_text, portal_shared, created_at")
     .order("created_at", { ascending: false })
     .limit(300);
   if (q) query = query.textSearch("fts", q, { type: "websearch" });
@@ -85,7 +85,7 @@ export default async function DocumentsPage({
     const clientLabel = resolvedClientId ? clientName.get(resolvedClientId) ?? null : null;
     const caseLabel = d.matter_id ? matterName.get(d.matter_id) ?? null : null;
     return {
-      id: d.id, filename: d.filename ?? "—", docType: d.doc_type,
+      id: d.id, filename: d.filename ?? "—", docType: d.doc_type, mime: d.mime,
       primary: clientLabel ?? caseLabel, secondary: clientLabel ? caseLabel : null,
       sourceLabel: SOURCE[d.source] ?? d.source, sizeLabel: fmtSize(d.size_bytes), dateLabel: fmtDate(d.created_at),
       matterId: d.matter_id, clientId: d.client_id, shared: d.portal_shared,

@@ -990,7 +990,9 @@
     "bulk": {
       "selected": "{n} selected",
       "selectAll": "Select all",
-      "download": "Download",
+      "export": "Export (.zip)",
+      "exporting": "Preparing…",
+      "exportFailed": "Export failed. Please try again.",
       "toClient": "File to client…",
       "toCase": "Tag to case…",
       "delete": "Delete",
@@ -1071,6 +1073,15 @@
     "untitled": "Untitled document",
     "via": "via {source}",
     "download": "Download",
+    "preview": {
+      "heading": "Preview",
+      "quickLook": "Preview",
+      "open": "Open full document",
+      "download": "Download to view",
+      "unavailable": "This file type can't be previewed here.",
+      "unavailableBody": "Download it to view the full document. The extracted text is shown below.",
+      "close": "Close preview"
+    },
     "summaryHeading": "Summary",
     "summaryDisclaimer": "AI-generated from this document — informational, not legal advice.",
     "extractedHeading": "Extracted text",
