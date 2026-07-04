@@ -1,0 +1,36 @@
+name: branch-guardian
+
+# CI-CD.md Layer 2 — the compensating control for the missing hard force-push lock
+# (branch protection is Pro-gated on free-private repos). We can't PREVENT a rogue
+# force-push to main, so we make it LOUD and recoverable: file an issue on any
+# non-fast-forward push. main is reconstructable from the durable wt/* branches.
+# Auto-restore is deliberately NOT automated (it could clobber a legit concurrent merge).
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  guard:
+    if: ${{ github.event.forced }}   # a force-push / history rewrite landed on main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const before = context.payload.before.slice(0, 9);
+            const after = context.payload.after.slice(0, 9);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 main force-moved: ${before} → ${after}`,
+              body: `A non-fast-forward push landed on \`main\` by @${context.actor}.\n\n` +
+                    `This can orphan merged work. Recover from a \`wt/*\` branch or restore the ` +
+                    `"before" SHA \`${context.payload.before}\`. See \`exec/COORDINATION-ARCH.md\` ` +
+                    `+ \`exec/INTEGRATION-DEPLOY.md\`.`,
+              labels: ['incident'],
+            });

@@ -1,0 +1,86 @@
+name: automerge
+
+# The free "merge queue" from CI-CD.md Layer 1 — the automated integrator.
+# Flow: a worker opens a PR from wt/<WO> → CI runs → a reviewer applies the
+# `automerge` label (the "approved to integrate" signal, since GitHub free-private
+# can't require reviews/checks server-side) → this workflow merges it into main,
+# serially. No agent ever pushes main directly.
+#
+# Why label-gated: pushing a wt/* branch is frequent + often WIP, so we do NOT
+# merge every green PR blindly. The label is the human/reviewer go-ahead; CI green
+# is still required (this only runs after CI succeeds). To make it fully automatic
+# for a PR, the reviewer (or founder) adds the `automerge` label once.
+
+on:
+  # Fires when the CI workflow finishes. workflow_run always runs the copy of this
+  # file on the DEFAULT branch (main), so it must live on main to take effect.
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  # Also re-evaluate the moment the label is applied to an already-green PR.
+  pull_request_target:
+    types: [labeled]
+
+concurrency:
+  # STATIC group → one merge to main at a time. This IS the serialization point
+  # (the "one integrator" property) — never cancel an in-flight merge.
+  group: integrate-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+
+            // Resolve the candidate PR(s) depending on the trigger.
+            let prNumbers = [];
+            if (context.eventName === 'workflow_run') {
+              const run = context.payload.workflow_run;
+              if (run.conclusion !== 'success' || run.event !== 'pull_request') {
+                core.info(`CI run not a successful PR run (conclusion=${run.conclusion}, event=${run.event}) — skip`);
+                return;
+              }
+              // Find the open PR whose head is this run's head SHA.
+              const list = await github.rest.pulls.list({ owner, repo, state: 'open', per_page: 100 });
+              const match = list.data.filter(p => p.head.sha === run.head_sha);
+              prNumbers = match.map(p => p.number);
+              if (!prNumbers.length) { core.info(`No open PR at ${run.head_sha.slice(0,9)} — skip`); return; }
+            } else {
+              // pull_request_target labeled
+              if (context.payload.label?.name !== 'automerge') { core.info('label != automerge — skip'); return; }
+              prNumbers = [context.payload.pull_request.number];
+            }
+
+            for (const number of prNumbers) {
+              const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+              if (pr.state !== 'open' || pr.draft) { core.info(`PR #${number} not an open non-draft — skip`); continue; }
+
+              const labels = pr.labels.map(l => l.name);
+              if (!labels.includes('automerge')) { core.info(`PR #${number} has no 'automerge' label — skip (reviewer applies it when approved)`); continue; }
+
+              // For a label-triggered run, CI may not have run via workflow_run yet;
+              // require the head commit's combined check state to be success.
+              const { data: checks } = await github.rest.checks.listForRef({ owner, repo, ref: pr.head.sha });
+              const ciRuns = checks.check_runs.filter(c => c.name && c.name.toLowerCase().includes('build'));
+              const relevant = ciRuns.length ? ciRuns : checks.check_runs;
+              const allGreen = relevant.length > 0 && relevant.every(c => c.conclusion === 'success');
+              if (!allGreen) { core.info(`PR #${number} checks not all green yet — skip (will retry on CI completion)`); continue; }
+
+              if (pr.mergeable === false) { core.warning(`PR #${number} not mergeable (conflicts) — bounce to author`); continue; }
+
+              await github.rest.pulls.merge({
+                owner, repo, pull_number: number,
+                merge_method: 'merge',
+                commit_title: `integrate: ${pr.head.ref} → main (automerge)`,
+                commit_message: pr.title,
+              });
+              core.info(`✓ merged PR #${number} (${pr.head.ref})`);
+            }
