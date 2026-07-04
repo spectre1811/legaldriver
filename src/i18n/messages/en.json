@@ -1364,9 +1364,24 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Add advocates with their Bar Registration Number to pull their daily cause list.",
+    "subtitle": "Your profile, practice, billing, integrations, and workspace preferences.",
+    "nav": {
+      "profile": "Profile",
+      "practice": "Practice",
+      "billing": "Billing",
+      "integrations": "Integrations",
+      "preferences": "Preferences",
+      "admin": "Admin & diagnostics"
+    },
+    "profile": {
+      "heading": "Your profile",
+      "email": "Email",
+      "workspace": "Workspace",
+      "editNote": "Editable profile details (name, phone, chamber) are coming — they need the profile data model."
+    },
     "advocates": {
       "heading": "Advocates",
+      "desc": "Add advocates with their Bar Registration Number to pull their daily cause list.",
       "remove": "Remove",
       "saving": "Saving…",
       "add": "Add advocate",
@@ -1382,6 +1397,15 @@
     "billing": {
       "heading": "Billing & GST",
       "desc": "Used on invoices — firm details, GSTIN, place of supply, and GST defaults (legal services SAC 9982)."
+    },
+    "preferences": {
+      "heading": "Language",
+      "language": "Choose the interface language for your workspace.",
+      "notifications": "Notification preferences",
+      "notificationsSoon": "WhatsApp and email alert preferences (cause-list, reminders, quiet hours) are coming with WhatsApp delivery."
+    },
+    "admin": {
+      "desc": "Operational tools for maintaining court-data sync. These aren't day-to-day advocate settings."
     },
     "court": {
       "heading": "Court data",
