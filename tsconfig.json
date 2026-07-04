@@ -17,5 +17,6 @@
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "// e2e": "Playwright specs + config live in a separate project (their own runner/tsconfig) so the app typecheck stays scoped to app code and green without @playwright/test in every tree.",
+  "exclude": ["node_modules", "e2e", "playwright.config.ts", "scripts"]
 }

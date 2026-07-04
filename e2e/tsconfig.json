@@ -1,0 +1,11 @@
+{
+  "// note": "Scoped tsconfig for the Playwright E2E project (WO-36). The app's root tsconfig excludes e2e/ so `npm run typecheck` stays app-only; Playwright + editors use this one for the specs.",
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "@playwright/test"],
+    "resolveJsonModule": true,
+    "noEmit": true
+  },
+  "include": ["**/*.ts", "../playwright.config.ts"],
+  "exclude": ["node_modules"]
+}
