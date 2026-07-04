@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 import { IngestButton } from "./ingest-button";
 import { isDemoMode } from "@/lib/demo";
 import { ReviewItem } from "./review-item";
+import { FiledInbox, type InboxGroup } from "./filed-inbox";
 import { DisconnectButton, LoadEarlierButton } from "./connect-controls";
 
 export default async function InboxPage({ searchParams }: { searchParams: { connected?: string; error?: string } }) {
@@ -15,7 +16,7 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
     supabase.from("oauth_connection").select("id, status").eq("provider", "google").eq("status", "active").maybeSingle(),
     supabase.from("client").select("id, name").order("name"),
     supabase.from("matter").select("id, title").order("title"),
-    supabase.from("email_message").select("id, subject, from_addr, received_at, confidence, status, classified_client_id, classified_matter_id").order("received_at", { ascending: false }).limit(200),
+    supabase.from("email_message").select("id, subject, from_addr, received_at, confidence, status, classified_client_id, classified_matter_id").in("status", ["pending", "filed", "needs_review"]).order("received_at", { ascending: false }).limit(200),
   ]);
 
   const clientOpts = (clients ?? []).map((c) => ({ id: c.id, label: c.name }));
@@ -26,12 +27,28 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
   const review = (emails ?? []).filter((e) => e.status === "needs_review");
   const filed = (emails ?? []).filter((e) => e.status === "filed");
 
-  const groups = new Map<string, typeof filed>();
+  // Surface the attachments each email pulled (WO-29): filename → the filed document.
+  const filedIds = filed.map((e) => e.id);
+  const { data: attachRows } = filedIds.length
+    ? await supabase.from("document").select("id, filename, email_message_id").in("email_message_id", filedIds)
+    : { data: [] as { id: string; filename: string | null; email_message_id: string | null }[] };
+  const attachByEmail = new Map<string, { id: string; filename: string }[]>();
+  for (const d of attachRows ?? []) {
+    if (!d.email_message_id) continue;
+    (attachByEmail.get(d.email_message_id) ?? attachByEmail.set(d.email_message_id, []).get(d.email_message_id)!)
+      .push({ id: d.id, filename: d.filename ?? "attachment" });
+  }
+
+  const groupMap = new Map<string, InboxGroup["items"]>();
   for (const e of filed) {
     const key = e.classified_matter_id ? `${t("group.case")}: ${matterName.get(e.classified_matter_id) ?? "—"}`
       : e.classified_client_id ? `${t("group.client")}: ${clientName.get(e.classified_client_id) ?? "—"}` : t("group.unassigned");
-    (groups.get(key) ?? groups.set(key, []).get(key)!).push(e);
+    (groupMap.get(key) ?? groupMap.set(key, []).get(key)!).push({
+      id: e.id, subject: e.subject ?? "", from: e.from_addr ?? "", receivedAt: e.received_at,
+      attachments: attachByEmail.get(e.id) ?? [],
+    });
   }
+  const filedGroups: InboxGroup[] = [...groupMap.entries()].map(([key, items]) => ({ key, items }));
 
   return (
     <div className="space-y-7">
@@ -81,28 +98,14 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
         </Card>
       )}
 
-      <section className="space-y-4">
-        <h2 className="text-base font-medium">{t("filedHeading")}</h2>
-        {groups.size === 0 ? (
+      {filedGroups.length === 0 ? (
+        <section className="space-y-4">
+          <h2 className="text-base font-medium">{t("filedHeading")}</h2>
           <EmptyState icon="inbox" title={t("empty.title")} body={t("empty.body")} />
-        ) : (
-          [...groups.entries()].map(([group, items]) => (
-            <Card key={group} className="overflow-hidden">
-              <div className="border-b border-line bg-paper px-5 py-3 text-sm font-medium text-ink">
-                {group} <span className="text-ink-faint">({items.length})</span>
-              </div>
-              <ul className="divide-y divide-line">
-                {items.map((e) => (
-                  <li key={e.id} className="px-5 py-3 text-sm">
-                    <p className="font-medium text-ink">{e.subject || t("noSubject")}</p>
-                    <p className="text-xs text-ink-faint">{e.from_addr} · {e.received_at ? new Date(e.received_at).toLocaleString("en-IN") : ""}</p>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ))
-        )}
-      </section>
+        </section>
+      ) : (
+        <FiledInbox groups={filedGroups} />
+      )}
 
       <p className="text-xs text-ink-faint">{t("footer")}</p>
     </div>

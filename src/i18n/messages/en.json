@@ -920,6 +920,16 @@
       "caseOption": "— case —",
       "filing": "Filing…",
       "confirmAndFile": "Confirm & file"
+    },
+    "bulk": {
+      "selectAll": "Select all",
+      "clearAll": "Clear selection",
+      "selectOne": "Select email",
+      "nSelected": "{n} selected",
+      "archive": "Archive",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "undo": "Undo"
     }
   },
   "messages": {
