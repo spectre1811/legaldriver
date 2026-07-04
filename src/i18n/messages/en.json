@@ -1966,5 +1966,10 @@
     "cached": "cached",
     "failed": "failed",
     "footer": "Assistive AI — grounded and cited where possible, not legal advice. Costs are gateway-metered per tenant."
+  },
+  "pagination": {
+    "loadMore": "Load more",
+    "error": "Couldn't load more — tap to retry.",
+    "end": "All {n} shown"
   }
 }

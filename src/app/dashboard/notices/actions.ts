@@ -3,8 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
+import { paginate, type Page } from "@/lib/paginate";
+import { noticesQuery, NOTICES_PAGE_SIZE, type NoticeRow } from "./notices-query";
 
 export type ActionResult = { ok: boolean; message: string };
+
+// Next keyset page for the notices list (WO-39). RLS scopes the read to the tenant;
+// a tampered cursor decodes to null → harmlessly returns the first page again.
+export async function loadMoreNotices(cursor: string): Promise<Page<NoticeRow>> {
+  const supabase = createClient();
+  return paginate<NoticeRow>(noticesQuery(supabase), {
+    column: "created_at",
+    limit: NOTICES_PAGE_SIZE,
+    cursor,
+  });
+}
 
 // Create a notice in 'awaiting_response'. next_escalation_at = response_due, so
 // the escalation cron advances it if there's no response by then.
