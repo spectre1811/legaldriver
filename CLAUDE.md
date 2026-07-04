@@ -34,7 +34,7 @@ Resend for email. Deploy on Vercel (P4).
 | `src/app/` | App Router pages. `login/`, `auth/` (callback+signout), `dashboard/` (overview, cases, calendar, notices, inbox). |
 | `src/lib/supabase/` | `client.ts` (browser), `server.ts` (RLS server), `admin.ts` (service-role, RLS-bypassing — server-only), `middleware.ts` (session refresh + route guard). |
 | `src/lib/db/database.types.ts` | **Generated** from the live schema. Single source of DB types — import, never hand-edit. Regenerate with `npm run db:types` (or the Management API). |
-| `supabase/migrations/` | SQL migrations. `0001_init.sql` = schema + RLS + new-user bootstrap trigger. |
+| `supabase/migrations/` | SQL migrations. `0001_init.sql` = schema + RLS + new-user bootstrap trigger. **New ones: `supabase migration new <slug>` (timestamped — never hand-pick the next `NNNN`, it collides across parallel WOs). `npm run check:migrations` / CI guards version-uniqueness (WO-41).** |
 | `TASKBOARD.md` | Phase + workstream status. |
 
 ## Non-negotiable conventions
