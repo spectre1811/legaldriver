@@ -43,25 +43,37 @@ export default defineConfig({
     timezoneId: "Asia/Kolkata",
   },
   projects: [
-    // 1) Log in once per role → save storageState. Everything else depends on this.
+    // 1) Log in once per role → save storageState. The authed project depends on this.
     { name: "setup", testMatch: /auth\.setup\.ts/ },
+    // 2) Public routes — NO storageState, so pages that redirect a signed-in user (`/`, `/login`)
+    //    are tested as a real visitor sees them. No creds needed → always runs.
     {
-      name: "chromium",
+      name: "public",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: ["routes-public.spec.ts"],
+    },
+    // 3) Authed app — advocate session; dashboard routes + hero journeys + smoke.
+    {
+      name: "authed",
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/advocate.json",
       },
+      testMatch: ["smoke.spec.ts", "hero-*.spec.ts", "routes-authed.spec.ts"],
     },
   ],
-  // Local: auto-start the app in DEMO_MODE. CI against a preview URL skips this.
+  // Local/CI on localhost: auto-start the app in DEMO_MODE. Command is overridable via
+  // E2E_WEBSERVER_CMD (CI uses `npm start` against a prebuilt app; local defaults to `npm run dev`).
+  // Against a remote E2E_BASE_URL (a deployed DEMO_MODE preview) the webServer is skipped.
   webServer: isLocal
     ? {
-        command: "npm run dev",
+        command: process.env.E2E_WEBSERVER_CMD || "npm run dev",
         url: BASE_URL,
         reuseExistingServer: !isCI,
-        timeout: 120_000,
-        env: { DEMO_MODE: "1", NODE_ENV: "development" },
+        timeout: 180_000,
+        // DEMO_MODE forced on; the Supabase public env is inherited from the job/shell environment.
+        env: { DEMO_MODE: "1" },
       }
     : undefined,
 });

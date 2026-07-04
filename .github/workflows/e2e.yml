@@ -1,0 +1,53 @@
+name: E2E
+
+# WO-36 · Advisory Playwright E2E run. DELIBERATELY named "E2E" (not "CI") and its job is not named
+# "build", so the auto-merge queue (automerge.yml keys off the "CI"/"build" checks) NEVER waits on or
+# is blocked by it — a red/flaky E2E run can't wedge the merge queue for any session.
+#
+# DORMANT until the founder activates it: it runs a real DEMO_MODE=1 app + logs into the seeded demo
+# tenant, which needs a demo Supabase project + creds. To activate:
+#   1. Repo → Settings → Secrets and variables → Actions → Variables: add  E2E_ENABLED = true
+#   2. Add secrets: E2E_SUPABASE_URL, E2E_SUPABASE_ANON_KEY (demo project),
+#      E2E_EMAIL, E2E_PASSWORD (demo advocate), optional E2E_EMAIL2, E2E_ROUTE_IDS (demo seed ids).
+# Until E2E_ENABLED=true the job is skipped (neutral, no red). See docs/E2E.md.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# One E2E run per PR ref — cancel a superseded run when new commits land (cost/hygiene).
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    if: ${{ vars.E2E_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DEMO_MODE: "1"
+      E2E_BASE_URL: http://localhost:3000
+      E2E_WEBSERVER_CMD: npm start
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
+      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      E2E_EMAIL2: ${{ secrets.E2E_EMAIL2 }}
+      E2E_ROUTE_IDS: ${{ secrets.E2E_ROUTE_IDS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
