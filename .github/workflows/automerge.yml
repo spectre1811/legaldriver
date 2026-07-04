@@ -8,8 +8,7 @@ name: automerge
 #
 # Why label-gated: pushing a wt/* branch is frequent + often WIP, so we do NOT
 # merge every green PR blindly. The label is the human/reviewer go-ahead; CI green
-# is still required (this only runs after CI succeeds). To make it fully automatic
-# for a PR, the reviewer (or founder) adds the `automerge` label once.
+# is still required. To make a PR auto-land, the reviewer adds the `automerge` label.
 
 on:
   # Fires when the CI workflow finishes. workflow_run always runs the copy of this
@@ -17,7 +16,7 @@ on:
   workflow_run:
     workflows: ["CI"]
     types: [completed]
-  # Also re-evaluate the moment the label is applied to an already-green PR.
+  # Re-evaluate the moment the label is applied to an already-green PR.
   pull_request_target:
     types: [labeled]
 
@@ -28,8 +27,10 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: write        # merge a PR = a contents write
+  pull-requests: write   # read PR state / labels
+  checks: read           # read combined check status on the label path
+  statuses: read
 
 jobs:
   merge:
@@ -39,22 +40,21 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo;
+            const fromCI = context.eventName === 'workflow_run';
 
-            // Resolve the candidate PR(s) depending on the trigger.
+            // Resolve candidate PR(s) + whether CI is already known-green from the trigger.
             let prNumbers = [];
-            if (context.eventName === 'workflow_run') {
+            if (fromCI) {
               const run = context.payload.workflow_run;
               if (run.conclusion !== 'success' || run.event !== 'pull_request') {
                 core.info(`CI run not a successful PR run (conclusion=${run.conclusion}, event=${run.event}) — skip`);
                 return;
               }
-              // Find the open PR whose head is this run's head SHA.
+              // Open PR(s) whose head is exactly this run's head SHA → CI for them is green.
               const list = await github.rest.pulls.list({ owner, repo, state: 'open', per_page: 100 });
-              const match = list.data.filter(p => p.head.sha === run.head_sha);
-              prNumbers = match.map(p => p.number);
+              prNumbers = list.data.filter(p => p.head.sha === run.head_sha).map(p => p.number);
               if (!prNumbers.length) { core.info(`No open PR at ${run.head_sha.slice(0,9)} — skip`); return; }
             } else {
-              // pull_request_target labeled
               if (context.payload.label?.name !== 'automerge') { core.info('label != automerge — skip'); return; }
               prNumbers = [context.payload.pull_request.number];
             }
@@ -62,19 +62,18 @@ jobs:
             for (const number of prNumbers) {
               const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
               if (pr.state !== 'open' || pr.draft) { core.info(`PR #${number} not an open non-draft — skip`); continue; }
+              if (!pr.labels.map(l => l.name).includes('automerge')) { core.info(`PR #${number}: no 'automerge' label — skip (reviewer applies it)`); continue; }
 
-              const labels = pr.labels.map(l => l.name);
-              if (!labels.includes('automerge')) { core.info(`PR #${number} has no 'automerge' label — skip (reviewer applies it when approved)`); continue; }
-
-              // For a label-triggered run, CI may not have run via workflow_run yet;
-              // require the head commit's combined check state to be success.
-              const { data: checks } = await github.rest.checks.listForRef({ owner, repo, ref: pr.head.sha });
-              const ciRuns = checks.check_runs.filter(c => c.name && c.name.toLowerCase().includes('build'));
-              const relevant = ciRuns.length ? ciRuns : checks.check_runs;
-              const allGreen = relevant.length > 0 && relevant.every(c => c.conclusion === 'success');
-              if (!allGreen) { core.info(`PR #${number} checks not all green yet — skip (will retry on CI completion)`); continue; }
-
-              if (pr.mergeable === false) { core.warning(`PR #${number} not mergeable (conflicts) — bounce to author`); continue; }
+              // CI is known-green on the workflow_run trigger; on the label trigger, verify it.
+              let green = fromCI;
+              if (!green) {
+                const { data: cs } = await github.rest.checks.listForRef({ owner, repo, ref: pr.head.sha });
+                const build = cs.check_runs.filter(c => (c.name || '').toLowerCase().includes('build'));
+                const relevant = build.length ? build : cs.check_runs;
+                green = relevant.length > 0 && relevant.every(c => c.conclusion === 'success');
+              }
+              if (!green) { core.info(`PR #${number}: checks not all green yet — will retry on CI completion`); continue; }
+              if (pr.mergeable === false) { core.warning(`PR #${number}: not mergeable (conflicts) — bounce to author`); continue; }
 
               await github.rest.pulls.merge({
                 owner, repo, pull_number: number,
@@ -82,5 +81,5 @@ jobs:
                 commit_title: `integrate: ${pr.head.ref} → main (automerge)`,
                 commit_message: pr.title,
               });
-              core.info(`✓ merged PR #${number} (${pr.head.ref})`);
+              core.notice(`✓ merged PR #${number} (${pr.head.ref})`);
             }
