@@ -13,6 +13,7 @@
 // test in its own process, then exit non-zero if any failed.
 
 import { spawnSync } from "node:child_process";
+import { readdirSync } from "node:fs";
 
 const TSX = "tsx@4.23.0";
 
@@ -22,16 +23,19 @@ const OFFLINE = [
   "ai_gateway",
   "design_tokens_smoke",
   "i18n_coverage",
+  "timeline_sort",
   "wo01_causelist_alert",
   "wo01_refresh_priority",
   "wo01_sync_contract",
   "wo15_analytics",
   "wo27_filing_decision",
   "wo27_select_range",
+  "wo29_gmail_hygiene",
   "wo32_review_why",
   "wo33_classification_cache",
   "wo33_grounding",
   "wo33_name_match",
+  "wo35_provider_signal",
 ];
 
 // Need a live Supabase (service-role) + .env — founder-secret-gated CI job.
@@ -52,6 +56,22 @@ const NET = [
 ];
 
 const GROUPS = { offline: OFFLINE, db: DB, net: NET, all: [...OFFLINE, ...DB, ...NET] };
+
+// Self-policing: under many concurrent sessions, a new tests/*.ts added by another
+// worktree would otherwise be silently un-gated. Fail loudly if any test file is not
+// classified into a group — turn "silently skipped" into a CI error that names the fix.
+const classified = new Set([...OFFLINE, ...DB, ...NET]);
+const onDisk = readdirSync("tests")
+  .filter((f) => f.endsWith(".ts"))
+  .map((f) => f.slice(0, -3));
+const orphans = onDisk.filter((t) => !classified.has(t));
+if (orphans.length) {
+  console.error(
+    `Unclassified test(s): ${orphans.join(", ")}\n` +
+      `Add each to a group in scripts/run-tests.mjs (offline = mocked/no-secrets; db = live Supabase; net = LLM/court-API).`
+  );
+  process.exit(2);
+}
 
 const mode = process.argv[2] || "offline";
 const tests = GROUPS[mode];

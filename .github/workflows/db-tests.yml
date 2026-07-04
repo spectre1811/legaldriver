@@ -11,9 +11,15 @@ name: DB Tests
 # `TEST_ENV_FILE` = the full contents of a working `.env` (must include
 # NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
 # CRON_SECRET, REPLY_TO). See docs/CI.md.
+#
+# Deliberately NOT triggered on `pull_request`: a fast dormant PR check could, in a
+# runner-contention window, register green before the CI `build` check exists and
+# nudge automerge's label-path fallback (`build.length ? build : all-checks`) into
+# merging early. Running post-merge + on demand avoids that with no automerge change.
+# To PR-gate these once activated, add `pull_request` back AND a branch-protection
+# required check (founder decision) — see docs/CI.md.
 
 on:
-  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
