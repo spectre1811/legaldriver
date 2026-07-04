@@ -39,21 +39,23 @@ const OFFLINE = [
   "wo35_provider_signal",
 ];
 
-// Need a live Supabase (service-role) + .env — founder-secret-gated CI job.
+// Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the
+// TEST_ENV_FILE secret exists. All headless (sign in, service-role probes, RLS checks).
 const DB = [
   "p1_smoke",
-  "p2_smoke",
   "portal_isolation",
   "rls_isolation",
   "wo01_tenancy_sync",
 ];
 
-// Need LLM / embeddings / live court API keys ($ + external) — manual only.
+// Manual only ($ / a running server / live external APIs). p2_smoke needs `npm start`
+// on :3000 AND sends a REAL email → it can't run in a headless CI job.
 const NET = [
   "agent_smoke",
   "court_gateway_smoke",
   "document_filing_test",
   "embed_test",
+  "p2_smoke",
 ];
 
 const GROUPS = { offline: OFFLINE, db: DB, net: NET, all: [...OFFLINE, ...DB, ...NET] };
