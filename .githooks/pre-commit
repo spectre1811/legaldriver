@@ -1,0 +1,9 @@
+#!/bin/sh
+# Anti-clobber (INTEGRATION-DEPLOY.md): no direct commits on main. Work on wt/<WO>.
+b=$(git symbolic-ref --short HEAD 2>/dev/null)
+if [ "$b" = "main" ] && [ "$GIT_INTEGRATOR" != "1" ]; then
+  echo "✋ pre-commit BLOCKED: you're on 'main'. Commit to a wt/<WO> branch + open a PR." >&2
+  echo "   (integrator only: GIT_INTEGRATOR=1. See plan/exec/INTEGRATION-DEPLOY.md)" >&2
+  exit 1
+fi
+exit 0

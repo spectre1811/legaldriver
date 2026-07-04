@@ -1,0 +1,23 @@
+#!/bin/sh
+# Anti-clobber (INTEGRATION-DEPLOY.md). Rules for pushes to main:
+#  - non-integrator: BLOCKED entirely (push wt/<WO> + open a PR).
+#  - integrator (GIT_INTEGRATOR=1): allowed ONLY as a fast-forward — a non-ff push
+#    (force/clobber) is refused even for the integrator, so no one can orphan commits.
+z=0000000000000000000000000000000000000000
+while read lref lsha rref rsha; do
+  case "$rref" in
+    refs/heads/main)
+      if [ "$GIT_INTEGRATOR" != "1" ]; then
+        echo "✋ pre-push BLOCKED: direct push to 'main' is not allowed. Push wt/<WO> + open a PR." >&2
+        echo "   (integrator merges via GIT_INTEGRATOR=1; see plan/exec/INTEGRATION-DEPLOY.md)" >&2
+        exit 1
+      fi
+      if [ "$rsha" != "$z" ] && ! git merge-base --is-ancestor "$rsha" "$lsha" 2>/dev/null; then
+        echo "✋ pre-push BLOCKED: non-fast-forward push to 'main' would ORPHAN commits — refused even for the integrator." >&2
+        echo "   Merge origin/main into your integration branch first, then push (ff)." >&2
+        exit 1
+      fi
+      ;;
+  esac
+done
+exit 0
