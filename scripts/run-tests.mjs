@@ -28,6 +28,7 @@ const OFFLINE = [
   "wo01_refresh_priority",
   "wo01_sync_contract",
   "wo15_analytics",
+  "wo27_export",
   "wo27_filing_decision",
   "wo27_select_range",
   "wo29_gmail_hygiene",

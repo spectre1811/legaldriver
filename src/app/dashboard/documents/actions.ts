@@ -178,21 +178,9 @@ export async function bulkFileToCase(ids: string[], matterId: string): Promise<D
   return { ok: true, message: `${count ?? ids.length} filed to case.`, count: count ?? ids.length };
 }
 
-// Signed URLs for a bulk download (short-lived). The client opens each.
-export async function bulkDownloadUrls(ids: string[]): Promise<{ ok: boolean; files: { filename: string; url: string }[] }> {
-  const supabase = createClient();
-  const tenantId = await getTenantId(supabase);
-  if (!tenantId) return { ok: false, files: [] };
-  const { data: rows } = await supabase.from("document").select("filename, storage_path").in("id", ids);
-  const admin = createAdminClient();
-  const files: { filename: string; url: string }[] = [];
-  for (const r of rows ?? []) {
-    if (!r.storage_path) continue;
-    const { data: signed } = await admin.storage.from("documents").createSignedUrl(r.storage_path, 120);
-    if (signed?.signedUrl) files.push({ filename: r.filename ?? "document", url: signed.signedUrl });
-  }
-  return { ok: true, files };
-}
+// Bulk export was reworked in WO-27 W3 into a single-zip download served by
+// `/api/documents/export` (route handler streams a real archive), replacing the old
+// per-file "open a signed URL in a new tab" approach that browsers blocked past one file.
 
 // Delete a document — removes the storage object then the row (tenant-scoped).
 export async function deleteDocument(documentId: string): Promise<DocResult> {
