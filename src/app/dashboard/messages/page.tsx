@@ -23,11 +23,12 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
   const supabase = createClient();
   const channel = searchParams.channel;
 
+  const MSG_CAP = 300;
   let query = supabase
     .from("msg_message")
     .select("id, channel, direction, provider, from_addr, to_addr, body, status, thread_key, client_id, matter_id, confidence, suggested_reply, created_at")
     .order("created_at", { ascending: false })
-    .limit(300);
+    .limit(MSG_CAP);
   if (channel) query = query.eq("channel", channel);
 
   const [{ data: messages }, { data: clients }, { data: matters }] = await Promise.all([
@@ -39,6 +40,10 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
   const clientName = new Map((clients ?? []).map((c) => [c.id, c.name]));
   const matterName = new Map((matters ?? []).map((m) => [m.id, m.title]));
   const rows = messages ?? [];
+  // Honest cap (WO-39 / ship-grade §2): this thread-grouped view isn't yet keyset-paged
+  // (threads span pages → needs thread-level paging, a W2 follow-up). Until then, surface
+  // the cap instead of silently dropping message 301.
+  const capped = rows.length >= MSG_CAP;
 
   // Group by thread_key, latest thread first (threads ordered by newest message).
   type Row = (typeof rows)[number];
@@ -125,6 +130,12 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
             );
           })}
         </div>
+      )}
+
+      {capped && (
+        <p className="rounded-xl border border-line bg-paper px-4 py-2.5 text-xs text-ink-muted" role="status">
+          {t("cappedNote", { count: MSG_CAP })}
+        </p>
       )}
 
       <p className="text-xs text-ink-faint">

@@ -9,8 +9,18 @@ import { logActivity } from "@/lib/activity";
 import { aiGateway } from "@/lib/ai/gateway";
 import { getVoiceService } from "@/lib/services/voice/service";
 import type { Database } from "@/lib/db/database.types";
+import { fetchVoicePage, type VoiceRow } from "./voice-query";
+import type { Page } from "@/lib/paginate";
 
 export type ActionResult = { ok: boolean; message: string };
+
+// Next keyset page for the voice list (WO-39). RLS scopes reads to the tenant; only
+// this page's playback URLs are signed.
+export async function loadMoreVoice(cursor: string): Promise<Page<VoiceRow>> {
+  const supabase = createClient();
+  const admin = createAdminClient();
+  return fetchVoicePage(supabase, admin, cursor);
+}
 
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024; // 50 MB
 
