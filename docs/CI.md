@@ -17,14 +17,17 @@ failure. The runner groups them so CI can gate on the secret-free ones and keep 
 rest opt-in:
 
 ```
-node scripts/run-tests.mjs offline   # mocked tests (17 today) — no network, no .env → CI `build` gate
+node scripts/run-tests.mjs offline   # mocked tests (18 today) — no network, no .env → CI `build` gate
 node scripts/run-tests.mjs db        #  5 tests — need a live Supabase + .env → DB Tests workflow
 node scripts/run-tests.mjs net       #  4 tests — need LLM/embeddings/court-API keys → manual only ($)
 node scripts/run-tests.mjs all       # everything (run locally with .env sourced)
 ```
 
-The runner **self-polices**: every invocation globs `tests/*.ts` and fails (exit 2) if any
-file isn't in a group — so a test another session adds can't silently go un-gated.
+The runner **self-polices**: every invocation globs `tests/*.ts` and emits a GitHub Actions
+`::warning::` (visible on the PR) naming any test not in a group, so a test another session
+adds is surfaced rather than silently un-gated. It **warns, not fails** — CI runs on the PR
+merge-ref (branch + current `main`), so a hard failure here would let one concurrently-merged
+unclassified test block every subsequent PR. Classify new tests into a group to clear it.
 
 tsx is pinned in the runner (no repo devDependency, so CI wiring stays a CI-only change).
 Each test shells out to `npx --yes tsx@4.23.0`, which fetches tsx from the npm registry on
