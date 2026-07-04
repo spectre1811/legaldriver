@@ -97,6 +97,9 @@ export function CommandPalette() {
     >
       {it.icon ? <Icon name={it.icon} className="h-4 w-4 shrink-0 text-ink-faint" /> : <span className="w-4 shrink-0" />}
       <span className="min-w-0 flex-1 truncate font-medium text-ink">{it.label}</span>
+      {/* On entity results the sub is the identifier (CNR / ₹amount) — show it in mono. On commands
+          the sub is filter keywords, so it stays hidden. */}
+      {it.kind === "result" && it.sub && <span className="shrink-0 truncate font-mono text-[0.7rem] text-ink-faint">{it.sub}</span>}
       <span className="shrink-0 text-[0.7rem] text-ink-faint">{it.type}</span>
     </button>
   );
