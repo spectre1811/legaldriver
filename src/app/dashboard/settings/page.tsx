@@ -33,6 +33,7 @@ export default async function SettingsPage() {
   const { data: notif } = await supabase
     .from("notification_prefs")
     .select("whatsapp_number, channel_whatsapp, channel_email, channel_sms, quiet_start, quiet_end, cause_list_time")
+    .eq("id", user?.id ?? "")
     .maybeSingle();
   const { data: advocates } = await supabase
     .from("advocate")

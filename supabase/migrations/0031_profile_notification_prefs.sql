@@ -5,8 +5,10 @@
 -- role, created_at, rate_minor, locale (0029). We only ADD the missing self-service fields and a
 -- per-user notification_prefs table. Idempotent; safe to run repeatedly and before/without the app.
 --
--- RLS mirrors `profile` (0001): the tenant can SELECT (firm-wide visibility), but only the owning
--- user (id = auth.uid()) may INSERT/UPDATE their own row. No cross-tenant leakage.
+-- RLS: notification prefs are PERSONAL (WhatsApp number, quiet hours), so unlike `profile` the
+-- SELECT is scoped to the owning user (id = auth.uid()) — not firm-wide — and only that user may
+-- INSERT/UPDATE their own row. Delivery crons read via the service-role client (RLS-bypassing), so
+-- per-user SELECT doesn't hinder them. No cross-user or cross-tenant leakage.
 
 -- (1) Profile self-service fields (full_name already exists).
 alter table profile
@@ -34,7 +36,7 @@ alter table notification_prefs enable row level security;
 
 drop policy if exists notification_prefs_select on notification_prefs;
 create policy notification_prefs_select on notification_prefs
-  for select using (tenant_id = current_tenant_id());
+  for select using (id = auth.uid());
 
 drop policy if exists notification_prefs_insert on notification_prefs;
 create policy notification_prefs_insert on notification_prefs
@@ -42,4 +44,4 @@ create policy notification_prefs_insert on notification_prefs
 
 drop policy if exists notification_prefs_update on notification_prefs;
 create policy notification_prefs_update on notification_prefs
-  for update using (id = auth.uid()) with check (id = auth.uid());
+  for update using (id = auth.uid()) with check (id = auth.uid() and tenant_id = current_tenant_id());

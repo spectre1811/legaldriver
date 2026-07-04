@@ -1427,8 +1427,7 @@
     "preferences": {
       "heading": "Language",
       "language": "Choose the interface language for your workspace.",
-      "notifications": "Notification preferences",
-      "notificationsSoon": "WhatsApp and email alert preferences (cause-list, reminders, quiet hours) are coming with WhatsApp delivery."
+      "notifications": "Notification preferences"
     },
     "admin": {
       "desc": "Operational tools for maintaining court-data sync. These aren't day-to-day advocate settings."
