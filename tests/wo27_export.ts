@@ -46,6 +46,16 @@ ok("first central directory record signature", u32(zip, cdOffset) === 0x02014b50
 const zipText = new TextDecoder("utf-8", { fatal: false }).decode(zip);
 ok("duplicate name de-collided to 'dup (1).txt'", zipText.includes("dup (1).txt"));
 
+// Review #2: a generated name must not collide with a later LITERAL entry of that same name.
+const collide = buildZip([
+  { name: "dup.txt", data: enc.encode("a") },
+  { name: "dup.txt", data: enc.encode("b") },       // → dup (1).txt
+  { name: "dup (1).txt", data: enc.encode("c") },   // literal — must NOT overwrite the generated one
+]);
+const collideText = new TextDecoder("utf-8", { fatal: false }).decode(collide);
+ok("generated name doesn't clobber a later literal (dup (1) (1).txt present)", collideText.includes("dup (1) (1).txt"));
+ok("collision archive has 3 entries", u16(collide, collide.length - 22 + 10) === 3);
+
 // A single-entry zip round-trips its declared CRC in the local header.
 const one = buildZip([{ name: "x.bin", data: enc.encode("hello") }]);
 ok("local header CRC matches crc32(data)", u32(one, 14) === crc32(enc.encode("hello")));
@@ -63,6 +73,18 @@ ok("inner quote is doubled", csv.includes('"quote""inside"'));
 ok("newline field is quoted", csv.includes('"line\nbreak"'));
 ok("null size renders empty (trailing commas)", lines[2].includes("upload,,"));
 ok("capping note appended as comment", csv.includes("# 2 skipped"));
+
+// Review #1: CSV formula injection — a filename starting with = + - @ is neutralized with a leading '.
+const inj = buildManifestCsv([
+  { filename: "=1+2", docType: null, category: null, client: "@evil", matter: null, source: "gmail", sizeBytes: null, added: null },
+]);
+ok("formula filename neutralized ('=1+2)", inj.includes("'=1+2"));
+ok("formula client field neutralized ('@evil)", inj.includes("'@evil"));
+// A =HYPERLINK payload (holds commas + quotes) is neutralized AND RFC-4180 quoted.
+const inj2 = buildManifestCsv([
+  { filename: '=HYPERLINK("http://evil","x")', docType: null, category: null, client: null, matter: null, source: "gmail", sizeBytes: null, added: null },
+]);
+ok("hyperlink payload neutralized + quoted", inj2.includes(`"'=HYPERLINK(""http://evil"",""x"")"`));
 
 // ── previewKind ──────────────────────────────────────────────────────────────────
 ok("pdf by mime", previewKind("application/pdf", "x") === "pdf");

@@ -37,6 +37,15 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
   const [exportErr, setExportErr] = useState(false);
   const [preview, setPreview] = useState<DocRow | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+
+  // When the quick-look opens, move focus into the dialog (a11y) and restore it to the trigger on close.
+  useEffect(() => {
+    if (!preview) return;
+    const prev = document.activeElement as HTMLElement | null;
+    closeBtnRef.current?.focus();
+    return () => prev?.focus?.();
+  }, [preview]);
 
   const clear = useCallback(() => { setSel(new Set()); setAnchor(null); }, []);
 
@@ -290,7 +299,7 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
                   <Icon name="external" className="h-4 w-4" />
                   <span className="hidden sm:inline">{t("preview.open")}</span>
                 </Link>
-                <button onClick={() => setPreview(null)} className="rounded-lg p-1.5 text-ink-faint hover:bg-paper hover:text-ink" aria-label={t("preview.close")}>
+                <button ref={closeBtnRef} onClick={() => setPreview(null)} className="rounded-lg p-1.5 text-ink-faint hover:bg-paper hover:text-ink" aria-label={t("preview.close")}>
                   <Icon name="close" className="h-4 w-4" />
                 </button>
               </div>

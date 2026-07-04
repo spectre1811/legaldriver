@@ -12,9 +12,14 @@ export type ManifestRow = {
   added: string | null; // ISO or display string
 };
 
-// RFC-4180 field escaping: quote if the value contains a comma, quote, or newline; double inner quotes.
+// RFC-4180 field escaping + CSV formula-injection defence. A value starting with = + - @ (or a
+// tab/CR) is executed as a formula by Excel/LibreOffice, and filename/client/matter are
+// user-controllable (e.g. a Gmail attachment named `=HYPERLINK(...)` is stored raw), so we prefix
+// a single quote to force it to plain text. Then quote per RFC-4180 if it holds a comma/quote/newline.
 function csvField(value: string): string {
-  return /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  let v = value;
+  if (/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+  return /[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
 
 const HEADERS = ["Filename", "Type", "Category", "Client", "Case", "Source", "Size (bytes)", "Added"];

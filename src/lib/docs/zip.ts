@@ -44,13 +44,22 @@ export function buildZip(entries: ZipEntry[], mtime: Date = new Date(1980, 0, 1,
   const chunks: Uint8Array[] = [];
   const central: Uint8Array[] = [];
   let offset = 0;
-  const seen = new Map<string, number>();
+  const used = new Set<string>();
 
   for (const entry of entries) {
     let name = entry.name;
-    const dup = seen.get(name);
-    if (dup !== undefined) { seen.set(entry.name, dup + 1); const dot = name.lastIndexOf("."); const base = dot > 0 ? name.slice(0, dot) : name; const ext = dot > 0 ? name.slice(dot) : ""; name = `${base} (${dup + 1})${ext}`; }
-    else seen.set(name, 0);
+    // De-collide against EVERY name already placed (including previously-generated ones), so a
+    // generated "foo (1).txt" can never silently overwrite a later literal "foo (1).txt".
+    if (used.has(name)) {
+      const dot = name.lastIndexOf(".");
+      const base = dot > 0 ? name.slice(0, dot) : name;
+      const ext = dot > 0 ? name.slice(dot) : "";
+      let i = 1;
+      let candidate = `${base} (${i})${ext}`;
+      while (used.has(candidate)) { i++; candidate = `${base} (${i})${ext}`; }
+      name = candidate;
+    }
+    used.add(name);
 
     const nameBytes = enc.encode(name);
     const crc = crc32(entry.data);

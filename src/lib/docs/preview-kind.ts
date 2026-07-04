@@ -12,7 +12,9 @@ export function previewKind(mime: string | null | undefined, filename: string | 
   if (m === "application/pdf") return "pdf";
   if (m.startsWith("image/")) return "image";
 
-  const ext = (filename ?? "").toLowerCase().split(".").pop() ?? "";
+  const name = (filename ?? "").toLowerCase();
+  const dot = name.lastIndexOf(".");
+  const ext = dot >= 0 ? name.slice(dot + 1) : ""; // dotless name → no extension (not the whole string)
   if (ext === "pdf") return "pdf";
   if (IMAGE_EXT.has(ext)) return "image";
   return "none";

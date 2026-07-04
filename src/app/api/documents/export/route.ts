@@ -73,6 +73,9 @@ export async function POST(request: NextRequest) {
 
     if (!d.storage_path) { skippedMissing++; continue; }
     if (entries.length >= MAX_FILES) { skippedCap++; continue; }
+    // Reject on the KNOWN size before pulling bytes into memory — a Gmail attachment isn't bound by
+    // the 20 MB hub-upload limit, so this keeps a single oversized object from being buffered at all.
+    if (d.size_bytes != null && totalBytes + d.size_bytes > MAX_TOTAL_BYTES) { skippedCap++; continue; }
 
     const { data: blob, error } = await admin.storage.from("documents").download(d.storage_path);
     if (error || !blob) { skippedMissing++; continue; }
