@@ -16,6 +16,8 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { deleteMatter } from "../actions";
 import { DeadlineRuleForm } from "./deadline-rules";
 import { OrdersPanel } from "./orders-panel";
+import { CaseTimeline } from "./case-timeline";
+import { getTimeline } from "@/lib/court/legaldriver-api";
 
 type Party = { name?: string; side?: string; advocate?: string };
 
@@ -30,6 +32,7 @@ const truncate = (s: string, n = 32) => (s.length > n ? s.slice(0, n - 1) + "…
 const CASE_TAB_DEFS = [
   { id: "overview", label: "overview", icon: "sparkles" as const },
   { id: "court", label: "court", icon: "scale" as const },
+  { id: "timeline", label: "timeline", icon: "calendar" as const },
   { id: "documents", label: "documents", icon: "documents" as const },
   { id: "billing", label: "billing", icon: "clock" as const },
   { id: "comms", label: "comms", icon: "inbox" as const },
@@ -66,7 +69,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const billableExp = (expenses ?? []).filter((e) => e.billable).reduce((s, e) => s + e.amount_minor, 0);
   const wip = billableTime + billableExp;
 
-  const [{ data: orders }, similar, { data: deadlines }, { data: deadlineRules }] = await Promise.all([
+  const [{ data: orders }, similar, { data: deadlines }, { data: deadlineRules }, timelineEvents] = await Promise.all([
     supabase.from("court_order").select("id, order_date, title, url, raw").eq("matter_id", matter.id).order("order_date", { ascending: false, nullsFirst: false }),
     findSimilarCases(supabase, {
       id: matter.id,
@@ -77,6 +80,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     }, 6),
     supabase.from("deadline").select("id, kind, due_date, jurisdiction_rule, status, basis").eq("matter_id", matter.id).order("due_date", { ascending: true }),
     supabase.from("deadline_rule").select("id, kind, days, jurisdiction, description").order("jurisdiction"),
+    matter.cnr ? getTimeline(matter.cnr).catch(() => []) : Promise.resolve([]),
   ]);
 
   const parties = (Array.isArray(matter.parties) ? matter.parties : []) as Party[];
@@ -84,14 +88,21 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const acts = (matter.act_names ?? []) as string[];
   const detail = (matter.detail ?? {}) as Record<string, unknown>;
 
+  const coramName = str(detail.coram);
   const caseDetails: [string, string | null][] = [
     [t("detail.registrationNo"), str(detail.registrationNumber)],
     [t("detail.filingNo"), str(detail.filingNumber)],
     [t("detail.registrationDate"), detail.registrationDate ? fmtDate(str(detail.registrationDate)) : null],
     [t("detail.filingDate"), detail.filingDate ? fmtDate(str(detail.filingDate)) : null],
+    [t("detail.firstHearingDate"), detail.first_hearing_date ? fmtDate(str(detail.first_hearing_date)) : null],
     [t("detail.district"), str(detail.district)],
     [t("detail.state"), str(detail.state)],
-    [t("detail.coram"), str(detail.coram)],
+    [t("detail.category"), str(detail.category)],
+    [t("detail.subCategory"), str(detail.sub_category)],
+    [t("detail.benchType"), str(detail.bench_type)],
+    [t("detail.judicialBranch"), str(detail.judicial_branch)],
+    [t("detail.subordinateCourt"), str(detail.subordinate_court)],
+    [t("detail.filedBy"), str(detail.filed_by)],
     [t("detail.decidedOn"), detail.decisionDate ? fmtDate(str(detail.decisionDate)) : null],
     [t("detail.firNo"), detail.firNo ? `${str(detail.firNo)}${detail.firYear ? `/${str(detail.firYear)}` : ""}` : null],
     [t("detail.policeStation"), str(detail.policeStation)],
@@ -266,7 +277,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       </CaseTabPanel>
       <CaseTabPanel id="court">
 
-      {caseDetails.length > 0 && (
+      {(caseDetails.length > 0 || coramName) && (
         <div className="ec-card">
           <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium">{t("details.title")}</h2></div>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-5 py-5 sm:grid-cols-3">
@@ -276,6 +287,16 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 <dd className="mt-1 text-sm text-ec-ink">{value}</dd>
               </div>
             ))}
+            {coramName && (
+              <div>
+                <dt className="ec-label">{t("detail.coram")}</dt>
+                <dd className="mt-1 text-sm">
+                  <Link href={`/dashboard/lookup?q=${encodeURIComponent(coramName)}`} className="font-medium text-ec-brass-deep hover:text-ec-brass">
+                    {coramName}
+                  </Link>
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
       )}
@@ -379,7 +400,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 <li key={h.id} className="flex items-center gap-3 px-5 py-3 text-sm">
                   <span className="num w-20 shrink-0 text-ec-ink-3">{fmtDate(h.date)}</span>
                   <span className="flex-1 text-ec-ink">{h.purpose ?? t("hearings.fallback")}</span>
-                  <span className="text-xs text-ec-ink-3">{h.judge ? <Link href={`/api/court/judge?name=${encodeURIComponent(h.judge)}`} className="hover:text-ec-brass-deep">{h.judge}</Link> : ""}</span>
+                  <span className="text-xs text-ec-ink-3">{h.judge ? <Link href={`/dashboard/lookup?q=${encodeURIComponent(h.judge)}`} className="text-ec-brass-deep hover:text-ec-brass">{h.judge}</Link> : ""}</span>
                 </li>
               ))}
             </ul>
@@ -457,6 +478,11 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           </ul>
         </div>
       )}
+
+      </CaseTabPanel>
+      <CaseTabPanel id="timeline">
+
+      <CaseTimeline events={timelineEvents} hasCnr={!!matter.cnr} />
 
       </CaseTabPanel>
       <CaseTabPanel id="documents">

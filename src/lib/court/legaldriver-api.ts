@@ -14,12 +14,12 @@ async function ldGet<T>(path: string): Promise<T | null> {
   } catch { return null; }
 }
 
-export interface AdvocateCaseItem { cnr: string; side?: string; case_type?: string; status?: string; tier?: string; registration_year?: number }
-export interface AdvocateProfile { bar_id: string; names: string[]; case_count: number; cases: AdvocateCaseItem[] }
+export interface AdvocateCaseItem { cnr: string; side?: string; case_type?: string; status?: string; tier?: string; registration_year?: number; advocate_bar_id?: string | null }
+export interface AdvocateProfile { bar_id: string; names: string[]; case_count: number; cases: AdvocateCaseItem[]; registration_year?: number | null }
 // bar_id is numeric (HC) or slash-form "G/NN/YYYY" (district) — keep slashes raw (:path route).
 export const getAdvocateProfile = (barId: string) => ldGet<AdvocateProfile>(`/advocate/${barId.split("/").map(encodeURIComponent).join("/")}`);
 
-export interface JudgeCaseItem { cnr: string; case_type?: string; status?: string; decision_date?: string | null; tier?: string }
+export interface JudgeCaseItem { cnr: string; case_type?: string; status?: string; decision_date?: string | null; tier?: string; disposal_nature?: string | null; advocate_names?: string[] }
 export interface JudgeProfile { judge_id: string; name: string; case_count: number; returned: number; cases: JudgeCaseItem[] }
 export const getJudge = (judgeId: string) => ldGet<JudgeProfile>(`/judge/${encodeURIComponent(judgeId)}`);
 
@@ -75,7 +75,7 @@ export async function resolveAdvocateBar(name: string): Promise<string | null> {
   return (exact ?? results.sort((a, b) => (b.cases ?? 0) - (a.cases ?? 0))[0]).bar_id ?? null;
 }
 
-export interface TimelineEvent { date: string; type: "hearing" | "order" | "process"; detail?: string; judge?: string }
+export interface TimelineEvent { date: string; type: "hearing" | "order" | "process"; detail?: string; judge?: string; order_id?: number }
 export async function getTimeline(cnr: string): Promise<TimelineEvent[]> {
   const d = await ldGet<{ events?: TimelineEvent[] }>(`/case/${encodeURIComponent(cnr)}/timeline`);
   return d?.events ?? [];
