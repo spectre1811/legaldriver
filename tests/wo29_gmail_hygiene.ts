@@ -1,7 +1,7 @@
 // WO-29 · Gmail ingestion hygiene. Run: npx tsx tests/wo29_gmail_hygiene.ts
 // The guarantee: spam/promotions/social/trash never ingest, regardless of the path they arrive by
 // (the incremental history feed ignores the list `q`, so the label check is the real gate).
-import { isJunkByLabels, EXCLUDE_QUERY, GmailClient } from "../src/lib/mail/gmail";
+import { isJunkByLabels, EXCLUDE_QUERY, GmailClient, combineListQuery } from "../src/lib/mail/gmail";
 
 let failed = 0;
 function ok(name: string, cond: boolean) {
@@ -29,6 +29,11 @@ ok("SPAM is NOT rescued by STARRED (hard drop)", isJunkByLabels(["SPAM", "STARRE
 // The list query narrows up front (defense in depth for the list path).
 ok("exclude query drops promotions+social+spam+trash",
   /-in:spam/.test(EXCLUDE_QUERY) && /-category:promotions/.test(EXCLUDE_QUERY) && /-category:social/.test(EXCLUDE_QUERY));
+
+// W1b: the per-connection scope ANDs with the always-on exclusion (never replaces it).
+ok("no user query → just the exclusion", combineListQuery(null) === EXCLUDE_QUERY && combineListQuery("  ") === EXCLUDE_QUERY);
+ok("user query is appended after the exclusion", combineListQuery("from:x@y.test") === `${EXCLUDE_QUERY} from:x@y.test`);
+ok("junk exclusion survives a user scope", /-in:spam/.test(combineListQuery("label:legal")));
 
 // INTEGRATION: the guarantee end-to-end. Drive the INCREMENTAL history path (the one that ignores
 // the list `q`) with a fake Gmail API and assert junk is dropped in fetchMessagesByIds — a starred

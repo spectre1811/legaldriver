@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient();
   const { data: conns, error } = await admin
     .from("oauth_connection")
-    .select("id, tenant_id, user_id, refresh_token_ref, gmail_last_history_id")
+    .select("id, tenant_id, user_id, refresh_token_ref, gmail_last_history_id, gmail_query")
     .eq("provider", "google")
     .eq("status", "active");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       const refresh = await readSecret(admin, c.refresh_token_ref);
       if (!refresh) throw new Error("could not read refresh token from vault");
       const accessToken = await refreshAccessToken(refresh);
-      const mail = getGmailClient(accessToken);
+      const mail = getGmailClient(accessToken, c.gmail_query);
       const summary = await ingestMail(admin, c.tenant_id, c.user_id, mail, c.gmail_last_history_id);
       filed += summary.filed;
       needsReview += summary.needsReview;

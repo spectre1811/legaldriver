@@ -18,7 +18,9 @@ export function getMockMailClient(seed = "demo"): MailClient {
   return new MockMailClient(seed);
 }
 
-export function getGmailClient(accessToken: string): MailClient {
+// `query` is the optional per-connection Gmail search scope (oauth_connection.gmail_query) —
+// narrows which messages ingest on the list/backfill paths (WO-29 W1b).
+export function getGmailClient(accessToken: string, query?: string | null): MailClient {
   const { GmailClient } = require("./gmail") as typeof import("./gmail");
-  return new GmailClient(accessToken);
+  return new GmailClient(accessToken, query ?? null);
 }

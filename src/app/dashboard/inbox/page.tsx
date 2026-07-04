@@ -7,13 +7,14 @@ import { IngestButton } from "./ingest-button";
 import { isDemoMode } from "@/lib/demo";
 import { FiledInbox, type InboxGroup } from "./filed-inbox";
 import { ReviewInbox } from "./review-inbox";
+import { GmailQueryForm } from "./gmail-query-form";
 import { DisconnectButton, LoadEarlierButton } from "./connect-controls";
 
 export default async function InboxPage({ searchParams }: { searchParams: { connected?: string; error?: string } }) {
   const t = await getTranslations("inbox");
   const supabase = createClient();
   const [{ data: conn }, { data: clients }, { data: matters }, { data: emails }] = await Promise.all([
-    supabase.from("oauth_connection").select("id, status").eq("provider", "google").eq("status", "active").maybeSingle(),
+    supabase.from("oauth_connection").select("id, status, gmail_query").eq("provider", "google").eq("status", "active").maybeSingle(),
     supabase.from("client").select("id, name").order("name"),
     supabase.from("matter").select("id, title").order("title"),
     supabase.from("email_message").select("id, subject, from_addr, received_at, confidence, status, classified_client_id, classified_matter_id").in("status", ["pending", "filed", "needs_review"]).order("received_at", { ascending: false }).limit(200),
@@ -79,6 +80,8 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
           {(process.env.NODE_ENV !== "production" || isDemoMode()) && <IngestButton />}
         </div>
       </Card>
+
+      {conn && <GmailQueryForm initial={conn.gmail_query ?? ""} />}
 
       {review.length > 0 && (
         <ReviewInbox

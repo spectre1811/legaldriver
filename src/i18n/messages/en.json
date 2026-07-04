@@ -932,6 +932,14 @@
       "delete": "Delete",
       "cancel": "Cancel",
       "undo": "Undo"
+    },
+    "scope": {
+      "title": "Ingestion scope (optional)",
+      "help": "Limit which emails are ingested with a Gmail search query — e.g. from:(@courts.gov.in) OR label:legal. Applies to backfill / first sync; new incoming mail is filtered for junk only. Leave empty to ingest everything.",
+      "placeholder": "from:(@courts.gov.in) OR label:legal",
+      "save": "Save scope",
+      "saving": "Saving…",
+      "hygieneNote": "Spam, promotions and social are always excluded regardless of this scope."
     }
   },
   "messages": {

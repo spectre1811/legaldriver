@@ -145,7 +145,7 @@ export async function runOnboarding(
   try {
     const { googleConfigured, refreshAccessToken } = await import("@/lib/mail/oauth");
     if (googleConfigured()) {
-      const { data: acct } = await admin.from("oauth_connection").select("id, user_id, refresh_token_ref").eq("tenant_id", tenantId).limit(1).maybeSingle();
+      const { data: acct } = await admin.from("oauth_connection").select("id, user_id, refresh_token_ref, gmail_query").eq("tenant_id", tenantId).limit(1).maybeSingle();
       if (acct?.refresh_token_ref) {
         const { readSecret } = await import("@/lib/mail/vault");
         const { getGmailClient } = await import("@/lib/mail/client");
@@ -153,7 +153,7 @@ export async function runOnboarding(
         const refresh = await readSecret(admin, acct.refresh_token_ref);
         if (refresh) {
           const accessToken = await refreshAccessToken(refresh);
-          const mail = getGmailClient(accessToken);
+          const mail = getGmailClient(accessToken, acct.gmail_query); // honor the connection's scope on backfill too (WO-29 W1b)
           const summary = await ingestMail(admin, tenantId, acct.user_id, mail, null, 25);
           counts.inbox_filed = summary.filed ?? 0;
         }

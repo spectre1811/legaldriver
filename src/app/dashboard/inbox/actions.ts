@@ -56,7 +56,7 @@ export async function loadEarlierEmails(): Promise<ActionResult> {
   const admin = createAdminClient();
   const { data: conn } = await admin
     .from("oauth_connection")
-    .select("id, refresh_token_ref")
+    .select("id, refresh_token_ref, gmail_query")
     .eq("tenant_id", tenantId)
     .eq("user_id", user.id)
     .eq("provider", "google")
@@ -68,7 +68,7 @@ export async function loadEarlierEmails(): Promise<ActionResult> {
     const refresh = await readSecret(admin, conn.refresh_token_ref);
     if (!refresh) return { ok: false, message: "Could not read credential." };
     const accessToken = await refreshAccessToken(refresh);
-    const mail = getGmailClient(accessToken);
+    const mail = getGmailClient(accessToken, conn.gmail_query);
     const summary = await ingestMail(admin, tenantId, user.id, mail, null, 30);
     revalidatePath("/dashboard/inbox");
     return {
@@ -158,6 +158,26 @@ export async function restoreEmails(entries: { id: string; status: string }[]): 
   await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "email.restore", entity: "email_message", entity_id: entries[0].id, after: { count: entries.length } });
   revalidatePath("/dashboard/inbox");
   return { ok: true, message: "Restored." };
+}
+
+// Set (or clear) the connection's optional Gmail search scope (WO-29 W1b). Empty = ingest all
+// (minus the always-on junk exclusion). Applies to future backfills/cold-starts.
+export async function setGmailQuery(query: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId || !user) return { ok: false, message: "Not signed in." };
+  const trimmed = query.trim();
+  if (trimmed.length > 500) return { ok: false, message: "Query is too long (max 500 characters)." };
+  const { error } = await supabase
+    .from("oauth_connection")
+    .update({ gmail_query: trimmed || null })
+    .eq("tenant_id", tenantId)
+    .eq("user_id", user.id)
+    .eq("provider", "google");
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/dashboard/inbox");
+  return { ok: true, message: trimmed ? "Ingestion scope saved." : "Scope cleared — ingesting all mail (minus spam/promotions)." };
 }
 
 export async function disconnectGmail(): Promise<ActionResult> {
