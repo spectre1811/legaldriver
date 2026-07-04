@@ -7,13 +7,15 @@ import { Icon, type IconName } from "@/components/icons";
 
 type NavEntry = { href: string; label: string; icon: IconName };
 
-// Scrollable nav sections. Onboarding is demoted out of the top slot into its own
-// low-key "setup" group; the four comms surfaces (inbox/messages/voice/notifications)
-// are consolidated under "communication"; every item now carries a distinct icon.
+// Scrollable nav sections. "Advocate Onboarding" is the activation entry point, pinned to the
+// top of the practice group (founder 2026-07-05); the four comms surfaces
+// (inbox/messages/voice/notifications) are consolidated under "communication"; every item
+// carries a distinct icon.
 const SECTIONS: { heading: string; items: NavEntry[] }[] = [
   {
     heading: "practice",
     items: [
+      { href: "/dashboard/onboarding", label: "onboarding", icon: "sparkles" },
       { href: "/dashboard", label: "overview", icon: "overview" },
       { href: "/dashboard/cases", label: "cases", icon: "cases" },
       { href: "/dashboard/clients", label: "clients", icon: "clients" },
@@ -55,10 +57,6 @@ const SECTIONS: { heading: string; items: NavEntry[] }[] = [
       { href: "/dashboard/draft", label: "drafting", icon: "edit" },
       { href: "/dashboard/ai-usage", label: "aiUsage", icon: "gauge" },
     ],
-  },
-  {
-    heading: "setup",
-    items: [{ href: "/dashboard/onboarding", label: "onboarding", icon: "check" }],
   },
 ];
 

@@ -85,12 +85,11 @@
       "communication": "Communication",
       "insight": "Insight",
       "assistant": "Assistant",
-      "setup": "Setup",
       "account": "Account"
     },
     "item": {
       "overview": "Overview",
-      "onboarding": "Onboarding",
+      "onboarding": "Advocate Onboarding",
       "clients": "Clients",
       "cases": "Cases",
       "calendar": "Calendar",
