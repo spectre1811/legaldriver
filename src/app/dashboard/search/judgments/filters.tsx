@@ -35,7 +35,7 @@ export function Filters() {
   const [q, setQ] = useState(sp.get("q") ?? "");
   const [judgeQ, setJudgeQ] = useState(sp.get("judge") ?? "");
 
-  const push = (next: URLSearchParams) => router.push(`/dashboard/research?${next.toString()}`);
+  const push = (next: URLSearchParams) => router.push(`/dashboard/search/judgments?${next.toString()}`);
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(sp.toString());
@@ -55,7 +55,7 @@ export function Filters() {
   const clearAll = () => {
     setQ("");
     setJudgeQ("");
-    router.push("/dashboard/research");
+    router.push("/dashboard/search/judgments");
   };
 
   const hasFilters = Boolean(sp.get("q") || sp.get("court") || sp.get("year") || sp.get("disposal") || sp.get("judge"));

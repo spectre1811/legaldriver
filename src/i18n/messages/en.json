@@ -95,8 +95,7 @@
       "calendar": "Calendar",
       "analytics": "Analytics",
       "portfolio": "Portfolio",
-      "research": "Case research",
-      "lookup": "Judges & advocates",
+      "search": "Court search",
       "notices": "Notices",
       "causeList": "Cause list",
       "inbox": "Inbox",
@@ -1613,6 +1612,13 @@
     "resAdvCol": "Res. advocate",
     "relatedToMatter": "Related: {matter}",
     "filterByDisposal": "Filter by this disposition"
+  },
+  "search": {
+    "tabsAria": "Court search sections",
+    "tabs": {
+      "directory": "Judges & advocates",
+      "judgments": "Judgments"
+    }
   },
   "assistant": {
     "tabsAria": "Assistant sections",

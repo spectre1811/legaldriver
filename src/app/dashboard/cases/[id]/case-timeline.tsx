@@ -118,7 +118,7 @@ export async function CaseTimeline({ events, hasCnr }: { events: TimelineEvent[]
                   <p className="mt-0.5 text-xs text-ec-ink-3">
                     {t("timeline.judgePrefix")}{" "}
                     <Link
-                      href={`/dashboard/lookup?q=${encodeURIComponent(decode(ev.judge))}`}
+                      href={`/dashboard/search/directory?q=${encodeURIComponent(decode(ev.judge))}`}
                       className="font-medium text-ec-brass-deep hover:text-ec-brass"
                     >
                       {decode(ev.judge)}

@@ -27,7 +27,7 @@ function judgmentHref(r: JudgmentRow): string {
   add("citation", r.citation);
   add("date", r.decision_date);
   add("disposal", r.disposal_nature);
-  return `/dashboard/research/judgment?${params.toString()}`;
+  return `/dashboard/search/judgments/judgment?${params.toString()}`;
 }
 
 // Title looks like "CR.RA/952/2023 of ARTHKUMAR... Vs BINALBEN...".
@@ -150,7 +150,7 @@ export default async function ResearchPage({
               {activeFilters ? ` · ${t("filtered")}` : ""}
             </div>
             {activeFilters && (
-              <a href="/dashboard/research" className="text-xs font-medium text-brand-700 hover:underline">{t("clearFilters")}</a>
+              <a href="/dashboard/search/judgments" className="text-xs font-medium text-brand-700 hover:underline">{t("clearFilters")}</a>
             )}
           </div>
           <div className="overflow-x-auto">
@@ -207,7 +207,7 @@ export default async function ResearchPage({
                               className="hover:text-brand-600 hover:underline text-left"
                               aria-label={`Filter by judge ${r.judge}`}
                             >
-                              <a href={`/dashboard/research?judge=${encodeURIComponent(r.judge)}`} className="hover:text-brand-600 hover:underline">{r.judge}</a>
+                              <a href={`/dashboard/search/judgments?judge=${encodeURIComponent(r.judge)}`} className="hover:text-brand-600 hover:underline">{r.judge}</a>
                             </button>
                           : <span className="text-ink-faint">—</span>}
                       </td>
@@ -218,7 +218,7 @@ export default async function ResearchPage({
                       </td>
                       <td className="px-5 py-3.5 align-top">
                         {r.disposal_nature
-                          ? <a href={`/dashboard/research?disposal=${encodeURIComponent(r.disposal_nature)}`} title={t("filterByDisposal")} className="hover:opacity-70 transition-opacity">
+                          ? <a href={`/dashboard/search/judgments?disposal=${encodeURIComponent(r.disposal_nature)}`} title={t("filterByDisposal")} className="hover:opacity-70 transition-opacity">
                               <Badge>{expandDisposal(r.disposal_nature).full}</Badge>
                             </a>
                           : <span className="text-ink-faint">—</span>}

@@ -95,7 +95,7 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
   // We look at the case-level advocate names stored on decisions in our DB.
   // For now, cross-link via the lookup search route (no extra API call needed).
   const advocateSearchHref = (name: string) =>
-    `/dashboard/lookup?q=${encodeURIComponent(name)}`;
+    `/dashboard/search/directory?q=${encodeURIComponent(name)}`;
 
   // ── Tier chip colours ───────────────────────────────────────────────────────
   const tierTone = (tier: string): "brand" | "neutral" | "amber" =>
@@ -109,7 +109,7 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
     <div className="space-y-6">
       {/* ── Back link ──────────────────────────────────────────────────────── */}
       <Link
-        href="/dashboard/lookup"
+        href="/dashboard/search/directory"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-ec-brass-deep hover:text-ec-brass"
       >
         <Icon name="back" className="h-4 w-4" />

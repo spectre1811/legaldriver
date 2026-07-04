@@ -331,7 +331,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               <div>
                 <dt className="ec-label">{t("detail.coram")}</dt>
                 <dd className="mt-1 text-sm">
-                  <Link href={`/dashboard/lookup?q=${encodeURIComponent(coramName)}`} className="font-medium text-ec-brass-deep hover:text-ec-brass">
+                  <Link href={`/dashboard/search/directory?q=${encodeURIComponent(coramName)}`} className="font-medium text-ec-brass-deep hover:text-ec-brass">
                     {coramName}
                   </Link>
                 </dd>
@@ -440,7 +440,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 <li key={h.id} className="flex items-center gap-3 px-5 py-3 text-sm">
                   <span className="num w-20 shrink-0 text-ec-ink-3">{fmtDate(h.date)}</span>
                   <span className="flex-1 text-ec-ink">{h.purpose ? cleanPurpose(h.purpose) : t("hearings.fallback")}</span>
-                  <span className="text-xs text-ec-ink-3">{h.judge ? <Link href={`/dashboard/lookup?q=${encodeURIComponent(h.judge)}`} className="text-ec-brass-deep hover:text-ec-brass">{h.judge}</Link> : ""}</span>
+                  <span className="text-xs text-ec-ink-3">{h.judge ? <Link href={`/dashboard/search/directory?q=${encodeURIComponent(h.judge)}`} className="text-ec-brass-deep hover:text-ec-brass">{h.judge}</Link> : ""}</span>
                 </li>
               ))}
             </ul>

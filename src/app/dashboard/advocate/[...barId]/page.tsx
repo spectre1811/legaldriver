@@ -110,7 +110,7 @@ export default async function AdvocatePage({
     <div className="space-y-6">
       {/* ── Back link ──────────────────────────────────────────────────────── */}
       <Link
-        href="/dashboard/lookup"
+        href="/dashboard/search/directory"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-ec-brass-deep hover:text-ec-brass"
       >
         <Icon name="back" className="h-4 w-4" />
@@ -294,7 +294,7 @@ export default async function AdvocatePage({
                           </Link>
                         ) : (
                           <Link
-                            href={`/dashboard/lookup?q=${encodeURIComponent(name)}`}
+                            href={`/dashboard/search/directory?q=${encodeURIComponent(name)}`}
                             className="min-w-0 truncate font-medium text-brand-600 hover:underline"
                           >
                             {name}

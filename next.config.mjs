@@ -14,14 +14,18 @@ const nextConfig = {
       "/dashboard/inbox": ["./node_modules/unpdf/**"],
     },
   },
-  // WO-31 surface consolidation: the copilot + drafting surfaces merged into one
-  // /dashboard/assistant (Ask/Draft tabs). Keep old deep links working. Query
-  // strings (e.g. ?thread=/?matter=) and the :id param are preserved automatically.
+  // WO-31 surface consolidation: copilot+drafting merged into /dashboard/assistant
+  // (Ask/Draft tabs); lookup+research merged into /dashboard/search (Directory/
+  // Judgments tabs). Keep old deep links working — query strings (?thread=/?matter=/
+  // ?q=/?judge=) and the :id param are preserved automatically.
   async redirects() {
     return [
       { source: "/dashboard/copilot", destination: "/dashboard/assistant/ask", permanent: true },
       { source: "/dashboard/draft", destination: "/dashboard/assistant/draft", permanent: true },
       { source: "/dashboard/draft/:id", destination: "/dashboard/assistant/draft/:id", permanent: true },
+      { source: "/dashboard/lookup", destination: "/dashboard/search/directory", permanent: true },
+      { source: "/dashboard/research", destination: "/dashboard/search/judgments", permanent: true },
+      { source: "/dashboard/research/judgment", destination: "/dashboard/search/judgments/judgment", permanent: true },
     ];
   },
 };
