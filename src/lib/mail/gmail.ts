@@ -8,6 +8,29 @@ import type { FetchResult, NormalizedAttachment, NormalizedEmail } from "./types
 
 const API = "https://gmail.googleapis.com/gmail/v1/users/me";
 
+// WO-29 · ingestion hygiene (product-depth §5). Junk must never vacuum in silently. Gmail's
+// messages.list already drops SPAM/TRASH, but NOT Promotions/Social; and the incremental
+// history.list path ignores `q` entirely and reports EVERY messageAdded. So we (a) narrow the
+// list query with these operators up front, and (b) — the guarantee — drop any message carrying
+// an excluded label in the shared per-message fetch, which covers the history path too.
+export const EXCLUDE_QUERY = "-in:spam -in:trash -category:promotions -category:social";
+// SPAM/TRASH are ALWAYS dropped. Promotions/Social are dropped by default too — UNLESS the user
+// explicitly flagged the message IMPORTANT or STARRED, in which case the human signal overrides
+// Gmail's auto-categorization and we keep it (Gmail categories coexist with IMPORTANT/STARRED). This
+// avoids silently losing a starred/important legal email that Gmail happened to auto-bin — §5 cuts
+// both ways: never vacuum junk IN, but never silently vacuum a wanted message OUT either.
+const HARD_EXCLUDED = new Set(["SPAM", "TRASH"]);
+const SOFT_EXCLUDED = new Set(["CATEGORY_PROMOTIONS", "CATEGORY_SOCIAL"]);
+const RESCUE_LABELS = new Set(["IMPORTANT", "STARRED"]);
+
+// Pure predicate (unit-testable, no I/O): should this message be skipped as junk?
+export function isJunkByLabels(labelIds: readonly string[] | null | undefined): boolean {
+  const labels = labelIds ?? [];
+  if (labels.some((l) => HARD_EXCLUDED.has(l))) return true; // spam/trash — always out
+  if (labels.some((l) => RESCUE_LABELS.has(l))) return false; // human-flagged — always kept
+  return labels.some((l) => SOFT_EXCLUDED.has(l)); // promotions/social — out by default
+}
+
 type Json = Record<string, unknown>;
 
 function b64urlToBuffer(data: string): Buffer {
@@ -47,7 +70,7 @@ export class GmailClient implements MailClient {
       }
       if (hist?.historyId) newHistoryId = String(hist.historyId);
     } else {
-      const list = await this.get(`/messages?maxResults=10`);
+      const list = await this.get(`/messages?maxResults=10&q=${encodeURIComponent(EXCLUDE_QUERY)}`);
       ids = ((list?.messages as Json[]) ?? []).map((m) => String(m.id));
       const profile = await this.get(`/profile`);
       if (profile?.historyId) newHistoryId = String(profile.historyId);
@@ -62,7 +85,7 @@ export class GmailClient implements MailClient {
   // ingest dedupes already-stored messages, netting the older ones.
   async fetchBackfill(maxMessages: number): Promise<FetchResult> {
     const cap = Math.min(Math.max(maxMessages, 1), 100);
-    const list = await this.get(`/messages?maxResults=${cap}`);
+    const list = await this.get(`/messages?maxResults=${cap}&q=${encodeURIComponent(EXCLUDE_QUERY)}`);
     const ids = ((list?.messages as Json[]) ?? []).map((m) => String(m.id));
     const emails = await this.fetchMessagesByIds([...new Set(ids)]);
     return { emails };
@@ -73,6 +96,9 @@ export class GmailClient implements MailClient {
     for (const id of ids) {
       const msg = await this.get(`/messages/${id}?format=full`);
       if (!msg) continue;
+      // Drop spam/promotions/social/trash regardless of how the id arrived (the history path
+      // reports them; the list `q` doesn't apply there). This is the single hygiene guarantee.
+      if (isJunkByLabels(msg.labelIds as string[] | undefined)) continue;
       const payload = (msg.payload as Json) ?? {};
       const headers = (payload.headers as Json[]) ?? [];
       const { body, attachments } = await this.walkParts(id, payload);

@@ -4,6 +4,7 @@ import { googleConfigured } from "@/lib/mail/oauth";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { IngestButton } from "./ingest-button";
+import { isDemoMode } from "@/lib/demo";
 import { ReviewItem } from "./review-item";
 import { DisconnectButton, LoadEarlierButton } from "./connect-controls";
 
@@ -57,7 +58,8 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
               <Icon name="gmail" className="h-4 w-4" /> {t("connectGmail")}
             </a>
           )}
-          <IngestButton />
+          {/* WO-29: the mock "Demo ingest" button is dev/demo-only — never in a real advocate's prod inbox. */}
+          {(process.env.NODE_ENV !== "production" || isDemoMode()) && <IngestButton />}
         </div>
       </Card>
 
