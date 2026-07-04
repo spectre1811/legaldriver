@@ -1394,8 +1394,27 @@
       "practice": "Practice",
       "billing": "Billing",
       "integrations": "Integrations",
+      "team": "Team",
       "preferences": "Preferences",
+      "privacy": "Data & privacy",
       "admin": "Admin & diagnostics"
+    },
+    "team": {
+      "heading": "Team & members",
+      "desc": "People in your workspace and their roles.",
+      "unnamed": "Unnamed",
+      "you": "· you",
+      "inviteSoon": "Inviting teammates is coming soon — each will get their own login scoped to this workspace."
+    },
+    "privacy": {
+      "exportHeading": "Export your data",
+      "exportDesc": "Download a JSON copy of your workspace data (cases, clients, documents metadata, invoices, notices, activity). Document files aren't included.",
+      "exportButton": "Download my data",
+      "activityHeading": "Activity log",
+      "activityDesc": "A record of recent actions taken in your workspace.",
+      "activityEmpty": "No activity recorded yet.",
+      "deleteHeading": "Delete account",
+      "deleteDesc": "Account deletion permanently removes your workspace and all its data. To request it, contact support — this is intentionally not one-click."
     },
     "profile": {
       "heading": "Your profile",

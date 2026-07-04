@@ -41,6 +41,14 @@ export default async function SettingsPage() {
     .order("name");
   const { data: firmBilling } = await supabase.from("firm_billing").select("*").maybeSingle();
 
+  // Team members (RLS scopes to the tenant) + recent activity log (audit_event, already written).
+  const { data: members } = await supabase.from("profile").select("id, full_name, role, created_at").order("created_at");
+  const { data: auditLog } = await supabase
+    .from("audit_event")
+    .select("id, action, entity, created_at")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
   // Active capture token (HITL bookmarklet). baseUrl for the bookmarklet target.
   const { data: tok } = await supabase
     .from("capture_token")
@@ -71,7 +79,9 @@ export default async function SettingsPage() {
     { id: "practice", label: t("nav.practice"), icon: "scale" },
     { id: "billing", label: t("nav.billing"), icon: "invoice" },
     { id: "integrations", label: t("nav.integrations"), icon: "gmail" },
+    { id: "team", label: t("nav.team"), icon: "clients" },
     { id: "preferences", label: t("nav.preferences"), icon: "settings" },
+    { id: "privacy", label: t("nav.privacy"), icon: "bulb" },
     { id: "admin", label: t("nav.admin"), icon: "alert" },
   ];
 
@@ -147,6 +157,32 @@ export default async function SettingsPage() {
           </Card>
         </SettingsPanel>
 
+        {/* ── Team & members (read-only today; invite needs the multi-member flow) ── */}
+        <SettingsPanel id="team">
+          <Card className="p-5">
+            <h2 className="mb-1 text-base font-medium">{t("team.heading")}</h2>
+            <p className="mb-4 text-sm text-ink-muted">{t("team.desc")}</p>
+            <ul className="divide-y divide-line">
+              {(members ?? []).map((m) => (
+                <li key={m.id} className="flex items-center justify-between py-3 text-sm">
+                  <span className="flex items-center gap-2.5 font-medium text-ink">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">
+                      {(m.full_name ?? "?").slice(0, 1).toUpperCase()}
+                    </span>
+                    {m.full_name ?? t("team.unnamed")}
+                    {m.id === user?.id && <span className="text-xs font-normal text-ink-faint">{t("team.you")}</span>}
+                  </span>
+                  <span className="ec-chip capitalize">{m.role}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-line px-4 py-3 text-sm">
+              <Icon name="clients" className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint" />
+              <p className="text-xs text-ink-muted">{t("team.inviteSoon")}</p>
+            </div>
+          </Card>
+        </SettingsPanel>
+
         {/* ── Preferences: language + notifications ── */}
         <SettingsPanel id="preferences">
           <Card className="p-5">
@@ -162,6 +198,48 @@ export default async function SettingsPage() {
             <NotificationForm
               prefs={notif ?? { whatsapp_number: null, channel_whatsapp: false, channel_email: true, channel_sms: false, quiet_start: null, quiet_end: null, cause_list_time: null }}
             />
+          </Card>
+        </SettingsPanel>
+
+        {/* ── Data & privacy: activity log + export + account deletion ── */}
+        <SettingsPanel id="privacy">
+          <Card className="p-5">
+            <div className="mb-1 flex items-center gap-2">
+              <Icon name="documents" className="h-4 w-4 text-ink-faint" />
+              <h2 className="text-base font-medium">{t("privacy.exportHeading")}</h2>
+            </div>
+            <p className="mb-4 text-sm text-ink-muted">{t("privacy.exportDesc")}</p>
+            <a href="/api/export" className="btn-primary inline-flex w-fit items-center gap-2" download>
+              <Icon name="external" className="h-4 w-4" /> {t("privacy.exportButton")}
+            </a>
+          </Card>
+
+          <Card className="p-5">
+            <h2 className="mb-1 text-base font-medium">{t("privacy.activityHeading")}</h2>
+            <p className="mb-4 text-sm text-ink-muted">{t("privacy.activityDesc")}</p>
+            {auditLog && auditLog.length ? (
+              <ul className="divide-y divide-line">
+                {auditLog.map((a) => (
+                  <li key={a.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                    <span className="text-ink">
+                      <span className="font-mono text-xs text-ec-brass-deep">{a.action}</span>
+                      {a.entity ? <span className="text-ink-faint"> · {a.entity}</span> : null}
+                    </span>
+                    <span className="shrink-0 text-xs text-ink-faint">{fmtAgo(a.created_at)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="py-6 text-center text-sm text-ink-faint">{t("privacy.activityEmpty")}</p>
+            )}
+          </Card>
+
+          <Card className="flex items-start gap-3 p-5">
+            <Icon name="alert" className="mt-0.5 h-5 w-5 text-red-600" />
+            <div className="text-sm text-ink-muted">
+              <p className="font-medium text-ink">{t("privacy.deleteHeading")}</p>
+              <p className="mt-0.5">{t("privacy.deleteDesc")}</p>
+            </div>
           </Card>
         </SettingsPanel>
 
