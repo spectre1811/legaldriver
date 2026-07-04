@@ -971,6 +971,7 @@
       "failed": "failed"
     },
     "noText": "(media / no text)",
+    "cappedNote": "Showing the {count} most recent messages. Filter by channel to narrow the list.",
     "provenance": "Provenance: each row records its provider and direction. Inbound messages are classified by AI and filed deterministically; low-confidence routing leaves a message unfiled. Message bodies are never logged.",
     "composer": {
       "title": "New WhatsApp message",
@@ -1974,5 +1975,10 @@
     "cached": "cached",
     "failed": "failed",
     "footer": "Assistive AI — grounded and cited where possible, not legal advice. Costs are gateway-metered per tenant."
+  },
+  "pagination": {
+    "loadMore": "Load more",
+    "error": "Couldn't load more — tap to retry.",
+    "end": "All {n} shown"
   }
 }
