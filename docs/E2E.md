@@ -8,13 +8,28 @@ Two layers, different jobs:
   scores UX against the polish rubric, files bugs. Never a merge gate. *(Phase 2+.)*
 
 ## Phase status
-- **Phase 0 (this change) ✅** — Playwright config, one-time auth (`auth.setup.ts`, advocate + junior roles),
+- **Phase 0 ✅ (merged)** — Playwright config, one-time auth (`auth.setup.ts`, advocate + junior),
   auto route inventory (`scripts/gen-routes.mjs` → `e2e/routes.generated.json`, 42 routes), the
-  login→dashboard smoke, and a per-route render/console/network health gate over all 34 static routes.
-- **Phase 1 (next)** — per-route `@axe-core/playwright` + visual snapshots + `<main>`-landmark assert;
-  seed dynamic routes (`E2E_ROUTE_IDS`); the **WO-35 hero journeys** as specs; wire the `e2e` job into
-  `ci.yml` as a required check.
+  login→dashboard smoke, per-route render/console/network health gate.
+- **Phase 1 ✅ (this change)** — **public/authed project split** (public routes tested *unauthenticated*,
+  so `/` and `/login` are no longer silently redirected to `/dashboard`); per-route **`@axe-core/playwright`**
+  a11y scan (fails on `critical`, tunable via `A11Y_MAX_IMPACT`) + **`<main>`-landmark** assertion;
+  **dynamic routes seeded** via `E2E_ROUTE_IDS`; a **settle** (networkidle) before the console/network guard.
+  The **WO-35 hero journeys** already landed as specs in WO-35 W4 (`e2e/hero-*.spec.ts`). An **activatable
+  `.github/workflows/e2e.yml`** runs the whole suite in CI (dormant until the founder enables it — see below).
+- **Phase 1b (next)** — **visual snapshots** (`toHaveScreenshot`): baselines must be generated on the CI
+  Linux runner (`--update-snapshots`) and committed, so this lands after the E2E workflow is activated.
 - **Phase 2–4** — agentic explorer MVP, auto-issue filing w/ dedup, spec-graduation, nightly sweep + cost caps.
+
+## Activating the `E2E` CI workflow (founder, one-time)
+`.github/workflows/e2e.yml` is **advisory** (named `E2E`, not `CI` — it can never gate/wedge the
+auto-merge queue) and **dormant** until you provision a demo test env. To turn it on:
+1. Repo → Settings → Secrets and variables → Actions → **Variables**: add `E2E_ENABLED = true`.
+2. **Secrets**: `E2E_SUPABASE_URL`, `E2E_SUPABASE_ANON_KEY` (a **demo** Supabase project), `E2E_EMAIL`,
+   `E2E_PASSWORD` (demo advocate), optional `E2E_EMAIL2`, `E2E_ROUTE_IDS` (demo seed ids, e.g.
+   `{"id":"<matter-uuid>","judgeId":"<uuid>","barId":"12345"}`).
+Until then the job is **skipped** (neutral, never red). Once green across a few PRs, promote it to a
+required check (branch protection, or add an `e2e`-named check to `automerge.yml`'s green filter).
 
 ## Running locally
 ```bash
@@ -36,17 +51,17 @@ export E2E_BASE_URL=https://<demo-preview>.vercel.app   # webServer is skipped w
 ## Env
 | Var | Meaning |
 |---|---|
-| `E2E_BASE_URL` | URL under test (default `http://localhost:3000`; local ⇒ auto-starts dev in DEMO_MODE) |
+| `E2E_BASE_URL` | URL under test (default `http://localhost:3000`; local ⇒ auto-starts a server in DEMO_MODE) |
+| `E2E_WEBSERVER_CMD` | server command when local (default `npm run dev`; CI uses `npm start` against a prebuilt app) |
 | `E2E_EMAIL` / `E2E_PASSWORD` | demo advocate login (aliases: `DEMO_EMAIL` / `DEMO_PASSWORD`) — **required** for authed specs |
 | `E2E_EMAIL2` | demo junior/second-role login (optional; junior specs skip if unset) |
-
-## ⚠️ Phase-1 prerequisite — the DEMO_MODE outbound sandbox must actually exist first
-Phase 0 only navigates + smoke-tests (login→dashboard, per-route render) — it **never clicks a "send"**, so it is safe today. But the config sets `DEMO_MODE=1` on the promise that it sandboxes outbound email/WhatsApp/SMS, and **that short-circuit is not yet in `main`** (`grep DEMO_MODE src/` = 0; the WO-08 sandbox is on an unmerged branch). **Do NOT ship any Phase-1 spec that triggers an outbound action (notice→escalate, send-reminder, etc.) until the app honors `DEMO_MODE` in every send path** — otherwise those specs fire REAL messages. Verify with `grep -rn DEMO_MODE src/lib/notify src/lib/services/messaging` before enabling send-path journeys.
+| `E2E_ROUTE_IDS` | JSON map of dynamic-route param → id, e.g. `{"id":"<uuid>","judgeId":"<uuid>","barId":"12345"}` — dynamic routes skip unless seeded |
+| `A11Y_MAX_IMPACT` | axe severity floor to fail on: `critical` (default) → tighten to `serious` once the baseline is clean |
 
 ## Guardrails
-- **DEMO_MODE=1 only.** The suite logs into the seeded demo tenant and clicks real actions; never point it at a real tenant. `DEMO_MODE` is *intended* to sandbox all outbound email/WhatsApp/SMS — but see the prerequisite above: that sandbox must be implemented + verified in the app before any send-path spec runs.
+- **DEMO_MODE=1 only.** The suite logs into the seeded demo tenant and clicks real actions; never point it at a real tenant. `DEMO_MODE` **is now honored in the app** (WO-08, merged): `isDemoMode()` in `src/lib/demo.ts` forces `getMailer()`/`getMessagingClient()` to console/mock impls, so outbound email/WhatsApp/SMS is sandboxed. (Re-verify after touching a send path: `grep -rn DEMO_MODE src/lib/notify src/lib/services/messaging`.)
 - Deterministic layer gates; the agentic layer only advises (LLM explorers over-click/hallucinate — documented failure mode).
-- Auth state (`playwright/.auth/`) + run artifacts are git-ignored; **visual baselines are committed**.
+- Auth state (`playwright/.auth/`) + run artifacts are git-ignored. **Visual baselines** are committed once generated (Phase 1b — must be produced on the CI Linux runner to match, not on a dev macOS box).
 
 ## Known setup notes
 - `playwright` (the library) is already a devDep; this change adds `@playwright/test` (the runner) + `@axe-core/playwright`. A fresh `npm ci` picks them up. Chromium binaries were already present in this environment.
