@@ -2252,6 +2252,7 @@ export type Database = {
         Row: {
           created_at: string
           gmail_last_history_id: string | null
+          gmail_query: string | null
           id: string
           provider: string
           refresh_token_ref: string | null
@@ -2263,6 +2264,7 @@ export type Database = {
         Insert: {
           created_at?: string
           gmail_last_history_id?: string | null
+          gmail_query?: string | null
           id?: string
           provider?: string
           refresh_token_ref?: string | null
@@ -2274,6 +2276,7 @@ export type Database = {
         Update: {
           created_at?: string
           gmail_last_history_id?: string | null
+          gmail_query?: string | null
           id?: string
           provider?: string
           refresh_token_ref?: string | null

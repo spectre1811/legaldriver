@@ -23,6 +23,12 @@ const HARD_EXCLUDED = new Set(["SPAM", "TRASH"]);
 const SOFT_EXCLUDED = new Set(["CATEGORY_PROMOTIONS", "CATEGORY_SOCIAL"]);
 const RESCUE_LABELS = new Set(["IMPORTANT", "STARRED"]);
 
+// Combine the always-on junk exclusion with the optional per-connection scope (WO-29 W1b) into the
+// Gmail list `q`. Space = AND, so both apply. Pure/unit-testable.
+export function combineListQuery(userQuery: string | null | undefined): string {
+  return [EXCLUDE_QUERY, userQuery?.trim()].filter(Boolean).join(" ");
+}
+
 // Pure predicate (unit-testable, no I/O): should this message be skipped as junk?
 export function isJunkByLabels(labelIds: readonly string[] | null | undefined): boolean {
   const labels = labelIds ?? [];
@@ -43,7 +49,14 @@ function header(headers: Json[], name: string): string {
 
 export class GmailClient implements MailClient {
   readonly provider = "gmail";
-  constructor(private readonly accessToken: string) {}
+  // `query` = optional per-connection scope (oauth_connection.gmail_query), combined with the
+  // always-on junk exclusion on the list/backfill paths. The incremental history API ignores `q`,
+  // so the query narrows backfill + cold-start only; junk is still dropped everywhere by the labels.
+  constructor(private readonly accessToken: string, private readonly query: string | null = null) {}
+
+  private listQuery(): string {
+    return combineListQuery(this.query);
+  }
 
   private async get(path: string): Promise<Json | null> {
     const res = await fetch(`${API}${path}`, {
@@ -70,7 +83,7 @@ export class GmailClient implements MailClient {
       }
       if (hist?.historyId) newHistoryId = String(hist.historyId);
     } else {
-      const list = await this.get(`/messages?maxResults=10&q=${encodeURIComponent(EXCLUDE_QUERY)}`);
+      const list = await this.get(`/messages?maxResults=10&q=${encodeURIComponent(this.listQuery())}`);
       ids = ((list?.messages as Json[]) ?? []).map((m) => String(m.id));
       const profile = await this.get(`/profile`);
       if (profile?.historyId) newHistoryId = String(profile.historyId);
@@ -85,7 +98,7 @@ export class GmailClient implements MailClient {
   // ingest dedupes already-stored messages, netting the older ones.
   async fetchBackfill(maxMessages: number): Promise<FetchResult> {
     const cap = Math.min(Math.max(maxMessages, 1), 100);
-    const list = await this.get(`/messages?maxResults=${cap}&q=${encodeURIComponent(EXCLUDE_QUERY)}`);
+    const list = await this.get(`/messages?maxResults=${cap}&q=${encodeURIComponent(this.listQuery())}`);
     const ids = ((list?.messages as Json[]) ?? []).map((m) => String(m.id));
     const emails = await this.fetchMessagesByIds([...new Set(ids)]);
     return { emails };
