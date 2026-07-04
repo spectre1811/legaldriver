@@ -151,6 +151,9 @@ export default async function LookupPage({
           </Card>
         </>
       )}
+      {enabled && q.length === 1 && (
+        <p className="text-xs text-ink-faint">{t("typeMore")}</p>
+      )}
       {q.length >= 2 && <p className="text-xs text-ink-faint">{t("footer")}</p>}
     </div>
   );

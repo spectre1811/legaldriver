@@ -275,11 +275,14 @@ export async function addCaseByCnr(_prev: ActionResult, formData: FormData): Pro
   revalidatePath("/dashboard/cases");
   revalidatePath("/dashboard/calendar");
   revalidatePath("/dashboard");
+  // The gateway serves stale cache when the provider is unreachable — say so, so a
+  // "successful" add isn't silently backed by old data (WO-35 polish · information-integrity).
+  const staleNote = fetched.stale ? " — served from cache (live provider was unavailable; refresh later to verify)" : "";
   return {
     ok: true,
     message: `${isNew ? "Added" : "Re-synced"} ${normalized.title} — next hearing ${
       normalized.nextHearingDate ?? "n/a"
-    } (source: ${normalized.source}).`,
+    } (source: ${normalized.source})${staleNote}.`,
   };
 }
 
