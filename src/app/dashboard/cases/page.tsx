@@ -45,8 +45,15 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   if (q) {
     const term = q.replace(/[%,()]/g, " ").trim();
     if (term) {
+      // party_names is text[] → array-contains is EXACT-element only (a partial name matches nothing).
+      // Once migration 0030 (party_text + trigram) is applied and COURT_PARTY_TEXT_SEARCH=1 is set,
+      // switch to a substring ILIKE so "Sharm" finds "Sharma vs State" (WO-35 #5). Falls back to the
+      // exact-element match otherwise, so the app is safe to run before the migration lands.
+      const partyClause = process.env.COURT_PARTY_TEXT_SEARCH === "1"
+        ? `party_text.ilike.%${term}%`
+        : `party_names.cs.{${term}}`;
       query = query.or(
-        `title.ilike.%${term}%,cnr.ilike.%${term}%,court.ilike.%${term}%,party_names.cs.{${term}}`,
+        `title.ilike.%${term}%,cnr.ilike.%${term}%,court.ilike.%${term}%,${partyClause}`,
       );
     }
   }

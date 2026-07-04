@@ -1209,7 +1209,20 @@
     "noJudges": "No judges found",
     "noParties": "No parties found",
     "noPartiesBody": "Try a surname (fuzzy match across litigants).",
-    "footer": "Source: Mukadma / eCourts (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record."
+    "footer": "Source: Mukadma / eCourts (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record.",
+    "caseNumber": {
+      "title": "Find a case by number",
+      "subtitle": "Registration number, not CNR — e.g. type C.S., number 1234, year 2022.",
+      "typeLabel": "Type",
+      "typePlaceholder": "C.S.",
+      "numberLabel": "Number",
+      "numberPlaceholder": "1234",
+      "yearLabel": "Year",
+      "yearPlaceholder": "2022",
+      "search": "Find case",
+      "noResults": "No case matched",
+      "noResultsBody": "Check the type, number and year against the filing receipt, or search by CNR above."
+    }
   },
   "analytics": {
     "title": "Analytics",
