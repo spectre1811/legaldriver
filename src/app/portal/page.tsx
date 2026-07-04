@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { cleanPurpose } from "@/lib/court/code-labels";
 import { Composer } from "./composer";
 
 export default async function PortalHome() {
@@ -34,7 +35,7 @@ export default async function PortalHome() {
               <p className="num mt-1 flex flex-wrap items-center gap-2 text-xs text-ec-ink-3">
                 {m.cnr && <span>{m.cnr}</span>}
                 {m.court && <span>· {m.court}</span>}
-                {m.stage && <span>· {m.stage}</span>}
+                {m.stage && <span title={m.stage}>· {cleanPurpose(m.stage)}</span>}
               </p>
             </div>
             <div className="text-right text-sm">
@@ -54,7 +55,7 @@ export default async function PortalHome() {
             <ul className="divide-y divide-ec-hair">
               {hearings.map((h) => (
                 <li key={h.id} className="flex items-center justify-between px-5 py-3 text-sm">
-                  <span className="text-ec-ink-2">{h.purpose ?? t("hearingFallback")}</span>
+                  <span className="text-ec-ink-2">{h.purpose ? cleanPurpose(h.purpose) : t("hearingFallback")}</span>
                   <span className="num text-ec-ink-3">{fmtDate(h.date)}</span>
                 </li>
               ))}

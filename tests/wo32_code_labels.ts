@@ -30,6 +30,11 @@ eq("bare 'RCS'", expandCaseType("RCS", "DISTRICT").full, "Regular Civil Suit");
 eq("bare 'CR.MA' @HIGH (punct-normalized)", expandCaseType("CR.MA", "HIGH").full, "Criminal Misc.Application");
 eq("bare 'CRMA-S' == 'CRMA S' (normalized)", expandCaseType("CRMA-S", "DISTRICT").full, expandCaseType("CRMA S", "DISTRICT").full);
 ok("bare 'NDPS' keeps acronym", expandCaseType("NDPS", "DISTRICT").full.includes("NDPS"));
+// runtime↔generator parity: the bare-code master lookup must equal the self-describing parse of the
+// SAME datum (both normalize identically) — a multi-" - " district full-name is the stress case.
+eq("round-trip: bare 'CMA SC' == its self-describing form",
+  expandCaseType("CMA SC", "DISTRICT").full,
+  expandCaseType("CMA SC - CIVIL MISC. APPLICATION - SR/CIVIL/SMALL CAUSE COU", "DISTRICT").full);
 
 // ── case_type: unknown codes stay RAW + flagged (never fabricated) ──
 for (const u of ["SMRY", "FSUIT", "ZZZQ"]) {
