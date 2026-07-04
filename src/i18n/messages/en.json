@@ -1086,6 +1086,8 @@
       "download": "Download to view",
       "unavailable": "This file type can't be previewed here.",
       "unavailableBody": "Download it to view the full document. The extracted text is shown below.",
+      "noFile": "No file on record",
+      "noFileBody": "This document's file isn't stored yet, so there's nothing to preview. Any extracted text is shown below.",
       "close": "Close preview"
     },
     "summaryHeading": "Summary",
@@ -1667,6 +1669,7 @@
     "emptyBody": "Upload a document above to draft a reply.",
     "uploading": "Uploading…",
     "uploadAndDraft": "Upload & draft",
+    "fileAria": "Choose a document to draft a reply to",
     "drafting": "Drafting…",
     "regenerate": "Regenerate",
     "generateDraft": "Generate draft",

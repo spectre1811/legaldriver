@@ -33,7 +33,7 @@ export function ConfirmDelete({
 
   if (!armed) {
     return (
-      <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setArmed(true); }} className={`inline-flex items-center gap-1 rounded-md ${pad} text-red-600 hover:bg-red-50`}>
+      <button aria-label={label || confirmLabel} title={label || confirmLabel} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setArmed(true); }} className={`inline-flex items-center gap-1 rounded-md ${pad} text-red-600 hover:bg-red-50`}>
         <Icon name="alert" className="h-3.5 w-3.5" /> {label}
       </button>
     );

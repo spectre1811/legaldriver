@@ -13,17 +13,33 @@ export function DocPreview({
   documentId,
   mime,
   filename,
+  hasFile = true,
   className = "",
 }: {
   documentId: string;
   mime: string | null;
   filename: string | null;
+  // False when the DB record has no stored object yet — the download route would 404 with
+  // JSON, which an <iframe>/<img> renders as raw `{"error":"not found"}`. Show a human state
+  // instead of ever embedding that URL. Defaults true so existing callers keep working.
+  hasFile?: boolean;
   className?: string;
 }) {
   const t = useTranslations("documents");
   const kind = previewKind(mime, filename);
   const src = `/api/documents/${documentId}/download`;
   const frame = "w-full rounded-xl border border-line bg-paper";
+
+  // No stored bytes → never embed the download URL (it would show raw error JSON). QA-N2/N3.
+  if (!hasFile) {
+    return (
+      <div className={`flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-paper/50 px-6 py-12 text-center ${className}`}>
+        <Icon name="documents" className="h-8 w-8 text-ink-faint" />
+        <p className="text-sm font-medium text-ink">{t("preview.noFile")}</p>
+        <p className="max-w-xs text-xs text-ink-faint">{t("preview.noFileBody")}</p>
+      </div>
+    );
+  }
 
   if (kind === "pdf") {
     return <iframe src={src} title={filename ?? t("untitled")} className={`${frame} ${className || "h-[34rem]"}`} />;

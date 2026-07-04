@@ -82,6 +82,25 @@ export interface JudgmentRow {
 
 const SELECT_COLS = "src, cnr, title, judge, court_code court, year, decision_date, disposal_nature, citation, path pdf_link, petitioner, respondent";
 
+// The corpus can return the same judgment more than once (overlapping partitions /
+// re-ingested batches), which showed up as duplicate rows + a duplicate React key
+// (CNR-keyed) in the research table. Collapse EXACT duplicates on the fields that
+// identify a document — preserving genuinely distinct orders that share a CNR.
+// Order-stable; pure (no I/O) so it's unit-testable offline.
+export function dedupeJudgments(rows: JudgmentRow[]): JudgmentRow[] {
+  const seen = new Set<string>();
+  const out: JudgmentRow[] = [];
+  for (const r of rows) {
+    const key = [r.cnr, r.pdf_link, r.title, r.decision_date, r.disposal_nature]
+      .map((v) => v ?? "")
+      .join(" ");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(r);
+  }
+  return out;
+}
+
 // Full-corpus judgment search across ALL High Courts + the Supreme Court (judgments_all).
 // court/year validated + inlined (partition pruning); free-text binds as parameters.
 // disposal/judgeFilter: optional equality filters (validated + inlined — no user-controlled SQL).
@@ -102,7 +121,7 @@ export async function searchJudgments(opts: {
   if (term) { where.push("(lower(title) LIKE ? OR lower(judge) LIKE ? OR lower(cnr) LIKE ? OR lower(citation) LIKE ?)"); const p = `%${term.toLowerCase()}%`; params.push(p, p, p, p); }
   const sql = `SELECT ${SELECT_COLS} FROM judgments_all ${where.length ? "WHERE " + where.join(" AND ") : ""}
     ORDER BY decision_date DESC LIMIT ${Math.min(opts.limit ?? 100, 200)}`;
-  return (await athenaQuery(sql, params, opts.limit ?? 100)) as unknown as JudgmentRow[];
+  return dedupeJudgments((await athenaQuery(sql, params, opts.limit ?? 100)) as unknown as JudgmentRow[]);
 }
 
 export interface CaseDetail {

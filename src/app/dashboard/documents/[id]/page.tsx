@@ -23,7 +23,7 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
   // RLS scopes this to the caller's tenant — they can only see their own docs.
   const { data: doc } = await supabase
     .from("document")
-    .select("id, filename, doc_type, category, source, client_id, matter_id, mime, size_bytes, parsed_text, extracted, portal_shared, created_at")
+    .select("id, filename, doc_type, category, source, client_id, matter_id, mime, size_bytes, storage_path, parsed_text, extracted, portal_shared, created_at")
     .eq("id", params.id)
     .maybeSingle();
   if (!doc) notFound();
@@ -127,7 +127,7 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
           <h2 className="text-base font-medium">{t("preview.heading")}</h2>
         </div>
         <div className="p-4">
-          <DocPreview documentId={doc.id} mime={doc.mime} filename={doc.filename} />
+          <DocPreview documentId={doc.id} mime={doc.mime} filename={doc.filename} hasFile={Boolean(doc.storage_path)} />
         </div>
       </Card>
 
