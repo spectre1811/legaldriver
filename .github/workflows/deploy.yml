@@ -1,6 +1,4 @@
 name: deploy-prod
-# Server-side deploy on merge to main (INTEGRATION-DEPLOY.md). Serialized by concurrency →
-# no alias race. Uses VERCEL_TOKEN (repo secret) → no Vercel GitHub-App connection needed.
 on:
   push:
     branches: [main]
@@ -22,10 +20,5 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::warning::VERCEL_TOKEN not set — skipping deploy. Add it in Settings → Secrets and variables → Actions."
-            exit 0
-          fi
-          npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
-          npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
-          npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+          if [ -z "$VERCEL_TOKEN" ]; then echo "::warning::VERCEL_TOKEN not set — skipping deploy."; exit 0; fi
+          npx --yes vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN" --scope yashbahety90-gmailcoms-projects
