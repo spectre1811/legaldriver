@@ -12,7 +12,9 @@
     "gen:routes": "node scripts/gen-routes.mjs",
     "test:e2e": "npm run gen:routes && playwright test",
     "test:e2e:ui": "npm run gen:routes && playwright test --ui",
-    "test:e2e:update": "npm run gen:routes && playwright test --update-snapshots"
+    "test:e2e:update": "npm run gen:routes && playwright test --update-snapshots",
+    "test:qa": "node qa-agent/findings.test.mjs",
+    "qa:sweep": "npm run gen:routes && node qa-agent/run.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",

@@ -17,9 +17,15 @@ Two layers, different jobs:
   **dynamic routes seeded** via `E2E_ROUTE_IDS`; a **settle** (networkidle) before the console/network guard.
   The **WO-35 hero journeys** already landed as specs in WO-35 W4 (`e2e/hero-*.spec.ts`). An **activatable
   `.github/workflows/e2e.yml`** runs the whole suite in CI (dormant until the founder enables it — see below).
-- **Phase 1b (next)** — **visual snapshots** (`toHaveScreenshot`): baselines must be generated on the CI
-  Linux runner (`--update-snapshots`) and committed, so this lands after the E2E workflow is activated.
-- **Phase 2–4** — agentic explorer MVP, auto-issue filing w/ dedup, spec-graduation, nightly sweep + cost caps.
+- **Phase 1b ✅ (this change)** — **visual snapshot** scaffolding (`e2e/visual.spec.ts`, key authed
+  screens, opt-in via `RUN_VISUAL=1`). Baselines must be **generated on the CI Linux runner**
+  (`RUN_VISUAL=1 npm run test:e2e:update`) and committed — they land the first time the E2E workflow
+  runs green (a dev macOS box produces mismatching baselines).
+- **Layer 2 ✅ (this change)** — the **agentic exploratory QA tester** (`qa-agent/`, dormant nightly
+  `qa-sweep.yml`). Reviews every screen like a human, scores UX, files deduped issues. Advisory only.
+  See **`docs/QA-AGENT.md`**.
+- **Next (Phase 3+)** — spec-graduation (agent-confirmed bug → a Playwright spec), PR-comment summaries,
+  per-route step budgets from real cost data.
 
 ## Activating the `E2E` CI workflow (founder, one-time)
 `.github/workflows/e2e.yml` is **advisory** (named `E2E`, not `CI` — it can never gate/wedge the
