@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { getAdvocateProfile, ldEnabled } from "@/lib/court/legaldriver-api";
 import { TrackCaseButton } from "@/components/track-case-button";
+import { expandCaseType, advocateRole } from "@/lib/court/code-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function AdvocatePage({
 }) {
   if (!ldEnabled()) notFound();
   const t = await getTranslations("advocate");
+  const tc = await getTranslations("codeLabels");
   const barId = params.barId.map(decodeURIComponent).join("/");
   const profile = await getAdvocateProfile(barId);
   if (!profile) notFound();
@@ -60,7 +62,8 @@ export default async function AdvocatePage({
   // Case-type breakdown (top 8)
   const byType = new Map<string, number>();
   for (const c of profile.cases) {
-    const ct = (c.case_type ?? "—").split("(")[0].trim();
+    // WO-32: group by the expanded case-type name (merges code + labeled variants).
+    const ct = expandCaseType(c.case_type, c.tier).full || "—";
     byType.set(ct, (byType.get(ct) ?? 0) + 1);
   }
   const topTypes = [...byType.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -93,6 +96,8 @@ export default async function AdvocatePage({
 
   // Aliases (deduplicated, primary name excluded)
   const primaryName = profile.names[0] ?? "";
+  // WO-32: this "advocate" may actually be a court role (APP/PP/AGP) — flag it, don't present as a person.
+  const headerRole = advocateRole(primaryName);
   const aliases = profile.names.slice(1).filter(
     (n) => n.trim() && n.toUpperCase() !== primaryName.toUpperCase()
   );
@@ -115,9 +120,11 @@ export default async function AdvocatePage({
       {/* ── Page header with alias chips inline ──────────────────────────── */}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[1.6rem] font-semibold leading-tight">
-            {primaryName || t("nameFallback", { barId: profile.bar_id })}
+          <h1 className="flex flex-wrap items-center gap-2 text-[1.6rem] font-semibold leading-tight">
+            {headerRole.isRole ? (headerRole.full ?? primaryName) : (primaryName || t("nameFallback", { barId: profile.bar_id }))}
+            {headerRole.isRole && <Badge tone="amber">{tc("role")}</Badge>}
           </h1>
+          {headerRole.isRole && <p className="mt-1.5 max-w-xl text-xs text-ink-faint">{tc("roleNote", { name: primaryName })}</p>}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="ec-chip">{t("barLabel", { barId: profile.bar_id })}</span>
             {regYear && (
@@ -351,8 +358,8 @@ export default async function AdvocatePage({
                               c.cnr
                             )}
                           </td>
-                          <td className="px-3 py-2 text-ink-soft">
-                            {c.case_type?.split("(")[0].trim() ?? "—"}
+                          <td className="px-3 py-2 text-ink-soft" title={c.case_type ?? undefined}>
+                            {expandCaseType(c.case_type, c.tier).full || "—"}
                             {c.registration_year ? (
                               <span className="ml-1 text-xs text-ink-faint">
                                 ({c.registration_year})

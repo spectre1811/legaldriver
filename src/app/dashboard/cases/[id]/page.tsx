@@ -18,6 +18,7 @@ import { DeadlineRuleForm } from "./deadline-rules";
 import { OrdersPanel } from "./orders-panel";
 import { CaseTimeline } from "./case-timeline";
 import { getTimeline, type TimelineEvent } from "@/lib/court/legaldriver-api";
+import { expandCaseType, cleanPurpose } from "@/lib/court/code-labels";
 
 type Party = { name?: string; side?: string; advocate?: string };
 
@@ -136,10 +137,15 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const advocateBars = (detail.advocateBars ?? {}) as Record<string, string>;
   const regional = (detail.regional ?? {}) as { pet_name?: string | null; res_name?: string | null };
 
+  // WO-32: expand the cryptic case-type code to its full name (code kept as a suffix), tidy the stage.
+  const ct = expandCaseType(matter.case_type);
+  const caseTypeLabel = ct.full
+    ? (ct.known && ct.code.toUpperCase() !== ct.full.toUpperCase() ? `${ct.full} · ${ct.code}` : ct.full)
+    : null;
   const info: [string, string | null][] = [
     [t("info.court"), matter.court],
-    [t("info.caseType"), matter.case_type],
-    [t("info.stage"), matter.stage],
+    [t("info.caseType"), caseTypeLabel],
+    [t("info.stage"), cleanPurpose(matter.stage) || null],
     [t("info.client"), client?.name ?? null],
     [t("info.next"), matter.next_hearing_override ? `${fmtDate(matter.next_hearing_override)} ${t("info.yourDiary")}` : fmtDate(matter.next_hearing_date)],
     [t("info.judge"), hearings?.find((h) => h.judge)?.judge ?? null],
@@ -433,7 +439,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               {hearings.map((h) => (
                 <li key={h.id} className="flex items-center gap-3 px-5 py-3 text-sm">
                   <span className="num w-20 shrink-0 text-ec-ink-3">{fmtDate(h.date)}</span>
-                  <span className="flex-1 text-ec-ink">{h.purpose ?? t("hearings.fallback")}</span>
+                  <span className="flex-1 text-ec-ink">{h.purpose ? cleanPurpose(h.purpose) : t("hearings.fallback")}</span>
                   <span className="text-xs text-ec-ink-3">{h.judge ? <Link href={`/dashboard/lookup?q=${encodeURIComponent(h.judge)}`} className="text-ec-brass-deep hover:text-ec-brass">{h.judge}</Link> : ""}</span>
                 </li>
               ))}
