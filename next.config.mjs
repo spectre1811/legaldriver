@@ -14,6 +14,16 @@ const nextConfig = {
       "/dashboard/inbox": ["./node_modules/unpdf/**"],
     },
   },
+  // WO-31 surface consolidation: the copilot + drafting surfaces merged into one
+  // /dashboard/assistant (Ask/Draft tabs). Keep old deep links working. Query
+  // strings (e.g. ?thread=/?matter=) and the :id param are preserved automatically.
+  async redirects() {
+    return [
+      { source: "/dashboard/copilot", destination: "/dashboard/assistant/ask", permanent: true },
+      { source: "/dashboard/draft", destination: "/dashboard/assistant/draft", permanent: true },
+      { source: "/dashboard/draft/:id", destination: "/dashboard/assistant/draft/:id", permanent: true },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

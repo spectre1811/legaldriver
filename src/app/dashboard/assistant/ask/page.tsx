@@ -72,7 +72,7 @@ export default async function CopilotPage({
             <div className="flex items-center justify-between border-b border-line px-4 py-3">
               <h2 className="text-sm font-medium">{t("conversations")}</h2>
               <Link
-                href="/dashboard/copilot"
+                href="/dashboard/assistant/ask"
                 className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
               >
                 <Icon name="plus" className="h-3.5 w-3.5" /> {t("new")}
@@ -83,7 +83,7 @@ export default async function CopilotPage({
                 {threads.map((thread) => (
                   <li key={thread.id}>
                     <Link
-                      href={`/dashboard/copilot?thread=${thread.id}`}
+                      href={`/dashboard/assistant/ask?thread=${thread.id}`}
                       className={`block px-4 py-3 text-sm transition hover:bg-paper ${
                         thread.id === threadId ? "bg-brand-50" : ""
                       }`}

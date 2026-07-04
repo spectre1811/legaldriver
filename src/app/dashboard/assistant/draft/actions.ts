@@ -30,7 +30,7 @@ export async function draftFromDocument(documentId: string, opts?: { templateId?
   });
   if (!out) return { ok: false, message: t("couldNotStart") };
   if (out.noTemplate) return { ok: true, draftId: out.draftId, message: t("noTemplateMatch") };
-  revalidatePath("/dashboard/draft");
+  revalidatePath("/dashboard/assistant/draft");
   return {
     ok: true, draftId: out.draftId, pending: out.pending,
     message: out.pending
@@ -70,7 +70,7 @@ export async function uploadAndDraft(formData: FormData): Promise<DraftActionRes
 
   if (needsOcr) {
     // Image-only scan: the worker will OCR it, then it can be drafted. Don't block.
-    revalidatePath("/dashboard/draft");
+    revalidatePath("/dashboard/assistant/draft");
     return { ok: true, message: t("uploadedScan") };
   }
   return draftFromDocument(doc.id);
@@ -112,11 +112,11 @@ export async function regenerateDraft(draftId: string, opts?: { templateId?: str
       assumptions: result.assumptions, presumptions: result.presumptions, clarifications: result.clarifications,
       bullet_points: result.bullet_points, citations: result.citations as unknown as Json, generated_by: "llm",
     });
-    revalidatePath(`/dashboard/draft/${draftId}`);
+    revalidatePath(`/dashboard/assistant/draft/${draftId}`);
     return { ok: true, draftId, message: t("regenerated") };
   }
   await supabase.from("draft_version").insert({ tenant_id: tenantId, draft_id: draftId, version: nextVersion, body: "", generated_by: "llm", meta: { pending: true, grounding } as unknown as Json });
-  revalidatePath(`/dashboard/draft/${draftId}`);
+  revalidatePath(`/dashboard/assistant/draft/${draftId}`);
   return { ok: true, draftId, pending: true, message: t("regeneratingInBackground") };
 }
 
@@ -135,7 +135,7 @@ export async function saveDraftEdit(draftId: string, body: string): Promise<Draf
   });
   if (error) return { ok: false, message: error.message };
   await supabase.from("draft").update({ status: "edited", updated_at: new Date().toISOString() }).eq("id", draftId);
-  revalidatePath(`/dashboard/draft/${draftId}`);
+  revalidatePath(`/dashboard/assistant/draft/${draftId}`);
   return { ok: true, draftId, message: t("saved") };
 }
 
@@ -164,7 +164,7 @@ export async function finalizeDraft(draftId: string): Promise<DraftActionResult>
     extracted: { draftId, finalized: true } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],
   });
   await supabase.from("draft").update({ status: "finalized", updated_at: new Date().toISOString() }).eq("id", draftId);
-  revalidatePath(`/dashboard/draft/${draftId}`);
+  revalidatePath(`/dashboard/assistant/draft/${draftId}`);
   revalidatePath("/dashboard/documents");
   return { ok: true, draftId, message: t("finalised") };
 }
@@ -175,7 +175,7 @@ export async function discardDraft(draftId: string): Promise<DraftActionResult> 
   const tenantId = await getTenantId(supabase);
   if (!tenantId) return { ok: false, message: t("noTenant") };
   await supabase.from("draft").update({ status: "discarded", updated_at: new Date().toISOString() }).eq("id", draftId);
-  revalidatePath("/dashboard/draft");
+  revalidatePath("/dashboard/assistant/draft");
   return { ok: true, message: t("discarded") };
 }
 

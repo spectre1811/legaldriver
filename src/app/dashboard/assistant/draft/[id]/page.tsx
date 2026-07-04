@@ -37,7 +37,7 @@ export default async function DraftDetailPage({ params }: { params: { id: string
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <Link href="/dashboard/draft" className="mb-1 inline-flex items-center gap-1.5 text-xs text-ink-muted hover:text-ink"><Icon name="back" className="h-3.5 w-3.5" /> {t("header")}</Link>
+          <Link href="/dashboard/assistant/draft" className="mb-1 inline-flex items-center gap-1.5 text-xs text-ink-muted hover:text-ink"><Icon name="back" className="h-3.5 w-3.5" /> {t("header")}</Link>
           <h1 className="text-[1.5rem] font-semibold leading-tight">{draft.title ?? t("draftFallback")}</h1>
           <p className="mt-1 text-sm text-ink-muted">{draft.produces_doc_type?.replace(/_/g, " ") ?? t("draftTypeFallback")} · {t("updated", { date: fmtDate(draft.updated_at) })}</p>
         </div>

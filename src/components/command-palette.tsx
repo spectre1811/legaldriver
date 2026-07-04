@@ -12,7 +12,7 @@ interface Item { kind: "action" | "nav" | "result"; type: string; label: string;
 const QUICK: { key: string; href: string; icon: IconName; keywords: string }[] = [
   { key: "addCase", href: "/dashboard/lookup", icon: "plus", keywords: "add case cnr track new matter lookup" },
   { key: "newNotice", href: "/dashboard/notices", icon: "notices", keywords: "notice legal escalation" },
-  { key: "draft", href: "/dashboard/draft", icon: "edit", keywords: "draft document reply generate write" },
+  { key: "draft", href: "/dashboard/assistant/draft", icon: "edit", keywords: "draft document reply generate write" },
   { key: "upload", href: "/dashboard/documents", icon: "upload", keywords: "upload document file attach" },
   { key: "addAdvocate", href: "/dashboard/settings", icon: "clients", keywords: "advocate bar add settings profile" },
 ];
