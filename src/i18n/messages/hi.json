@@ -339,7 +339,8 @@
       "typeOrder": "आदेश",
       "typeProcess": "प्रक्रिया",
       "judgePrefix": "के समक्ष",
-      "noDetail": "पेशी"
+      "noDetail": "पेशी",
+      "undated": "अदिनांकित"
     },
     "acts": {
       "title": "अधिनियम व धाराएँ"

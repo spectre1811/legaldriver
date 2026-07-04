@@ -339,7 +339,8 @@
       "typeOrder": "Order",
       "typeProcess": "Process",
       "judgePrefix": "Before",
-      "noDetail": "Hearing"
+      "noDetail": "Hearing",
+      "undated": "Undated"
     },
     "acts": {
       "title": "Acts & Sections"
