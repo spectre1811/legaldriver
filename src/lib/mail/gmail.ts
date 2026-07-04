@@ -42,6 +42,26 @@ type Json = Record<string, unknown>;
 function b64urlToBuffer(data: string): Buffer {
   return Buffer.from(data.replace(/-/g, "+").replace(/_/g, "/"), "base64");
 }
+
+// Minimal HTML → text (WO-29 W3). Many emails ship HTML-only; without this their body was empty,
+// starving classification/matter-linkage. Pure/dependency-free (no DOM): drop script/style, turn
+// block/line breaks into newlines, strip tags, decode the common entities, collapse whitespace.
+export function htmlToText(html: string): string {
+  if (!html) return "";
+  return html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|tr|li|h[1-6]|table)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"').replace(/&#0?39;|&apos;/gi, "'")
+    .replace(/&amp;/gi, "&") // decode &amp; LAST so &amp;lt; → &lt; (not double-decoded to <)
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n[ \t]*/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 function header(headers: Json[], name: string): string {
   const h = headers.find((x) => String(x.name).toLowerCase() === name.toLowerCase());
   return h ? String(h.value ?? "") : "";
@@ -114,7 +134,9 @@ export class GmailClient implements MailClient {
       if (isJunkByLabels(msg.labelIds as string[] | undefined)) continue;
       const payload = (msg.payload as Json) ?? {};
       const headers = (payload.headers as Json[]) ?? [];
-      const { body, attachments } = await this.walkParts(id, payload);
+      const { plain, html, attachments } = await this.walkParts(id, payload);
+      // Prefer the real plain-text part; fall back to a stripped HTML body (WO-29 W3).
+      const body = plain.trim() ? plain : htmlToText(html);
       emails.push({
         providerId: id,
         historyId: msg.historyId ? String(msg.historyId) : undefined,
@@ -129,19 +151,23 @@ export class GmailClient implements MailClient {
     return emails;
   }
 
-  // Recursively collect the plain-text body + attachments from a MIME tree.
+  // Recursively collect the plain-text AND html bodies + attachments from a MIME tree. The caller
+  // prefers plain, else strips the html — so HTML-only emails are no longer bodyless (WO-29 W3).
   private async walkParts(
     messageId: string,
     part: Json,
-  ): Promise<{ body: string; attachments: NormalizedAttachment[] }> {
-    let body = "";
+  ): Promise<{ plain: string; html: string; attachments: NormalizedAttachment[] }> {
+    let plain = "";
+    let html = "";
     const attachments: NormalizedAttachment[] = [];
     const mime = String(part.mimeType ?? "");
     const partBody = (part.body as Json) ?? {};
     const filename = String(part.filename ?? "");
 
-    if (mime === "text/plain" && partBody.data) {
-      body += b64urlToBuffer(String(partBody.data)).toString("utf8");
+    if (mime === "text/plain" && partBody.data && !filename) {
+      plain += b64urlToBuffer(String(partBody.data)).toString("utf8");
+    } else if (mime === "text/html" && partBody.data && !filename) {
+      html += b64urlToBuffer(String(partBody.data)).toString("utf8");
     } else if (filename && partBody.attachmentId) {
       const att = await this.get(`/messages/${messageId}/attachments/${partBody.attachmentId}`);
       if (att?.data) {
@@ -155,9 +181,10 @@ export class GmailClient implements MailClient {
 
     for (const child of (part.parts as Json[]) ?? []) {
       const sub = await this.walkParts(messageId, child);
-      body += sub.body;
+      plain += sub.plain;
+      html += sub.html;
       attachments.push(...sub.attachments);
     }
-    return { body, attachments };
+    return { plain, html, attachments };
   }
 }

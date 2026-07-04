@@ -1016,6 +1016,7 @@ export type Database = {
           created_at: string
           doc_type: string | null
           email_message_id: string | null
+          email_subject: string | null
           extracted: Json
           filename: string | null
           fts: unknown
@@ -1036,6 +1037,7 @@ export type Database = {
           created_at?: string
           doc_type?: string | null
           email_message_id?: string | null
+          email_subject?: string | null
           extracted?: Json
           filename?: string | null
           fts?: unknown
@@ -1056,6 +1058,7 @@ export type Database = {
           created_at?: string
           doc_type?: string | null
           email_message_id?: string | null
+          email_subject?: string | null
           extracted?: Json
           filename?: string | null
           fts?: unknown
