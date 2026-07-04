@@ -65,6 +65,9 @@ const SECTIONS: { heading: string; items: NavEntry[] }[] = [
 // Pinned in the sidebar footer (out of the scroll region) so it never clips off short viewports.
 const ACCOUNT_ITEMS: NavEntry[] = [{ href: "/dashboard/settings", label: "settings", icon: "settings" }];
 
+// Flattened jump-to targets (single source of truth) — reused by the ⌘K command palette.
+export const NAV_TARGETS: NavEntry[] = [...SECTIONS.flatMap((s) => s.items), ...ACCOUNT_ITEMS];
+
 function useIsActive() {
   const pathname = usePathname();
   return (href: string) =>
