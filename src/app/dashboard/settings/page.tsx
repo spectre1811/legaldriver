@@ -12,6 +12,8 @@ import { getMailerReadiness } from "@/lib/notify/mailer";
 import { causeListAlertsSupported } from "@/lib/court/client";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { SettingsTabs, SettingsPanel } from "./settings-tabs";
+import { ProfileForm } from "./profile-form";
+import { NotificationForm } from "./notification-form";
 import { getTranslations } from "next-intl/server";
 
 export default async function SettingsPage() {
@@ -23,6 +25,15 @@ export default async function SettingsPage() {
 
   const { data: { user } } = await supabase.auth.getUser();
   const { data: tenant } = await supabase.from("tenant").select("name").maybeSingle();
+  const { data: profile } = await supabase
+    .from("profile")
+    .select("full_name, phone, designation, chamber")
+    .eq("id", user?.id ?? "")
+    .maybeSingle();
+  const { data: notif } = await supabase
+    .from("notification_prefs")
+    .select("whatsapp_number, channel_whatsapp, channel_email, channel_sms, quiet_start, quiet_end, cause_list_time")
+    .maybeSingle();
   const { data: advocates } = await supabase
     .from("advocate")
     .select("id, name, bar_registration_number, state_code")
@@ -82,9 +93,7 @@ export default async function SettingsPage() {
                 <dd className="mt-1 text-sm text-ink">{tenant?.name ?? "—"}</dd>
               </div>
             </dl>
-            <p className="mt-4 flex items-center gap-1.5 text-xs text-ink-faint">
-              <Icon name="alert" className="h-3.5 w-3.5" /> {t("profile.editNote")}
-            </p>
+            <ProfileForm profile={profile ?? { full_name: null, phone: null, designation: null, chamber: null }} />
           </Card>
         </SettingsPanel>
 
@@ -144,12 +153,14 @@ export default async function SettingsPage() {
             <p className="mb-4 text-sm text-ink-muted">{t("preferences.language")}</p>
             <LanguageSwitcher />
           </Card>
-          <Card className="flex items-start gap-3 p-5">
-            <Icon name="bell" className="mt-0.5 h-5 w-5 text-ink-faint" />
-            <div className="text-sm text-ink-muted">
-              <p className="font-medium text-ink">{t("preferences.notifications")}</p>
-              <p className="mt-0.5">{t("preferences.notificationsSoon")}</p>
+          <Card className="p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <Icon name="bell" className="h-4 w-4 text-ink-faint" />
+              <h2 className="text-base font-medium">{t("preferences.notifications")}</h2>
             </div>
+            <NotificationForm
+              prefs={notif ?? { whatsapp_number: null, channel_whatsapp: false, channel_email: true, channel_sms: false, quiet_start: null, quiet_end: null, cause_list_time: null }}
+            />
           </Card>
         </SettingsPanel>
 

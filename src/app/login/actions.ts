@@ -15,6 +15,20 @@ export async function signIn(formData: FormData) {
   redirect("/dashboard");
 }
 
+// "Continue with Google" — additive to email+password (existing users unaffected).
+// Requires the Google provider enabled in the Supabase dashboard (see docs/AUTH-SETUP.md);
+// /auth/callback already exchanges the returned code for a session.
+export async function signInWithGoogle() {
+  const supabase = createClient();
+  const origin = process.env.APP_BASE_URL ?? "http://localhost:3000";
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: `${origin}/auth/callback` },
+  });
+  if (error) redirect(`/login?error=${encodeURIComponent(error.message)}`);
+  if (data.url) redirect(data.url);
+}
+
 export async function signUp(formData: FormData) {
   const supabase = createClient();
   const { error } = await supabase.auth.signUp({
