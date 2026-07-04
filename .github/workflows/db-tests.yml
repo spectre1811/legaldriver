@@ -1,0 +1,49 @@
+name: DB Tests
+
+# WO-11 · DB/RLS integration tests — DORMANT until the founder adds a test env.
+# These tests hit a LIVE Supabase (service-role) and read a `.env` file, so they
+# can't run on placeholder creds. Deliberately a SEPARATE workflow (name != "CI")
+# so it never feeds the automerge queue's workflow_run / "build" check — it stays
+# advisory until promoted. When empty, the job self-skips and passes (green no-op).
+#
+# TO ACTIVATE (founder): create a THROWAWAY test Supabase project (never prod),
+# apply supabase/migrations, seed a demo tenant, then add one repo secret
+# `TEST_ENV_FILE` = the full contents of a working `.env` (must include
+# NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
+# CRON_SECRET, REPLY_TO). See docs/CI.md.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  db-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - id: env
+        # Secrets aren't readable in a job-level `if:`, so detect presence in a step.
+        env:
+          TEST_ENV_FILE: ${{ secrets.TEST_ENV_FILE }}
+        run: |
+          if [ -n "$TEST_ENV_FILE" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.env.outputs.present == 'false'
+        run: echo "::notice::DB tests dormant — set the TEST_ENV_FILE secret to activate (see docs/CI.md)."
+      - if: steps.env.outputs.present == 'true'
+        env:
+          TEST_ENV_FILE: ${{ secrets.TEST_ENV_FILE }}
+        run: printf '%s' "$TEST_ENV_FILE" > .env
+      - if: steps.env.outputs.present == 'true'
+        run: npm ci
+      - if: steps.env.outputs.present == 'true'
+        run: node scripts/run-tests.mjs db
