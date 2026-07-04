@@ -72,3 +72,10 @@ P3 Gmail ingest + parsing · P4 polish + demo + deploy.
 Per-project CLAUDE.md + TASKBOARD; GitHub Actions CI; `.env` git-ignored; skill authoring via
 the skill-smith workflow (new skills at `~/.claude/skills/`); model routing Sonnet-default,
 Opus for hard architecture.
+
+## ⚠️ Git flow — ENFORCED (see `plan/exec/INTEGRATION-DEPLOY.md`)
+Parallel agents share this repo. **NEVER commit to / push / reset `main`.** Work in your own
+`wt/<WO>` worktree (`git worktree add ../legaldriver-<WO> -b wt/<WO> origin/main`), `git push origin
+wt/<WO>`, open a PR. The **integrator** (single writer to main) merges via `plan/exec/integrate.sh`
+— ff-only, gated. A `pre-push` hook blocks direct/force pushes to `main` for everyone.
+**New clone/worktree, run once:** `git config core.hooksPath .githooks`.
