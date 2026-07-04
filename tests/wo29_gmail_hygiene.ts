@@ -1,7 +1,7 @@
 // WO-29 · Gmail ingestion hygiene. Run: npx tsx tests/wo29_gmail_hygiene.ts
 // The guarantee: spam/promotions/social/trash never ingest, regardless of the path they arrive by
 // (the incremental history feed ignores the list `q`, so the label check is the real gate).
-import { isJunkByLabels, EXCLUDE_QUERY, GmailClient, combineListQuery } from "../src/lib/mail/gmail";
+import { isJunkByLabels, EXCLUDE_QUERY, GmailClient, combineListQuery, htmlToText } from "../src/lib/mail/gmail";
 
 let failed = 0;
 function ok(name: string, cond: boolean) {
@@ -29,6 +29,13 @@ ok("SPAM is NOT rescued by STARRED (hard drop)", isJunkByLabels(["SPAM", "STARRE
 // The list query narrows up front (defense in depth for the list path).
 ok("exclude query drops promotions+social+spam+trash",
   /-in:spam/.test(EXCLUDE_QUERY) && /-category:promotions/.test(EXCLUDE_QUERY) && /-category:social/.test(EXCLUDE_QUERY));
+
+// W3: HTML-only bodies are no longer empty — stripped to text for classification.
+ok("html tags stripped to text", htmlToText("<p>Hello <b>world</b></p>").replace(/\s+/g, " ").trim() === "Hello world");
+ok("script/style bodies dropped", !/color|function/.test(htmlToText("<style>a{color:red}</style><script>function f(){}</script><p>Body</p>")));
+ok("br/p become line breaks", htmlToText("<p>Line1</p><p>Line2</p>").includes("\n"));
+ok("entities decoded", htmlToText("Smith &amp; Co &lt;legal&gt;") === "Smith & Co <legal>");
+ok("empty html → empty string", htmlToText("") === "");
 
 // W1b: the per-connection scope ANDs with the always-on exclusion (never replaces it).
 ok("no user query → just the exclusion", combineListQuery(null) === EXCLUDE_QUERY && combineListQuery("  ") === EXCLUDE_QUERY);

@@ -149,6 +149,7 @@ export async function ingestMail(
         content_hash: p.contentHash,
         extracted: { ...p.cls.extracted, summary: p.cls.summary, needsOcr: p.needsOcr ?? false, ...(p.extractError ? { extractError: p.extractError } : {}) } as Database["public"]["Tables"]["document"]["Insert"]["extracted"],
         email_message_id: emailId,
+        email_subject: email.subject || null, // WO-29 W3: tag the doc with its email subject (searchable)
       });
       if (docErr) continue; // skip this attachment, don't miscount; never throw the run
       documents++;
