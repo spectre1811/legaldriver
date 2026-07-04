@@ -51,3 +51,21 @@ marker so nightly runs comment on recurring issues instead of duplicating them.
   loop is validated **on first activated run** (needs the demo env + key — same gate as Layer 1's E2E).
 - **Next (Phase 3+):** spec-graduation (an agent-confirmed repeatable bug → a Playwright spec that joins
   Layer 1), a PR-comment summary, and per-route step budgets once real cost data lands.
+
+## Pagination / scale coverage (WO-39)
+- **Layer 1 (deterministic):** `e2e/pagination.spec.ts` exercises every paginated surface (cases, clients,
+  notices, voice) — reads the `<PaginatedList>` hooks (`data-testid="paginated-list"`, `data-row-count`,
+  `data-has-more`, `data-testid="paginated-load-more"`), clicks **Load more**, and asserts the row count
+  **grows** with no console/5xx error. Data-volume-safe: a single-page surface asserts the button is absent
+  + the "showing all N" end marker is present (no dead button, no silent cap) instead of failing.
+- **Layer 2 (agentic):** the rubric flags a growable list with no pagination affordance as a **bug**.
+- **Any new `<PaginatedList>` surface is covered automatically** — add its route to the `SURFACES` list in
+  the spec (one line). New list components must expose the same `data-testid`/`data-*` hooks.
+
+## The verification handoff (standing rule — why this matters)
+When a change can't be **click-tested in the build environment** (e.g. no demo Supabase creds, so the authed
+app can't load data), the last-mile check is **not** waived — it moves here. The PR author MUST, in the same
+change, either extend a Layer-1 spec (deterministic, preferred) or add a Layer-2 rubric line so the QA tester
+owns the live check, and name that coverage in the PR. "Gates green but I couldn't click it" is only acceptable
+if the QA tester now can. (Origin: WO-39 pagination shipped correct-but-unclicked; this spec closes that gap
+and makes it a rule for every such change.)

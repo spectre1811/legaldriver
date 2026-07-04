@@ -56,15 +56,19 @@ export function PaginatedList<T>({
 
   if (rows.length === 0) return <>{empty ?? null}</>;
 
+  // `data-testid` + `data-row-count` are stable hooks for the QA tester (WO-36 e2e): a
+  // spec reads the count, clicks load-more, and asserts it grew — surface-agnostic (works
+  // for tables and card lists alike) and i18n-independent. `data-has-more` lets a spec
+  // decide whether to expect a load-more without depending on demo-data volume.
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="paginated-list" data-row-count={rows.length} data-has-more={cursor ? "true" : "false"}>
       {children(rows)}
 
       {pending && <ListSkeleton rows={skeletonRows} />}
 
       {cursor && !pending && (
         <div className="flex flex-col items-center gap-2 pt-1">
-          <button type="button" onClick={onLoadMore} className="btn-secondary">
+          <button type="button" onClick={onLoadMore} className="btn-secondary" data-testid="paginated-load-more">
             {t("loadMore")}
           </button>
           {error && (
@@ -74,7 +78,7 @@ export function PaginatedList<T>({
       )}
 
       {!cursor && !pending && rows.length > 0 && (
-        <p className="pt-1 text-center text-xs text-ink-faint">{t("end", { n: rows.length })}</p>
+        <p className="pt-1 text-center text-xs text-ink-faint" data-testid="paginated-end">{t("end", { n: rows.length })}</p>
       )}
     </div>
   );
