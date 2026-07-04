@@ -78,7 +78,7 @@ export default async function LookupPage({
               {cnResults.length ? (
                 <ul className="divide-y divide-line">
                   {cnResults.slice(0, 25).map((p, i) => (
-                    <li key={p.cnr + i} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                    <li key={`${p.cnr}-${i}`} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                       <span className="min-w-0 flex-1 truncate">
                         <span className="font-medium text-ink">{p.name || p.cnr}</span>
                         <span className="ml-2 font-mono text-[0.7rem] text-ink-faint">{p.cnr}</span>

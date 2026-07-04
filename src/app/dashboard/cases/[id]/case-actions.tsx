@@ -61,7 +61,7 @@ export function RefreshButton({ matterId }: { matterId: string }) {
   return (
     <div className="flex items-center gap-2">
       <button
-        onClick={() => start(async () => { const r = await refreshCase(matterId); setMsg({ ok: r.ok, text: r.message }); router.refresh(); })}
+        onClick={() => start(async () => { setMsg(null); const r = await refreshCase(matterId); setMsg({ ok: r.ok, text: r.message }); router.refresh(); })}
         disabled={pending}
         className="btn-secondary"
       >
