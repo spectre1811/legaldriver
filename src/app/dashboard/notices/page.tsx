@@ -1,19 +1,21 @@
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card } from "@/components/ui";
+import { PageHeader, Card, EmptyState } from "@/components/ui";
 import { NoticeForm } from "./notice-form";
 import { NoticesList } from "./notices-list";
-import { paginate } from "@/lib/paginate";
-import { noticesQuery, NOTICES_PAGE_SIZE, type NoticeRow } from "./notices-query";
+import { Pagination } from "@/components/pagination";
+import { fetchNoticesPage } from "./notices-query";
+import { parsePage, clampPerPage } from "@/lib/paginate";
 
-export default async function NoticesPage() {
+export default async function NoticesPage({ searchParams }: { searchParams: { page?: string; per?: string } }) {
   const t = await getTranslations("notices");
   const supabase = createClient();
+  const page = parsePage(searchParams.page);
+  const per = clampPerPage(searchParams.per);
 
-  // Keyset-paginated (WO-39): fetch only the first page; "Load more" pulls the rest
-  // via the loadMoreNotices server action. No more unbounded fetch-all of every notice.
-  const [firstPage, { data: matters }] = await Promise.all([
-    paginate<NoticeRow>(noticesQuery(supabase), { column: "created_at", limit: NOTICES_PAGE_SIZE }),
+  // Numbered-page pagination (WO-39): this page's slice + an exact count.
+  const [{ rows: notices, total }, { data: matters }] = await Promise.all([
+    fetchNoticesPage(supabase, page, per),
     supabase.from("matter").select("id, title").order("title"),
   ]);
 
@@ -25,7 +27,14 @@ export default async function NoticesPage() {
         <NoticeForm matters={matters ?? []} />
       </Card>
 
-      <NoticesList initialRows={firstPage.rows} initialCursor={firstPage.nextCursor} />
+      {total > 0 ? (
+        <>
+          <NoticesList rows={notices} />
+          <Pagination page={page} perPage={per} total={total} />
+        </>
+      ) : (
+        <EmptyState icon="notices" title={t("empty.title")} body={t("empty.body")} />
+      )}
     </div>
   );
 }

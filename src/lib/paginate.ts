@@ -205,3 +205,56 @@ export async function offsetPage<T>(
     nextCursor: hasMore ? encodeOffset(offset + limit) : null,
   };
 }
+
+// --- Numbered-page pagination (the classic table control: pages + rows-per-page) -----
+//
+// For data tables an advocate scans (cases, clients, …), "Load more" is the wrong UX —
+// they expect numbered pages, a rows-per-page choice, and "showing X–Y of N". That's
+// URL-driven (`?page=N&per=P`): bookmarkable, server-rendered, and composes with the
+// existing filter searchParams. These pure helpers do the arithmetic; `<Pagination>`
+// renders it; the page fetches its slice with `.range(from,to)` + a `{count:'exact'}`.
+
+export const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+export const DEFAULT_PER_PAGE = 25;
+
+/** Parse a 1-based page from a query string; anything invalid → 1. */
+export function parsePage(v: string | undefined | null): number {
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 1 ? n : 1;
+}
+
+/** Clamp a per-page choice to the allowed set; anything else → the default. */
+export function clampPerPage(v: string | number | undefined | null, options: readonly number[] = PAGE_SIZE_OPTIONS): number {
+  const n = typeof v === "string" ? Number(v) : v;
+  return typeof n === "number" && options.includes(n) ? n : DEFAULT_PER_PAGE;
+}
+
+/** Inclusive Supabase `.range(from, to)` bounds for a 1-based page. */
+export function rangeFor(page: number, per: number): { from: number; to: number } {
+  const from = (Math.max(1, page) - 1) * per;
+  return { from, to: from + per - 1 };
+}
+
+export function pageCount(total: number, per: number): number {
+  return Math.max(1, Math.ceil(total / Math.max(1, per)));
+}
+
+/**
+ * The compact page-number window for the control, e.g. `[1, "…", 4, 5, 6, "…", 20]`.
+ * Always shows the first + last page and `span` neighbours around the current one;
+ * collapses the rest into "…". No gap token when the pages are already adjacent.
+ */
+export function pageWindow(current: number, total: number, span = 1): (number | "…")[] {
+  const cur = Math.min(Math.max(1, current), total);
+  const pages = new Set<number>([1, total]);
+  for (let p = cur - span; p <= cur + span; p++) if (p >= 1 && p <= total) pages.add(p);
+  const sorted = [...pages].sort((a, b) => a - b);
+  const out: (number | "…")[] = [];
+  let prev = 0;
+  for (const p of sorted) {
+    if (prev && p - prev > 1) out.push("…");
+    out.push(p);
+    prev = p;
+  }
+  return out;
+}

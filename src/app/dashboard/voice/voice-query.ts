@@ -1,13 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
-import { paginate, type Page, type PaginableQuery } from "@/lib/paginate";
+import { rangeFor } from "@/lib/paginate";
 
-// Voice recordings, keyset-paginated by created_at (WO-39). Signing playback URLs is
-// the expensive bit — the old page eagerly signed up to 200 URLs on EVERY load (most
+// Voice recordings (WO-39), numbered-page pagination by created_at. Signing playback URLs
+// is the expensive bit — the old page eagerly signed up to 200 URLs on EVERY load (most
 // never clicked). Paging signs only the current page (≤ page size), so the work scales
 // with what's shown, not the whole corpus (ship-grade §4).
-
-export const VOICE_PAGE_SIZE = 25;
 
 interface RawVoice {
   id: string;
@@ -35,37 +33,42 @@ export interface VoiceRow {
   signedUrl: string | null;
 }
 
+export interface VoicePageResult {
+  rows: VoiceRow[];
+  total: number;
+}
+
 export async function fetchVoicePage(
   supabase: SupabaseClient<Database>,
   admin: SupabaseClient<Database>,
-  cursor?: string | null,
-): Promise<Page<VoiceRow>> {
-  const base = supabase
+  page: number,
+  per: number,
+): Promise<VoicePageResult> {
+  const { from, to } = rangeFor(page, per);
+  const { data, count, error } = await supabase
     .from("voice_recording")
     .select(
       "id, source, from_number, client_id, matter_id, storage_path, duration_sec, status, transcript, created_at",
-    ) as unknown as PaginableQuery<RawVoice>;
-
-  const page = await paginate<RawVoice>(base, {
-    column: "created_at",
-    ascending: false,
-    limit: VOICE_PAGE_SIZE,
-    cursor,
-  });
+      { count: "exact" },
+    )
+    .order("created_at", { ascending: false })
+    .range(from, to);
+  if (error) throw new Error(`fetchVoicePage: ${error.message}`);
+  const raw = (data ?? []) as RawVoice[];
 
   // Sign only this page's URLs (private bucket, service role). Bounded to page size.
   const signed = new Map<string, string>();
   await Promise.all(
-    page.rows
+    raw
       .filter((r) => r.storage_path)
       .map(async (r) => {
-        const { data } = await admin.storage.from("documents").createSignedUrl(r.storage_path as string, 120);
-        if (data?.signedUrl) signed.set(r.id, data.signedUrl);
+        const { data: s } = await admin.storage.from("documents").createSignedUrl(r.storage_path as string, 120);
+        if (s?.signedUrl) signed.set(r.id, s.signedUrl);
       }),
   );
 
   return {
-    rows: page.rows.map((r) => ({
+    rows: raw.map((r) => ({
       id: r.id,
       source: r.source,
       from_number: r.from_number,
@@ -77,6 +80,6 @@ export async function fetchVoicePage(
       created_at: r.created_at,
       signedUrl: signed.get(r.id) ?? null,
     })),
-    nextCursor: page.nextCursor,
+    total: count ?? 0,
   };
 }
