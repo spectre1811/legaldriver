@@ -28,11 +28,16 @@ async function signIn(page: import("@playwright/test").Page, email: string, pass
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  // Success = redirect off /login into the app. A wrong-cred attempt renders role="alert" on /login.
+  // Success = redirect off /login into the app. A wrong-cred attempt stays on /login with a
+  // role="alert" showing the error. Guard: only check for the alert while still on /login —
+  // Next.js App Router injects an empty RouteAnnouncer (role="alert") on every page for a11y
+  // navigation announcements, which would false-positive if we check after the redirect lands.
   await page.waitForURL(/\/dashboard(\/|$)/, { timeout: 20_000 }).catch(() => {});
-  const alert = page.getByRole("alert");
-  if (await alert.count()) {
-    throw new Error(`Login failed for ${email}: ${(await alert.first().innerText()).trim()}`);
+  if (!/\/dashboard(\/|$)/.test(page.url())) {
+    const alert = page.getByRole("alert");
+    if (await alert.count()) {
+      throw new Error(`Login failed for ${email}: ${(await alert.first().innerText()).trim()}`);
+    }
   }
   await expect(page, "expected redirect to /dashboard after sign-in").toHaveURL(/\/dashboard(\/|$)/);
 }
