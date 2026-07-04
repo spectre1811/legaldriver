@@ -2194,6 +2194,60 @@ export type Database = {
           },
         ]
       }
+      notification_prefs: {
+        Row: {
+          cause_list_time: string
+          channel_email: boolean
+          channel_sms: boolean
+          channel_whatsapp: boolean
+          id: string
+          quiet_end: string | null
+          quiet_start: string | null
+          tenant_id: string
+          updated_at: string
+          whatsapp_number: string | null
+        }
+        Insert: {
+          cause_list_time?: string
+          channel_email?: boolean
+          channel_sms?: boolean
+          channel_whatsapp?: boolean
+          id: string
+          quiet_end?: string | null
+          quiet_start?: string | null
+          tenant_id: string
+          updated_at?: string
+          whatsapp_number?: string | null
+        }
+        Update: {
+          cause_list_time?: string
+          channel_email?: boolean
+          channel_sms?: boolean
+          channel_whatsapp?: boolean
+          id?: string
+          quiet_end?: string | null
+          quiet_start?: string | null
+          tenant_id?: string
+          updated_at?: string
+          whatsapp_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_prefs_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profile"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_prefs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       oauth_connection: {
         Row: {
           created_at: string
@@ -2475,28 +2529,40 @@ export type Database = {
       }
       profile: {
         Row: {
+          chamber: string | null
           created_at: string
+          designation: string | null
           full_name: string | null
           id: string
           locale: string | null
+          phone: string | null
+          photo_url: string | null
           rate_minor: number | null
           role: string
           tenant_id: string
         }
         Insert: {
+          chamber?: string | null
           created_at?: string
+          designation?: string | null
           full_name?: string | null
           id: string
           locale?: string | null
+          phone?: string | null
+          photo_url?: string | null
           rate_minor?: number | null
           role?: string
           tenant_id: string
         }
         Update: {
+          chamber?: string | null
           created_at?: string
+          designation?: string | null
           full_name?: string | null
           id?: string
           locale?: string | null
+          phone?: string | null
+          photo_url?: string | null
           rate_minor?: number | null
           role?: string
           tenant_id?: string

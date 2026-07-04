@@ -40,6 +40,52 @@ export async function addAdvocate(_prev: ActionResult, formData: FormData): Prom
   return { ok: true, message: t("form.added", { name: `${name}${bar ? ` (${bar})` : ""}` }) };
 }
 
+// Update the signed-in user's own profile (RLS: profile_update is id = auth.uid()). WO-30 W2.
+export async function updateProfile(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const t = await getTranslations("settings");
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: t("form.noTenant") };
+
+  const clean = (k: string) => (String(formData.get(k) ?? "").trim() || null);
+  const { error } = await supabase
+    .from("profile")
+    .update({ full_name: clean("full_name"), phone: clean("phone"), designation: clean("designation"), chamber: clean("chamber") })
+    .eq("id", user.id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/dashboard/settings");
+  return { ok: true, message: t("profile.saved") };
+}
+
+// Upsert the signed-in user's notification preferences (RLS: id = auth.uid()). WO-30 W2.
+// Delivery wiring (WhatsApp/SMS) lands with WO-04/WO-17; this persists the intent.
+export async function updateNotificationPrefs(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const t = await getTranslations("settings");
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const tenantId = await getTenantId(supabase);
+  if (!user || !tenantId) return { ok: false, message: t("form.noTenant") };
+
+  const time = (k: string) => (String(formData.get(k) ?? "").trim() || null);
+  const { error } = await supabase.from("notification_prefs").upsert({
+    id: user.id,
+    tenant_id: tenantId,
+    whatsapp_number: String(formData.get("whatsapp_number") ?? "").trim() || null,
+    channel_whatsapp: formData.get("channel_whatsapp") === "on",
+    channel_email: formData.get("channel_email") === "on",
+    channel_sms: formData.get("channel_sms") === "on",
+    quiet_start: time("quiet_start"),
+    quiet_end: time("quiet_end"),
+    cause_list_time: time("cause_list_time") ?? "07:00",
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/dashboard/settings");
+  return { ok: true, message: t("notify.saved") };
+}
+
 // Delete an advocate (tenant-scoped via RLS), then audit.
 export async function deleteAdvocate(id: string): Promise<ActionResult> {
   const t = await getTranslations("settings");

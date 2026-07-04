@@ -514,6 +514,8 @@
     },
     "welcome": "Welcome back",
     "subtitle": "Sign in to your workspace, or create a new one.",
+    "google": "Continue with Google",
+    "or": "or",
     "fullName": "Full name",
     "fullNameHint": "(sign up)",
     "email": "Email",
@@ -1386,9 +1388,48 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Add advocates with their Bar Registration Number to pull their daily cause list.",
+    "subtitle": "Your profile, practice, billing, integrations, and workspace preferences.",
+    "nav": {
+      "profile": "Profile",
+      "practice": "Practice",
+      "billing": "Billing",
+      "integrations": "Integrations",
+      "preferences": "Preferences",
+      "admin": "Admin & diagnostics"
+    },
+    "profile": {
+      "heading": "Your profile",
+      "email": "Email",
+      "workspace": "Workspace",
+      "fullName": "Full name",
+      "phone": "Phone",
+      "phonePh": "+91…",
+      "designation": "Designation",
+      "designationPh": "e.g. Advocate, Senior Partner",
+      "chamber": "Chamber / firm",
+      "chamberPh": "e.g. Sharma & Associates",
+      "save": "Save profile",
+      "saving": "Saving…",
+      "saved": "Profile saved."
+    },
+    "notify": {
+      "whatsappNumber": "WhatsApp number",
+      "whatsappPh": "+91…",
+      "channels": "Channels",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "sms": "SMS",
+      "causeListTime": "Daily cause-list at",
+      "quietStart": "Quiet hours from",
+      "quietEnd": "to",
+      "deliveryNote": "Preferences are saved now; WhatsApp/SMS delivery activates when the messaging provider is live.",
+      "save": "Save preferences",
+      "saving": "Saving…",
+      "saved": "Notification preferences saved."
+    },
     "advocates": {
       "heading": "Advocates",
+      "desc": "Add advocates with their Bar Registration Number to pull their daily cause list.",
       "remove": "Remove",
       "saving": "Saving…",
       "add": "Add advocate",
@@ -1404,6 +1445,14 @@
     "billing": {
       "heading": "Billing & GST",
       "desc": "Used on invoices — firm details, GSTIN, place of supply, and GST defaults (legal services SAC 9982)."
+    },
+    "preferences": {
+      "heading": "Language",
+      "language": "Choose the interface language for your workspace.",
+      "notifications": "Notification preferences"
+    },
+    "admin": {
+      "desc": "Operational tools for maintaining court-data sync. These aren't day-to-day advocate settings."
     },
     "court": {
       "heading": "Court data",
