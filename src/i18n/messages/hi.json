@@ -85,12 +85,11 @@
       "communication": "संवाद",
       "insight": "अंतर्दृष्टि",
       "assistant": "सहायक",
-      "setup": "सेटअप",
       "account": "खाता"
     },
     "item": {
       "overview": "अवलोकन",
-      "onboarding": "शुरुआत",
+      "onboarding": "अधिवक्ता ऑनबोर्डिंग",
       "clients": "मुवक्किल",
       "cases": "मुकदमे",
       "calendar": "कैलेंडर",
