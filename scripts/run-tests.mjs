@@ -31,6 +31,7 @@ const OFFLINE = [
   "wo27_filing_decision",
   "wo27_select_range",
   "wo29_gmail_hygiene",
+  "wo29_inbox_status",
   "wo32_review_why",
   "wo33_classification_cache",
   "wo33_grounding",
@@ -38,39 +39,43 @@ const OFFLINE = [
   "wo35_provider_signal",
 ];
 
-// Need a live Supabase (service-role) + .env — founder-secret-gated CI job.
+// Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the
+// TEST_ENV_FILE secret exists. All headless (sign in, service-role probes, RLS checks).
 const DB = [
   "p1_smoke",
-  "p2_smoke",
   "portal_isolation",
   "rls_isolation",
   "wo01_tenancy_sync",
 ];
 
-// Need LLM / embeddings / live court API keys ($ + external) — manual only.
+// Manual only ($ / a running server / live external APIs). p2_smoke needs `npm start`
+// on :3000 AND sends a REAL email → it can't run in a headless CI job.
 const NET = [
   "agent_smoke",
   "court_gateway_smoke",
   "document_filing_test",
   "embed_test",
+  "p2_smoke",
 ];
 
 const GROUPS = { offline: OFFLINE, db: DB, net: NET, all: [...OFFLINE, ...DB, ...NET] };
 
-// Self-policing: under many concurrent sessions, a new tests/*.ts added by another
-// worktree would otherwise be silently un-gated. Fail loudly if any test file is not
-// classified into a group — turn "silently skipped" into a CI error that names the fix.
+// Self-policing: under many concurrent sessions a new tests/*.ts added by another
+// worktree can land on `main` unclassified. Surface it LOUDLY (a GitHub Actions
+// ::warning:: annotation is visible on the PR) but do NOT fail — because CI runs on
+// the PR merge-ref (branch + current main), a hard failure here would let ONE
+// concurrently-merged unclassified test block EVERY subsequent PR across the fleet.
+// A warning names the fix without holding the whole queue hostage.
 const classified = new Set([...OFFLINE, ...DB, ...NET]);
-const onDisk = readdirSync("tests")
+const orphans = readdirSync("tests")
   .filter((f) => f.endsWith(".ts"))
-  .map((f) => f.slice(0, -3));
-const orphans = onDisk.filter((t) => !classified.has(t));
+  .map((f) => f.slice(0, -3))
+  .filter((t) => !classified.has(t));
 if (orphans.length) {
-  console.error(
-    `Unclassified test(s): ${orphans.join(", ")}\n` +
-      `Add each to a group in scripts/run-tests.mjs (offline = mocked/no-secrets; db = live Supabase; net = LLM/court-API).`
-  );
-  process.exit(2);
+  const msg =
+    `Unclassified test(s) not run by any group: ${orphans.join(", ")}. ` +
+    `Add each to a group in scripts/run-tests.mjs (offline = mocked/no-secrets; db = live Supabase; net = LLM/court-API).`;
+  console.warn(`::warning title=WO-11 unclassified test::${msg}`);
 }
 
 const mode = process.argv[2] || "offline";
