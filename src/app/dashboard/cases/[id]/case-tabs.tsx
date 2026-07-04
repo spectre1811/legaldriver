@@ -14,12 +14,14 @@ export function CaseTabs({ tabs, children }: { tabs: { id: string; label: string
   return (
     <TabCtx.Provider value={{ active, setActive }}>
       <div className="space-y-6">
-        <div className="sticky top-0 z-10 -mx-1 flex gap-1 overflow-x-auto border-b border-ec-hair bg-ec-paper/80 px-1 py-1 backdrop-blur">
+        <div role="tablist" aria-label="Case sections" className="sticky top-0 z-10 -mx-1 flex gap-1 overflow-x-auto border-b border-ec-hair bg-ec-paper/80 px-1 py-1 backdrop-blur">
           {tabs.map((t) => {
             const on = active === t.id;
             return (
               <button
                 key={t.id}
+                role="tab"
+                aria-selected={on}
                 onClick={() => setActive(t.id)}
                 className={`flex shrink-0 items-center gap-1.5 rounded-ec-s px-3 py-1.5 text-sm transition ${on ? "bg-ec-ink font-medium text-ec-paper" : "text-ec-ink-2 hover:bg-ec-paper-3 hover:text-ec-ink"}`}
               >
