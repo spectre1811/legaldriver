@@ -5,8 +5,8 @@ import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { IngestButton } from "./ingest-button";
 import { isDemoMode } from "@/lib/demo";
-import { ReviewItem } from "./review-item";
 import { FiledInbox, type InboxGroup } from "./filed-inbox";
+import { ReviewInbox } from "./review-inbox";
 import { DisconnectButton, LoadEarlierButton } from "./connect-controls";
 
 export default async function InboxPage({ searchParams }: { searchParams: { connected?: string; error?: string } }) {
@@ -81,21 +81,11 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
       </Card>
 
       {review.length > 0 && (
-        <Card className="overflow-hidden border-amber-200">
-          <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm font-medium text-amber-800">
-            <Icon name="alert" className="h-4 w-4" /> {t("needsReview", { count: review.length })}
-          </div>
-          <ul className="divide-y divide-line">
-            {review.map((e) => (
-              <ReviewItem
-                key={e.id}
-                email={{ id: e.id, subject: e.subject ?? "", from: e.from_addr ?? "", confidence: e.confidence, client_id: e.classified_client_id, matter_id: e.classified_matter_id }}
-                clients={clientOpts}
-                matters={matterOpts}
-              />
-            ))}
-          </ul>
-        </Card>
+        <ReviewInbox
+          emails={review.map((e) => ({ id: e.id, subject: e.subject ?? "", from: e.from_addr ?? "", confidence: e.confidence, client_id: e.classified_client_id, matter_id: e.classified_matter_id }))}
+          clients={clientOpts}
+          matters={matterOpts}
+        />
       )}
 
       {filedGroups.length === 0 ? (
