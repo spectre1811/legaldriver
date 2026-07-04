@@ -4,9 +4,10 @@
 // A sticky top bar (< md) with the wordmark + a hamburger that opens a slide-in
 // drawer reusing the desktop NavLinks. Desktop keeps the persistent sidebar.
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { NavLinks } from "./nav";
+import { NavLinks, AccountNav } from "./nav";
 import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { brand } from "@/lib/brand";
@@ -42,7 +43,7 @@ export function MobileNav({ email, tenantName, initial }: { email: string; tenan
         >
           <Icon name="menu" className="h-5 w-5" />
         </button>
-        <span className="ec-underline font-display text-xl font-semibold lowercase tracking-tight text-ec-ink">{brand.name}</span>
+        <Link href="/dashboard" aria-label={t("home")} className="ec-underline font-display text-xl font-semibold lowercase tracking-tight text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo">{brand.name}</Link>
       </header>
 
       {open && (
@@ -50,7 +51,7 @@ export function MobileNav({ email, tenantName, initial }: { email: string; tenan
           <div className="absolute inset-0 bg-ec-ink/40" onClick={() => setOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col border-r border-ec-hair bg-ec-paper px-4 py-5 shadow-ec-2">
             <div className="flex items-center justify-between px-2">
-              <span className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink">{brand.name}</span>
+              <Link href="/dashboard" aria-label={t("home")} className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo">{brand.name}</Link>
               <button
                 onClick={() => setOpen(false)}
                 aria-label={t("closeNav")}
@@ -62,6 +63,7 @@ export function MobileNav({ email, tenantName, initial }: { email: string; tenan
             <p className="mt-1.5 truncate px-2 text-xs text-ec-ink-3" title={tenantName}>{tenantName}</p>
             <div className="mt-6 flex-1 overflow-y-auto"><NavLinks /></div>
             <div className="mt-4 border-t border-ec-hair pt-4">
+              <div className="mb-3"><AccountNav /></div>
               <div className="mb-3 px-1"><LanguageSwitcher /></div>
               <div className="flex items-center gap-3 px-1">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ec-indigo text-sm font-semibold text-white">{initial}</span>
