@@ -18,7 +18,7 @@ pack at `~/personal/legalmarketplace/plan/exec/`: **`00-OPERATING-PROTOCOL.md`**
 - **Small, reviewed, in waves** — branch per work order (`wt/<id>`); a second agent reviews (author never self-approves).
 - **Cheapest capable model** — Sonnet by default; Opus only for schema/RLS/security/product-wide-interface (say so).
 - **No hacks** — diagnose the root cause; never disable a gate, swallow an error, or silently degrade.
-- **Deploy discipline:** `main` does **NOT** auto-deploy to Vercel yet (WO-09 pending) → run `vercel deploy --prod --token=$VERCEL_TOKEN` after merging, or the change isn't live. Env/crons are on the Vercel project.
+- **Deploy discipline:** `main` **auto-deploys** to Vercel via native git-integration on merge (WO-09 ✅) — do **NOT** run `vercel --prod` manually. **Integration is automated (see Git flow below):** push `wt/<id>` → open a PR → CI green → a reviewer applies the **`automerge`** label → the queue lands it on `main` + it deploys. Env/crons are on the Vercel project.
 - **Parallel sessions run concurrently** — touch only your work order's files; edit only your own TRACKER/SESSION-LOG rows; flag shared-config (package.json/CI) changes first.
 
 ## Stack
@@ -76,6 +76,8 @@ Opus for hard architecture.
 ## ⚠️ Git flow — ENFORCED (see `plan/exec/INTEGRATION-DEPLOY.md`)
 Parallel agents share this repo. **NEVER commit to / push / reset `main`.** Work in your own
 `wt/<WO>` worktree (`git worktree add ../legaldriver-<WO> -b wt/<WO> origin/main`), `git push origin
-wt/<WO>`, open a PR. The **integrator** (single writer to main) merges via `plan/exec/integrate.sh`
-— ff-only, gated. A `pre-push` hook blocks direct/force pushes to `main` for everyone.
+wt/<WO>`, **open a PR**. **Merging is now AUTOMATED — the auto-merge queue** (`.github/workflows/automerge.yml`):
+CI green → a reviewer adds the **`automerge`** label → the workflow merges to `main` (serialized) →
+Vercel deploys. No agent hand-merges `main`; `plan/exec/integrate.sh` is only a fallback. A `pre-push`
+hook blocks direct/force pushes to `main`; `branch-guardian` alarms on any force-move.
 **New clone/worktree, run once:** `git config core.hooksPath .githooks`.
