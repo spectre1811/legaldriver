@@ -47,11 +47,23 @@
     "openNav": "Open menu",
     "closeNav": "Close menu",
     "commandPalette": {
-      "placeholder": "Search cases, clients, documents, invoices, notices…",
+      "placeholder": "Search or jump to… cases, clients, actions",
       "hint": "Type to search across your practice.",
       "searching": "Searching…",
       "noMatches": "No matches.",
-      "trigger": "Search…"
+      "trigger": "Search…",
+      "actionType": "Action",
+      "goType": "Go to",
+      "quickHeading": "Quick actions",
+      "commandsHeading": "Commands",
+      "resultsHeading": "Results",
+      "action": {
+        "addCase": "Add a case",
+        "newNotice": "New notice",
+        "draft": "Draft a document",
+        "upload": "Upload a document",
+        "addAdvocate": "Add an advocate"
+      }
     }
   },
   "enum": {

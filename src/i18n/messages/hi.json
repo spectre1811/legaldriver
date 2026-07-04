@@ -47,11 +47,23 @@
     "openNav": "मेन्यू खोलें",
     "closeNav": "मेन्यू बंद करें",
     "commandPalette": {
-      "placeholder": "मुकदमे, मुवक्किल, दस्तावेज़, इनवॉइस, नोटिस खोजें…",
+      "placeholder": "खोजें या जाएँ… मुकदमे, मुवक्किल, क्रियाएँ",
       "hint": "अपनी प्रैक्टिस में खोजने के लिए टाइप करें।",
       "searching": "खोज रहे हैं…",
       "noMatches": "कोई मिलान नहीं।",
-      "trigger": "खोजें…"
+      "trigger": "खोजें…",
+      "actionType": "क्रिया",
+      "goType": "जाएँ",
+      "quickHeading": "त्वरित क्रियाएँ",
+      "commandsHeading": "कमांड",
+      "resultsHeading": "परिणाम",
+      "action": {
+        "addCase": "मुकदमा जोड़ें",
+        "newNotice": "नया नोटिस",
+        "draft": "दस्तावेज़ का प्रारूप",
+        "upload": "दस्तावेज़ अपलोड करें",
+        "addAdvocate": "अधिवक्ता जोड़ें"
+      }
     }
   },
   "enum": {
