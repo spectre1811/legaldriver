@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fmtDate, fmtAgo } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AddCaseForm } from "./add-case-form";
+import { CourtProviderBanner } from "@/components/court-provider-banner";
 import { Console, type SavedView } from "./console";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deleteMatter } from "./actions";
@@ -44,8 +45,15 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   if (q) {
     const term = q.replace(/[%,()]/g, " ").trim();
     if (term) {
+      // party_names is text[] → array-contains is EXACT-element only (a partial name matches nothing).
+      // Once migration 0030 (party_text + trigram) is applied and COURT_PARTY_TEXT_SEARCH=1 is set,
+      // switch to a substring ILIKE so "Sharm" finds "Sharma vs State" (WO-35 #5). Falls back to the
+      // exact-element match otherwise, so the app is safe to run before the migration lands.
+      const partyClause = process.env.COURT_PARTY_TEXT_SEARCH === "1"
+        ? `party_text.ilike.%${term}%`
+        : `party_names.cs.{${term}}`;
       query = query.or(
-        `title.ilike.%${term}%,cnr.ilike.%${term}%,court.ilike.%${term}%,party_names.cs.{${term}}`,
+        `title.ilike.%${term}%,cnr.ilike.%${term}%,court.ilike.%${term}%,${partyClause}`,
       );
     }
   }
@@ -110,6 +118,8 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
         <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("subtitle")}</p>
       </header>
+
+      <CourtProviderBanner />
 
       <div className="ec-card p-5">
         <AddCaseForm />

@@ -3,15 +3,28 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { TrackCaseButton } from "@/components/track-case-button";
-import { searchAdvocates, searchJudges, searchParties, getStats, ldEnabled } from "@/lib/court/legaldriver-api";
+import { searchAdvocates, searchJudges, searchParties, searchByCaseNumber, getStats, ldEnabled } from "@/lib/court/legaldriver-api";
 
 export const dynamic = "force-dynamic";
 
-// Search the live court corpus by name — advocates, judges, and parties/litigants.
-export default async function LookupPage({ searchParams }: { searchParams: { q?: string } }) {
+// Search the live court corpus by name — advocates, judges, and parties/litigants —
+// or directly by registration case number (type/number/year). The case-number path
+// is the core lawyer expectation the API supported but no UI reached (WO-35 #7).
+export default async function LookupPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; ct?: string; cn?: string; cy?: string };
+}) {
   const t = await getTranslations("lookup");
   const q = (searchParams.q ?? "").trim();
+  const cnType = (searchParams.ct ?? "").trim();
+  const cnNumber = (searchParams.cn ?? "").trim();
+  const cnYear = (searchParams.cy ?? "").trim();
+  const cnActive = Boolean(cnNumber && cnYear);
   const enabled = ldEnabled();
+  const cnResults = enabled && cnActive
+    ? await searchByCaseNumber(cnType, cnNumber, cnYear).catch(() => [])
+    : [];
   const [advocates, judges, parties, stats] = enabled && q.length >= 2
     ? await Promise.all([searchAdvocates(q).catch(() => []), searchJudges(q).catch(() => []), searchParties(q).catch(() => []), getStats().catch(() => null)])
     : [[], [], [], enabled ? await getStats().catch(() => null) : null];
@@ -39,6 +52,50 @@ export default async function LookupPage({ searchParams }: { searchParams: { q?:
         {!enabled ? <p className="mt-3 text-xs text-amber-700">{t("notConfigured")}</p>
           : coverage && <p className="mt-3 text-xs text-ink-faint">{coverage}</p>}
       </Card>
+
+      {enabled && (
+        <Card className="p-5">
+          <h2 className="text-sm font-medium text-ink">{t("caseNumber.title")}</h2>
+          <p className="mt-0.5 text-xs text-ink-faint">{t("caseNumber.subtitle")}</p>
+          <form method="get" className="mt-3 flex flex-wrap items-end gap-2">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-ink-faint">{t("caseNumber.typeLabel")}</span>
+              <input name="ct" defaultValue={cnType} placeholder={t("caseNumber.typePlaceholder")} className="w-40 rounded-xl border border-line px-3 py-2 text-sm uppercase outline-none" />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-ink-faint">{t("caseNumber.numberLabel")}</span>
+              <input name="cn" defaultValue={cnNumber} required placeholder={t("caseNumber.numberPlaceholder")} className="w-32 rounded-xl border border-line px-3 py-2 font-mono text-sm outline-none" />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-ink-faint">{t("caseNumber.yearLabel")}</span>
+              <input name="cy" defaultValue={cnYear} required inputMode="numeric" placeholder={t("caseNumber.yearPlaceholder")} className="w-24 rounded-xl border border-line px-3 py-2 font-mono text-sm outline-none" />
+            </label>
+            <button type="submit" className="btn-secondary">{t("caseNumber.search")}</button>
+          </form>
+
+          {cnActive && (
+            <div className="mt-4 border-t border-line pt-4">
+              {cnResults.length ? (
+                <ul className="divide-y divide-line">
+                  {cnResults.slice(0, 25).map((p, i) => (
+                    <li key={`${p.cnr}-${i}`} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                      <span className="min-w-0 flex-1 truncate">
+                        <span className="font-medium text-ink">{p.name || p.cnr}</span>
+                        <span className="ml-2 font-mono text-[0.7rem] text-ink-faint">{p.cnr}</span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        {p.side && <Badge tone={/pet|appl|compl/i.test(p.side) ? "green" : "neutral"}>{p.side.toLowerCase()}</Badge>}
+                        <span className="hidden text-xs text-ink-faint sm:inline">{p.case_type}</span>
+                        <TrackCaseButton cnr={p.cnr} />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <EmptyState icon="search" title={t("caseNumber.noResults")} body={t("caseNumber.noResultsBody")} />}
+            </div>
+          )}
+        </Card>
+      )}
 
       {q.length >= 2 && (
         <>

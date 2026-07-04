@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMailer } from "@/lib/notify/mailer";
+import { getWhatsAppSender, whatsappConfigured } from "@/lib/notify/whatsapp";
 import { logOutboundEmail } from "@/lib/notify/log";
 import { brand } from "@/lib/brand";
 
@@ -30,9 +31,28 @@ export async function GET(request: NextRequest) {
 
   let sent = 0;
   let failed = 0;
+  let skipped = 0;
   for (const n of due ?? []) {
-    const payload = (n.payload ?? {}) as { ref?: string; title?: string; eventDate?: string; body?: string; count?: number; cases?: DigestCase[] };
+    const payload = (n.payload ?? {}) as { ref?: string; title?: string; eventDate?: string; body?: string; count?: number; cases?: DigestCase[]; phone?: string };
     let ok = true;
+
+    // WhatsApp (WO-35 #3, dark until WO-04 BSP). Skip — NOT fail — while unconfigured so the row
+    // stays pending and delivers the moment a BSP is live; no churn to a permanent 'failed'.
+    if (n.channel === "whatsapp") {
+      if (!whatsappConfigured() || !payload.phone) { skipped++; continue; }
+      const wa = getWhatsAppSender();
+      const res = await wa.send(payload.phone, payload.body ?? subjectFor(n.kind, payload));
+      if (!res.configured) { skipped++; continue; }
+      ok = res.ok;
+      const { error: waErr } = await supabase
+        .from("notification")
+        .update({ status: ok ? "sent" : "failed", sent_at: ok ? new Date().toISOString() : null })
+        .eq("id", n.id)
+        .eq("status", "pending");
+      if (waErr || !ok) failed++;
+      else sent++;
+      continue;
+    }
 
     if (n.channel === "email") {
       // Resolve recipient: the row's user, else the tenant owner.
@@ -74,7 +94,7 @@ export async function GET(request: NextRequest) {
     else sent++;
   }
 
-  return NextResponse.json({ ok: true, channel: mailer.channel, considered: due?.length ?? 0, sent, failed });
+  return NextResponse.json({ ok: true, channel: mailer.channel, whatsapp: whatsappConfigured() ? "live" : "dark", considered: due?.length ?? 0, sent, failed, skipped });
 }
 
 type DigestCase = { title?: string; cnr?: string; itemNo?: string; type?: string; judge?: string };
