@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Icon } from "@/components/icons";
 import { fmtDate } from "@/components/ui";
 import type { TimelineEvent } from "@/lib/court/legaldriver-api";
+import { sortTimeline } from "@/lib/court/timeline-sort";
 
 const TYPE_ICON: Record<string, "scale" | "notices" | "alert"> = {
   hearing: "scale",
@@ -59,12 +60,9 @@ export async function CaseTimeline({ events, hasCnr }: { events: TimelineEvent[]
     );
   }
 
-  // Reverse-chronological. On a SHARED date, an order/process follows the hearing that produced
-  // it, so it ranks as the later (higher, more-recent) event — never a hearing "after" its order.
-  const SEQ: Record<string, number> = { hearing: 1, process: 2, order: 3 };
-  const sorted = [...events].sort(
-    (a, b) => b.date.localeCompare(a.date) || (SEQ[b.type] ?? 0) - (SEQ[a.type] ?? 0),
-  );
+  // Reverse-chronological, null-date-safe (see sortTimeline — undated events sink to the bottom
+  // instead of crashing the page on `null.localeCompare`).
+  const sorted = sortTimeline(events);
 
   const typeLabel = (type: string) => {
     if (type === "hearing") return t("timeline.typeHearing");
@@ -101,7 +99,7 @@ export async function CaseTimeline({ events, hasCnr }: { events: TimelineEvent[]
               </span>
               <div className="min-w-0 flex-1 pt-0.5">
                 <div className="flex flex-wrap items-baseline gap-2">
-                  <span className="num text-xs font-medium text-ec-ink-3">{fmtDate(ev.date)}</span>
+                  <span className="num text-xs font-medium text-ec-ink-3">{ev.date ? fmtDate(ev.date) : t("timeline.undated")}</span>
                   <span className={chipClass}>{typeLabel(ev.type)}</span>
                 </div>
                 {ev.type === "order" && ev.order_id ? (
