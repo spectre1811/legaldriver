@@ -48,3 +48,9 @@ npm-debug.log*
 
 # never commit session transcripts/artifacts
 .claude-sessions/
+
+# WO-36 · Playwright E2E — commit specs/config/visual baselines; ignore auth state + run artifacts
+playwright/.auth/
+test-results/
+playwright-report/
+blob-report/
