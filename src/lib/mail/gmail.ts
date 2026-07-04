@@ -14,11 +14,21 @@ const API = "https://gmail.googleapis.com/gmail/v1/users/me";
 // list query with these operators up front, and (b) — the guarantee — drop any message carrying
 // an excluded label in the shared per-message fetch, which covers the history path too.
 export const EXCLUDE_QUERY = "-in:spam -in:trash -category:promotions -category:social";
-const EXCLUDED_LABELS = new Set(["SPAM", "TRASH", "CATEGORY_PROMOTIONS", "CATEGORY_SOCIAL"]);
+// SPAM/TRASH are ALWAYS dropped. Promotions/Social are dropped by default too — UNLESS the user
+// explicitly flagged the message IMPORTANT or STARRED, in which case the human signal overrides
+// Gmail's auto-categorization and we keep it (Gmail categories coexist with IMPORTANT/STARRED). This
+// avoids silently losing a starred/important legal email that Gmail happened to auto-bin — §5 cuts
+// both ways: never vacuum junk IN, but never silently vacuum a wanted message OUT either.
+const HARD_EXCLUDED = new Set(["SPAM", "TRASH"]);
+const SOFT_EXCLUDED = new Set(["CATEGORY_PROMOTIONS", "CATEGORY_SOCIAL"]);
+const RESCUE_LABELS = new Set(["IMPORTANT", "STARRED"]);
 
-// Pure predicate (unit-testable, no I/O): does this message carry a label we never ingest?
+// Pure predicate (unit-testable, no I/O): should this message be skipped as junk?
 export function isJunkByLabels(labelIds: readonly string[] | null | undefined): boolean {
-  return (labelIds ?? []).some((l) => EXCLUDED_LABELS.has(l));
+  const labels = labelIds ?? [];
+  if (labels.some((l) => HARD_EXCLUDED.has(l))) return true; // spam/trash — always out
+  if (labels.some((l) => RESCUE_LABELS.has(l))) return false; // human-flagged — always kept
+  return labels.some((l) => SOFT_EXCLUDED.has(l)); // promotions/social — out by default
 }
 
 type Json = Record<string, unknown>;

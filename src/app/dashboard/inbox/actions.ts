@@ -8,6 +8,7 @@ import { getMockMailClient, getGmailClient } from "@/lib/mail/client";
 import { ingestMail } from "@/lib/mail/ingest";
 import { readSecret } from "@/lib/mail/vault";
 import { refreshAccessToken, googleConfigured } from "@/lib/mail/oauth";
+import { isDemoMode } from "@/lib/demo";
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -15,6 +16,11 @@ export type ActionResult = { ok: boolean; message: string };
 // classification). Uses the admin client server-side (trusted) so Storage +
 // inserts work without per-bucket RLS. Lets the inbox demo run with no Gmail.
 export async function runMockIngest(): Promise<ActionResult> {
+  // Dev/demo only — the button is hidden in prod, and the action itself refuses there too
+  // so it can't be invoked directly to inject mock mail into a real tenant (WO-29 review).
+  if (process.env.NODE_ENV === "production" && !isDemoMode()) {
+    return { ok: false, message: "Demo ingest is disabled." };
+  }
   const supabase = createClient();
   const {
     data: { user },
