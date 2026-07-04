@@ -16,7 +16,9 @@ export interface Expanded {
   full: string;
   /** The original short code, to show muted/secondary and as a `title`. */
   code: string;
-  /** True when a sourced expansion was found; false → the raw code is shown (flagged, not faked). */
+  /** True when a sourced expansion was found; false → the raw code is shown verbatim (never
+   *  fabricated). Unresolved codes are "flagged" by being logged in exec/DATA-GAPS.md +
+   *  UNRESOLVED_CASE_TYPES for later sourcing — not by a UI marker. */
   known: boolean;
   /** For advocate roles: this "name" is a role/office, not an individual person. */
   isRole?: boolean;

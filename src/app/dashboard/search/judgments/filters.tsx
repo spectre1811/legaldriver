@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
+import { expandDisposal } from "@/lib/court/code-labels";
 import { COURT_NAMES } from "@/lib/court/corpus-athena";
 
 // All 25 High Court codes in the corpus. Labels come from COURT_NAMES when known,
@@ -102,7 +103,7 @@ export function Filters() {
         </select>
         <select value={sp.get("disposal") ?? ""} onChange={(e) => setParam("disposal", e.target.value)} className="input max-w-[14rem]" aria-label={t("disposalAria")}>
           <option value="">{t("allDisposals")}</option>
-          {DISPOSAL_NATURES.map((d) => <option key={d} value={d}>{d}</option>)}
+          {DISPOSAL_NATURES.map((d) => <option key={d} value={d}>{expandDisposal(d).full}</option>)}
         </select>
       </div>
     </div>

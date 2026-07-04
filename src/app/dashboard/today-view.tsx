@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Icon } from "@/components/icons";
+import { cleanPurpose } from "@/lib/court/code-labels";
 
 // Presentational "Today" ledger (Mockup B). Data-driven so it renders from real
 // queries in page.tsx and from fixtures in the preview harness. No AI here — the
@@ -131,7 +132,7 @@ export async function TodayView({ now, week, hearings, courts, syncedAt, filings
                           {h.matter?.title ?? t("hearingFallback")}
                         </Link>
                         <span className="num block truncate text-xs text-ec-ink-3">
-                          {h.matter?.cnr ? `${h.matter.cnr} · ` : ""}{h.purpose ? <span className={`ec-chip ${isToday ? "ec-chip-hot" : ""} ml-0`}>{h.purpose}</span> : null}
+                          {h.matter?.cnr ? `${h.matter.cnr} · ` : ""}{h.purpose ? <span className={`ec-chip ${isToday ? "ec-chip-hot" : ""} ml-0`} title={h.purpose}>{cleanPurpose(h.purpose)}</span> : null}
                         </span>
                       </div>
                       <div className="flex justify-start sm:justify-end">

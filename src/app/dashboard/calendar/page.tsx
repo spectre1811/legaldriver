@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Stat, Disclaimer } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { cleanPurpose } from "@/lib/court/code-labels";
 import { AddEntry } from "./add-entry";
 import { FilterChips } from "./filter-chips";
 import { Agenda, type AgendaEvent } from "./agenda";
@@ -49,7 +50,7 @@ async function loadEvents(supabase: ReturnType<typeof createClient>, start: stri
   return [
     ...(hearings ?? []).map((h): CalEvent => {
       const m = h.matter as unknown as { id: string; title: string } | null;
-      return { id: `h-${h.id}`, date: h.date, title: m?.title ?? t("hearingFallback"), kind: "hearing", href: m ? `/dashboard/cases/${m.id}` : null, meta: h.purpose ?? undefined, deletable: false };
+      return { id: `h-${h.id}`, date: h.date, title: m?.title ?? t("hearingFallback"), kind: "hearing", href: m ? `/dashboard/cases/${m.id}` : null, meta: h.purpose ? cleanPurpose(h.purpose) : undefined, deletable: false };
     }),
     ...(causeList ?? []).map((c): CalEvent => ({ id: `c-${c.id}`, date: c.list_date, title: t("causeListTitle", { cnr: c.cnr ?? t("caseFallback") }), kind: "causelist", href: c.matter_id ? `/dashboard/cases/${c.matter_id}` : "/dashboard/cases", meta: c.item_no ? t("itemMeta", { n: c.item_no }) : undefined, deletable: false })),
     ...(deadlines ?? []).map((d): CalEvent => ({ id: `d-${d.id}`, date: d.due_date, title: d.kind, kind: "deadline", href: d.matter_id ? `/dashboard/cases/${d.matter_id}` : null, deletable: false })),

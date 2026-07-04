@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { fmtDate, fmtAgo } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { cleanPurpose } from "@/lib/court/code-labels";
 import { AddCaseForm } from "./add-case-form";
 import { CourtProviderBanner } from "@/components/court-provider-banner";
 import { Console, type SavedView } from "./console";
@@ -165,7 +166,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
                     </td>
                     <td className="hidden px-5 py-3.5 text-ec-ink-2 lg:table-cell">{client?.name ?? <span className="text-ec-ink-3">—</span>}</td>
                     <td className="hidden px-5 py-3.5 text-ec-ink-2 md:table-cell">{m.court ?? "—"}</td>
-                    <td className="hidden px-5 py-3.5 sm:table-cell">{m.stage ? <span className="ec-chip">{m.stage}</span> : <span className="text-ec-ink-3">—</span>}</td>
+                    <td className="hidden px-5 py-3.5 sm:table-cell">{m.stage ? <span className="ec-chip" title={m.stage}>{cleanPurpose(m.stage)}</span> : <span className="text-ec-ink-3">—</span>}</td>
                     <td className="hidden px-5 py-3.5 sm:table-cell">
                       {m.status ? <span className={`ec-chip ${m.status === "disposed" ? "" : "ec-chip-hot"}`}>{st(m.status)}</span> : <span className="text-ec-ink-3">—</span>}
                     </td>
