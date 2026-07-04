@@ -54,3 +54,7 @@ playwright/.auth/
 test-results/
 playwright-report/
 blob-report/
+
+# WO-36 Layer 2 · QA agent — generated sweep reports are run artifacts (uploaded in CI); ignore them.
+# (Playwright visual baselines under e2e/*-snapshots/ ARE committed — do not ignore those.)
+qa-reports/

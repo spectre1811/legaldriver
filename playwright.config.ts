@@ -60,7 +60,7 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/advocate.json",
       },
-      testMatch: ["smoke.spec.ts", "hero-*.spec.ts", "routes-authed.spec.ts"],
+      testMatch: ["smoke.spec.ts", "hero-*.spec.ts", "routes-authed.spec.ts", "visual.spec.ts"],
     },
   ],
   // Local/CI on localhost: auto-start the app in DEMO_MODE. Command is overridable via

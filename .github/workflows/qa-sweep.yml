@@ -1,0 +1,54 @@
+name: QA Sweep
+
+# WO-36 Layer 2 · Nightly agentic UX sweep (ADVISORY). Walks the app like a human, judges each screen
+# via Claude, writes a report, and files blocker/high findings as deduped GitHub issues. Named "QA
+# Sweep" (not "CI"/"build") so it can NEVER gate the auto-merge queue — it advises, humans decide.
+#
+# DORMANT until the founder activates it:
+#   1. Actions → Variables: QA_ENABLED = true
+#   2. Secrets: QA_TARGET_URL (a deployed DEMO_MODE=1 instance), ANTHROPIC_API_KEY,
+#      E2E_EMAIL, E2E_PASSWORD (demo advocate). Optional: QA_MODEL, QA_MAX_ROUTES (cost cap).
+# Runs nightly + on demand. Issue-filing uses the built-in GITHUB_TOKEN (issues: write).
+
+on:
+  schedule:
+    - cron: "0 20 * * *" # 20:00 UTC nightly (~01:30 IST)
+  workflow_dispatch:
+
+concurrency:
+  group: qa-sweep
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sweep:
+    if: ${{ vars.QA_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      E2E_BASE_URL: ${{ secrets.QA_TARGET_URL }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      QA_MODEL: ${{ vars.QA_MODEL }}
+      QA_MAX_ROUTES: ${{ vars.QA_MAX_ROUTES }}
+      # GITHUB_TOKEN is NOT auto-exposed as an env var — must pass it explicitly for --file-issues.
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run qa:sweep -- --file-issues
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: qa-report
+          path: qa-reports/
+          retention-days: 30
