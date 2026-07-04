@@ -258,6 +258,23 @@
       "save": "Save",
       "cancel": "Cancel",
       "saveView": "Save this view"
+    },
+    "demoBanner": {
+      "title": "Demo data — live court sync isn’t configured",
+      "body": "Cases added here are synthetic examples, not real court records. Add a court-data key (LD_API_KEY) to fetch live cases by CNR."
+    },
+    "manual": {
+      "toggle": "Add a case manually",
+      "help": "For a case the court portal can’t find yet (pre-filing or not on eCourts). Add the CNR later to sync live data.",
+      "titleLabel": "Case title",
+      "titlePlaceholder": "e.g. Sharma vs State of Gujarat",
+      "courtLabel": "Court (optional)",
+      "courtPlaceholder": "e.g. City Civil Court, Ahmedabad",
+      "typeLabel": "Case type (optional)",
+      "typePlaceholder": "e.g. Civil Suit",
+      "nextLabel": "Next hearing (optional)",
+      "cta": "Create case",
+      "creating": "Creating…"
     }
   },
   "caseDetail": {
@@ -460,6 +477,10 @@
       "categoryFiling": "Filing",
       "categoryOther": "Other",
       "notes": "Notes"
+    },
+    "demoBanner": {
+      "title": "Demo data — not a real court record",
+      "body": "This case was created with the mock provider. Configure live court sync and refresh to replace it with official data."
     }
   },
   "auth": {

@@ -150,6 +150,16 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         </div>
       </header>
 
+      {matter.source === "mock" && (
+        <div role="status" className="flex items-start gap-2.5 rounded-ec-s border border-ec-warn/30 bg-ec-warn-t px-4 py-3 text-sm text-ec-warn">
+          <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium">{t("demoBanner.title")}</p>
+            <p className="mt-0.5 text-xs text-ec-warn/90">{t("demoBanner.body")}</p>
+          </div>
+        </div>
+      )}
+
       <CaseTabs tabs={CASE_TAB_DEFS.map((d) => ({ ...d, label: t(`tab.${d.label}`) }))}>
       <CaseTabPanel id="overview">
 

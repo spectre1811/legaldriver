@@ -69,3 +69,11 @@ export function getCourtDataClient(): CourtDataClient {
 export function setCourtDataClient(client: CourtDataClient | null) {
   cached = client;
 }
+
+// True when the active provider is the free synthetic mock — i.e. no live court
+// sync is configured. Surfaced to the UI so we NEVER present fabricated cases as
+// real court records (WO-35 blocker #1 · information-integrity). The mock only
+// activates when neither LD_API_KEY nor a forced ecourtsindia token is present.
+export function isMockCourtProvider(): boolean {
+  return getCourtDataClient().source === "mock";
+}

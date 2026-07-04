@@ -55,16 +55,20 @@ export function ProposedDeadlineActions({ deadlineId }: { deadlineId: string }) 
 
 export function RefreshButton({ matterId }: { matterId: string }) {
   const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const router = useRouter();
   const t = useTranslations("caseDetail");
   return (
-    <button
-      onClick={() => start(async () => { await refreshCase(matterId); router.refresh(); })}
-      disabled={pending}
-      className="btn-secondary"
-    >
-      <Icon name="refresh" className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} /> {pending ? t("actions.refreshing") : t("actions.refresh")}
-    </button>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => start(async () => { const r = await refreshCase(matterId); setMsg({ ok: r.ok, text: r.message }); router.refresh(); })}
+        disabled={pending}
+        className="btn-secondary"
+      >
+        <Icon name="refresh" className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} /> {pending ? t("actions.refreshing") : t("actions.refresh")}
+      </button>
+      {msg && <span role="status" className={`max-w-xs text-xs ${msg.ok ? "text-ink-muted" : "text-red-600"}`}>{msg.text}</span>}
+    </div>
   );
 }
 

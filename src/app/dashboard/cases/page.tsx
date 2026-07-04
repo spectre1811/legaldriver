@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fmtDate, fmtAgo } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AddCaseForm } from "./add-case-form";
+import { CourtProviderBanner } from "@/components/court-provider-banner";
 import { Console, type SavedView } from "./console";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { deleteMatter } from "./actions";
@@ -110,6 +111,8 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
         <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
         <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("subtitle")}</p>
       </header>
+
+      <CourtProviderBanner />
 
       <div className="ec-card p-5">
         <AddCaseForm />
