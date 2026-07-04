@@ -16,7 +16,7 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
     supabase.from("oauth_connection").select("id, status").eq("provider", "google").eq("status", "active").maybeSingle(),
     supabase.from("client").select("id, name").order("name"),
     supabase.from("matter").select("id, title").order("title"),
-    supabase.from("email_message").select("id, subject, from_addr, received_at, confidence, status, classified_client_id, classified_matter_id").order("received_at", { ascending: false }).limit(200),
+    supabase.from("email_message").select("id, subject, from_addr, received_at, confidence, status, classified_client_id, classified_matter_id").in("status", ["pending", "filed", "needs_review"]).order("received_at", { ascending: false }).limit(200),
   ]);
 
   const clientOpts = (clients ?? []).map((c) => ({ id: c.id, label: c.name }));

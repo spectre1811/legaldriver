@@ -9,6 +9,7 @@ import { ingestMail } from "@/lib/mail/ingest";
 import { readSecret } from "@/lib/mail/vault";
 import { refreshAccessToken, googleConfigured } from "@/lib/mail/oauth";
 import { isDemoMode } from "@/lib/demo";
+import { groupIdsByStatus } from "@/lib/mail/inbox-status";
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -149,10 +150,12 @@ export async function restoreEmails(entries: { id: string; status: string }[]): 
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
   if (!tenantId) return { ok: false, message: "No tenant." };
-  const byStatus = new Map<string, string[]>();
-  for (const e of entries) (byStatus.get(e.status) ?? byStatus.set(e.status, []).get(e.status)!).push(e.id);
-  for (const [status, ids] of byStatus) await supabase.from("email_message").update({ status }).in("id", ids);
-  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "email.restore", entity: "email_message", entity_id: entries[0]?.id ?? "", after: { count: entries.length } });
+  if (!entries.length) return { ok: false, message: "Nothing to restore." };
+  for (const [status, ids] of groupIdsByStatus(entries)) {
+    const { error } = await supabase.from("email_message").update({ status }).in("id", ids);
+    if (error) return { ok: false, message: error.message };
+  }
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "email.restore", entity: "email_message", entity_id: entries[0].id, after: { count: entries.length } });
   revalidatePath("/dashboard/inbox");
   return { ok: true, message: "Restored." };
 }

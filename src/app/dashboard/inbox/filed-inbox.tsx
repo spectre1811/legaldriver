@@ -48,7 +48,7 @@ export function FiledInbox({ groups }: { groups: InboxGroup[] }) {
   const allSelected = order.length > 0 && order.every((id) => selected.has(id));
   const toggleAll = () => { allSelected ? clear() : (setSelected(new Set(order)), setAnchor(null)); };
 
-  async function run(fn: (ids: string[]) => Promise<BulkResult>, label: string) {
+  async function run(fn: (ids: string[]) => Promise<BulkResult>) {
     const ids = [...selected];
     if (!ids.length) return;
     setBusy(true);
@@ -123,8 +123,8 @@ export function FiledInbox({ groups }: { groups: InboxGroup[] }) {
       {selected.size > 0 && (
         <div className="sticky bottom-4 z-20 mx-auto flex w-fit items-center gap-2 rounded-xl border border-line bg-ink px-4 py-2.5 text-sm text-white shadow-lg">
           <span className="font-medium">{t("bulk.nSelected", { n: selected.size })}</span>
-          <button disabled={busy} onClick={() => run(archiveEmails, "archive")} className="rounded-lg px-2.5 py-1 hover:bg-white/10 disabled:opacity-50">{t("bulk.archive")}</button>
-          <button disabled={busy} onClick={() => run(deleteEmails, "delete")} className="rounded-lg px-2.5 py-1 text-red-300 hover:bg-white/10 disabled:opacity-50">{t("bulk.delete")}</button>
+          <button disabled={busy} onClick={() => run(archiveEmails)} className="rounded-lg px-2.5 py-1 hover:bg-white/10 disabled:opacity-50">{t("bulk.archive")}</button>
+          <button disabled={busy} onClick={() => run(deleteEmails)} className="rounded-lg px-2.5 py-1 text-red-300 hover:bg-white/10 disabled:opacity-50">{t("bulk.delete")}</button>
           <button onClick={clear} className="rounded-lg px-2.5 py-1 text-white/70 hover:bg-white/10">{t("bulk.cancel")}</button>
         </div>
       )}
