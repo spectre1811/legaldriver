@@ -42,6 +42,7 @@
   "shell": {
     "workspace": "कार्यक्षेत्र",
     "signOut": "साइन आउट",
+    "home": "होम",
     "nav": "नेविगेशन",
     "openNav": "मेन्यू खोलें",
     "closeNav": "मेन्यू बंद करें",
@@ -69,7 +70,10 @@
     "heading": {
       "practice": "प्रैक्टिस",
       "workflow": "कार्यप्रवाह",
+      "communication": "संवाद",
+      "insight": "अंतर्दृष्टि",
       "assistant": "सहायक",
+      "setup": "सेटअप",
       "account": "खाता"
     },
     "item": {
@@ -93,6 +97,7 @@
       "notifications": "सूचनाएँ",
       "copilot": "कोपायलट",
       "drafting": "प्रारूपण",
+      "aiUsage": "AI उपयोग",
       "settings": "सेटिंग्स"
     },
     "aiUsage": "AI उपयोग"

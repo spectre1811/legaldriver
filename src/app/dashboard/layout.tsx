@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
-import { NavLinks } from "./nav";
+import { NavLinks, AccountNav } from "./nav";
 import { MobileNav } from "./mobile-nav";
 import { CommandPalette } from "@/components/command-palette";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -27,7 +28,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex min-h-screen bg-ec-paper text-ec-ink">
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-ec-hair bg-ec-paper px-4 py-5 md:flex">
-        <div className="flex items-center gap-2.5 px-2">
+        <Link
+          href="/dashboard"
+          aria-label={t("home")}
+          className="flex items-center gap-2.5 rounded-ec-s px-2 py-1 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+        >
           {/* Brand mark (letter tile) + typographic wordmark — the "date underline" motif. */}
           <BrandMark size={32} tone="dark" className="shrink-0" />
           <div className="leading-tight">
@@ -36,7 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </p>
             <p className="mt-1.5 truncate text-xs text-ec-ink-3" title={tenantName}>{tenantName}</p>
           </div>
-        </div>
+        </Link>
 
         <div className="mt-7 flex-1 overflow-y-auto">
           <CommandPalette />
@@ -44,6 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
 
         <div className="mt-4 border-t border-ec-hair pt-4">
+          <div className="mb-3"><AccountNav /></div>
           <div className="mb-3 px-1"><LanguageSwitcher /></div>
           <div className="flex items-center gap-3 px-1">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ec-indigo text-sm font-semibold text-white">

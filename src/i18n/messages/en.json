@@ -42,6 +42,7 @@
   "shell": {
     "workspace": "Workspace",
     "signOut": "Sign out",
+    "home": "Home",
     "nav": "Navigation",
     "openNav": "Open menu",
     "closeNav": "Close menu",
@@ -69,7 +70,10 @@
     "heading": {
       "practice": "Practice",
       "workflow": "Workflow",
+      "communication": "Communication",
+      "insight": "Insight",
       "assistant": "Assistant",
+      "setup": "Setup",
       "account": "Account"
     },
     "item": {
@@ -93,6 +97,7 @@
       "notifications": "Notifications",
       "copilot": "Copilot",
       "drafting": "Drafting",
+      "aiUsage": "AI usage",
       "settings": "Settings"
     },
     "aiUsage": "AI usage"
