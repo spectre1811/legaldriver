@@ -17,7 +17,7 @@ import { deleteMatter } from "../actions";
 import { DeadlineRuleForm } from "./deadline-rules";
 import { OrdersPanel } from "./orders-panel";
 import { CaseTimeline } from "./case-timeline";
-import { getTimeline } from "@/lib/court/legaldriver-api";
+import { getTimeline, type TimelineEvent } from "@/lib/court/legaldriver-api";
 
 type Party = { name?: string; side?: string; advocate?: string };
 
@@ -108,6 +108,30 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     [t("detail.policeStation"), str(detail.policeStation)],
   ].filter(([, v]) => v) as [string, string | null][];
 
+  // Timeline: prefer the live /timeline feed; when it's empty (endpoint down, no LD key, or a
+  // manual case), fall back to DB-derived hearings + orders so the tab reflects what we DO have
+  // instead of a false "data gap" (WO-35 timeline fallback).
+  //
+  // The order-pdf route resolves a court_order by its ROW id (uuid) and derives the provider id
+  // from raw.order_id itself. But the live /timeline hands us the PROVIDER order id — so for BOTH
+  // paths we map that to the row id before rendering, else the PDF link dead-ends (was broken for
+  // live orders too). Unmatched → no order_id → renders as text, not a dead link.
+  const orderRowByProviderId = new Map<string, string>();
+  for (const o of orders ?? []) {
+    const pid = (o.raw as { order_id?: number | string } | null)?.order_id;
+    if (pid != null) orderRowByProviderId.set(String(pid), o.id);
+  }
+  const dbTimeline: TimelineEvent[] = [
+    ...(hearings ?? []).filter((h) => h.date).map((h) => ({ date: h.date as string, type: "hearing" as const, detail: h.purpose ?? undefined, judge: h.judge ?? undefined })),
+    ...(orders ?? []).filter((o) => o.order_date).map((o) => ({ date: o.order_date as string, type: "order" as const, detail: o.title ?? undefined, order_id: o.id })),
+  ];
+  const liveTimeline: TimelineEvent[] = timelineEvents.map((ev) =>
+    ev.type === "order" && ev.order_id != null
+      ? { ...ev, order_id: orderRowByProviderId.get(String(ev.order_id)) }
+      : ev,
+  );
+  const effectiveTimeline = timelineEvents.length ? liveTimeline : dbTimeline;
+
   const processes = (Array.isArray(detail.processes) ? detail.processes : []) as { process_id?: string; process_date?: string; title?: string }[];
   const advocateBars = (detail.advocateBars ?? {}) as Record<string, string>;
   const regional = (detail.regional ?? {}) as { pet_name?: string | null; res_name?: string | null };
@@ -149,6 +173,16 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <ConfirmDelete action={deleteMatter} id={matter.id} label={t("delete")} confirmLabel={t("deleteConfirm")} note={t("deleteNote")} redirectTo="/dashboard/cases" size="md" />
         </div>
       </header>
+
+      {matter.source === "mock" && (
+        <div role="status" className="flex items-start gap-2.5 rounded-ec-s border border-ec-warn/30 bg-ec-warn-t px-4 py-3 text-sm text-ec-warn">
+          <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-medium">{t("demoBanner.title")}</p>
+            <p className="mt-0.5 text-xs text-ec-warn/90">{t("demoBanner.body")}</p>
+          </div>
+        </div>
+      )}
 
       <CaseTabs tabs={CASE_TAB_DEFS.map((d) => ({ ...d, label: t(`tab.${d.label}`) }))}>
       <CaseTabPanel id="overview">
@@ -482,7 +516,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       </CaseTabPanel>
       <CaseTabPanel id="timeline">
 
-      <CaseTimeline events={timelineEvents} hasCnr={!!matter.cnr} />
+      <CaseTimeline events={effectiveTimeline} hasCnr={!!matter.cnr} />
 
       </CaseTabPanel>
       <CaseTabPanel id="documents">

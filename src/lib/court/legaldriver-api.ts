@@ -77,7 +77,10 @@ export async function resolveAdvocateBar(name: string): Promise<string | null> {
 
 // date can be null — the /timeline source returns undated orders/hearings (verified live). Keep it
 // honest so consumers guard it (a bare `date.localeCompare` once crashed the whole case page).
-export interface TimelineEvent { date: string | null; type: "hearing" | "order" | "process"; detail?: string; judge?: string; order_id?: number }
+// order_id: from the live /timeline this is the PROVIDER order id (number). Before rendering we
+// remap it to the court_order ROW id (uuid string) that the order-pdf route resolves by — hence
+// the union type. `undefined` = no streamable PDF (renders as plain text, no dead link).
+export interface TimelineEvent { date: string | null; type: "hearing" | "order" | "process"; detail?: string; judge?: string; order_id?: number | string }
 export async function getTimeline(cnr: string): Promise<TimelineEvent[]> {
   const d = await ldGet<{ events?: TimelineEvent[] }>(`/case/${encodeURIComponent(cnr)}/timeline`);
   return d?.events ?? [];

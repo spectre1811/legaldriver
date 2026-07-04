@@ -36,15 +36,16 @@ function decode(s?: string): string {
 export async function CaseTimeline({ events, hasCnr }: { events: TimelineEvent[]; hasCnr: boolean }) {
   const t = await getTranslations("caseDetail");
 
-  if (!hasCnr) {
-    return (
-      <div className="ec-card px-5 py-10 text-center">
-        <p className="text-sm text-ec-ink-3">{t("timeline.dataGap")}</p>
-      </div>
-    );
-  }
-
+  // With no events at all: a case without a CNR has no court record to draw from ("data gap");
+  // a CNR'd case simply has nothing logged yet ("empty"). Events (live OR DB-derived) always render.
   if (!events.length) {
+    if (!hasCnr) {
+      return (
+        <div className="ec-card px-5 py-10 text-center">
+          <p className="text-sm text-ec-ink-3">{t("timeline.dataGap")}</p>
+        </div>
+      );
+    }
     return (
       <div className="ec-card">
         <div className="border-b border-ec-hair px-5 py-4">

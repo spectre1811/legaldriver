@@ -126,13 +126,16 @@ export async function addCaseDocument(matterId: string, formData: FormData): Pro
   const buffer = Buffer.from(await file.arrayBuffer());
   // WO-27 — shared path: store + dedup + extract + CLASSIFY, with this case as explicit context
   // (respected, never overridden). The upload now gets a doc_type/summary it didn't before.
+  // WO-35: also propagate the matter's client_id so the doc lands in the client's library
+  // immediately — filing by matter alone left it invisible there until a re-file.
+  const { data: m } = await supabase.from("matter").select("client_id").eq("id", matterId).maybeSingle();
   const r = await fileUploadedDocument({
     tenantId,
     buffer,
     mime: file.type,
     filename: file.name,
     pathPrefix: `cases/${matterId}`,
-    context: { matterId },
+    context: { matterId, clientId: m?.client_id ?? null },
   });
   if (!r.ok) return { ok: false, message: `Upload failed: ${r.error}` };
   if (r.status === "duplicate") return { ok: true, message: `“${file.name}” is already on file — skipped as a duplicate.` };
@@ -278,6 +281,51 @@ export async function addCaseByCnr(_prev: ActionResult, formData: FormData): Pro
       normalized.nextHearingDate ?? "n/a"
     } (source: ${normalized.source}).`,
   };
+}
+
+// Create a case MANUALLY — for cases the provider can't find (not yet on eCourts,
+// pre-filing, or when no live court sync is configured). WO-35 #2: the add-by-CNR
+// "add it manually" prompt now leads somewhere real. Minimal by design: title is
+// required; court/type/next-date optional. source="manual" so provenance stays honest
+// (never labelled as court-sourced) and a later CNR sync can supersede it.
+export async function createManualMatter(
+  _prev: { ok: boolean; message: string; matterId?: string },
+  formData: FormData,
+): Promise<{ ok: boolean; message: string; matterId?: string }> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant — please sign in again." };
+
+  const get = (k: string) => { const v = String(formData.get(k) ?? "").trim(); return v === "" ? null : v; };
+  const title = get("title");
+  if (!title) return { ok: false, message: "Give the case a title (e.g. the party names)." };
+  const nextDate = get("next_hearing_date");
+  if (nextDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) return { ok: false, message: "Enter the next hearing date as YYYY-MM-DD." };
+
+  const { data, error } = await supabase
+    .from("matter")
+    .insert({
+      tenant_id: tenantId,
+      title,
+      court: get("court"),
+      case_type: get("case_type"),
+      next_hearing_date: nextDate,
+      status: "active",
+      source: "manual",
+    })
+    .select("id")
+    .single();
+  if (error || !data) return { ok: false, message: `Could not create the case: ${error?.message ?? "unknown error"}.` };
+
+  const matterId = data.id;
+  if (nextDate) await scheduleReminders(supabase, tenantId, { kind: "hearing_reminder", eventDate: nextDate, ref: `matter:${matterId}`, title });
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "case.add_manual", entity: "matter", entity_id: matterId, after: { title } });
+  await logActivity(supabase, tenantId, { matterId, type: "case.added", summary: `Case “${title}” added manually` });
+  track("case_added", tenantId, { source: "manual", isNew: "true" });
+  revalidatePath("/dashboard/cases");
+  revalidatePath("/dashboard/calendar");
+  revalidatePath("/dashboard");
+  return { ok: true, matterId, message: `Created “${title}”. Add its CNR later to sync live court data.` };
 }
 
 // Apply a statutory deadline rule to a case: due_date = base date + rule.days.

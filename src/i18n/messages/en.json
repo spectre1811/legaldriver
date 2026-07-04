@@ -263,6 +263,23 @@
       "save": "Save",
       "cancel": "Cancel",
       "saveView": "Save this view"
+    },
+    "demoBanner": {
+      "title": "Demo data — live court sync isn’t configured",
+      "body": "Cases added here are synthetic examples, not real court records. Add a court-data key (LD_API_KEY) to fetch live cases by CNR."
+    },
+    "manual": {
+      "toggle": "Add a case manually",
+      "help": "For a case the court portal can’t find yet (pre-filing or not on eCourts). Add the CNR later to sync live data.",
+      "titleLabel": "Case title",
+      "titlePlaceholder": "e.g. Sharma vs State of Gujarat",
+      "courtLabel": "Court (optional)",
+      "courtPlaceholder": "e.g. City Civil Court, Ahmedabad",
+      "typeLabel": "Case type (optional)",
+      "typePlaceholder": "e.g. Civil Suit",
+      "nextLabel": "Next hearing (optional)",
+      "cta": "Create case",
+      "creating": "Creating…"
     }
   },
   "caseDetail": {
@@ -466,6 +483,10 @@
       "categoryFiling": "Filing",
       "categoryOther": "Other",
       "notes": "Notes"
+    },
+    "demoBanner": {
+      "title": "Demo data — not a real court record",
+      "body": "This case was created with the mock provider. Configure live court sync and refresh to replace it with official data."
     }
   },
   "auth": {
@@ -1194,7 +1215,20 @@
     "noJudges": "No judges found",
     "noParties": "No parties found",
     "noPartiesBody": "Try a surname (fuzzy match across litigants).",
-    "footer": "Source: Mukadma / eCourts (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record."
+    "footer": "Source: Mukadma / eCourts (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record.",
+    "caseNumber": {
+      "title": "Find a case by number",
+      "subtitle": "Registration number, not CNR — e.g. type C.S., number 1234, year 2022.",
+      "typeLabel": "Type",
+      "typePlaceholder": "C.S.",
+      "numberLabel": "Number",
+      "numberPlaceholder": "1234",
+      "yearLabel": "Year",
+      "yearPlaceholder": "2022",
+      "search": "Find case",
+      "noResults": "No case matched",
+      "noResultsBody": "Check the type, number and year against the filing receipt, or search by CNR above."
+    }
   },
   "analytics": {
     "title": "Analytics",
@@ -1372,7 +1406,21 @@
       "noteLabel": "Note",
       "submitting": "Submitting…",
       "submitRequest": "Submit refresh request",
-      "hitlFollowup": "Parsing the pasted payload into the matter is a follow-up — it's stored for now."
+      "hitlFollowup": "Parsing the pasted payload into the matter is a follow-up — it's stored for now.",
+      "mail": {
+        "ready": "Email delivery is live",
+        "readyHint": "Reminders and digests send from {from} to any recipient.",
+        "restricted": "Email restricted to your own inbox",
+        "restrictedHint": "Sending from {from} (Resend shared sender) reaches only the account owner. Verify a domain and set FROM_EMAIL to deliver to clients and advocates.",
+        "unconfigured": "Email not configured",
+        "unconfiguredHint": "No RESEND_API_KEY set — reminder and digest emails are logged, not delivered. Add the key (and a verified FROM_EMAIL) to send."
+      },
+      "causeList": {
+        "on": "Cause-list alerts active",
+        "onHint": "We check daily whether your tracked cases are listed for the next court day and raise a bell + email digest.",
+        "off": "Cause-list alerts unavailable on this provider",
+        "offHint": "The current court-data provider does not support the by-CNR cause-list lookup, so \"listed tomorrow\" alerts are paused. They resume automatically on the live provider."
+      }
     },
     "capture": {
       "heading": "Capture from eCourts (human-in-the-loop)",
