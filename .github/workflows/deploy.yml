@@ -9,13 +9,21 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_z2r1c2s2VX2L84LsRfzymHRw
+      VERCEL_PROJECT_ID: prj_7XmMbd0nGa92e5rrC5eIOtzDwzaR
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to Vercel (production)
-        uses: amondnet/vercel-action@v25
+      - uses: actions/setup-node@v4
         with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: team_z2r1c2s2VX2L84LsRfzymHRw
-          vercel-project-id: prj_7XmMbd0nGa92e5rrC5eIOtzDwzaR
-          vercel-args: '--prod'
-          scope: yashbahety90-gmailcoms-projects
+          node-version: '22'
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Deploy to Vercel (production)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then echo "::warning::VERCEL_TOKEN not set — skipping."; exit 0; fi
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
