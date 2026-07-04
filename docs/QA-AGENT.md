@@ -54,13 +54,14 @@ marker so nightly runs comment on recurring issues instead of duplicating them.
 
 ## Pagination / scale coverage (WO-39)
 - **Layer 1 (deterministic):** `e2e/pagination.spec.ts` exercises every paginated surface (cases, clients,
-  notices, voice) — reads the `<PaginatedList>` hooks (`data-testid="paginated-list"`, `data-row-count`,
-  `data-has-more`, `data-testid="paginated-load-more"`), clicks **Load more**, and asserts the row count
-  **grows** with no console/5xx error. Data-volume-safe: a single-page surface asserts the button is absent
-  + the "showing all N" end marker is present (no dead button, no silent cap) instead of failing.
+  notices, voice) — reads the `<Pagination>` hooks (`data-testid="pagination"` + `data-page` / `data-per-page`
+  / `data-total` / `data-total-pages`; `page-next` / `page-prev` / `per-page-select`), clicks **Next** and
+  asserts the page number advances, then changes rows-per-page and asserts it resets to page 1 — all with no
+  console/5xx error. Data-volume-safe: a single-page surface asserts no Prev/Next nav renders (nothing to page).
 - **Layer 2 (agentic):** the rubric flags a growable list with no pagination affordance as a **bug**.
-- **Any new `<PaginatedList>` surface is covered automatically** — add its route to the `SURFACES` list in
-  the spec (one line). New list components must expose the same `data-testid`/`data-*` hooks.
+- **Any new paginated surface is covered automatically** — add its route to the `SURFACES` list in the spec
+  (one line). New list pages render `<Pagination page perPage total>` (which carries the `data-*` hooks) below
+  the list, driven by `?page`/`?per` searchParams + a `.range()` + `{count:'exact'}` fetch.
 
 ## The verification handoff (standing rule — why this matters)
 When a change can't be **click-tested in the build environment** (e.g. no demo Supabase creds, so the authed

@@ -5,16 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { checkConflicts, type ConflictHit } from "@/lib/conflict";
 import { logActivity } from "@/lib/activity";
-import { fetchClientsPage, type ClientRow } from "./clients-query";
-import type { Page } from "@/lib/paginate";
 
 export type IntakeResult = { ok: boolean; message: string; conflicts?: ConflictHit[] };
-
-// Next keyset page for the clients list (WO-39). RLS scopes the read to the tenant.
-export async function loadMoreClients(cursor: string): Promise<Page<ClientRow>> {
-  const supabase = createClient();
-  return fetchClientsPage(supabase, cursor);
-}
 
 // Live conflict check for the intake form (called before creating the client).
 export async function runConflictCheck(name: string): Promise<ConflictHit[]> {

@@ -2,14 +2,13 @@ import { test, expect, expectHealthy } from "./fixtures";
 import { HAS_CREDS, NO_CREDS_REASON } from "./env";
 
 // WO-39 · Scale / pagination gate. Proves the thing the build env can NOT click-test (no demo
-// login there): that "Load more" actually returns the NEXT page against real data — the count
-// grows, no row 301 silently vanishes, and nothing errors mid-load. Surface-agnostic: it keys off
-// the `<PaginatedList>` test hooks (`data-testid="paginated-list"` + `data-row-count` + `data-has-more`
-// + `data-testid="paginated-load-more"`), so it covers tables and card lists identically.
+// login there): that the numbered-page control actually pages through the list — Next advances the
+// page and the slice changes — and that "showing X–Y of N" + rows-per-page work, with nothing
+// erroring. Keys off the `<Pagination>` test hooks (`data-testid="pagination"` + `data-page` /
+// `data-per-page` / `data-total` / `data-total-pages`, `page-next`/`page-prev`, `per-page-select`).
 //
-// Data-volume-safe: a surface with only one page (or none) is NOT a failure — we only assert the
-// load-more MECHANISM when the demo tenant actually has a second page. On a richly-seeded demo
-// tenant (WO-08) the paginated surfaces exercise the real click; on a thin one they pass cleanly.
+// Data-volume-safe: a surface with only one page (or none) is NOT a failure — the multi-page
+// assertions run only when the demo tenant actually has a second page.
 
 test.skip(!HAS_CREDS, NO_CREDS_REASON);
 
@@ -21,46 +20,54 @@ const SURFACES = [
 ];
 
 for (const surface of SURFACES) {
-  test(`${surface.name}: Load more returns the next page (no silent truncation)`, async ({ page, guard }) => {
+  test(`${surface.name}: numbered pagination pages through the list`, async ({ page, guard }) => {
     await page.goto(surface.url);
     await expectHealthy(page);
 
-    const list = page.locator('[data-testid="paginated-list"]').first();
-    const listCount = await list.count();
-    if (listCount === 0) {
-      // No paginated list rendered → the tenant has no rows on this surface (empty state).
-      // Nothing to paginate; the surface still rendered healthy above.
-      test.info().annotations.push({ type: "note", description: `${surface.name}: no rows to paginate (empty)` });
+    const pager = () => page.locator('[data-testid="pagination"]').first();
+    if ((await pager().count()) === 0) {
+      // No rows on this surface → no pager (empty state). Rendered healthy above.
+      test.info().annotations.push({ type: "note", description: `${surface.name}: no rows (empty)` });
       return;
     }
 
-    const before = Number(await list.getAttribute("data-row-count"));
-    expect(before, "a rendered paginated list should report a positive row count").toBeGreaterThan(0);
+    const total = Number(await pager().getAttribute("data-total"));
+    expect(total, "a rendered pager should report a positive total").toBeGreaterThan(0);
+    // "Showing X–Y of N" is always present.
+    await expect(page.locator('[data-testid="pagination-range"]').first()).toBeVisible();
 
-    const hasMore = (await list.getAttribute("data-has-more")) === "true";
-    const loadMore = page.locator('[data-testid="paginated-load-more"]');
+    const totalPages = Number(await pager().getAttribute("data-total-pages"));
+    const next = page.locator('[data-testid="page-next"]');
 
-    if (!hasMore) {
-      // Single page: the load-more button must be ABSENT and the end marker present — i.e. the
-      // list honestly says "that's everything", never a dead button or a silent cap.
-      await expect(loadMore).toHaveCount(0);
-      await expect(page.locator('[data-testid="paginated-end"]').first()).toBeVisible();
-      test.info().annotations.push({ type: "note", description: `${surface.name}: single page (${before} rows)` });
+    if (totalPages <= 1) {
+      // Single page: no Prev/Next nav is rendered (nothing to page through).
+      await expect(next).toHaveCount(0);
+      test.info().annotations.push({ type: "note", description: `${surface.name}: single page (${total} rows)` });
       return;
     }
 
-    // There IS a next page → click it and prove the row count grows.
-    await expect(loadMore).toBeVisible();
-    await loadMore.click();
-
+    // Multi-page: Next advances to page 2 (server re-renders with the next slice).
+    const startPage = Number(await pager().getAttribute("data-page"));
+    await expect(next).toBeVisible();
+    await next.click();
     await expect
-      .poll(async () => Number(await list.getAttribute("data-row-count")), {
-        message: "row count should increase after Load more",
+      .poll(async () => Number(await pager().getAttribute("data-page")), {
+        message: "Next should advance the page number",
         timeout: 10_000,
       })
-      .toBeGreaterThan(before);
+      .toBeGreaterThan(startPage);
 
-    // The load itself must be clean — no 5xx, no console error, no failed request.
+    // Rows-per-page: bumping it re-renders and resets to page 1.
+    const perSelect = page.locator('[data-testid="per-page-select"]');
+    if (await perSelect.count()) {
+      await perSelect.selectOption("50");
+      await expect
+        .poll(async () => Number(await pager().getAttribute("data-per-page")), { timeout: 10_000 })
+        .toBe(50);
+      expect(Number(await pager().getAttribute("data-page")), "changing page size resets to page 1").toBe(1);
+    }
+
+    // Every navigation must be clean — no 5xx, console error, or failed request.
     expect(guard.consoleErrors, guard.consoleErrors.join("\n")).toHaveLength(0);
     expect(guard.failedRequests, guard.failedRequests.join("\n")).toHaveLength(0);
   });

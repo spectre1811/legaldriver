@@ -1,12 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
-import type { PaginableQuery } from "@/lib/paginate";
+import { rangeFor } from "@/lib/paginate";
 
-// One query shape, used by BOTH the first-page server render and the load-more server
-// action, so the two can never drift (ship-grade §3 — the list contract is one thing).
-// `created_at` is selected because the keyset cursor is minted from it (+ id).
-
-export const NOTICES_PAGE_SIZE = 20;
+// Notices list (WO-39), numbered-page pagination by created_at (newest first). Was an
+// unbounded fetch-all of every notice.
 
 export interface NoticeRow {
   id: string;
@@ -20,12 +17,25 @@ export interface NoticeRow {
   matter: { title?: string } | null;
 }
 
-export function noticesQuery(supabase: SupabaseClient<Database>): PaginableQuery<NoticeRow> {
-  // RLS scopes this to the caller's tenant; the cast bridges Supabase's inferred join
-  // shape to our row type (same pattern the page already used for the matter join).
-  return supabase
+export interface NoticesPageResult {
+  rows: NoticeRow[];
+  total: number;
+}
+
+export async function fetchNoticesPage(
+  supabase: SupabaseClient<Database>,
+  page: number,
+  per: number,
+): Promise<NoticesPageResult> {
+  const { from, to } = rangeFor(page, per);
+  const { data, count, error } = await supabase
     .from("notice")
     .select(
       "id, type, response_due, escalation_state, sent_at, next_escalation_at, body_ref, created_at, matter:matter_id (title)",
-    ) as unknown as PaginableQuery<NoticeRow>;
+      { count: "exact" },
+    )
+    .order("created_at", { ascending: false })
+    .range(from, to);
+  if (error) throw new Error(`fetchNoticesPage: ${error.message}`);
+  return { rows: (data ?? []) as unknown as NoticeRow[], total: count ?? 0 };
 }

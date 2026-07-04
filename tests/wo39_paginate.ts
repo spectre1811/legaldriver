@@ -13,6 +13,12 @@ import {
   encodeOffset,
   decodeOffset,
   offsetPage,
+  parsePage,
+  clampPerPage,
+  rangeFor,
+  pageCount,
+  pageWindow,
+  DEFAULT_PER_PAGE,
   type PaginableQuery,
   type OffsetQuery,
 } from "../src/lib/paginate";
@@ -98,6 +104,19 @@ check("offset codec round-trips", decodeOffset(encodeOffset(80)) === 80);
 check("offset codec fails safe (null → 0)", decodeOffset(null) === 0);
 check("offset codec fails safe (garbage → 0)", decodeOffset("@@@") === 0);
 check("offset codec rejects negatives → 0", decodeOffset(Buffer.from('{"o":-5}').toString("base64url")) === 0);
+
+// --- numbered-page helpers (cases/clients/notices/voice use these) ---
+check("parsePage: valid 1-based page", parsePage("3") === 3);
+check("parsePage: garbage/zero/negative → 1", parsePage("0") === 1 && parsePage("-2") === 1 && parsePage("x") === 1 && parsePage(undefined) === 1);
+check("clampPerPage: allowed value kept", clampPerPage("50") === 50);
+check("clampPerPage: disallowed → default", clampPerPage("37") === DEFAULT_PER_PAGE && clampPerPage(undefined) === DEFAULT_PER_PAGE);
+check("rangeFor: page 1 → [0, per-1] inclusive", (() => { const r = rangeFor(1, 25); return r.from === 0 && r.to === 24; })());
+check("rangeFor: page 3 @ 25 → [50, 74]", (() => { const r = rangeFor(3, 25); return r.from === 50 && r.to === 74; })());
+check("pageCount: ceil, min 1", pageCount(0, 25) === 1 && pageCount(1, 25) === 1 && pageCount(26, 25) === 2 && pageCount(50, 25) === 2);
+check("pageWindow: small set is all pages, no gaps", JSON.stringify(pageWindow(1, 3)) === JSON.stringify([1, 2, 3]));
+check("pageWindow: middle of a big set collapses with ellipses", JSON.stringify(pageWindow(10, 20)) === JSON.stringify([1, "…", 9, 10, 11, "…", 20]));
+check("pageWindow: near the start has no leading gap", JSON.stringify(pageWindow(2, 20)) === JSON.stringify([1, 2, 3, "…", 20]));
+check("pageWindow: current clamps into range", JSON.stringify(pageWindow(99, 5)) === JSON.stringify([1, "…", 4, 5]));
 
 async function offsetExecTest() {
   const ranges: [number, number][] = [];

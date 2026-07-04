@@ -1993,7 +1993,12 @@
   "pagination": {
     "loadMore": "Load more",
     "error": "Couldn't load more — tap to retry.",
-    "end": "All {n} shown"
+    "end": "All {n} shown",
+    "perPage": "Per page",
+    "showing": "Showing {from}–{to} of {total}",
+    "nav": "Pagination",
+    "prev": "Prev",
+    "next": "Next"
   },
   "codeLabels": {
     "role": "role",

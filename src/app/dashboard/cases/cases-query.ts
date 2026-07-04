@@ -1,13 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
-import { offsetPage, type Page, type OffsetQuery } from "@/lib/paginate";
+import { rangeFor } from "@/lib/paginate";
 
-// Cases list query — ONE builder used by both the first-page server render and the
-// load-more server action, so the filter/sort contract can't drift (WO-39, ship-grade §3).
-// Offset-paginated (not keyset): the default sort is the NULLABLE `next_hearing_date`
-// (urgency order) and the user can re-sort, which keyset can't serve cleanly.
-
-export const CASES_PAGE_SIZE = 40;
+// Cases list query (WO-39). Numbered-page pagination: the page fetches `.range(from,to)`
+// for the requested page WITH an exact count, so the control can show real page numbers +
+// "showing X–Y of N". Offset/range (not keyset) because the default sort is the NULLABLE
+// `next_hearing_date` (urgency order) and the user can re-sort — keyset can't serve that.
 
 export interface CasesFilters {
   q?: string;
@@ -44,11 +42,11 @@ function isoDay(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-// Build the filtered + ordered matter query (identical semantics to the old inline page
-// logic). Returns the query ready for a `.range()`; RLS scopes it to the tenant.
+// Build the filtered + ordered matter query. Returns the query ready for a `.range()`,
+// with an exact count so the page can render numbered pages; RLS scopes it to the tenant.
 export function buildCasesQuery(supabase: SupabaseClient<Database>, f: CasesFilters) {
   const today = isoDay(new Date());
-  let query = supabase.from("matter").select(SELECT);
+  let query = supabase.from("matter").select(SELECT, { count: "exact" });
 
   if (f.q) {
     const term = f.q.replace(/[%,()]/g, " ").trim();
@@ -89,11 +87,19 @@ export function buildCasesQuery(supabase: SupabaseClient<Database>, f: CasesFilt
   return query;
 }
 
+export interface CasesPageResult {
+  rows: MatterRow[];
+  total: number;
+}
+
 export async function fetchCasesPage(
   supabase: SupabaseClient<Database>,
   filters: CasesFilters,
-  cursor?: string | null,
-): Promise<Page<MatterRow>> {
-  const query = buildCasesQuery(supabase, filters) as unknown as OffsetQuery<MatterRow>;
-  return offsetPage<MatterRow>(query, { limit: CASES_PAGE_SIZE, cursor });
+  page: number,
+  per: number,
+): Promise<CasesPageResult> {
+  const { from, to } = rangeFor(page, per);
+  const { data, count, error } = await buildCasesQuery(supabase, filters).range(from, to);
+  if (error) throw new Error(`fetchCasesPage: ${error.message}`);
+  return { rows: (data ?? []) as unknown as MatterRow[], total: count ?? 0 };
 }

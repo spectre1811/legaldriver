@@ -12,15 +12,6 @@ import { buildCaseSummaryPrompt, CASE_SUMMARY_SCHEMA, normalizeCaseSummary } fro
 import { logActivity } from "@/lib/activity";
 import { track } from "@/lib/analytics/track";
 import { fileUploadedDocument } from "@/lib/docs/file-upload";
-import { fetchCasesPage, type CasesFilters, type MatterRow } from "./cases-query";
-import type { Page } from "@/lib/paginate";
-
-// Next page of the cases list (WO-39). Replays the current filters + sort so pages stay
-// consistent; RLS scopes the read to the tenant.
-export async function loadMoreCases(filters: CasesFilters, cursor: string): Promise<Page<MatterRow>> {
-  const supabase = createClient();
-  return fetchCasesPage(supabase, filters, cursor);
-}
 import { scheduleReminders } from "@/lib/notify/schedule";
 import type { Database } from "@/lib/db/database.types";
 
