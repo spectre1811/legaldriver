@@ -10,7 +10,11 @@ import {
   keysetFilter,
   finalizePage,
   paginate,
+  encodeOffset,
+  decodeOffset,
+  offsetPage,
   type PaginableQuery,
+  type OffsetQuery,
 } from "../src/lib/paginate";
 
 let failures = 0;
@@ -89,7 +93,50 @@ async function execTest() {
   check("a Postgrest error throws (no silent empty page)", threw);
 }
 
-execTest().then(() => {
+// --- offset pagination (for nullable/user-sortable lists like cases) ---
+check("offset codec round-trips", decodeOffset(encodeOffset(80)) === 80);
+check("offset codec fails safe (null → 0)", decodeOffset(null) === 0);
+check("offset codec fails safe (garbage → 0)", decodeOffset("@@@") === 0);
+check("offset codec rejects negatives → 0", decodeOffset(Buffer.from('{"o":-5}').toString("base64url")) === 0);
+
+async function offsetExecTest() {
+  const ranges: [number, number][] = [];
+  const makeRangeBuilder = (data: Record<string, unknown>[]): OffsetQuery<Record<string, unknown>> => {
+    const b: OffsetQuery<Record<string, unknown>> = {
+      range(from: number, to: number) { ranges.push([from, to]); return b; },
+      then(resolve) { return Promise.resolve({ data, error: null }).then(resolve); },
+    };
+    return b;
+  };
+  const rows5 = Array.from({ length: 5 }, (_, i) => ({ id: `id${i}` }));
+
+  // First page: range(0, limit) = inclusive limit+1 probe; 5 fetched > 4 → nextCursor set.
+  ranges.length = 0;
+  const p1 = await offsetPage(makeRangeBuilder(rows5), { limit: 4 });
+  check("offset first page requests range(0, limit)", ranges[0][0] === 0 && ranges[0][1] === 4);
+  check("offset first page trims to page size", p1.rows.length === 4);
+  check("offset first page sets nextCursor (offset 4)", decodeOffset(p1.nextCursor) === 4);
+
+  // Next page from the cursor: range starts at the encoded offset.
+  ranges.length = 0;
+  await offsetPage(makeRangeBuilder(rows5.slice(0, 2)), { limit: 4, cursor: p1.nextCursor });
+  check("offset next page requests range(4, 8)", ranges[0][0] === 4 && ranges[0][1] === 8);
+
+  // Under-a-page → last page, no cursor.
+  const last = await offsetPage(makeRangeBuilder(rows5.slice(0, 3)), { limit: 4 });
+  check("offset last page has null nextCursor", last.nextCursor === null && last.rows.length === 3);
+
+  // Error surfaces.
+  let threw = false;
+  const errB: OffsetQuery<Record<string, unknown>> = {
+    range() { return errB; },
+    then(resolve) { return Promise.resolve({ data: null, error: { message: "boom" } }).then(resolve); },
+  };
+  try { await offsetPage(errB, { limit: 4 }); } catch { threw = true; }
+  check("offsetPage surfaces a Postgrest error", threw);
+}
+
+execTest().then(offsetExecTest).then(() => {
   if (failures) { console.error(`\n${failures} check(s) failed`); process.exit(1); }
   console.log("\nAll wo39_paginate checks passed.");
 });

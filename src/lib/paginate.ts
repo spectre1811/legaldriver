@@ -155,3 +155,53 @@ export async function paginate<T>(
   const page = finalizePage((data ?? []) as Record<string, unknown>[], limit, opts.column, idColumn);
   return { rows: page.rows as unknown as T[], nextCursor: page.nextCursor };
 }
+
+// --- Offset pagination (for the surfaces keyset can't serve cleanly) ------------------
+//
+// Keyset needs a NOT NULL sort key. A list whose natural sort is a NULLABLE column
+// (cases by `next_hearing_date` urgency, ip by `renewal_date`) — or one that lets the
+// user re-sort by arbitrary columns — can't keyset without a per-sort null-aware WHERE.
+// For those *bounded per-tenant* lists, OFFSET is the right tool (ship-grade §2 permits
+// it for bounded sets): it works with any ORDER BY (incl. nullable + user-chosen) and
+// preserves the existing filter/sort logic verbatim. Tradeoff: it re-scans skipped rows
+// (fine at these sizes) and can drift if rows are inserted/deleted mid-browse (rare for
+// a lawyer's own caseload). It returns the SAME `Page<T>` contract, so `<PaginatedList>`
+// drives it unchanged — the cursor just encodes an offset instead of a keyset position.
+
+export interface OffsetQuery<Row> extends PromiseLike<{ data: Row[] | null; error: { message: string } | null }> {
+  range(from: number, to: number): OffsetQuery<Row>;
+}
+
+export function encodeOffset(offset: number): string {
+  return Buffer.from(JSON.stringify({ o: offset })).toString("base64url");
+}
+
+export function decodeOffset(cursor: string | null | undefined): number {
+  if (!cursor) return 0;
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as { o?: unknown };
+    return typeof parsed.o === "number" && Number.isFinite(parsed.o) && parsed.o >= 0 ? parsed.o : 0;
+  } catch {
+    return 0; // malformed → first page, never throws.
+  }
+}
+
+/**
+ * Apply offset pagination to an already-filtered+ordered Supabase query and execute it.
+ * Fetches `limit+1` rows (via an inclusive `.range`) to detect a next page without a COUNT.
+ */
+export async function offsetPage<T>(
+  query: OffsetQuery<T>,
+  opts: { limit?: number; cursor?: string | null },
+): Promise<Page<T>> {
+  const limit = Math.max(1, opts.limit ?? DEFAULT_PAGE_SIZE);
+  const offset = decodeOffset(opts.cursor);
+  const { data, error } = await query.range(offset, offset + limit); // inclusive → limit+1 rows
+  if (error) throw new Error(`offsetPage: ${error.message}`);
+  const rows = (data ?? []) as T[];
+  const hasMore = rows.length > limit;
+  return {
+    rows: hasMore ? rows.slice(0, limit) : rows,
+    nextCursor: hasMore ? encodeOffset(offset + limit) : null,
+  };
+}
