@@ -36,6 +36,7 @@ Judge against this bar (clean · crisp · user-friendly · informational):
 - Designed empty/loading/error states — never a bare "No data", raw error, or [object Object].
 - Labels + microcopy are real, specific, in a professional legal-product voice — no dev placeholders, no truncated/ambiguous labels.
 - Accessible: every control has an accessible name; headings form a sensible outline; nothing is a nameless button/icon.
+- Scale-aware: a list that can grow (cases, clients, documents, notices, voice, messages) shows a pagination affordance ("Load more" / pages) or an honest "showing first N" — a long list dumped with no way to page, or a silent hard cap, is a scale defect (flag it as a bug, not a nit).
 - Nothing confusing, dead-ended, or overwhelming for a busy advocate.
 
 Report ONLY genuine issues a human would notice — be precise, cite the offending element, and don't invent problems. Score uxScore 1–5 (5 = a senior designer would ship it as-is). If the screen is clean, return an empty findings array with a high score.`;
