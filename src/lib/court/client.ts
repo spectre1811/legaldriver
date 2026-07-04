@@ -77,3 +77,10 @@ export function setCourtDataClient(client: CourtDataClient | null) {
 export function isMockCourtProvider(): boolean {
   return getCourtDataClient().source === "mock";
 }
+
+// Whether the active provider supports the CNR-keyed cause-list lookup that powers the daily
+// "your case is listed tomorrow" alert. Only the LegalDriver internal API implements it; on other
+// providers the alert silently no-ops, so we surface this in settings (WO-35 #4).
+export function causeListAlertsSupported(): boolean {
+  return typeof getCourtDataClient().getCauseListByCNRs === "function";
+}

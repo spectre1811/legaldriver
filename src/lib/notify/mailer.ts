@@ -59,3 +59,22 @@ export function getMailer(): Mailer {
   cached = key ? new ResendMailer(key, from) : new ConsoleMailer();
   return cached;
 }
+
+// Readiness for the settings diagnostics (WO-35 #6) — email alerts silently no-op with no key,
+// and Resend restricts delivery to the account owner until a sending domain is verified. Surface
+// which state we're in so an advocate isn't left wondering why reminders never arrive.
+// "ready" = real delivery to any recipient; "restricted" = key set but on the shared sender
+// (owner-only); "unconfigured" = console no-op.
+export type MailerReadiness = {
+  status: "ready" | "restricted" | "unconfigured";
+  from: string;
+};
+export function getMailerReadiness(): MailerReadiness {
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.FROM_EMAIL ?? "onboarding@resend.dev";
+  if (!key) return { status: "unconfigured", from };
+  // The shared resend.dev sender can only reach the account owner — a verified custom FROM_EMAIL
+  // domain is what unlocks delivery to clients/advocates.
+  const restricted = /@resend\.dev$/i.test(from) || !process.env.FROM_EMAIL;
+  return { status: restricted ? "restricted" : "ready", from };
+}

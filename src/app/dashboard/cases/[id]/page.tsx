@@ -17,7 +17,7 @@ import { deleteMatter } from "../actions";
 import { DeadlineRuleForm } from "./deadline-rules";
 import { OrdersPanel } from "./orders-panel";
 import { CaseTimeline } from "./case-timeline";
-import { getTimeline } from "@/lib/court/legaldriver-api";
+import { getTimeline, type TimelineEvent } from "@/lib/court/legaldriver-api";
 
 type Party = { name?: string; side?: string; advocate?: string };
 
@@ -107,6 +107,19 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     [t("detail.firNo"), detail.firNo ? `${str(detail.firNo)}${detail.firYear ? `/${str(detail.firYear)}` : ""}` : null],
     [t("detail.policeStation"), str(detail.policeStation)],
   ].filter(([, v]) => v) as [string, string | null][];
+
+  // Timeline: prefer the live /timeline feed; when it's empty (endpoint down, no LD key, or a
+  // manual case), fall back to DB-derived hearings + orders so the tab reflects what we DO have
+  // instead of a false "data gap" (WO-35 timeline fallback).
+  const dbTimeline: TimelineEvent[] = [
+    ...(hearings ?? []).filter((h) => h.date).map((h) => ({ date: h.date as string, type: "hearing" as const, detail: h.purpose ?? undefined, judge: h.judge ?? undefined })),
+    ...(orders ?? []).filter((o) => o.order_date).map((o) => {
+      const oid = (o.raw as { order_id?: number | string } | null)?.order_id;
+      const order_id = oid != null && Number.isFinite(Number(oid)) ? Number(oid) : undefined;
+      return { date: o.order_date as string, type: "order" as const, detail: o.title ?? undefined, order_id };
+    }),
+  ];
+  const effectiveTimeline = timelineEvents.length ? timelineEvents : dbTimeline;
 
   const processes = (Array.isArray(detail.processes) ? detail.processes : []) as { process_id?: string; process_date?: string; title?: string }[];
   const advocateBars = (detail.advocateBars ?? {}) as Record<string, string>;
@@ -492,7 +505,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       </CaseTabPanel>
       <CaseTabPanel id="timeline">
 
-      <CaseTimeline events={timelineEvents} hasCnr={!!matter.cnr} />
+      <CaseTimeline events={effectiveTimeline} hasCnr={!!matter.cnr} />
 
       </CaseTabPanel>
       <CaseTabPanel id="documents">

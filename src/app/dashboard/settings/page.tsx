@@ -8,6 +8,8 @@ import { CaptureTool } from "./capture-tool";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteAdvocate } from "./actions";
 import { getProviderHealth, getCacheStats } from "@/lib/court/gateway";
+import { getMailerReadiness } from "@/lib/notify/mailer";
+import { causeListAlertsSupported } from "@/lib/court/client";
 import { getTranslations } from "next-intl/server";
 
 export default async function SettingsPage() {
@@ -45,6 +47,8 @@ export default async function SettingsPage() {
       .limit(8)
       .then((r) => r.data ?? []),
   ]);
+  const mailer = getMailerReadiness();
+  const causeListOk = causeListAlertsSupported();
 
   return (
     <div className="space-y-7">
@@ -135,6 +139,30 @@ export default async function SettingsPage() {
             <Icon name="refresh" className="h-3.5 w-3.5" />
             {t("court.lastRefresh")} <span className="text-ink">{fmtAgo(stats.lastFetchedAt)}</span>
           </span>
+        </div>
+
+        {/* Email delivery readiness (WO-35 #6) — so silent no-ops / owner-only restriction are visible */}
+        <div className="mt-3 flex items-start gap-2 rounded-xl border border-line px-4 py-3 text-sm">
+          <Icon
+            name={mailer.status === "ready" ? "check" : "alert"}
+            className={`mt-0.5 h-4 w-4 shrink-0 ${mailer.status === "ready" ? "text-emerald-600" : "text-amber-600"}`}
+          />
+          <div className="min-w-0">
+            <p className="font-medium text-ink">{t(`court.mail.${mailer.status}`)}</p>
+            <p className="mt-0.5 text-xs text-ink-faint">{t(`court.mail.${mailer.status}Hint`, { from: mailer.from })}</p>
+          </div>
+        </div>
+
+        {/* Cause-list alert capability (WO-35 #4) — flagship "listed tomorrow" alert needs a provider that supports it */}
+        <div className="mt-2 flex items-start gap-2 rounded-xl border border-line px-4 py-3 text-sm">
+          <Icon
+            name={causeListOk ? "check" : "alert"}
+            className={`mt-0.5 h-4 w-4 shrink-0 ${causeListOk ? "text-emerald-600" : "text-amber-600"}`}
+          />
+          <div className="min-w-0">
+            <p className="font-medium text-ink">{t(causeListOk ? "court.causeList.on" : "court.causeList.off")}</p>
+            <p className="mt-0.5 text-xs text-ink-faint">{t(causeListOk ? "court.causeList.onHint" : "court.causeList.offHint")}</p>
+          </div>
         </div>
 
         {/* Refresh controls (provider button + HITL) */}

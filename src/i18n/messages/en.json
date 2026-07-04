@@ -1400,7 +1400,21 @@
       "noteLabel": "Note",
       "submitting": "Submitting…",
       "submitRequest": "Submit refresh request",
-      "hitlFollowup": "Parsing the pasted payload into the matter is a follow-up — it's stored for now."
+      "hitlFollowup": "Parsing the pasted payload into the matter is a follow-up — it's stored for now.",
+      "mail": {
+        "ready": "Email delivery is live",
+        "readyHint": "Reminders and digests send from {from} to any recipient.",
+        "restricted": "Email restricted to your own inbox",
+        "restrictedHint": "Sending from {from} (Resend shared sender) reaches only the account owner. Verify a domain and set FROM_EMAIL to deliver to clients and advocates.",
+        "unconfigured": "Email not configured",
+        "unconfiguredHint": "No RESEND_API_KEY set — reminder and digest emails are logged, not delivered. Add the key (and a verified FROM_EMAIL) to send."
+      },
+      "causeList": {
+        "on": "Cause-list alerts active",
+        "onHint": "We check daily whether your tracked cases are listed for the next court day and raise a bell + email digest.",
+        "off": "Cause-list alerts unavailable on this provider",
+        "offHint": "The current court-data provider does not support the by-CNR cause-list lookup, so \"listed tomorrow\" alerts are paused. They resume automatically on the live provider."
+      }
     },
     "capture": {
       "heading": "Capture from eCourts (human-in-the-loop)",
