@@ -4,6 +4,7 @@ import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { corpusEnabled, searchJudgments, judgmentPdfUrl, courtLabel, type JudgmentRow } from "@/lib/court/corpus-athena";
+import { expandDisposal } from "@/lib/court/code-labels";
 import { Filters } from "./filters";
 
 export const dynamic = "force-dynamic";
@@ -218,7 +219,7 @@ export default async function ResearchPage({
                       <td className="px-5 py-3.5 align-top">
                         {r.disposal_nature
                           ? <a href={`/dashboard/research?disposal=${encodeURIComponent(r.disposal_nature)}`} title={t("filterByDisposal")} className="hover:opacity-70 transition-opacity">
-                              <Badge>{r.disposal_nature}</Badge>
+                              <Badge>{expandDisposal(r.disposal_nature).full}</Badge>
                             </a>
                           : <span className="text-ink-faint">—</span>}
                       </td>

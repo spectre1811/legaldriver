@@ -4,6 +4,8 @@ import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { TrackCaseButton } from "@/components/track-case-button";
 import { searchAdvocates, searchJudges, searchParties, searchByCaseNumber, getStats, ldEnabled } from "@/lib/court/legaldriver-api";
+import { expandCaseType, advocateRole } from "@/lib/court/code-labels";
+import { CodeLabel } from "@/components/code-label";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,7 @@ export default async function LookupPage({
   searchParams: { q?: string; ct?: string; cn?: string; cy?: string };
 }) {
   const t = await getTranslations("lookup");
+  const tc = await getTranslations("codeLabels");
   const q = (searchParams.q ?? "").trim();
   const cnType = (searchParams.ct ?? "").trim();
   const cnNumber = (searchParams.cn ?? "").trim();
@@ -85,7 +88,7 @@ export default async function LookupPage({
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
                         {p.side && <Badge tone={/pet|appl|compl/i.test(p.side) ? "green" : "neutral"}>{p.side.toLowerCase()}</Badge>}
-                        <span className="hidden text-xs text-ink-faint sm:inline">{p.case_type}</span>
+                        <CodeLabel value={expandCaseType(p.case_type, p.tier)} showCode={false} className="hidden text-xs text-ink-faint sm:inline" fallback="" />
                         <TrackCaseButton cnr={p.cnr} />
                       </span>
                     </li>
@@ -104,12 +107,24 @@ export default async function LookupPage({
               <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">{t("advocates")} <span className="text-ink-faint">({advocates.length})</span></h2></div>
               {advocates.length ? (
                 <ul className="divide-y divide-line">
-                  {advocates.slice(0, 25).map((a, i) => (
+                  {advocates.slice(0, 25).map((a, i) => {
+                    // Role-as-entity flag (WO-32): APP/PP/AGP etc. are court roles, not individual
+                    // advocates — label + don't link them as if they were a person.
+                    const role = advocateRole(a.name_raw);
+                    return (
                     <li key={(a.bar_id ?? "") + i} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
-                      {a.bar_id ? <Link href={`/dashboard/advocate/${a.bar_id}`} className="min-w-0 flex-1 truncate font-medium text-brand-600 hover:underline">{a.name_raw}</Link> : <span className="min-w-0 flex-1 truncate text-ink">{a.name_raw}</span>}
+                      <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
+                        {role.isRole
+                          ? <span className="truncate font-medium text-ink" title={tc("roleAria")}>{role.full ?? a.name_raw}</span>
+                          : a.bar_id
+                            ? <Link href={`/dashboard/advocate/${a.bar_id}`} className="truncate font-medium text-brand-600 hover:underline">{a.name_raw}</Link>
+                            : <span className="truncate text-ink">{a.name_raw}</span>}
+                        {role.isRole && <Badge tone="amber">{tc("role")}</Badge>}
+                      </span>
                       <span className="shrink-0 text-xs text-ink-faint">{t("casesCount", { n: a.cases })}{a.bar_id ? t("barSuffix", { id: a.bar_id }) : t("noBar")}</span>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               ) : <EmptyState icon="scale" title={t("noAdvocates")} />}
             </Card>
@@ -141,7 +156,7 @@ export default async function LookupPage({
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
                       {p.side && <Badge tone={/pet|appl|compl/i.test(p.side) ? "green" : "neutral"}>{p.side.toLowerCase()}</Badge>}
-                      <span className="hidden text-xs text-ink-faint sm:inline">{p.case_type}</span>
+                      <CodeLabel value={expandCaseType(p.case_type, p.tier)} showCode={false} className="hidden text-xs text-ink-faint sm:inline" fallback="" />
                       <TrackCaseButton cnr={p.cnr} />
                     </span>
                   </li>

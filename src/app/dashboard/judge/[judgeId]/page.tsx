@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { getJudge, ldEnabled } from "@/lib/court/legaldriver-api";
 import { TrackCaseButton } from "@/components/track-case-button";
+import { expandCaseType, expandDisposal } from "@/lib/court/code-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,8 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
   // Disposal-nature breakdown (bar chart data)
   const byNature = new Map<string, number>();
   for (const c of j.cases) {
-    const n = (c.disposal_nature ?? "").trim() || null;
+    // WO-32: group by the expanded disposal description, not the raw "Contested--56-…" code.
+    const n = expandDisposal(c.disposal_nature).full || null;
     if (n) byNature.set(n, (byNature.get(n) ?? 0) + 1);
   }
   const disposalNatures = [...byNature.entries()]
@@ -49,7 +51,8 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
   // Case-type mix (top 8)
   const byType = new Map<string, number>();
   for (const c of j.cases) {
-    const ct = (c.case_type ?? "—").split("(")[0].trim();
+    // WO-32: group by the expanded case-type name (merges "CR.A" / "CR.A(CRIMINAL APPEAL)-43" etc.).
+    const ct = expandCaseType(c.case_type, c.tier).full || "—";
     byType.set(ct, (byType.get(ct) ?? 0) + 1);
   }
   const topTypes = [...byType.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
@@ -257,8 +260,8 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
                               c.cnr
                             )}
                           </td>
-                          <td className="px-3 py-2 text-ink-muted">
-                            {c.case_type?.split("(")[0].trim() ?? "—"}
+                          <td className="px-3 py-2 text-ink-muted" title={c.case_type ?? undefined}>
+                            {expandCaseType(c.case_type, c.tier).full || "—"}
                           </td>
                           <td className="px-3 py-2">
                             {c.tier ? (
@@ -267,8 +270,8 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
                               <span className="text-ink-faint">—</span>
                             )}
                           </td>
-                          <td className="px-3 py-2 text-xs text-ink-muted">
-                            {c.disposal_nature ?? <span className="text-ink-faint">—</span>}
+                          <td className="px-3 py-2 text-xs text-ink-muted" title={c.disposal_nature ?? undefined}>
+                            {c.disposal_nature ? expandDisposal(c.disposal_nature).full : <span className="text-ink-faint">—</span>}
                           </td>
                           <td className="px-3 py-2 text-xs text-ink-faint">
                             {fmtDate(c.decision_date)}

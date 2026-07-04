@@ -1979,5 +1979,10 @@
     "loadMore": "Load more",
     "error": "Couldn't load more — tap to retry.",
     "end": "All {n} shown"
+  },
+  "codeLabels": {
+    "role": "role",
+    "roleAria": "Court role, not an individual advocate",
+    "roleNote": "“{name}” is a court role (e.g. Public Prosecutor / Government Pleader), not an individual advocate. These State-counsel entries are aggregated across many cases."
   }
 }

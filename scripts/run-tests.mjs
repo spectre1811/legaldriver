@@ -33,6 +33,7 @@ const OFFLINE = [
   "wo27_select_range",
   "wo29_gmail_hygiene",
   "wo29_inbox_status",
+  "wo32_code_labels",
   "wo32_review_why",
   "wo33_classification_cache",
   "wo33_grounding",
