@@ -194,7 +194,7 @@ export async function TodayView({ now, week, hearings, courts, syncedAt, filings
               <p className="num font-display text-[15px] leading-relaxed text-ec-ink-2">
                 {t("summary", { count: hearings.length, courts })}.
               </p>
-              <Link href="/dashboard/copilot" className="mt-3 inline-block border-b border-ec-brass text-[13px] font-semibold text-ec-brass-deep hover:text-ec-brass">
+              <Link href="/dashboard/assistant/ask" className="mt-3 inline-block border-b border-ec-brass text-[13px] font-semibold text-ec-brass-deep hover:text-ec-brass">
                 {t("glance.openCopilot")} →
               </Link>
             </div>

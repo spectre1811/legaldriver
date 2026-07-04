@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
-import { draftFromDocument } from "@/app/dashboard/draft/actions";
+import { draftFromDocument } from "@/app/dashboard/assistant/draft/actions";
 
 // Entry point from any document → start a drafting-agent reply and open the console.
 export function DraftReplyButton({ documentId, className }: { documentId: string; className?: string }) {
@@ -16,7 +16,7 @@ export function DraftReplyButton({ documentId, className }: { documentId: string
         onClick={() => start(async () => {
           const r = await draftFromDocument(documentId);
           setMsg(r.message);
-          if (r.ok && r.draftId) router.push(`/dashboard/draft/${r.draftId}`);
+          if (r.ok && r.draftId) router.push(`/dashboard/assistant/draft/${r.draftId}`);
         })}
         disabled={pending}
         className={className ?? "btn-secondary inline-flex items-center gap-1.5 px-3 py-2 text-sm"}

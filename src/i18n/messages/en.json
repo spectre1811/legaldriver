@@ -84,7 +84,7 @@
       "workflow": "Workflow",
       "communication": "Communication",
       "insight": "Insight",
-      "assistant": "Assistant",
+      "assistant": "AI",
       "account": "Account"
     },
     "item": {
@@ -106,8 +106,7 @@
       "invoices": "Invoices",
       "ip": "IP assets",
       "notifications": "Notifications",
-      "copilot": "Copilot",
-      "drafting": "Drafting",
+      "assistant": "Assistant",
       "aiUsage": "AI usage",
       "settings": "Settings"
     },
@@ -1614,6 +1613,13 @@
     "resAdvCol": "Res. advocate",
     "relatedToMatter": "Related: {matter}",
     "filterByDisposal": "Filter by this disposition"
+  },
+  "assistant": {
+    "tabsAria": "Assistant sections",
+    "tabs": {
+      "ask": "Ask",
+      "draft": "Draft"
+    }
   },
   "copilot": {
     "title": "Copilot",

@@ -8,7 +8,7 @@ import { askAgentAction } from "./actions";
 
 // Composer pinned at the bottom of the agent panel. Carries the matter/client
 // context (and active thread) through as hidden fields so a scoped deep-link like
-// /dashboard/copilot?matter=<id> keeps that grounding on every turn.
+// /dashboard/assistant/ask?matter=<id> keeps that grounding on every turn.
 export function Chat({
   threadId,
   matterId,
@@ -34,7 +34,7 @@ export function Chat({
         return;
       }
       form.reset();
-      router.push(`/dashboard/copilot?thread=${r.threadId}`);
+      router.push(`/dashboard/assistant/ask?thread=${r.threadId}`);
       router.refresh();
     });
   }

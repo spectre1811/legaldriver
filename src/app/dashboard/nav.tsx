@@ -53,8 +53,7 @@ const SECTIONS: { heading: string; items: NavEntry[] }[] = [
   {
     heading: "assistant",
     items: [
-      { href: "/dashboard/copilot", label: "copilot", icon: "sparkles" },
-      { href: "/dashboard/draft", label: "drafting", icon: "edit" },
+      { href: "/dashboard/assistant", label: "assistant", icon: "sparkles" },
       { href: "/dashboard/ai-usage", label: "aiUsage", icon: "gauge" },
     ],
   },

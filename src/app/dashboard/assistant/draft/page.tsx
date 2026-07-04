@@ -49,7 +49,7 @@ export default async function DraftConsolePage() {
               const doc = d.document as { filename?: string } | null;
               return (
                 <li key={d.id}>
-                  <Link href={`/dashboard/draft/${d.id}`} className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-paper">
+                  <Link href={`/dashboard/assistant/draft/${d.id}`} className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-paper">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{d.title ?? t("draftFallback")}</p>
                       <p className="truncate text-xs text-ink-muted">

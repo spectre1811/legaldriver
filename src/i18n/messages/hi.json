@@ -84,7 +84,7 @@
       "workflow": "कार्यप्रवाह",
       "communication": "संवाद",
       "insight": "अंतर्दृष्टि",
-      "assistant": "सहायक",
+      "assistant": "एआई",
       "account": "खाता"
     },
     "item": {
@@ -106,8 +106,7 @@
       "invoices": "बिल",
       "ip": "आईपी संपत्ति",
       "notifications": "सूचनाएँ",
-      "copilot": "कोपायलट",
-      "drafting": "प्रारूपण",
+      "assistant": "सहायक",
       "aiUsage": "AI उपयोग",
       "settings": "सेटिंग्स"
     },
@@ -1614,6 +1613,13 @@
     "resAdvCol": "प्रतिवादी अधिवक्ता",
     "relatedToMatter": "संबंधित: {matter}",
     "filterByDisposal": "इस निपटान से फ़िल्टर करें"
+  },
+  "assistant": {
+    "tabsAria": "सहायक अनुभाग",
+    "tabs": {
+      "ask": "पूछें",
+      "draft": "प्रारूपण"
+    }
   },
   "copilot": {
     "title": "कोपायलट",

@@ -39,6 +39,6 @@ export async function askAgentAction(formData: FormData): Promise<AskResult> {
     threadId,
   });
 
-  revalidatePath("/dashboard/copilot");
+  revalidatePath("/dashboard/assistant/ask");
   return { ok: true, threadId: tid, pending: Boolean(answer.pending) };
 }

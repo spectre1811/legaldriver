@@ -21,7 +21,7 @@ export function UploadAndDraftForm() {
         start(async () => {
           const r = await uploadAndDraft(fd);
           setMsg(r.message);
-          if (r.ok) { formRef.current?.reset(); if (r.draftId) router.push(`/dashboard/draft/${r.draftId}`); else router.refresh(); }
+          if (r.ok) { formRef.current?.reset(); if (r.draftId) router.push(`/dashboard/assistant/draft/${r.draftId}`); else router.refresh(); }
         });
       }}
       className="flex flex-wrap items-center gap-3"
@@ -164,7 +164,7 @@ export function DiscardButton({ draftId }: { draftId: string }) {
   const [pending, start] = useTransition();
   const router = useRouter();
   return (
-    <button onClick={() => { if (confirm(t("discardConfirm"))) start(async () => { await discardDraft(draftId); router.push("/dashboard/draft"); }); }} disabled={pending} className="text-xs text-ink-faint hover:text-red-600">
+    <button onClick={() => { if (confirm(t("discardConfirm"))) start(async () => { await discardDraft(draftId); router.push("/dashboard/assistant/draft"); }); }} disabled={pending} className="text-xs text-ink-faint hover:text-red-600">
       {t("discard")}
     </button>
   );
