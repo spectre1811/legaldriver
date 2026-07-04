@@ -2,23 +2,20 @@ name: deploy-prod
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 concurrency:
   group: deploy-prod
   cancel-in-progress: false
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      VERCEL_ORG_ID: team_z2r1c2s2VX2L84LsRfzymHRw
-      VERCEL_PROJECT_ID: prj_7XmMbd0nGa92e5rrC5eIOtzDwzaR
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
       - name: Deploy to Vercel (production)
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          if [ -z "$VERCEL_TOKEN" ]; then echo "::warning::VERCEL_TOKEN not set — skipping deploy."; exit 0; fi
-          npx --yes vercel@latest deploy --prod --yes --token="$VERCEL_TOKEN" --scope yashbahety90-gmailcoms-projects
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: team_z2r1c2s2VX2L84LsRfzymHRw
+          vercel-project-id: prj_7XmMbd0nGa92e5rrC5eIOtzDwzaR
+          vercel-args: '--prod'
+          scope: yashbahety90-gmailcoms-projects
