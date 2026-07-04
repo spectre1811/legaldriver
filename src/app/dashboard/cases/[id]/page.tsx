@@ -111,15 +111,26 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   // Timeline: prefer the live /timeline feed; when it's empty (endpoint down, no LD key, or a
   // manual case), fall back to DB-derived hearings + orders so the tab reflects what we DO have
   // instead of a false "data gap" (WO-35 timeline fallback).
+  //
+  // The order-pdf route resolves a court_order by its ROW id (uuid) and derives the provider id
+  // from raw.order_id itself. But the live /timeline hands us the PROVIDER order id — so for BOTH
+  // paths we map that to the row id before rendering, else the PDF link dead-ends (was broken for
+  // live orders too). Unmatched → no order_id → renders as text, not a dead link.
+  const orderRowByProviderId = new Map<string, string>();
+  for (const o of orders ?? []) {
+    const pid = (o.raw as { order_id?: number | string } | null)?.order_id;
+    if (pid != null) orderRowByProviderId.set(String(pid), o.id);
+  }
   const dbTimeline: TimelineEvent[] = [
     ...(hearings ?? []).filter((h) => h.date).map((h) => ({ date: h.date as string, type: "hearing" as const, detail: h.purpose ?? undefined, judge: h.judge ?? undefined })),
-    ...(orders ?? []).filter((o) => o.order_date).map((o) => {
-      const oid = (o.raw as { order_id?: number | string } | null)?.order_id;
-      const order_id = oid != null && Number.isFinite(Number(oid)) ? Number(oid) : undefined;
-      return { date: o.order_date as string, type: "order" as const, detail: o.title ?? undefined, order_id };
-    }),
+    ...(orders ?? []).filter((o) => o.order_date).map((o) => ({ date: o.order_date as string, type: "order" as const, detail: o.title ?? undefined, order_id: o.id })),
   ];
-  const effectiveTimeline = timelineEvents.length ? timelineEvents : dbTimeline;
+  const liveTimeline: TimelineEvent[] = timelineEvents.map((ev) =>
+    ev.type === "order" && ev.order_id != null
+      ? { ...ev, order_id: orderRowByProviderId.get(String(ev.order_id)) }
+      : ev,
+  );
+  const effectiveTimeline = timelineEvents.length ? liveTimeline : dbTimeline;
 
   const processes = (Array.isArray(detail.processes) ? detail.processes : []) as { process_id?: string; process_date?: string; title?: string }[];
   const advocateBars = (detail.advocateBars ?? {}) as Record<string, string>;

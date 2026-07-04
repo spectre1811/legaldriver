@@ -75,7 +75,10 @@ export async function resolveAdvocateBar(name: string): Promise<string | null> {
   return (exact ?? results.sort((a, b) => (b.cases ?? 0) - (a.cases ?? 0))[0]).bar_id ?? null;
 }
 
-export interface TimelineEvent { date: string; type: "hearing" | "order" | "process"; detail?: string; judge?: string; order_id?: number }
+// order_id: from the live /timeline this is the PROVIDER order id (number). Before rendering we
+// remap it to the court_order ROW id (uuid string) that the order-pdf route resolves by — hence
+// the union type. `undefined` = no streamable PDF (renders as plain text, no dead link).
+export interface TimelineEvent { date: string; type: "hearing" | "order" | "process"; detail?: string; judge?: string; order_id?: number | string }
 export async function getTimeline(cnr: string): Promise<TimelineEvent[]> {
   const d = await ldGet<{ events?: TimelineEvent[] }>(`/case/${encodeURIComponent(cnr)}/timeline`);
   return d?.events ?? [];

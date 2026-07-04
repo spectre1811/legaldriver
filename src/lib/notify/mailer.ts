@@ -74,7 +74,8 @@ export function getMailerReadiness(): MailerReadiness {
   const from = process.env.FROM_EMAIL ?? "onboarding@resend.dev";
   if (!key) return { status: "unconfigured", from };
   // The shared resend.dev sender can only reach the account owner — a verified custom FROM_EMAIL
-  // domain is what unlocks delivery to clients/advocates.
-  const restricted = /@resend\.dev$/i.test(from) || !process.env.FROM_EMAIL;
+  // domain is what unlocks delivery to clients/advocates. (An unset FROM_EMAIL already defaults to
+  // onboarding@resend.dev, so this catches that case too.)
+  const restricted = /@resend\.dev$/i.test(from);
   return { status: restricted ? "restricted" : "ready", from };
 }
