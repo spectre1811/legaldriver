@@ -920,6 +920,16 @@
       "caseOption": "— मुकदमा —",
       "filing": "फ़ाइल किया जा रहा है…",
       "confirmAndFile": "पुष्टि करें और फ़ाइल करें"
+    },
+    "bulk": {
+      "selectAll": "सभी चुनें",
+      "clearAll": "चयन हटाएं",
+      "selectOne": "ईमेल चुनें",
+      "nSelected": "{n} चयनित",
+      "archive": "संग्रहित करें",
+      "delete": "हटाएं",
+      "cancel": "रद्द करें",
+      "undo": "पूर्ववत करें"
     }
   },
   "messages": {

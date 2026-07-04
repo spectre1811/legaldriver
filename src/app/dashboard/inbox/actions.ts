@@ -115,6 +115,48 @@ export async function confirmEmail(
   return { ok: true, message: "Filed." };
 }
 
+// ── Inbox bulk actions (WO-29 W2) — soft, reversible. status 'deleted'/'archived' hide the row
+// from both lists (the page filters to review/filed) without destroying the record, so an Undo can
+// restore the exact prior status. Documents stay filed (a doc belongs to its client/case, not the
+// email). RLS scopes email_message to the tenant, so `.in("id", ids)` can't touch another tenant.
+export type BulkResult = { ok: boolean; message: string; undo?: { id: string; status: string }[] };
+
+async function bulkSetStatus(ids: string[], status: "archived" | "deleted", action: string, verb: string): Promise<BulkResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const clean = [...new Set(ids)].filter(Boolean);
+  if (!clean.length) return { ok: false, message: "Nothing selected." };
+
+  const { data: prior } = await supabase.from("email_message").select("id, status").in("id", clean);
+  const { error } = await supabase.from("email_message").update({ status }).in("id", clean);
+  if (error) return { ok: false, message: error.message };
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action, entity: "email_message", entity_id: clean[0], after: { ids: clean, status } });
+  revalidatePath("/dashboard/inbox");
+  const n = prior?.length ?? clean.length;
+  return { ok: true, message: `${verb} ${n} email${n === 1 ? "" : "s"}.`, undo: (prior ?? []).map((p) => ({ id: p.id, status: p.status })) };
+}
+
+export async function deleteEmails(ids: string[]): Promise<BulkResult> {
+  return bulkSetStatus(ids, "deleted", "email.delete", "Deleted");
+}
+export async function archiveEmails(ids: string[]): Promise<BulkResult> {
+  return bulkSetStatus(ids, "archived", "email.archive", "Archived");
+}
+
+// Undo — restore each email to its exact prior status (grouped so one UPDATE per status).
+export async function restoreEmails(entries: { id: string; status: string }[]): Promise<ActionResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const byStatus = new Map<string, string[]>();
+  for (const e of entries) (byStatus.get(e.status) ?? byStatus.set(e.status, []).get(e.status)!).push(e.id);
+  for (const [status, ids] of byStatus) await supabase.from("email_message").update({ status }).in("id", ids);
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "email.restore", entity: "email_message", entity_id: entries[0]?.id ?? "", after: { count: entries.length } });
+  revalidatePath("/dashboard/inbox");
+  return { ok: true, message: "Restored." };
+}
+
 export async function disconnectGmail(): Promise<ActionResult> {
   const supabase = createClient();
   const {
