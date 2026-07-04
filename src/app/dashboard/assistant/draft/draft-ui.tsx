@@ -26,7 +26,7 @@ export function UploadAndDraftForm() {
       }}
       className="flex flex-wrap items-center gap-3"
     >
-      <input type="file" name="file" required accept=".pdf,.png,.jpg,.jpeg,.tiff,.txt,.md,.eml" className="block max-w-xs text-sm text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100" />
+      <input type="file" name="file" required aria-label={t("fileAria")} title={t("fileAria")} accept=".pdf,.png,.jpg,.jpeg,.tiff,.txt,.md,.eml" className="block max-w-xs text-sm text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100" />
       <button type="submit" disabled={pending} className="btn-primary">
         <Icon name={pending ? "refresh" : "upload"} className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} /> {pending ? t("uploading") : t("uploadAndDraft")}
       </button>

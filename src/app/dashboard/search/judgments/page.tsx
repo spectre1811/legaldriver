@@ -174,7 +174,7 @@ export default async function ResearchPage({
                   const pdfUrl = judgmentPdfUrl(r.pdf_link, r.court, r.year, r.src);
                   const relatedMatter = relatesToMatter(r, matters);
                   return (
-                    <tr key={r.cnr ?? `${r.title}-${i}`} className={`border-b border-line last:border-0 hover:bg-paper ${relatedMatter ? "bg-brand-50/30" : ""}`}>
+                    <tr key={`${r.cnr ?? r.title ?? "row"}-${i}`} className={`border-b border-line last:border-0 hover:bg-paper ${relatedMatter ? "bg-brand-50/30" : ""}`}>
                       <td className="px-5 py-3.5 align-top">
                         <Link href={judgmentHref(r)} className="group flex flex-col leading-tight">
                           <span className="flex items-center gap-2 font-medium text-ink group-hover:text-brand-700 group-hover:underline">

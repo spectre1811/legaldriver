@@ -18,6 +18,7 @@ export type DocRow = {
   primary: string | null; secondary: string | null;
   sourceLabel: string; sizeLabel: string; dateLabel: string;
   matterId: string | null; clientId: string | null; shared: boolean;
+  hasFile: boolean;
 };
 export type DocSection = { cat: string; label: string; icon: string; rows: DocRow[] };
 type Opt = { id: string; label: string };
@@ -305,7 +306,7 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
               </div>
             </div>
             <div className="min-h-0 flex-1 overflow-auto p-4">
-              <DocPreview documentId={preview.id} mime={preview.mime} filename={preview.filename} className="h-[70vh]" />
+              <DocPreview documentId={preview.id} mime={preview.mime} filename={preview.filename} hasFile={preview.hasFile} className="h-[70vh]" />
             </div>
           </div>
         </div>
