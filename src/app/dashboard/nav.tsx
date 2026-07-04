@@ -45,8 +45,7 @@ const SECTIONS: { heading: string; items: NavEntry[] }[] = [
   {
     heading: "insight",
     items: [
-      { href: "/dashboard/research", label: "research", icon: "search" },
-      { href: "/dashboard/lookup", label: "lookup", icon: "scale" },
+      { href: "/dashboard/search", label: "search", icon: "search" },
       { href: "/dashboard/analytics", label: "analytics", icon: "chart" },
     ],
   },

@@ -95,8 +95,7 @@
       "calendar": "कैलेंडर",
       "analytics": "विश्लेषण",
       "portfolio": "पोर्टफोलियो",
-      "research": "केस शोध",
-      "lookup": "न्यायाधीश व अधिवक्ता",
+      "search": "न्यायालय खोज",
       "notices": "नोटिस",
       "causeList": "पेशी सूची",
       "inbox": "इनबॉक्स",
@@ -1613,6 +1612,13 @@
     "resAdvCol": "प्रतिवादी अधिवक्ता",
     "relatedToMatter": "संबंधित: {matter}",
     "filterByDisposal": "इस निपटान से फ़िल्टर करें"
+  },
+  "search": {
+    "tabsAria": "न्यायालय खोज अनुभाग",
+    "tabs": {
+      "directory": "न्यायाधीश व अधिवक्ता",
+      "judgments": "निर्णय"
+    }
   },
   "assistant": {
     "tabsAria": "सहायक अनुभाग",

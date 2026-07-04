@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 // Resolve an advocate NAME (from a judgment/case) → bar code → advocate dossier.
 export async function GET(request: NextRequest) {
   const name = request.nextUrl.searchParams.get("name");
-  if (!name || !ldEnabled()) return NextResponse.redirect(new URL("/dashboard/research", request.url));
+  if (!name || !ldEnabled()) return NextResponse.redirect(new URL("/dashboard/search/judgments", request.url));
   const bar = await resolveAdvocateBar(name);
-  return NextResponse.redirect(new URL(bar ? `/dashboard/advocate/${bar}` : "/dashboard/research", request.url));
+  return NextResponse.redirect(new URL(bar ? `/dashboard/advocate/${bar}` : "/dashboard/search/judgments", request.url));
 }

@@ -101,7 +101,7 @@ export default async function OnboardingPage() {
         {t.rich("footer", {
           calendar: (c) => <Link href="/dashboard/calendar" className="text-brand-600 hover:underline">{c}</Link>,
           cases: (c) => <Link href="/dashboard/cases" className="text-brand-600 hover:underline">{c}</Link>,
-          research: (c) => <Link href="/dashboard/research" className="text-brand-600 hover:underline">{c}</Link>,
+          research: (c) => <Link href="/dashboard/search/judgments" className="text-brand-600 hover:underline">{c}</Link>,
         })}
       </p>
     </div>

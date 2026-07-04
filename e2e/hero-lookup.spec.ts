@@ -1,7 +1,7 @@
 import { test, expect, expectHealthy } from "./fixtures";
 import { HAS_CREDS, NO_CREDS_REASON } from "./env";
 
-// WO-35 hero flow · SEARCH surface (/dashboard/lookup). Two ways in must both be wired: the
+// WO-35 hero flow · Court Search → Directory tab. Two ways in must both be wired: the
 // name search (advocate/judge/party) and — the WO-35 #7 fix — search by registration case
 // number (type/number/year), which previously existed in the API but reached no UI. Results
 // depend on the live corpus provider, so we assert the surfaces render + a search stays healthy,
@@ -10,7 +10,7 @@ import { HAS_CREDS, NO_CREDS_REASON } from "./env";
 test.skip(!HAS_CREDS, NO_CREDS_REASON);
 
 test("lookup exposes BOTH name search and case-number search", async ({ page, guard }) => {
-  await page.goto("/dashboard/lookup");
+  await page.goto("/dashboard/search/directory");
   await expectHealthy(page);
 
   // Name search.
@@ -26,7 +26,7 @@ test("lookup exposes BOTH name search and case-number search", async ({ page, gu
 });
 
 test("a name search submits and the results page renders clean", async ({ page, guard }) => {
-  await page.goto("/dashboard/lookup");
+  await page.goto("/dashboard/search/directory");
   await page.locator('input[name="q"]').fill("patel");
   await page.locator('input[name="q"]').press("Enter");
 

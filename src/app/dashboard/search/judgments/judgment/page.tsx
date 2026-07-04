@@ -72,7 +72,7 @@ export default async function JudgmentReaderPage({
   return (
     <div className="space-y-6">
       <Link
-        href="/dashboard/research"
+        href="/dashboard/search/judgments"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline"
       >
         <Icon name="back" className="h-4 w-4" />
