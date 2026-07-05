@@ -419,7 +419,7 @@ export async function bulkDeleteMatters(ids: string[]): Promise<BulkResult> {
   await cancelReminders(supabase, tenantId, ids);
   const { data, error } = await supabase
     .from("matter")
-    .update({ deleted_at: new Date().toISOString() } as never) // column added in the WO-43-W2 migration
+    .update({ deleted_at: new Date().toISOString() }) // column added in the WO-43-W2 migration
     .in("id", ids)
     .select("id"); // RLS scopes to tenant
   if (error) return { ok: false, message: error.message, count: 0 };
@@ -439,7 +439,7 @@ export async function restoreMatters(ids: string[]): Promise<BulkResult> {
   // restores rows the SELECT policy currently hides.
   const { data, error } = await supabase
     .from("matter")
-    .update({ deleted_at: null } as never)
+    .update({ deleted_at: null })
     .in("id", ids)
     .select("id");
   if (error) return { ok: false, message: error.message, count: 0 };

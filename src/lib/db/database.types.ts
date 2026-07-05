@@ -1911,6 +1911,7 @@ export type Database = {
           cnr: string | null
           court: string | null
           created_at: string
+          deleted_at: string | null
           detail: Json | null
           id: string
           judge_names: string[]
@@ -1936,6 +1937,7 @@ export type Database = {
           cnr?: string | null
           court?: string | null
           created_at?: string
+          deleted_at?: string | null
           detail?: Json | null
           id?: string
           judge_names?: string[]
@@ -1961,6 +1963,7 @@ export type Database = {
           cnr?: string | null
           court?: string | null
           created_at?: string
+          deleted_at?: string | null
           detail?: Json | null
           id?: string
           judge_names?: string[]
