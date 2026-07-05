@@ -36,6 +36,7 @@ const OFFLINE = [
   "wo27_filing_decision",
   "wo27_select_range",
   "wo43_selection",
+  "wo43_bulk_cases",
   "wo29_gmail_hygiene",
   "wo29_inbox_status",
   "wo32_code_labels",

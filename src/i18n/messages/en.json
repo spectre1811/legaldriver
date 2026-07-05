@@ -211,6 +211,27 @@
     }
   },
   "cases": {
+    "bulk": {
+      "selected": "{n} selected",
+      "selectAll": "Select all",
+      "selectRow": "Select {title}",
+      "setStage": "Change stage…",
+      "export": "Export CSV",
+      "exportFilename": "cases-export.csv",
+      "delete": "Delete",
+      "undo": "Undo",
+      "clear": "Clear selection"
+    },
+    "views": {
+      "aria": "Saved views",
+      "all": "All",
+      "open": "Open",
+      "soon": "Hearing ≤7d",
+      "overdue": "Overdue",
+      "noDate": "No date",
+      "deleteView": "Delete view {name}",
+      "deleteConfirm": "Delete the saved view \"{name}\"?"
+    },
     "title": "Cases",
     "subtitle": "Add a case by CNR; we fetch its details and keep it fresh on a nightly sync.",
     "count": "{count, plural, one {# case} other {# cases}}",

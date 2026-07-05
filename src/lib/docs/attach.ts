@@ -36,14 +36,14 @@ export async function matchDocumentToMatter(sb: DB, tenantId: string, doc: DocLi
 
   // 1) CNR exact — unambiguous.
   for (const cnr of cnrs) {
-    const { data: m } = await sb.from("matter").select("id, client_id").eq("tenant_id", tenantId).eq("cnr", cnr).maybeSingle();
+    const { data: m } = await sb.from("matter").select("id, client_id").eq("tenant_id", tenantId).eq("cnr", cnr).is("deleted_at", null).maybeSingle(); // skip trashed (WO-43-W2)
     if (m) return { matterId: m.id, clientId: m.client_id, score: 1.0, identifier: `cnr:${cnr}` };
   }
 
   // 2) Party-name overlap — scored against the matter's denormalized party_names.
   const docTokens = partyTokens([...(ex.parties ?? []), doc.filename ?? ""]);
   if (docTokens.size) {
-    const { data: matters } = await sb.from("matter").select("id, client_id, party_names").eq("tenant_id", tenantId).not("party_names", "is", null).limit(300);
+    const { data: matters } = await sb.from("matter").select("id, client_id, party_names").eq("tenant_id", tenantId).not("party_names", "is", null).is("deleted_at", null).limit(300); // skip trashed (WO-43-W2)
     let best: AttachMatch | null = null;
     for (const m of matters ?? []) {
       const mTokens = partyTokens(m.party_names ?? []);

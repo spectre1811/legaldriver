@@ -58,7 +58,7 @@ export async function fileUploadedDocument(opts: {
   // Classifier shortlists — the tenant's clients + matters (admin client is tenant-filtered manually).
   const [{ data: clients }, { data: matters }] = await Promise.all([
     admin.from("client").select("id, name").eq("tenant_id", tenantId).limit(500),
-    admin.from("matter").select("id, title, cnr").eq("tenant_id", tenantId).limit(500),
+    admin.from("matter").select("id, title, cnr").eq("tenant_id", tenantId).is("deleted_at", null).limit(500), // skip trashed (WO-43-W2)
   ]);
 
   // Classification cache (WO-33): if this EXACT content was already read for the tenant, reuse the
