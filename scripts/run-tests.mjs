@@ -47,6 +47,7 @@ const OFFLINE = [
   "wo39_paginate",
   "wo41_migration_guard",
   "wo42_qa_fixes",
+  "wo42_bar_number",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the
