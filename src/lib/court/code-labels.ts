@@ -1,7 +1,9 @@
 // WO-32 · One source of truth for expanding cryptic eCourts codes → full human-readable names.
 //
 // Sourcing (NEVER guess — information-integrity §): the case-type master is DERIVED from the live
-// corpus, which self-labels its own expansions (see code-labels.source.csv + gen-code-labels.mjs).
+// corpus, which self-labels its own expansions. As of BP-05 W2 the master is pulled from the
+// PLATFORM's canonical /v1/dictionaries contract (ecourts-scraper owns it) at generate time
+// (gen-code-labels.mjs; committed corpus CSV = offline fallback) — one source of truth, no drift.
 // disposal_nature is parsed deterministically from its embedded description. Advocate-role terms
 // (APP/PP/AGP/GP) are the standard Indian court prosecution/State-counsel abbreviations, confirmed
 // against the corpus (single "advocates" named APP/PP with 10k–360k cases = a role, not a person).
