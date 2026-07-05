@@ -25,7 +25,27 @@ export interface CaseSummary {
   what_to_present: string[];
   /** The specific record items this briefing was grounded in (hearings, orders, docs). */
   sources: string[];
+  /** Model self-assessed confidence 0-1 that the briefing is well-grounded in the record —
+   *  NOT a prediction of the case outcome. Low when the record is thin, ambiguous, or stale. */
+  confidence: number;
+  /** Derived from confidence: below the threshold the briefing is routed to a review state
+   *  (shown with a low-confidence banner, never as settled fact). Stored so the app and the
+   *  worker render the same verdict. */
+  review?: boolean;
   generated_at?: string;
+}
+
+// Below this confidence the briefing is routed to a review state (low-confidence banner, muted
+// treatment, never presented as fact — AI-quality bar: cite-or-abstain / "LLM infers, code verifies").
+export const CASE_SUMMARY_REVIEW_THRESHOLD = 0.6;
+
+export type ConfidenceBand = "high" | "medium" | "low";
+
+/** Bucket a 0-1 confidence for display. `low` is exactly the review band. */
+export function confidenceBand(confidence: number): ConfidenceBand {
+  if (confidence >= 0.8) return "high";
+  if (confidence >= CASE_SUMMARY_REVIEW_THRESHOLD) return "medium";
+  return "low";
 }
 
 export const FALLBACK: CaseSummary = {
@@ -37,6 +57,8 @@ export const FALLBACK: CaseSummary = {
   arguments: [],
   what_to_present: [],
   sources: [],
+  confidence: 0,
+  review: true,
 };
 
 export const CASE_SUMMARY_SCHEMA = {
@@ -51,8 +73,9 @@ export const CASE_SUMMARY_SCHEMA = {
     arguments: { type: "array", items: { type: "string" }, description: "the legal arguments to advance for this client AND the likely arguments from the other side to anticipate/rebut — grounded in the record + well-settled law; each as a crisp point" },
     what_to_present: { type: "array", items: { type: "string" }, description: "what to actually present/submit at the next hearing — specific documents, submissions, authorities to cite, and the prayer/relief to seek; empty if not enough on record" },
     sources: { type: "array", items: { type: "string" }, description: "the SPECIFIC record items this briefing was grounded in — e.g. 'Hearing 2024-03-12: arguments', 'Order dated 2024-01-05', 'Doc: demand-notice.pdf'. So the advocate can verify each claim against the record." },
+    confidence: { type: "number", minimum: 0, maximum: 1, description: "your HONEST self-assessment 0-1 that this briefing is well-grounded in the record and free of unsupported inference — NOT a prediction of who wins. Score LOW (<0.6) when the record is thin, missing key documents/orders, ambiguous, or stale (so a human reviews before relying); HIGH (>=0.8) only when hearings/orders/documents richly support every point. Calibrate down when in doubt." },
   },
-  required: ["summary", "posture", "key_points", "next_steps", "risk_flags", "arguments", "what_to_present"],
+  required: ["summary", "posture", "key_points", "next_steps", "risk_flags", "arguments", "what_to_present", "confidence"],
 } as const;
 
 export function buildCaseSummaryPrompt(c: CaseSummaryInput): string {
@@ -78,6 +101,7 @@ COVER (across the structured fields):
 6. arguments — the legal arguments to advance for this client, and the likely opposing arguments to anticipate and rebut; ground them in the record + well-settled Indian law (cite the provision/principle, not invented case-law).
 7. what_to_present — exactly what to bring/submit at the next hearing: documents, written submissions, authorities to cite, and the prayer/relief to seek. If the record is too thin, say what's needed first rather than inventing.
 8. sources — list the SPECIFIC record items you grounded this briefing in (hearings by date, orders by date, documents by name), so the advocate can verify each claim. Only list items that actually appear in the record below.
+9. confidence — your honest 0-1 self-assessment that the above is well-grounded in the record (not a prediction of the outcome). Be calibrated and self-critical: score LOW (<0.6) when the record is thin (few/no hearings, no orders, no documents), ambiguous, or stale, so a human reviews before relying; score HIGH (>=0.8) only when the record richly supports every point.
 
 CASE: ${c.title}
 CNR: ${c.cnr ?? "—"} | Court: ${c.court ?? "—"} | Type: ${c.caseType ?? "—"} | Stage: ${c.stage ?? "—"} | Status: ${c.status ?? "—"} | Next hearing: ${c.nextHearingDate ?? "—"}
@@ -97,6 +121,11 @@ export function normalizeCaseSummary(raw: unknown): CaseSummary | null {
   const r = raw as Partial<CaseSummary>;
   if (typeof r.summary !== "string" || !r.summary.trim()) return null;
   const list = (v: unknown) => (Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : []);
+  // A missing/unparseable confidence is treated as unknown → 0.5, which is below the review
+  // threshold, so an un-self-assessed briefing is conservatively routed to review (never shown
+  // as certain). A returned value is clamped to [0,1].
+  const rawConf = typeof r.confidence === "number" && Number.isFinite(r.confidence) ? r.confidence : 0.5;
+  const confidence = rawConf < 0 ? 0 : rawConf > 1 ? 1 : rawConf;
   return {
     summary: r.summary.trim(),
     posture: typeof r.posture === "string" ? r.posture.trim() : "",
@@ -106,6 +135,8 @@ export function normalizeCaseSummary(raw: unknown): CaseSummary | null {
     arguments: list(r.arguments),
     what_to_present: list(r.what_to_present),
     sources: list(r.sources),
+    confidence,
+    review: confidence < CASE_SUMMARY_REVIEW_THRESHOLD,
     generated_at: new Date().toISOString(),
   };
 }

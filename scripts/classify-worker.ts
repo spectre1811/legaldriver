@@ -226,7 +226,7 @@ async function main() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await admin.from("matter").update({ ai_summary: summary as any }).eq("id", mt.id);
         done++;
-        console.log(`  [summary] ${mt.title.slice(0, 48)}`);
+        console.log(`  [summary] ${mt.title.slice(0, 48)} conf=${summary.confidence.toFixed(2)}${summary.review ? " (review)" : ""}`);
       }
     }
     return done;

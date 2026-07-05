@@ -316,7 +316,14 @@
       "disclaimer": "AI-generated from this case record — informational, not legal advice. Verify against the official record.",
       "empty": "Generate a plain-language briefing with suggested next steps and risk flags from everything on this case.",
       "sources": "Grounded in",
-      "stale": "This case was refreshed after this briefing — regenerate for the latest."
+      "stale": "This case was refreshed after this briefing — regenerate for the latest.",
+      "confidence": "Confidence",
+      "confidence_high": "High",
+      "confidence_medium": "Medium",
+      "confidence_low": "Low",
+      "confidenceHint": "AI self-assessed confidence that this briefing is grounded in the record ({pct}%). Not a prediction of the outcome — always verify against the record.",
+      "reviewTitle": "Low confidence — review before relying",
+      "reviewBody": "The record may be too thin, ambiguous, or stale for a dependable briefing. Check each point against the case record and regenerate after adding hearings, orders, or documents."
     },
     "info": {
       "court": "Court",
