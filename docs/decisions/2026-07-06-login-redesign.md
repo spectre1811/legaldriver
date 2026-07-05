@@ -41,10 +41,24 @@ Google button failed silently: the Supabase **Google provider was never configur
    the signed-in `/login` redirect resolves the deep-link intent instead of stripping the query.
    Session refresh, confirmation gating and portal routing are unchanged.
 
-## Root cause of "Google sign-in even fails"
-Configuration, not code: the Supabase Google provider is off (FOUNDER-ACTIONS #6,
-`docs/AUTH-SETUP.md`). Until it's flipped, GoTrue answers `validation_failed / provider is not
-enabled`; the UI now says so in plain language (EN+HI) instead of failing cryptically.
+## Root cause of "Google sign-in even fails" — REVISED (W2b, same day)
+First hypothesis (provider not configured) was **wrong**: the founder verified the dashboard —
+Google provider enabled, Site URL + allow-list correct. The real root cause was in code:
+`signInWithGoogle` (and every `emailRedirectTo`) built its base from
+`process.env.APP_BASE_URL ?? "http://localhost:3000"`. Any deployment without that env var —
+**Vercel previews in particular** — bounced the browser to localhost after Google auth, or to
+prod from a preview, where the PKCE `code_verifier` cookie doesn't exist →
+`exchangeCodeForSession` fails → the old generic "Could not sign in". Hence "fails *sometimes*":
+it depended on which deployment the user started from.
+
+**Fix:** `requestOrigin(headers())` in `src/lib/auth/redirects.ts` — prefer
+`x-forwarded-host` + `x-forwarded-proto` (Vercel sets both), then `host`, then `APP_BASE_URL`,
+then localhost — used as the base for **all** `redirectTo`/`emailRedirectTo` call sites (Google
+OAuth, signup confirm, resend, password reset). The flow now always returns to the domain it
+started on. Prod + localhost are already on the Supabase allow-list; previews need the
+`https://*.vercel.app/auth/callback` wildcard entry (noted in `docs/AUTH-SETUP.md`).
+The `googleUnavailable` plain-language error mapping stays — it's still correct if the provider
+is ever toggled off.
 
 ## Tests
 `tests/wo50_auth_flows.ts` (offline): sanitisers, destination resolution, error mapping,

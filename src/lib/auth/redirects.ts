@@ -3,6 +3,26 @@
 // middleware front-door redirect (Edge-safe: no Node APIs). Unit-tested in
 // tests/wo50_auth_flows.ts.
 
+/**
+ * The origin the current request actually arrived on — this is what OAuth and
+ * email `redirectTo`s must use, NOT a build-time env var. Root cause of the
+ * intermittent "Google fails" report: `APP_BASE_URL ?? localhost` bounced
+ * users to localhost (env unset) or to prod from a preview deployment, where
+ * the PKCE code_verifier cookie doesn't exist → exchangeCodeForSession fails.
+ * Vercel always sets x-forwarded-host/proto; plain `host` covers local dev.
+ */
+export function requestOrigin(h: Headers): string {
+  const first = (v: string | null) => v?.split(",")[0]?.trim() || null;
+  const host = first(h.get("x-forwarded-host")) ?? first(h.get("host"));
+  if (host) {
+    const proto =
+      first(h.get("x-forwarded-proto")) ??
+      (/^(localhost|127\.|\[::1\])/.test(host) ? "http" : "https");
+    return `${proto}://${host}`;
+  }
+  return process.env.APP_BASE_URL ?? "http://localhost:3000";
+}
+
 /** Accept only same-origin path redirects: "/x" but never "//evil", "/\evil" or absolute URLs. */
 export function sanitizeNext(raw: string | null | undefined): string | null {
   if (!raw) return null;

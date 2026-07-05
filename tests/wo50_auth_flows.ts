@@ -4,7 +4,7 @@
 // OAuth/email round-trips carry an explicit redirect, the callback never silently bounces,
 // and the middleware preserves the deep-link intent.
 import { readFileSync } from "node:fs";
-import { sanitizeNext, sanitizeTrack, postAuthPath, callbackUrl, loginUrl } from "../src/lib/auth/redirects";
+import { sanitizeNext, sanitizeTrack, postAuthPath, callbackUrl, loginUrl, requestOrigin } from "../src/lib/auth/redirects";
 import { mapAuthError, isAuthErrorCode, AUTH_ERROR_CODES } from "../src/lib/auth/errors";
 
 let failed = 0;
@@ -13,6 +13,33 @@ function ok(name: string, cond: boolean) {
   if (!cond) failed++;
 }
 const src = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
+
+// ── requestOrigin: OAuth/email redirects use the origin the request arrived on ──
+// (Root cause of "Google fails sometimes": APP_BASE_URL ?? localhost bounced
+// preview/unset-env deployments to the wrong domain, killing PKCE exchange.)
+{
+  const H = (o: Record<string, string>) => new Headers(o);
+  ok(
+    "origin: vercel forwarded host+proto win",
+    requestOrigin(H({ "x-forwarded-host": "app-git-wo50.vercel.app", "x-forwarded-proto": "https", host: "127.0.0.1:3000" })) ===
+      "https://app-git-wo50.vercel.app",
+  );
+  ok(
+    "origin: comma lists take the first hop",
+    requestOrigin(H({ "x-forwarded-host": "legaldriver.vercel.app, internal", "x-forwarded-proto": "https,http" })) ===
+      "https://legaldriver.vercel.app",
+  );
+  ok("origin: plain host, localhost → http", requestOrigin(H({ host: "localhost:3000" })) === "http://localhost:3000");
+  ok("origin: plain host, real domain → https", requestOrigin(H({ host: "legaldriver.vercel.app" })) === "https://legaldriver.vercel.app");
+  {
+    const prev = process.env.APP_BASE_URL;
+    process.env.APP_BASE_URL = "https://env.example";
+    ok("origin: no host headers → APP_BASE_URL", requestOrigin(H({})) === "https://env.example");
+    delete process.env.APP_BASE_URL;
+    ok("origin: last resort is localhost", requestOrigin(H({})) === "http://localhost:3000");
+    if (prev !== undefined) process.env.APP_BASE_URL = prev;
+  }
+}
 
 // ── sanitizeNext: same-origin paths only ──
 ok("next: plain path allowed", sanitizeNext("/dashboard/cases?x=1") === "/dashboard/cases?x=1");
@@ -81,6 +108,10 @@ ok("err: isAuthErrorCode guards URL input", isAuthErrorCode("googleUnavailable")
   ok("actions: signup confirmation email carries the intent", /signUp\(\{[\s\S]*?emailRedirectTo: callbackUrl/.test(actions));
   ok("actions: reset flow lands on /reset-password", actions.includes("resetPasswordForEmail") && actions.includes("/reset-password"));
   ok("actions: no raw provider message reaches the UI", !actions.includes("error.message"));
+  ok(
+    "actions: redirect base is the request origin, never a baked env var",
+    actions.includes("requestOrigin(headers())") && !actions.includes("APP_BASE_URL"),
+  );
 
   const cb = src("src/app/auth/callback/route.ts");
   ok("callback: failures go to the visible error page", cb.includes("/auth/error"));

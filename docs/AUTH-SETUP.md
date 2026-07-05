@@ -23,11 +23,13 @@ provider is configured below (founder steps — nothing to deploy).
    - **Redirect URLs (allow-list):** add
      - `https://legaldriver.vercel.app/auth/callback`
      - `http://localhost:3000/auth/callback` (local dev)
-     - (optional) `https://*.vercel.app/auth/callback` for preview deploys
-3. Done. The button works. (`APP_BASE_URL` env is already the prod URL, so the app's `redirectTo`
-   points at the right callback.)
+     - **`https://*.vercel.app/auth/callback` — required for preview deploys.** Since WO-50 W2b the
+       app builds `redirectTo` from the **request origin** (`x-forwarded-host`/`proto`), so a preview
+       deployment sends users back to *itself* — which only works if the wildcard entry is in this
+       allow-list. Without it, Google sign-in from previews is rejected by Supabase.
+3. Done. The button works on prod, localhost, and (with the wildcard entry) previews.
 
-**How it flows:** button → `signInWithOAuth({provider:'google', redirectTo: APP_BASE_URL/auth/callback})`
+**How it flows:** button → `signInWithOAuth({provider:'google', redirectTo: <request origin>/auth/callback})`
 → Google → Supabase `/auth/v1/callback` → app `/auth/callback` (`exchangeCodeForSession`) → `/dashboard`.
 A new Google user gets a tenant + profile via the existing `handle_new_user` trigger (full_name comes
 from the Google profile). Existing email+password users are unaffected — this is additive.

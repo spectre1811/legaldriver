@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { mapAuthError, type AuthErrorCode } from "@/lib/auth/errors";
-import { callbackUrl, loginUrl, postAuthPath } from "@/lib/auth/redirects";
+import { callbackUrl, loginUrl, postAuthPath, requestOrigin } from "@/lib/auth/redirects";
 
 // WO-50 login/signup redesign — every action returns a stable error CODE (the
 // client renders translated copy, EN+HI) and redirects on success. Emails stay
@@ -18,7 +19,9 @@ export type AuthFormState = {
   email?: string;
 };
 
-const base = () => process.env.APP_BASE_URL ?? "http://localhost:3000";
+// Redirect base = the origin this request came in on (preview, prod, or dev)
+// — never a baked env var, so OAuth/email round-trips return where they began.
+const base = () => requestOrigin(headers());
 const field = (formData: FormData, name: string) => String(formData.get(name) ?? "").trim();
 
 // GoTrue deliberately answers "Invalid login credentials" for BOTH a wrong
