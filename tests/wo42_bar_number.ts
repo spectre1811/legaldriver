@@ -4,6 +4,7 @@
 // ⭐ Canonical format (founder-ruled 2026-07-05): STATE/SERIAL/YEAR, Gujarat STATE="G"
 // (e.g. G/702/2020). A number like 11240 is an eCourts INTERNAL display code, NOT a bar
 // serial — never search the roster by it. See exec/LEARNINGS.md ⭐.
+import { readFileSync } from "node:fs";
 import { parseBarNumber, stateBarCouncil, councilByStatePrefix, barSearchScopes, diagnoseEmptyRoster, STATE_BAR_COUNCILS } from "../src/lib/court/bar-number";
 
 let failures = 0;
@@ -69,6 +70,16 @@ const unv = diagnoseEmptyRoster("MAH/1234/1982", "MH");
 check("unverified names the council", unv.kind === "unverified" && unv.council === "Maharashtra & Goa");
 check("valid enrolment + verified council → 'no-results'", diagnoseEmptyRoster("G/702/2020", "GJ").kind === "no-results");
 check("council inferred from enrolment PREFIX 'G' when token absent", diagnoseEmptyRoster("G/702/2020", null).kind === "no-results");
+
+// ── WO-48 copy-regression guard ───────────────────────────────────────────────
+// The onboarding placeholder/hint/toast has drifted back to `GUJ/11240/2025` more than once
+// (11240 = an eCourts display code that returns 0 cases — the founder-reported bug). Fail CI if
+// a user-facing bar EXAMPLE ever regresses to it, so the ⭐ ruling can't be undone by a copy edit.
+for (const f of ["en.json", "hi.json"]) {
+  const txt = readFileSync(new URL(`../src/i18n/messages/${f}`, import.meta.url), "utf8");
+  check(`${f}: bar examples use the canonical G/702/2020`, txt.includes("G/702/2020"));
+  check(`${f}: no stale 11240 example (⭐ ruling: 11240 is not a serial)`, !txt.includes("11240"));
+}
 
 console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);
