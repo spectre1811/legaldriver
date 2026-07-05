@@ -11,9 +11,13 @@
 //
 // WHY VALID ADVOCATES GOT "0 CASES": the eCourts bar-code search
 // (`searchByAdvocateName.php`, `checkedSearchByRadioValue:"2"`) REQUIRES four params —
-// `barstatecode` (tier-dependent: "GJ" for High Court, "GJG" for Gujarat district),
-// `barcode` (the serial), **`year` (enrollment year)**, and numeric `state_code` (17).
-// Onboarding never collected the year, so the search fell through to a lossy name match.
+// `barstatecode` = the single-letter Bar-Council code **"G"** for BOTH the High Court and
+// the Gujarat district tier, `barcode` (the enrollment serial, e.g. 702 — NOT the inline HC
+// advocate code 11240), **`year` (enrollment year)**, and numeric `state_code` (17).
+// Two bugs stacked: onboarding never collected the year (WO-42, fixed), AND the tier tokens
+// were "GJ"/"GJG" — both of which the eCourts backend answers with 0 cases. The 2026-07-05
+// MITM capture proved "G" + serial 702 + year 2020 returns 386 HC / 22 district cases, while
+// every GJ/GJG/GUJ variant and barcode 11240 returns 0 (BP-60; scraper `mobile_api.py`).
 //
 // This module is PURE (no I/O) so it is unit-tested offline. Token maps are SOURCED,
 // never guessed: only councils whose tokens were packet-verified carry `verified:true`
@@ -57,13 +61,13 @@ export interface StateBarCouncil {
 // packet-verified eCourts tokens and get a LIVE roster fetch; the rest capture the
 // enrollment + year and fall back to name search with an honest empty-state.
 //
-// VERIFIED so far: Gujarat only — HC `barstatecode="GJ"`, District `"GJG"`,
-// `state_code=17` (WO-34 mitmproxy capture; `scraper/mobile_api.py:search_by_advocate`,
-// `docs/HC-ADVOCATE-SEARCH-CAPTURE.md`). Each additional state's tokens must be
-// verified via the WO-43 MITM recon harness before flipping `verified` → true; the
-// unverified backlog lives in `exec/DATA-GAPS.md`.
+// VERIFIED so far: Gujarat only — `barstatecode="G"` for BOTH tiers (HC and district),
+// `state_code=17` (2026-07-05 MITM recon; `scraper/mobile_api.py:build_advocate_search_params`).
+// The earlier WO-34 "GJ"/"GJG" tokens were WRONG — the eCourts backend returns 0 cases for
+// them (BP-60). Each additional state's token must be packet-verified via the WO-43 MITM recon
+// harness before flipping `verified` → true; the unverified backlog lives in `exec/DATA-GAPS.md`.
 export const STATE_BAR_COUNCILS: StateBarCouncil[] = [
-  { id: "GJ", label: "Gujarat", stateCode: 17, hcBarToken: "GJ", dcBarToken: "GJG", verified: true },
+  { id: "GJ", label: "Gujarat", stateCode: 17, hcBarToken: "G", dcBarToken: "G", verified: true },
   // Unverified — enrollment + year are captured and stored; live eCourts bar search is
   // withheld (honest empty-state) until the tokens are packet-verified (WO-43 → DATA-GAPS).
   { id: "MH", label: "Maharashtra & Goa", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
@@ -126,8 +130,9 @@ export function barSearchScopes(council: StateBarCouncil): BarSearchScope[] {
     scopes.push({ tier: "HC", barState: council.hcBarToken, stateCode: council.stateCode, distCode: 1, courtCode: 1 });
   }
   if (council.dcBarToken) {
-    // court_code_arr "1,5" = the courts in ONE Gujarat district complex (WO-34 capture) —
-    // a partial probe, not statewide district coverage (see the block comment above).
+    // court_code_arr "1,5" = the courts in ONE Gujarat district complex — a partial probe, not
+    // statewide district coverage. (The 2026-07-05 capture returned 22 cases for district 13 with
+    // this complex; full district fan-out — the court worklist per district — is BP-57.)
     scopes.push({ tier: "DC", barState: council.dcBarToken, stateCode: council.stateCode, distCode: 1, courtCodeArr: "1,5" });
   }
   return scopes;
