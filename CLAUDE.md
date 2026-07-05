@@ -76,8 +76,10 @@ Opus for hard architecture.
 ## ⚠️ Git flow — ENFORCED (see `plan/exec/INTEGRATION-DEPLOY.md`)
 Parallel agents share this repo. **NEVER commit to / push / reset `main`.** Work in your own
 `wt/<WO>` worktree (`git worktree add ../legaldriver-<WO> -b wt/<WO> origin/main`), `git push origin
-wt/<WO>`, **open a PR**. **Merging is now AUTOMATED — the auto-merge queue** (`.github/workflows/automerge.yml`):
-CI green → a reviewer adds the **`automerge`** label → the workflow merges to `main` (serialized) →
-Vercel deploys. No agent hand-merges `main`; `plan/exec/integrate.sh` is only a fallback. A `pre-push`
-hook blocks direct/force pushes to `main`; `branch-guardian` alarms on any force-move.
+wt/<WO>`, **open a PR**, then **SELF-MERGE it once CI is green** — `gh pr merge <n> --merge`, or self-apply
+the **`automerge`** label (`.github/workflows/automerge.yml`) which merges to `main` (serialized) → Vercel deploys.
+**Founder rule (2026-07-05): always self-merge your own PR — never wait for a separate reviewer/integrator to
+land it.** Self-merging *through a PR* is not "touching `main`" — you still never commit/push/reset `main`
+directly (a `pre-push` hook blocks direct/force pushes; `branch-guardian` alarms on any force-move).
+`plan/exec/integrate.sh` is only a fallback.
 **New clone/worktree, run once:** `git config core.hooksPath .githooks`.
