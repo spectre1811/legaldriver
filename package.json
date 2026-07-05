@@ -11,6 +11,7 @@
     "db:types": "supabase gen types typescript --linked > src/lib/db/database.types.ts",
     "gen:routes": "node scripts/gen-routes.mjs",
     "gen:bar-councils": "node scripts/gen-bar-councils.mjs",
+    "gen:advocate-scopes": "node scripts/gen-advocate-scopes.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
     "test:e2e": "npm run gen:routes && playwright test",
     "test:e2e:ui": "npm run gen:routes && playwright test --ui",

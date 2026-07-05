@@ -44,6 +44,7 @@
 // name search with an honest empty-state (unverified tokens tracked in exec/DATA-GAPS.md).
 
 import { STATE_BAR_COUNCILS } from "./bar-councils.data";
+import { ADVOCATE_SCOPES } from "./advocate-scopes.data";
 
 export interface ParsedBarNumber {
   stateBar: string; // the enrollment STATE code as entered, uppercased (Gujarat = "G"; also "MAH")
@@ -120,29 +121,37 @@ export interface BarSearchScope {
   courtCodeArr?: string;
 }
 
-// Build the ordered list of live eCourts bar-search scopes for a parsed enrollment +
-// council. Empty when the council isn't verified (→ caller shows an honest empty-state
-// and falls back to name search). HC is tried first (broadest), then the district complex.
+// Build the ordered list of live eCourts bar-search scopes for a parsed enrollment + council.
+// Empty when the council isn't verified (→ caller shows an honest empty-state + name-search
+// fallback). HC is tried first (broadest), then EVERY district complex the registry knows.
 //
-// ⚠️ DISTRICT COVERAGE IS PARTIAL (WO-42, tracked in BACKLOG §D). HC is one court so its
-// scope returns the FULL HC roster. The district scope, by contrast, is a SINGLE hardcoded
-// complex (`dist_code=1, court_code_arr="1,5"` — the WO-34 capture example) — it does NOT
-// cover other Gujarat districts/complexes. Full district coverage needs iterating the
-// state's court/establishment map (`/courts/{state_code}`) → per-(dist_code, court_code_arr)
-// searches — that mapping is unverified (overlaps BP-07's court_id map), so we do NOT guess
-// it here. Callers must treat a district "0 results" as "none in HC + main district", not
-// "none exist" (see `emptyRosterNote`).
+// ⭐ DATA-DRIVEN (BP-57). The geographic scope list (HC + one row per district complex) comes from
+// the platform court-scope registry via the build-time-generated ADVOCATE_SCOPES (keyed by numeric
+// state_code) — NOT a hardcoded complex. The old single `dist_code=1, court_code_arr="1,5"` probe is
+// gone; as the registry's masters walk populates statewide (BP-57 W2), THIS function widens to full
+// coverage with no code change. Token-sourcing stays in bar-councils (hcBarToken/dcBarToken); this
+// zips each geographic scope with the council's token so the two concerns don't drift.
+//   Until the registry is populated statewide, ADVOCATE_SCOPES[stateCode] carries the verified
+//   fallback (HC + the one packet-verified complex, or HC-only) — so a district "0 results" still
+//   means "none in the courts we searched", never "none exist" (see `emptyRosterNote`). We NEVER
+//   synthesize a district complex here (info-integrity ⭐).
 export function barSearchScopes(council: StateBarCouncil): BarSearchScope[] {
   if (!council.verified || council.stateCode == null) return [];
+  const rows = ADVOCATE_SCOPES[council.stateCode] ?? [];
   const scopes: BarSearchScope[] = [];
-  if (council.hcBarToken) {
-    scopes.push({ tier: "HC", barState: council.hcBarToken, stateCode: council.stateCode, distCode: 1, courtCode: 1 });
+  for (const r of rows) {
+    if (r.tier === "HC" && council.hcBarToken) {
+      scopes.push({ tier: "HC", barState: council.hcBarToken, stateCode: council.stateCode,
+        distCode: r.distCode ?? 1, courtCode: r.courtCode ?? 1 });
+    } else if (r.tier === "DC" && council.dcBarToken && r.courtCodeArr) {
+      scopes.push({ tier: "DC", barState: council.dcBarToken, stateCode: council.stateCode,
+        distCode: r.distCode ?? 1, courtCodeArr: r.courtCodeArr });
+    }
   }
-  if (council.dcBarToken) {
-    // court_code_arr "1,5" = the courts in ONE Gujarat district complex — a partial probe, not
-    // statewide district coverage. (The 2026-07-05 capture returned 22 cases for district 13 with
-    // this complex; full district fan-out — the court worklist per district — is BP-57.)
-    scopes.push({ tier: "DC", barState: council.dcBarToken, stateCode: council.stateCode, distCode: 1, courtCodeArr: "1,5" });
+  // Safety fallback: a verified council with an HC token but no registry rows yet (state_code not in
+  // ADVOCATE_SCOPES) still probes the High Court — a live council never yields an empty scope list.
+  if (scopes.length === 0 && council.hcBarToken) {
+    scopes.push({ tier: "HC", barState: council.hcBarToken, stateCode: council.stateCode, distCode: 1, courtCode: 1 });
   }
   return scopes;
 }
