@@ -10,7 +10,7 @@
 // refuse. We fetch what IS compliantly available and label provenance + coverage.
 
 import { corpusEnabled } from "./corpus-athena";
-import { parseBarNumber, stateBarCouncil, barSearchScopes } from "./bar-number";
+import { parseBarNumber, stateBarCouncil, councilByStatePrefix, barSearchScopes } from "./bar-number";
 
 export interface FetchedAdvocateCase {
   cnr?: string | null;
@@ -174,7 +174,9 @@ const legaldriverProvider: AdvocateCaseProvider = {
     };
 
     const parsed = parseBarNumber(q.barNumber);
-    const council = stateBarCouncil(q.stateCode) ?? (parsed ? stateBarCouncil(parsed.stateBar) : null);
+    // Stored council token first (dropdown); else infer from the enrollment STATE prefix
+    // ("G" → Gujarat), NOT the token id — the advocate writes "G/702/2020", not "GJ/…".
+    const council = stateBarCouncil(q.stateCode) ?? (parsed ? councilByStatePrefix(parsed.stateBar) : null);
 
     // LIVE path (onboarding): full tuple + retry HC then district. `/advocate/{serial}/refresh`
     // ingests each returned case and re-reads the warehouse profile, so its `cases` is the roster.
