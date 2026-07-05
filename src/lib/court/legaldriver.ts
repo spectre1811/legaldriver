@@ -31,6 +31,10 @@ type RawCase = {
   schema_version?: string;
   cnr: string; tier?: string; case_type?: string; status?: string;
   registration_number?: string | null; registration_year?: number | null; decision_date?: string | null;
+  // WO-41: eCourts provides these + the mobile ingest already parses them — carry them through the
+  // contract so the case page stops showing a false "not on record" for data we hold.
+  filing_number?: string | null; filing_date?: string | null; first_hearing_date?: string | null;
+  registration_date?: string | null; district?: string | null; state?: string | null;
   coram?: string | null; fir_no?: string | null; fir_year?: number | null; police_station?: string | null; source?: string;
   regional?: Record<string, string | null>;
   parties?: { side?: string; name?: string; name_regional?: string | null }[];
@@ -200,6 +204,9 @@ export class LegalDriverClient implements CourtDataClient {
       detail: {
         // camelCase keys the case-page info grid already reads, plus the LD extras.
         tier: r.tier, registrationNumber: r.registration_number, registrationYear: r.registration_year,
+        // WO-41: keys match exactly what cases/[id]/page.tsx reads (mixed case is intentional).
+        filingNumber: r.filing_number, filingDate: r.filing_date, first_hearing_date: r.first_hearing_date,
+        registrationDate: r.registration_date, district: r.district, state: r.state,
         decisionDate: r.decision_date, coram,
         firNo: r.fir_no, firYear: r.fir_year, policeStation: r.police_station,
         regional: r.regional ?? {}, processes: r.processes ?? [], advocateBars: advBars,

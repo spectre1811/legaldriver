@@ -38,6 +38,7 @@ const OFFLINE = [
   "wo29_inbox_status",
   "wo32_code_labels",
   "wo32_review_why",
+  "wo41_case_detail_rows",
   "wo33_audit_refile",
   "wo33_classification_cache",
   "wo33_grounding",

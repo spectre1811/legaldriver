@@ -508,6 +508,7 @@
     "maskedTitle": "नाम गोपनीय",
     "empty": {
       "onRecord": "eCourts रिकॉर्ड में नहीं",
+      "notApplicable": "लागू नहीं",
       "notSet": "निर्धारित नहीं",
       "client": "कोई क्लाइंट लिंक नहीं",
       "scheduled": "कोई सुनवाई निर्धारित नहीं"
