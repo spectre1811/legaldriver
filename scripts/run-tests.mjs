@@ -24,6 +24,7 @@ const OFFLINE = [
   "bp26_case_summary_confidence",
   "ai_gateway",
   "bp17_court_kit",
+  "wo45_court_kit_adoption",
   "design_tokens_smoke",
   "i18n_coverage",
   "timeline_sort",

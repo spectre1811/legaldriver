@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
+import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
+import { CourtField, CourtDate, EmptyCell } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 // mix, decisions-by-year, tier breakdown, and advocate/case-type cross-link panel.
 export default async function JudgePage({ params }: { params: { judgeId: string } }) {
   const t = await getTranslations("judge");
+  const tCommon = await getTranslations("common");
   if (!ldEnabled()) notFound();
   const j = await getJudge(params.judgeId);
   if (!j) notFound();
@@ -261,20 +263,20 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
                             )}
                           </td>
                           <td className="px-3 py-2 text-ink-muted" title={c.case_type ?? undefined}>
-                            {expandCaseType(c.case_type, c.tier).full || "—"}
+                            <CourtField value={expandCaseType(c.case_type, c.tier).full || null} field="case_type" emptyLabel={tCommon("states.notOnRecord")} />
                           </td>
                           <td className="px-3 py-2">
                             {c.tier ? (
                               <Badge tone={tierTone(c.tier)}>{c.tier}</Badge>
                             ) : (
-                              <span className="text-ink-faint">—</span>
+                              <EmptyCell label={tCommon("states.notOnRecord")} />
                             )}
                           </td>
                           <td className="px-3 py-2 text-xs text-ink-muted" title={c.disposal_nature ?? undefined}>
-                            {c.disposal_nature ? expandDisposal(c.disposal_nature).full : <span className="text-ink-faint">—</span>}
+                            <CourtField value={c.disposal_nature ? expandDisposal(c.disposal_nature).full : null} field="disposal" emptyLabel={tCommon("states.notOnRecord")} />
                           </td>
                           <td className="px-3 py-2 text-xs text-ink-faint">
-                            {fmtDate(c.decision_date)}
+                            <CourtDate value={c.decision_date} emptyLabel={tCommon("states.notOnRecord")} />
                           </td>
                           <td className="px-3 py-2 text-right">
                             {!mid && <TrackCaseButton cnr={c.cnr} />}
