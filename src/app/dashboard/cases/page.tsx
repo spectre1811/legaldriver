@@ -12,6 +12,7 @@ import { deleteMatter } from "./actions";
 import { Pagination } from "@/components/pagination";
 import { fetchCasesPage, type CasesFilters } from "./cases-query";
 import { parsePage, clampPerPage } from "@/lib/paginate";
+import { maskTitle } from "@/lib/court/mask";
 
 function isoDay(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -24,6 +25,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const t = await getTranslations("cases");
   const tc = await getTranslations("common");
   const te = await getTranslations("enum");
+  const tcd = await getTranslations("caseDetail"); // shared masked-name copy (BP-24)
   const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
   const { q, court, case_type, stage, status, advocate, act, next, sort } = searchParams;
   const filters: CasesFilters = { q, court, case_type, stage, status, advocate, act, next, sort };
@@ -112,7 +114,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
                     <tr key={m.id} className="ec-row group border-b border-ec-hair last:border-0">
                       <td className="px-5 py-3.5">
                         <Link href={`/dashboard/cases/${m.id}`} className="font-display font-medium text-ec-ink group-hover:text-ec-brass-deep">
-                          {m.title}
+                          {maskTitle(m.title, tcd("maskedTitle"))}
                         </Link>
                         {m.cnr && <div className="num mt-0.5 text-[0.7rem] text-ec-ink-3">{m.cnr}</div>}
                       </td>

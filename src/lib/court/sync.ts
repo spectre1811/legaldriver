@@ -38,7 +38,9 @@ export async function upsertCase(
   }
 
   // Denormalized arrays power similar-case discovery (GIN-indexed) and console filters.
-  const partyNames = [...new Set(c.parties.map((p) => p.name).filter(Boolean))];
+  // Exclude masked ("XXXXXXX") protected-matter names — they must never be a fuzzy client-match /
+  // similar-case key, else every protected case matches every other (BP-24).
+  const partyNames = [...new Set(c.parties.filter((p) => !p.masked).map((p) => p.name).filter(Boolean))];
   const advocateNames = [...new Set(c.parties.map((p) => p.advocate).filter((a): a is string => Boolean(a)))];
   const judgeNames = c.judges?.length ? c.judges : c.judge ? c.judge.split(",").map((s) => s.trim()).filter(Boolean) : [];
   const actNames = c.acts ?? [];

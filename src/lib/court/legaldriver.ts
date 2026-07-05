@@ -3,6 +3,7 @@ import type {
   NormalizedCase, NormalizedParty, NormalizedHearing, NormalizedOrderRef,
 } from "./types";
 import type { CourtDataClient } from "./client";
+import { isMaskedName, maskName } from "./mask";
 
 // Adapter for the LegalDriver court-data API (our own, compliant, licensed-consumption
 // model — we call a REST API with a key; we do NOT scrape eCourts ourselves). Read-
@@ -111,7 +112,10 @@ export class LegalDriverClient implements CourtDataClient {
   }
 
   private map(r: RawCase): NormalizedCase {
-    const parties: NormalizedParty[] = (r.parties ?? []).map((p) => ({ name: decode(p.name) || (p.name ?? ""), side: side(p.side) }));
+    const parties: NormalizedParty[] = (r.parties ?? []).map((p) => {
+      const name = decode(p.name) || (p.name ?? "");
+      return { name, side: side(p.side), masked: isMaskedName(name) };
+    });
     // Attach advocates to their side's party; collect VALID advocate names + bar ids
     // (filter the per-character junk rows the API emits on HC cases; dedupe; keep bar).
     const advBars: Record<string, string> = {};
@@ -166,9 +170,10 @@ export class LegalDriverClient implements CourtDataClient {
     const acts = (r.acts ?? []).map((a) => decode(`${a.act_name ?? ""}${a.section ? ` ${a.section}` : ""}`).trim()).filter(Boolean);
     const coram = decode(r.coram) || undefined;
 
-    // Title from English parties (fall back to regional / cnr).
-    const pet = parties.find((p) => p.side === "petitioner")?.name || r.regional?.pet_name || "";
-    const res = parties.find((p) => p.side === "respondent")?.name || r.regional?.res_name || "";
+    // Title from English parties (fall back to regional / cnr). Mask protected-matter names so the
+    // stored/displayed title is never "XXXXXXX v. XXXXXXX" (BP-24) — either side masks independently.
+    const pet = maskName(parties.find((p) => p.side === "petitioner")?.name || r.regional?.pet_name || "");
+    const res = maskName(parties.find((p) => p.side === "respondent")?.name || r.regional?.res_name || "");
     const title = pet && res ? `${pet} v. ${res}` : pet || res || r.cnr;
 
     return {

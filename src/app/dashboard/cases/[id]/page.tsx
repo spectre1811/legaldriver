@@ -20,8 +20,10 @@ import { OrdersPanel } from "./orders-panel";
 import { CaseTimeline } from "./case-timeline";
 import { getTimeline, type TimelineEvent } from "@/lib/court/legaldriver-api";
 import { expandCaseType, cleanPurpose } from "@/lib/court/code-labels";
+import { CourtField, MaskedName } from "@/components/court";
+import { isMaskedName, maskTitle } from "@/lib/court/mask";
 
-type Party = { name?: string; side?: string; advocate?: string };
+type Party = { name?: string; side?: string; advocate?: string; masked?: boolean };
 
 const STATUS_TONE: Record<string, string> = { active: "green", disposed: "neutral" };
 // tone → ec chip class
@@ -95,7 +97,11 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const detail = (matter.detail ?? {}) as Record<string, unknown>;
 
   const coramName = str(detail.coram);
-  const caseDetails: [string, string | null][] = [
+  // A case is "court-sourced" when it came from the eCourts provider (not a manual entry). Only then
+  // is "not on record at eCourts" the honest empty state; a manual case has no eCourts record to
+  // compare against, so we don't render a 16-field "not on record" mirror for it (BP-24).
+  const isCourtSourced = !!matter.source && matter.source !== "manual";
+  const caseDetailsAll: [string, string | null][] = [
     [t("detail.registrationNo"), str(detail.registrationNumber)],
     [t("detail.filingNo"), str(detail.filingNumber)],
     [t("detail.registrationDate"), detail.registrationDate ? fmtDate(str(detail.registrationDate)) : null],
@@ -112,7 +118,10 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     [t("detail.decidedOn"), detail.decisionDate ? fmtDate(str(detail.decisionDate)) : null],
     [t("detail.firNo"), detail.firNo ? `${str(detail.firNo)}${detail.firYear ? `/${str(detail.firYear)}` : ""}` : null],
     [t("detail.policeStation"), str(detail.policeStation)],
-  ].filter(([, v]) => v) as [string, string | null][];
+  ];
+  // Court-sourced → show the full eCourts field mirror with an explicit "not on record" for gaps
+  // (honest-empty, never a silently-dropped field). Manual → only the fields actually filled.
+  const caseDetails = isCourtSourced ? caseDetailsAll : caseDetailsAll.filter(([, v]) => v);
 
   // Timeline: prefer the live /timeline feed; when it's empty (endpoint down, no LD key, or a
   // manual case), fall back to DB-derived hearings + orders so the tab reflects what we DO have
@@ -147,13 +156,15 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const caseTypeLabel = ct.full
     ? (ct.known && ct.code.toUpperCase() !== ct.full.toUpperCase() ? `${ct.full} · ${ct.code}` : ct.full)
     : null;
-  const info: [string, string | null][] = [
-    [t("info.court"), matter.court],
-    [t("info.caseType"), caseTypeLabel],
-    [t("info.stage"), cleanPurpose(matter.stage) || null],
-    [t("info.client"), client?.name ?? null],
-    [t("info.next"), matter.next_hearing_override ? `${fmtDate(matter.next_hearing_override)} ${t("info.yourDiary")}` : fmtDate(matter.next_hearing_date)],
-    [t("info.judge"), hearings?.find((h) => h.judge)?.judge ?? null],
+  // [label, value, empty-copy] — every empty renders explicit contextual copy, never a bare "—" (BP-24).
+  const emptyOnRecord = isCourtSourced ? t("empty.onRecord") : t("empty.notSet");
+  const info: [string, string | null, string][] = [
+    [t("info.court"), matter.court, emptyOnRecord],
+    [t("info.caseType"), caseTypeLabel, emptyOnRecord],
+    [t("info.stage"), cleanPurpose(matter.stage) || null, emptyOnRecord],
+    [t("info.client"), client?.name ?? null, t("empty.client")],
+    [t("info.next"), matter.next_hearing_override ? `${fmtDate(matter.next_hearing_override)} ${t("info.yourDiary")}` : fmtDate(matter.next_hearing_date), t("empty.scheduled")],
+    [t("info.judge"), hearings?.find((h) => h.judge)?.judge ?? null, emptyOnRecord],
   ];
   const refreshed = matter.last_synced_at ? new Date(matter.last_synced_at).toLocaleString("en-IN") : t("source.never");
 
@@ -165,7 +176,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-[1.7rem] font-medium leading-tight tracking-tight">{matter.title}</h1>
+          <h1 className="font-display text-[1.7rem] font-medium leading-tight tracking-tight">{maskTitle(matter.title, t("maskedTitle"))}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {matter.cnr && <span className={`num ${chip("brand")} inline-flex items-center gap-1`}><Icon name="cases" className="h-3 w-3" /> {matter.cnr}</span>}
             <span className={chip(STATUS_TONE[matter.status] ?? "neutral")}>{st(matter.status)}</span>
@@ -319,10 +330,12 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
 
       {/* Info grid */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {info.map(([label, value]) => (
+        {info.map(([label, value, emptyLabel]) => (
           <div key={label} className="ec-card p-4">
             <p className="ec-label">{label}</p>
-            <p className="mt-1.5 text-sm text-ec-ink">{value ?? "—"}</p>
+            <p className="mt-1.5 text-sm text-ec-ink">
+              <CourtField value={value} emptyLabel={emptyLabel} maskedLabel={t("masked")} field={label} />
+            </p>
           </div>
         ))}
       </section>
@@ -345,16 +358,22 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             {caseDetails.map(([label, value]) => (
               <div key={label}>
                 <dt className="ec-label">{label}</dt>
-                <dd className="mt-1 text-sm text-ec-ink">{value}</dd>
+                <dd className="mt-1 text-sm text-ec-ink">
+                  <CourtField value={value} emptyLabel={t("empty.onRecord")} maskedLabel={t("masked")} field={label} />
+                </dd>
               </div>
             ))}
             {coramName && (
               <div>
                 <dt className="ec-label">{t("detail.coram")}</dt>
                 <dd className="mt-1 text-sm">
-                  <Link href={`/dashboard/search/directory?q=${encodeURIComponent(coramName)}`} className="font-medium text-ec-brass-deep hover:text-ec-brass">
-                    {coramName}
-                  </Link>
+                  {isMaskedName(coramName) ? (
+                    <MaskedName value={coramName} label={t("masked")} />
+                  ) : (
+                    <Link href={`/dashboard/search/directory?q=${encodeURIComponent(coramName)}`} className="font-medium text-ec-brass-deep hover:text-ec-brass">
+                      {coramName}
+                    </Link>
+                  )}
                 </dd>
               </div>
             )}
@@ -435,8 +454,8 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 return (
                   <li key={i} className="flex items-start justify-between gap-3 px-5 py-3 text-sm">
                     <span className="min-w-0">
-                      <span className="font-medium text-ec-ink">{p.name}</span>
-                      {reg && reg !== p.name && reg !== "XXXXXXX" && <span className="block text-xs text-ec-ink-3">{reg}</span>}
+                      <CourtField value={p.name ?? null} maskedLabel={t("masked")} emptyLabel={t("parties.empty")} field="party" className="font-medium text-ec-ink" />
+                      {reg && reg !== p.name && !isMaskedName(reg) && <span className="block text-xs text-ec-ink-3">{reg}</span>}
                     </span>
                     <span className="shrink-0 text-right text-xs text-ec-ink-3">
                       {p.side}
@@ -461,7 +480,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 <li key={h.id} className="flex items-center gap-3 px-5 py-3 text-sm">
                   <span className="num w-20 shrink-0 text-ec-ink-3">{fmtDate(h.date)}</span>
                   <span className="flex-1 text-ec-ink">{h.purpose ? cleanPurpose(h.purpose) : t("hearings.fallback")}</span>
-                  <span className="text-xs text-ec-ink-3">{h.judge ? <Link href={`/dashboard/search/directory?q=${encodeURIComponent(h.judge)}`} className="text-ec-brass-deep hover:text-ec-brass">{h.judge}</Link> : ""}</span>
+                  <span className="text-xs text-ec-ink-3">{h.judge ? (isMaskedName(h.judge) ? <MaskedName value={h.judge} label={t("masked")} /> : <Link href={`/dashboard/search/directory?q=${encodeURIComponent(h.judge)}`} className="text-ec-brass-deep hover:text-ec-brass">{h.judge}</Link>) : ""}</span>
                 </li>
               ))}
             </ul>

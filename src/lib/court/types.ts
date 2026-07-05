@@ -6,6 +6,10 @@ export interface NormalizedParty {
   name: string;
   side?: "petitioner" | "respondent" | "other";
   advocate?: string;
+  // eCourts masks protected-matter parties (matrimonial/POCSO/juvenile) as "XXXXXXX".
+  // Set at map() time (BP-24) so the flag rides with the party everywhere — render as
+  // "name withheld", and never use as a client-match / search key.
+  masked?: boolean;
 }
 
 export interface NormalizedHearing {
