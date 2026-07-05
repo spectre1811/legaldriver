@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "./icons";
+import { Disclaimer as KitDisclaimer } from "./court/disclaimer";
 
 export function PageHeader({
   title,
@@ -91,15 +92,10 @@ export function EmptyState({
 }
 
 export function Disclaimer() {
-  // next-intl's useTranslations works in both Server and Client Components, so the
-  // shared Disclaimer stays usable everywhere without pulling next-intl/server in.
+  // Canonical presentation lives in the court kit (BP-17); this thin wrapper just feeds it the
+  // localized string. next-intl's useTranslations works in both Server and Client Components.
   const t = useTranslations("common");
-  return (
-    <p className="flex items-center gap-1.5 text-xs text-ink-faint">
-      <Icon name="alert" className="h-3.5 w-3.5" />
-      {t("disclaimer")}
-    </p>
-  );
+  return <KitDisclaimer text={t("disclaimer")} />;
 }
 
 export function fmtDate(d: string | null | undefined) {
