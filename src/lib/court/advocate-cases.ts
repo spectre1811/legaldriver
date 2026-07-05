@@ -10,6 +10,7 @@
 // refuse. We fetch what IS compliantly available and label provenance + coverage.
 
 import { corpusEnabled } from "./corpus-athena";
+import { parseBarNumber, stateBarCouncil, barSearchScopes } from "./bar-number";
 
 export interface FetchedAdvocateCase {
   cnr?: string | null;
@@ -24,7 +25,11 @@ export interface FetchedAdvocateCase {
   source: string;          // 'corpus' | 'indiankanoon' | 'vakeel360'
 }
 
-export interface AdvocateQuery { name: string; barNumber?: string | null; stateCode?: string | null }
+// `barNumber` = the canonical enrollment string "STATE/SERIAL/YEAR" (parsed for the
+// live eCourts tuple) or a bare numeric serial. `stateCode` = the State Bar Council
+// token (verified councils only) used as the cross-state guard + council resolver.
+// `live` = do a LIVE eCourts roster refresh (onboarding); off for warehouse-only reads.
+export interface AdvocateQuery { name: string; barNumber?: string | null; stateCode?: string | null; live?: boolean }
 
 // eCourts CNRs begin with the 2-letter state code (GJHC… = Gujarat, UPHC… = UP).
 // When an advocate is identified by an exact bar id + state, that state is the
@@ -133,7 +138,15 @@ const vakeel360Provider: AdvocateCaseProvider = {
   },
 };
 
-// ── LegalDriver API (our own; bar-code = exact, name = fuzzy) ─────────────────
+// ── LegalDriver API (our own; live eCourts bar search when year+verified-state) ────
+// WO-42: the roster fetch is only exact when it sends the FULL eCourts tuple —
+// `barstatecode` (tier-dependent) + `barcode` (serial) + **`year`** + numeric
+// `state_code`. So when the query carries a parsed enrollment (with year) + a verified
+// State Bar Council, we drive a LIVE `searchByAdvocateName.php` refresh across BOTH tiers
+// (HC then the district complex) so a single-tier advocate is never missed. Otherwise we
+// fall back to the warehouse (exact serial) then a fuzzy name search. This is what fixes
+// "valid advocate → 0 cases": the year was never sent, so the bar search returned nothing.
+interface LdProfileCase { cnr: string; case_type?: string; status?: string; tier?: string; registration_year?: number }
 const legaldriverProvider: AdvocateCaseProvider = {
   source: "legaldriver",
   enabled() { return !!process.env.LD_API_KEY; },
@@ -142,26 +155,50 @@ const legaldriverProvider: AdvocateCaseProvider = {
     if (!key) return [];
     const base = process.env.LD_API_BASE || "http://13.202.148.71:8080";
     const H = { "X-API-Key": key };
+    const sig = () => AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "60000"));
     const get = async (path: string) => {
-      try { const r = await fetch(`${base}${path}`, { headers: H, signal: AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "60000")) }); return r.ok ? await r.json() : null; } catch { return null; }
+      try { const r = await fetch(`${base}${path}`, { headers: H, signal: sig() }); return r.ok ? await r.json() : null; } catch { return null; }
     };
-    // Resolve bar id(s): exact when given, else fuzzy by name.
-    let barIds: string[] = [];
-    if (q.barNumber && /^\d+$/.test(q.barNumber)) barIds = [q.barNumber]; // LD keys on numeric bar codes
-    else if (q.name) {
-      const s = await get(`/search/advocate?name=${encodeURIComponent(q.name)}`);
-      barIds = [...new Set(((s?.results ?? []) as { bar_id?: string }[]).map((r) => r.bar_id).filter((b): b is string => !!b))].slice(0, 3);
-    }
+    const post = async (path: string) => {
+      try { const r = await fetch(`${base}${path}`, { method: "POST", headers: H, signal: sig() }); return r.ok ? await r.json() : null; } catch { return null; }
+    };
+    const map = (c: LdProfileCase): FetchedAdvocateCase => ({
+      cnr: c.cnr, caseNumber: null, title: `${c.case_type ?? "Case"}${c.registration_year ? ` (${c.registration_year})` : ""}`,
+      court: c.tier ?? null, status: c.status ?? null, nextHearingDate: null, parties: [], pdfUrl: null,
+      decided: (c.status ?? "").toUpperCase().includes("DISPOSED"), source: "legaldriver",
+    });
     const out: FetchedAdvocateCase[] = [];
-    for (const bar of barIds) {
-      const a = await get(`/advocate/${encodeURIComponent(bar)}`);
-      for (const c of (a?.cases ?? []) as { cnr: string; case_type?: string; status?: string; tier?: string; registration_year?: number }[]) {
-        out.push({
-          cnr: c.cnr, caseNumber: null, title: `${c.case_type ?? "Case"}${c.registration_year ? ` (${c.registration_year})` : ""}`,
-          court: c.tier ?? null, status: c.status ?? null, nextHearingDate: null, parties: [], pdfUrl: null,
-          decided: (c.status ?? "").toUpperCase().includes("DISPOSED"), source: "legaldriver",
-        });
+    const seen = new Set<string>();
+    const collect = (a: { cases?: LdProfileCase[] } | null) => {
+      for (const c of a?.cases ?? []) { if (c.cnr && !seen.has(c.cnr)) { seen.add(c.cnr); out.push(map(c)); } }
+    };
+
+    const parsed = parseBarNumber(q.barNumber);
+    const council = stateBarCouncil(q.stateCode) ?? (parsed ? stateBarCouncil(parsed.stateBar) : null);
+
+    // LIVE path (onboarding): full tuple + retry HC then district. `/advocate/{serial}/refresh`
+    // ingests each returned case and re-reads the warehouse profile, so its `cases` is the roster.
+    if (q.live && parsed && council?.verified) {
+      const serial = String(parsed.serial);
+      for (const scope of barSearchScopes(council)) {
+        const p = new URLSearchParams({ year: String(parsed.year), bar_state: scope.barState, state_code: String(scope.stateCode), tier: scope.tier });
+        if (scope.courtCodeArr) p.set("court_code_arr", scope.courtCodeArr);
+        else { p.set("dist_code", String(scope.distCode ?? 1)); p.set("court_code", String(scope.courtCode ?? 1)); }
+        const prof = await post(`/advocate/${encodeURIComponent(serial)}/refresh?${p.toString()}`);
+        if (prof && !prof.error) collect(prof);
       }
+    }
+
+    // Warehouse / name fallback: exact serial when known, else fuzzy by name.
+    if (!out.length) {
+      let barIds: string[] = [];
+      if (parsed) barIds = [String(parsed.serial)];
+      else if (q.barNumber && /^\d+$/.test(q.barNumber)) barIds = [q.barNumber]; // bare numeric serial
+      else if (q.name) {
+        const s = await get(`/search/advocate?name=${encodeURIComponent(q.name)}`);
+        barIds = [...new Set(((s?.results ?? []) as { bar_id?: string }[]).map((r) => r.bar_id).filter((b): b is string => !!b))].slice(0, 3);
+      }
+      for (const bar of barIds) collect(await get(`/advocate/${encodeURIComponent(bar)}`));
     }
     return out;
   },

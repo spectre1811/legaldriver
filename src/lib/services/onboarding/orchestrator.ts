@@ -85,8 +85,10 @@ export async function runOnboarding(
   await setRun(supabase, runId, { stage: "fetch" });
   try {
     const { fetchAdvocateCases } = await import("@/lib/court/advocate-cases");
-    // Prefer the numeric eCourts bar code (exact) → else resolve by name.
-    const fetched = await fetchAdvocateCases({ name: adv.name, barNumber: adv.bar_code, stateCode: adv.state_code });
+    // WO-42: pass the SAME parsed enrollment the cause-list stage uses (canonical
+    // "STATE/SERIAL/YEAR" — carries the year eCourts requires) and fetch LIVE so a
+    // verified council drives the full-tuple bar search across HC + district tiers.
+    const fetched = await fetchAdvocateCases({ name: adv.name, barNumber: adv.bar_registration_number, stateCode: adv.state_code, live: true });
     for (const fc of fetched.slice(0, 80)) {
       // De-dupe: by CNR when present, else by title (avoids re-creating on re-run).
       if (fc.cnr) {
