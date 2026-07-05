@@ -1492,11 +1492,11 @@
       "saving": "Saving…",
       "add": "Add advocate",
       "nameLabel": "Advocate name",
-      "barPlaceholder": "Bar enrolment no., e.g. GUJ/11240/2025",
+      "barPlaceholder": "Bar enrolment no., e.g. G/702/2020",
       "barLabel": "Bar enrolment number",
       "councilLabel": "State Bar Council",
       "councilPlaceholder": "Select State Bar Council…",
-      "hint": "Enter your full State Bar Council enrolment number — <b>state, serial and year</b> (e.g. GUJ/11240/2025). The year is what lets us pull your exact eCourts case roster; a ✓ marks councils with live roster search today."
+      "hint": "Enter your full State Bar Council enrolment number — <b>state, serial and year</b> (e.g. G/702/2020). The year is what lets us pull your exact eCourts case roster; a ✓ marks councils with live roster search today."
     },
     "billing": {
       "heading": "Billing & GST",
@@ -1577,7 +1577,7 @@
       "nameRequired": "Advocate name is required.",
       "noTenant": "No tenant.",
       "added": "Added advocate {name}.",
-      "addedNoYear": "Added {name}. Add your enrolment year (e.g. GUJ/11240/2025) — the year lets us pull your exact eCourts case roster.",
+      "addedNoYear": "Added {name}. Add your enrolment year (e.g. G/702/2020) — the year lets us pull your exact eCourts case roster.",
       "deleted": "Deleted."
     }
   },
