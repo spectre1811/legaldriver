@@ -8,7 +8,7 @@ import type { StateBarCouncil } from "./bar-number";
 
 export const STATE_BAR_COUNCILS: StateBarCouncil[] = [
   { id: "GJ", label: "Gujarat", statePrefix: "G", stateCode: 17, hcBarToken: "G", dcBarToken: "G", verified: true },
-  { id: "MH", label: "Maharashtra & Goa", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "MH", label: "Maharashtra & Goa (incl. Dadra & Nagar Haveli, Daman & Diu)", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
   { id: "DL", label: "Delhi", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
   { id: "UP", label: "Uttar Pradesh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
   { id: "RJ", label: "Rajasthan", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
@@ -17,9 +17,9 @@ export const STATE_BAR_COUNCILS: StateBarCouncil[] = [
   { id: "TN", label: "Tamil Nadu & Puducherry", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
   { id: "TG", label: "Telangana", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
   { id: "AP", label: "Andhra Pradesh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "KL", label: "Kerala", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "WB", label: "West Bengal", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "PB", label: "Punjab & Haryana", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "KL", label: "Kerala (incl. Lakshadweep)", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "WB", label: "West Bengal (incl. Andaman & Nicobar Islands)", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "PB", label: "Punjab, Haryana & Chandigarh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
   { id: "BR", label: "Bihar", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
   { id: "OD", label: "Odisha", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
   { id: "AS", label: "Assam, Nagaland, Mizoram, Arunachal, Sikkim", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
