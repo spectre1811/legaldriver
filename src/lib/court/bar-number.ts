@@ -1,13 +1,25 @@
 // WO-42 · Advocate bar-enrollment parsing + State Bar Council → eCourts token map.
 //
-// THE IDENTIFIER LANDSCAPE (researched — web + our own captured eCourts params):
-//   • A State Bar Council ENROLLMENT NUMBER is canonically  STATE / SERIAL / YEAR
-//     (e.g. "MAH/1234/1982", "G/702/2020", "GUJ/11240/2025"). The SERIAL *is* the
-//     "eCourts bar code" — there is no separate third id. The old 3-box form (bar no.
-//     + separate "eCourts bar code" + state) split one identifier into three and was
-//     the source of the founder-reported confusion.
-//   • The AIBE / BCI certificate number is a *separate national* id — irrelevant to
-//     eCourts. We never ask for it.
+// ⭐ CANONICAL FORMAT (founder-ruled 2026-07-05 — do not re-litigate; mirrored in exec/LEARNINGS.md):
+//   A State Bar Council ENROLLMENT NUMBER is  STATE / SERIAL / YEAR
+//     • STATE  = the state bar-council code  (Gujarat = "G")
+//     • SERIAL = the actual bar code/number  (e.g. 702, 4732)
+//     • YEAR   = the enrolment year          (REQUIRED by the eCourts bar search)
+//   e.g. "G/702/2020", "G/4732/1999" (Gujarat), "MAH/1234/1982" (Maharashtra).
+//   The SERIAL *is* the "eCourts bar code" — there is no separate third id. The old 3-box
+//   form split this one identifier into three and was the source of the founder confusion.
+//
+//   ⚠️ A number like **11240 is NOT a bar SERIAL** — it is an *internal eCourts system code*
+//   (the value that rides inline in `pet_adv` as "MR YASH J PATEL(11240)"). NEVER treat it as
+//   the enrolment serial and NEVER search the roster by it. The founder-reported "Bar 11240 → 0
+//   cases" was exactly this mistake: 11240 is an eCourts display number, not the person's
+//   STATE/SERIAL/YEAR enrolment. Parse/store the three parts; the SERIAL is what eCourts wants.
+//
+//   • The AIBE / BCI certificate number is a *separate national* id — irrelevant to eCourts.
+//     We never ask for it.
+//
+// This per-state map, filled across all states, is the spine for advocate onboarding + full-roster
+// ("scrape their complete details") scraping everywhere — so keep the three parts distinct.
 //
 // WHY VALID ADVOCATES GOT "0 CASES": the eCourts bar-code search
 // (`searchByAdvocateName.php`, `checkedSearchByRadioValue:"2"`) REQUIRES four params —
@@ -25,14 +37,14 @@
 // name search with an honest empty-state (unverified tokens tracked in exec/DATA-GAPS.md).
 
 export interface ParsedBarNumber {
-  stateBar: string; // the state prefix as entered, uppercased (e.g. "GUJ", "MAH", "G")
-  serial: number; // the numeric barcode/serial (e.g. 11240)
+  stateBar: string; // the STATE bar-council code, uppercased (Gujarat = "G"; also "MAH", "GUJ")
+  serial: number; // the SERIAL = the actual bar code (e.g. 702, 4732) — NOT the eCourts internal number (11240)
   year: number; // enrollment year — REQUIRED by the eCourts bar search
   canonical: string; // normalized display string "STATE/SERIAL/YEAR"
 }
 
 // STATE (1-4 letters) / SERIAL (1-6 digits) / YEAR (4 digits, 19xx or 20xx).
-// Separators (/, -, space) are optional so we accept "GUJ 11240 2025" and "G/702/2020"
+// Separators (/, -, space) are optional so we accept "G 702 2020" and "G/702/2020"
 // alike; the trailing 4-digit 19|20 year anchors the parse even without separators.
 const BAR_RE = /^([A-Za-z]{1,4})[\/\-\s.]*(\d{1,6})[\/\-\s.]*((?:19|20)\d{2})$/;
 
