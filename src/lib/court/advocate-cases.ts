@@ -11,6 +11,18 @@
 
 import { corpusEnabled } from "./corpus-athena";
 import { parseBarNumber, stateBarCouncil, councilByStatePrefix, barSearchScopes } from "./bar-number";
+import type { ParsedBarNumber } from "./bar-number";
+
+// WO-49: the bar id to look up in the LD warehouse (`GET /advocate/{bar_id}`). The warehouse keys
+// advocates on the **full canonical bar id** ("G/4732/1999" → 5075 cases), NOT the bare serial
+// (`GET /advocate/4732` → 404) — so onboarding was returning 0 even for advocates whose cases we
+// fully hold. Return the canonical string when the enrollment parses; else a bare numeric eCourts
+// code as-is; else null → the caller falls back to a fuzzy name search.
+export function warehouseBarId(parsed: ParsedBarNumber | null, barNumber?: string | null): string | null {
+  if (parsed) return parsed.canonical;                          // e.g. "G/4732/1999" — the warehouse key
+  if (barNumber && /^\d+$/.test(barNumber)) return barNumber;   // bare numeric eCourts code (e.g. 11240)
+  return null;                                                  // → caller does a name search
+}
 
 export interface FetchedAdvocateCase {
   cnr?: string | null;
@@ -191,11 +203,12 @@ const legaldriverProvider: AdvocateCaseProvider = {
       }
     }
 
-    // Warehouse / name fallback: exact serial when known, else fuzzy by name.
+    // Warehouse / name fallback: exact CANONICAL bar id when known (WO-49 — the warehouse keys on
+    // the full "STATE/SERIAL/YEAR", not the bare serial), else fuzzy by name.
     if (!out.length) {
       let barIds: string[] = [];
-      if (parsed) barIds = [String(parsed.serial)];
-      else if (q.barNumber && /^\d+$/.test(q.barNumber)) barIds = [q.barNumber]; // bare numeric serial
+      const whId = warehouseBarId(parsed, q.barNumber);
+      if (whId) barIds = [whId];
       else if (q.name) {
         const s = await get(`/search/advocate?name=${encodeURIComponent(q.name)}`);
         barIds = [...new Set(((s?.results ?? []) as { bar_id?: string }[]).map((r) => r.bar_id).filter((b): b is string => !!b))].slice(0, 3);
