@@ -9,6 +9,30 @@ import { diagnoseEmptyRoster } from "@/lib/court/bar-number";
 
 export type OnboardingActionResult = { ok: boolean; message: string; runId?: string };
 
+// BP-71 W2: the live status of the advocate's most-recent onboarding run, for the progress bar. Reads the
+// record `runOnboarding` writes stage-by-stage (RLS scopes to the tenant automatically via the server
+// client). The UI polls this while `startOnboarding` runs so the user sees real progress, not a spinner.
+export type OnboardingStatus = {
+  stage: string; status: string; counts: Record<string, number>; message: string | null; updatedAt: string;
+} | null;
+
+export async function getOnboardingStatus(advocateId: string): Promise<OnboardingStatus> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("onboarding_run")
+    .select("stage, status, counts, message, updated_at")
+    .eq("advocate_id", advocateId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    stage: data.stage, status: data.status,
+    counts: (data.counts ?? {}) as Record<string, number>,
+    message: data.message, updatedAt: data.updated_at,
+  };
+}
+
 // WO-42: never present a bare "0 cases" as truth — when a roster fetch found nothing,
 // say WHY (missing year / council not live yet / we only searched a subset of courts)
 // so the advocate isn't misled into thinking they have no cases when the query was
