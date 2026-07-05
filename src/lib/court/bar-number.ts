@@ -43,6 +43,8 @@
 // and drive a live eCourts roster fetch; the rest capture the enrollment + fall back to
 // name search with an honest empty-state (unverified tokens tracked in exec/DATA-GAPS.md).
 
+import { STATE_BAR_COUNCILS } from "./bar-councils.data";
+
 export interface ParsedBarNumber {
   stateBar: string; // the enrollment STATE code as entered, uppercased (Gujarat = "G"; also "MAH")
   serial: number; // the SERIAL = the actual bar code (e.g. 702, 4732) — NOT the eCourts internal number (11240)
@@ -77,44 +79,18 @@ export interface StateBarCouncil {
   verified: boolean; // tokens packet-verified against eCourts → drives live search
 }
 
-// The State Bar Councils (statutory bodies — public). `verified:true` councils have
-// packet-verified eCourts tokens and get a LIVE roster fetch; the rest capture the
-// enrollment + year and fall back to name search with an honest empty-state.
-//
-// VERIFIED so far: Gujarat only — `barstatecode="G"` for BOTH tiers (HC and district),
-// `state_code=17` (2026-07-05 MITM recon; `scraper/mobile_api.py:build_advocate_search_params`).
-// The earlier WO-34 "GJ"/"GJG" tokens were WRONG — the eCourts backend returns 0 cases for
-// them (BP-60). Each additional state's token must be packet-verified via the WO-43 MITM recon
-// harness before flipping `verified` → true; the unverified backlog lives in `exec/DATA-GAPS.md`.
-export const STATE_BAR_COUNCILS: StateBarCouncil[] = [
-  // Gujarat: enrollment STATE prefix "G" (⭐ ruling) + `barstatecode="G"` for BOTH tiers — the
-  // live-confirmed token (BP-60: "GJ"/"GJG" return 0 cases). Prefix and token coincide here.
-  { id: "GJ", label: "Gujarat", statePrefix: "G", stateCode: 17, hcBarToken: "G", dcBarToken: "G", verified: true },
-  // Unverified — enrollment + year are captured and stored; live eCourts bar search is
-  // withheld (honest empty-state) until the tokens are packet-verified (WO-43 → DATA-GAPS).
-  // `statePrefix` stays null for these until each state's enrollment code is sourced (not guessed).
-  { id: "MH", label: "Maharashtra & Goa", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "DL", label: "Delhi", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "UP", label: "Uttar Pradesh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "RJ", label: "Rajasthan", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "MP", label: "Madhya Pradesh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "KA", label: "Karnataka", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "TN", label: "Tamil Nadu & Puducherry", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "TG", label: "Telangana", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "AP", label: "Andhra Pradesh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "KL", label: "Kerala", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "WB", label: "West Bengal", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "PB", label: "Punjab & Haryana", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "BR", label: "Bihar", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "OD", label: "Odisha", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "AS", label: "Assam, Nagaland, Mizoram, Arunachal, Sikkim", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "JH", label: "Jharkhand", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "CT", label: "Chhattisgarh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "UK", label: "Uttarakhand", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "HP", label: "Himachal Pradesh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "JK", label: "Jammu & Kashmir and Ladakh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "OTHER", label: "Other / not listed", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-];
+// The State Bar Councils (statutory bodies — public) are **build-time-generated** from the platform
+// registry served at GET /v1/dictionaries?dims=bar_council (WO-46 Wave C, design §2) — so adding or
+// verifying a state is a platform DATA row, not an edit here, and legaldriver/peshi never drift.
+// `verified:true` councils carry packet-verified eCourts tokens and get a LIVE roster fetch: Gujarat
+// today — `barstatecode="G"` for BOTH tiers, `state_code=17` (the old WO-34 "GJ"/"GJG" return 0 cases,
+// BP-60). The rest capture the enrollment + year and fall back to an honest name-search empty-state;
+// their tokens stay null until packet-verified via WO-43 (never guessed).
+//   ⚠️ EDIT THE REGISTRY, NOT THIS RE-EXPORT: change ecourts-scraper `scraper/bar_councils.source.json`
+//   then `npm run gen:bar-councils` (contract-first, committed-snapshot fallback). See
+//   `scripts/gen-bar-councils.mjs` + the generated `src/lib/court/bar-councils.data.ts`.
+// (Imported at the top for the lookups below; re-exported here so consumers' import path is unchanged.)
+export { STATE_BAR_COUNCILS };
 
 export function stateBarCouncil(id: string | null | undefined): StateBarCouncil | null {
   if (!id) return null;

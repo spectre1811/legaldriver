@@ -1,0 +1,259 @@
+{
+  "_note": "WO-46 Wave C · COMMITTED OFFLINE FALLBACK for scripts/gen-bar-councils.mjs. Mirror of the platform registry served at GET /v1/dictionaries?dims=bar_council (ecourts-scraper/scraper/bar_councils.source.json). The generator prefers the live contract; this snapshot keeps `npm run build`/gen working offline (BP-05-W2 recipe). Do not hand-edit tokens here — change the platform registry + regenerate.",
+  "schema_version": "1.0",
+  "councils": [
+    {
+      "id": "GJ",
+      "alpha": "G",
+      "label": "Gujarat",
+      "ecourts_state_code": 17,
+      "hc_bar_token": "G",
+      "dc_bar_token": "G",
+      "roster_scope": {
+        "hc": {
+          "court_code": 1
+        },
+        "dc": {
+          "by_district": true,
+          "example_complex": {
+            "dist_code": 1,
+            "court_code_arr": "1,5"
+          }
+        }
+      },
+      "verified": true,
+      "source": "WO-46 W0 live capture 2026-07-05 (M H SOLANKI G/4732/1999 → 1,147 Pending cases, est 'TALUKA COURT, DWARKA') + BP-60 MITM capture (barstatecode='G' + serial 702 + year 2020 → HC 386 / DC 22; GJ/GJG/GUJ all → 0). District scope is a single verified complex (dist_code=1, court_code_arr='1,5'); statewide district fan-out = BP-57/BP-07."
+    },
+    {
+      "id": "MH",
+      "alpha": null,
+      "label": "Maharashtra & Goa",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "DL",
+      "alpha": null,
+      "label": "Delhi",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "UP",
+      "alpha": null,
+      "label": "Uttar Pradesh",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "RJ",
+      "alpha": null,
+      "label": "Rajasthan",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "MP",
+      "alpha": null,
+      "label": "Madhya Pradesh",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "KA",
+      "alpha": null,
+      "label": "Karnataka",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "TN",
+      "alpha": null,
+      "label": "Tamil Nadu & Puducherry",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "TG",
+      "alpha": null,
+      "label": "Telangana",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "AP",
+      "alpha": null,
+      "label": "Andhra Pradesh",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "KL",
+      "alpha": null,
+      "label": "Kerala",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "WB",
+      "alpha": null,
+      "label": "West Bengal",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "PB",
+      "alpha": null,
+      "label": "Punjab & Haryana",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "BR",
+      "alpha": null,
+      "label": "Bihar",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "OD",
+      "alpha": null,
+      "label": "Odisha",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "AS",
+      "alpha": null,
+      "label": "Assam, Nagaland, Mizoram, Arunachal, Sikkim",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "JH",
+      "alpha": null,
+      "label": "Jharkhand",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "CT",
+      "alpha": null,
+      "label": "Chhattisgarh",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "UK",
+      "alpha": null,
+      "label": "Uttarakhand",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "HP",
+      "alpha": null,
+      "label": "Himachal Pradesh",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "JK",
+      "alpha": null,
+      "label": "Jammu & Kashmir and Ladakh",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "unverified — tokens pending WO-43 MITM recon"
+    },
+    {
+      "id": "OTHER",
+      "alpha": null,
+      "label": "Other / not listed",
+      "ecourts_state_code": null,
+      "hc_bar_token": null,
+      "dc_bar_token": null,
+      "roster_scope": null,
+      "verified": false,
+      "source": "catch-all — capture the enrolment; no council token"
+    }
+  ]
+}
