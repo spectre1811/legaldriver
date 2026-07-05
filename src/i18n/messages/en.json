@@ -503,6 +503,14 @@
     "demoBanner": {
       "title": "Demo data — not a real court record",
       "body": "This case was created with the mock provider. Configure live court sync and refresh to replace it with official data."
+    },
+    "masked": "name withheld (protected matter)",
+    "maskedTitle": "name withheld",
+    "empty": {
+      "onRecord": "not on record at eCourts",
+      "notSet": "not set",
+      "client": "no client linked",
+      "scheduled": "none scheduled"
     }
   },
   "auth": {
