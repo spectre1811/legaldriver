@@ -51,6 +51,14 @@ Resend for email. Deploy on Vercel (P4).
    CAPTCHA web route only for district order PDFs). Provenance + "verify against the official
    record" disclaimer stay mandatory (conv. #3). See
    `docs/decisions/2026-07-03-scraper-sync-contract.md` (supersedes `2026-06-24-court-data-strategy.md`).
+   **Two surfaces, split by consumer (BP-11 / founder ruling FG-2):** legaldriver consumes the
+   **keyed `/v1/*`** surface (`X-API-Key`) — the full record: real order PDFs (streamed via the
+   durable endpoint, never a persisted presigned URL), live-eCourts fallback, no suppression (the
+   documented carve-out for the authed professional surface). The **public `/v1/public/*`** surface
+   (cache-only, `has_pdf` boolean not raw URL, PII-suppressed) is for **peshi-search / SEO / MCP** —
+   legaldriver never calls it. `src/lib/court/legaldriver.ts` hits only keyed `/v1/*`
+   (`tests/wo01_sync_contract.ts` asserts this). Contract: ecourts-scraper
+   `docs/decisions/2026-07-05-keyed-vs-public-v1-surface.md`.
 3. **Provenance + disclaimer on all court data**: store `source` + `last_synced_at`, show
    "source: eCourts, last refreshed X" and "not legal advice — verify against the official record".
 4. **No PII in logs.** Never log email bodies, tokens, or client data. OAuth refresh tokens are

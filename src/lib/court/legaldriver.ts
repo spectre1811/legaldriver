@@ -9,6 +9,14 @@ import { isMaskedName, maskName } from "./mask";
 // model — we call a REST API with a key; we do NOT scrape eCourts ourselves). Read-
 // through/DB-first with a live-eCourts fallback on the provider side, so any CNR
 // resolves. Base URL + key from env (LD_API_BASE / LD_API_KEY). See the API reference.
+//
+// KEYED surface (BP-11 / founder ruling FG-2): this client consumes the KEYED `/v1/*`
+// surface (X-API-Key) — the authed advocate app gets the FULL record: real order PDFs
+// (streamed via the durable `pdf_stream`, never a persisted presigned URL), live-eCourts
+// fallback, no PII suppression. That is the documented carve-out for the licensed
+// professional surface. It must NEVER call `/v1/public/*` — that suppression-clean,
+// cache-only, `has_pdf`-only surface is for peshi-search/SEO/MCP (a different consumer).
+// Contract: ecourts-scraper `docs/decisions/2026-07-05-keyed-vs-public-v1-surface.md`.
 
 const DEFAULT_BASE = "http://13.202.148.71:8080";
 
