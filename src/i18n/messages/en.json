@@ -508,6 +508,7 @@
     "maskedTitle": "name withheld",
     "empty": {
       "onRecord": "not on record at eCourts",
+      "notApplicable": "not applicable",
       "notSet": "not set",
       "client": "no client linked",
       "scheduled": "none scheduled"

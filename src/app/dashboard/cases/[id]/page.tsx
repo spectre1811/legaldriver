@@ -22,6 +22,7 @@ import { getTimeline, type TimelineEvent } from "@/lib/court/legaldriver-api";
 import { expandCaseType, cleanPurpose } from "@/lib/court/code-labels";
 import { CourtField, MaskedName } from "@/components/court";
 import { isMaskedName, maskTitle } from "@/lib/court/mask";
+import { selectCaseDetailRows, type CaseDetailFieldId } from "@/lib/court/case-detail-fields";
 
 type Party = { name?: string; side?: string; advocate?: string; masked?: boolean };
 
@@ -101,27 +102,45 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   // is "not on record at eCourts" the honest empty state; a manual case has no eCourts record to
   // compare against, so we don't render a 16-field "not on record" mirror for it (BP-24).
   const isCourtSourced = !!matter.source && matter.source !== "manual";
-  const caseDetailsAll: [string, string | null][] = [
-    [t("detail.registrationNo"), str(detail.registrationNumber)],
-    [t("detail.filingNo"), str(detail.filingNumber)],
-    [t("detail.registrationDate"), detail.registrationDate ? fmtDate(str(detail.registrationDate)) : null],
-    [t("detail.filingDate"), detail.filingDate ? fmtDate(str(detail.filingDate)) : null],
-    [t("detail.firstHearingDate"), detail.first_hearing_date ? fmtDate(str(detail.first_hearing_date)) : null],
-    [t("detail.district"), str(detail.district)],
-    [t("detail.state"), str(detail.state)],
-    [t("detail.category"), str(detail.category)],
-    [t("detail.subCategory"), str(detail.sub_category)],
-    [t("detail.benchType"), str(detail.bench_type)],
-    [t("detail.judicialBranch"), str(detail.judicial_branch)],
-    [t("detail.subordinateCourt"), str(detail.subordinate_court)],
-    [t("detail.filedBy"), str(detail.filed_by)],
-    [t("detail.decidedOn"), detail.decisionDate ? fmtDate(str(detail.decisionDate)) : null],
-    [t("detail.firNo"), detail.firNo ? `${str(detail.firNo)}${detail.firYear ? `/${str(detail.firYear)}` : ""}` : null],
-    [t("detail.policeStation"), str(detail.policeStation)],
-  ];
-  // Court-sourced → show the full eCourts field mirror with an explicit "not on record" for gaps
-  // (honest-empty, never a silently-dropped field). Manual → only the fields actually filled.
-  const caseDetails = isCourtSourced ? caseDetailsAll : caseDetailsAll.filter(([, v]) => v);
+  const isDisposed = (str(matter.status) ?? "").toUpperCase().includes("DISPOSED");
+  // WO-41 tier-aware honest-empty. The field taxonomy + selection rule live in a pure module
+  // (case-detail-fields.ts) so the trust contract is unit-tested; here we only supply values +
+  // localized labels. `sourced` fields are what the eCourts mobile API actually carries → an empty
+  // one is truthfully "not on record"; not-sourced empties are dropped (never a false "not on
+  // record"); a pending case's decision date reads "not applicable".
+  const detailValues: Partial<Record<CaseDetailFieldId, string | null>> = {
+    registrationNo: str(detail.registrationNumber),
+    filingNo: str(detail.filingNumber),
+    registrationDate: detail.registrationDate ? fmtDate(str(detail.registrationDate)) : null,
+    filingDate: detail.filingDate ? fmtDate(str(detail.filingDate)) : null,
+    firstHearingDate: detail.first_hearing_date ? fmtDate(str(detail.first_hearing_date)) : null,
+    district: str(detail.district),
+    state: str(detail.state),
+    category: str(detail.category),
+    subCategory: str(detail.sub_category),
+    benchType: str(detail.bench_type),
+    judicialBranch: str(detail.judicial_branch),
+    subordinateCourt: str(detail.subordinate_court),
+    filedBy: str(detail.filed_by),
+    decidedOn: detail.decisionDate ? fmtDate(str(detail.decisionDate)) : null,
+    firNo: detail.firNo ? `${str(detail.firNo)}${detail.firYear ? `/${str(detail.firYear)}` : ""}` : null,
+    policeStation: str(detail.policeStation),
+  };
+  const detailLabels: Record<CaseDetailFieldId, string> = {
+    registrationNo: t("detail.registrationNo"), filingNo: t("detail.filingNo"),
+    registrationDate: t("detail.registrationDate"), filingDate: t("detail.filingDate"),
+    firstHearingDate: t("detail.firstHearingDate"), district: t("detail.district"),
+    state: t("detail.state"), category: t("detail.category"), subCategory: t("detail.subCategory"),
+    benchType: t("detail.benchType"), judicialBranch: t("detail.judicialBranch"),
+    subordinateCourt: t("detail.subordinateCourt"), filedBy: t("detail.filedBy"),
+    decidedOn: t("detail.decidedOn"), firNo: t("detail.firNo"), policeStation: t("detail.policeStation"),
+  };
+  const caseDetails = selectCaseDetailRows(detailValues, { isCourtSourced, isDisposed }).map((r) => ({
+    label: detailLabels[r.id],
+    value: r.value,
+    emptyReason: r.emptyReason,
+    emptyLabel: r.emptyReason === "not-applicable" ? t("empty.notApplicable") : t("empty.onRecord"),
+  }));
 
   // Timeline: prefer the live /timeline feed; when it's empty (endpoint down, no LD key, or a
   // manual case), fall back to DB-derived hearings + orders so the tab reflects what we DO have
@@ -355,11 +374,17 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         <div className="ec-card">
           <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium">{t("details.title")}</h2></div>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-5 py-5 sm:grid-cols-3">
-            {caseDetails.map(([label, value]) => (
+            {caseDetails.map(({ label, value, emptyReason, emptyLabel }) => (
               <div key={label}>
                 <dt className="ec-label">{label}</dt>
                 <dd className="mt-1 text-sm text-ec-ink">
-                  <CourtField value={value} emptyLabel={t("empty.onRecord")} maskedLabel={t("masked")} field={label} />
+                  <CourtField
+                    value={value}
+                    emptyReason={emptyReason}
+                    emptyLabel={emptyLabel}
+                    maskedLabel={t("masked")}
+                    field={label}
+                  />
                 </dd>
               </div>
             ))}
