@@ -10,7 +10,8 @@
     "states": {
       "loading": "Loading…",
       "empty": "Nothing here yet",
-      "error": "Something went wrong"
+      "error": "Something went wrong",
+      "notOnRecord": "not on record at eCourts"
     },
     "disclaimer": "Not legal advice — verify against the official court record.",
     "provenance": "Source: {source} · updated {time}",

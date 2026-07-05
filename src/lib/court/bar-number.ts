@@ -1,23 +1,42 @@
 // WO-42 · Advocate bar-enrollment parsing + State Bar Council → eCourts token map.
 //
-// ⭐ CANONICAL FORMAT — founder-ruled 2026-07-05 (exec/LEARNINGS.md ⭐; do NOT re-litigate):
-// a State Bar Council enrollment number is  STATE / SERIAL / YEAR, e.g. **`G/702/2020`**,
-// `G/4732/1999` (Gujarat) or `MAH/1234/1982`. `STATE` = the state bar-council code
-// (**Gujarat = `G`**); `SERIAL` = the ACTUAL bar code/number; `YEAR` = enrollment year (required).
-//   ⚠️ A number like `11240` is NOT a serial — it is an INTERNAL eCourts system/display code
-//   (the value that rides inline in `pet_adv` as `MR YASH J PATEL(11240)`). NEVER search the
-//   roster by it. The eCourts search's `barcode` param is the SERIAL (`702`), not `11240`.
-//   • The AIBE / BCI certificate number is a *separate national* id — irrelevant to eCourts.
+// ⭐ CANONICAL FORMAT (founder-ruled 2026-07-05 — do not re-litigate; mirrored in exec/LEARNINGS.md):
+//   A State Bar Council ENROLLMENT NUMBER is  STATE / SERIAL / YEAR
+//     • STATE  = the state bar-council code  (Gujarat = "G")
+//     • SERIAL = the actual bar code/number  (e.g. 702, 4732)
+//     • YEAR   = the enrolment year          (REQUIRED by the eCourts bar search)
+//   e.g. "G/702/2020", "G/4732/1999" (Gujarat), "MAH/1234/1982" (Maharashtra).
+//   The SERIAL *is* the "eCourts bar code" — there is no separate third id. The old 3-box
+//   form split this one identifier into three and was the source of the founder confusion.
 //
-// WHY VALID ADVOCATES GOT "0 CASES": the eCourts bar search (`searchByAdvocateName.php`,
-// `checkedSearchByRadioValue:"2"`) REQUIRES four params — `barstatecode` (tier-dependent:
-// "GJ" High Court / "GJG" Gujarat district — the eCourts token, distinct from the enrollment
-// `STATE` letter "G"), `barcode` (the SERIAL), **`year`**, and numeric `state_code` (17).
-// Onboarding never collected the year, so the search fell through to a lossy name match.
+//   ⚠️ A number like **11240 is NOT a bar SERIAL** — it is an *internal eCourts system code*
+//   (the value that rides inline in `pet_adv` as "MR YASH J PATEL(11240)"). NEVER treat it as
+//   the enrolment serial and NEVER search the roster by it. The founder-reported "Bar 11240 → 0
+//   cases" was exactly this mistake: 11240 is an eCourts display number, not the person's
+//   STATE/SERIAL/YEAR enrolment. Parse/store the three parts; the SERIAL is what eCourts wants.
+//
+//   • The AIBE / BCI certificate number is a *separate national* id — irrelevant to eCourts.
+//     We never ask for it.
+//
+// This per-state map, filled across all states, is the spine for advocate onboarding + full-roster
+// ("scrape their complete details") scraping everywhere — so keep the three parts distinct. The
+// enrollment `STATE` letter the advocate writes (Gujarat = "G") is carried as `statePrefix` for
+// parsing/council-inference; the search token (`barstatecode`) is carried separately — for Gujarat
+// the two happen to coincide ("G"), but they are conceptually distinct.
+//
+// WHY VALID ADVOCATES GOT "0 CASES": the eCourts bar-code search
+// (`searchByAdvocateName.php`, `checkedSearchByRadioValue:"2"`) REQUIRES four params —
+// `barstatecode` = the single-letter Bar-Council code **"G"** for BOTH the High Court and
+// the Gujarat district tier, `barcode` (the enrollment serial, e.g. 702 — NOT the inline HC
+// advocate code 11240), **`year` (enrollment year)**, and numeric `state_code` (17).
+// Two bugs stacked: onboarding never collected the year (WO-42, fixed), AND the tier tokens
+// were "GJ"/"GJG" — both of which the eCourts backend answers with 0 cases. The 2026-07-05
+// MITM capture proved "G" + serial 702 + year 2020 returns 386 HC / 22 district cases, while
+// every GJ/GJG/GUJ variant and barcode 11240 returns 0 (BP-60; scraper `mobile_api.py`).
 //   NB (founder probe, S-WO41ingest): even with the correct SERIAL + scope + warmed session the
-//   live mobile search still returned 0 for advocates tried — getting a live NON-EMPTY roster is
-//   a SEPARATE open engineering step (scope/session/tier), not a format question. The format is
-//   settled; the empty-state stays honest until live retrieval is proven.
+//   live mobile search still returned 0 for some advocates tried — getting a live NON-EMPTY roster
+//   is a SEPARATE open engineering step (scope/session/tier), not a format question. The format is
+//   settled; the empty-state stays honest until live retrieval is broadly proven.
 //
 // This module is PURE (no I/O) so it is unit-tested offline. Token maps are SOURCED,
 // never guessed: only councils whose tokens were packet-verified carry `verified:true`
@@ -25,8 +44,8 @@
 // name search with an honest empty-state (unverified tokens tracked in exec/DATA-GAPS.md).
 
 export interface ParsedBarNumber {
-  stateBar: string; // the enrollment STATE code as entered, uppercased (e.g. "G", "MAH")
-  serial: number; // the ACTUAL bar serial (e.g. 702) — NOT an eCourts internal code like 11240
+  stateBar: string; // the enrollment STATE code as entered, uppercased (Gujarat = "G"; also "MAH")
+  serial: number; // the SERIAL = the actual bar code (e.g. 702, 4732) — NOT the eCourts internal number (11240)
   year: number; // enrollment year — REQUIRED by the eCourts bar search
   canonical: string; // normalized display string "STATE/SERIAL/YEAR"
 }
@@ -62,14 +81,15 @@ export interface StateBarCouncil {
 // packet-verified eCourts tokens and get a LIVE roster fetch; the rest capture the
 // enrollment + year and fall back to name search with an honest empty-state.
 //
-// VERIFIED so far: Gujarat only — HC `barstatecode="GJ"`, District `"GJG"`,
-// `state_code=17` (WO-34 mitmproxy capture; `scraper/mobile_api.py:search_by_advocate`,
-// `docs/HC-ADVOCATE-SEARCH-CAPTURE.md`). Each additional state's tokens must be
-// verified via the WO-43 MITM recon harness before flipping `verified` → true; the
-// unverified backlog lives in `exec/DATA-GAPS.md`.
+// VERIFIED so far: Gujarat only — `barstatecode="G"` for BOTH tiers (HC and district),
+// `state_code=17` (2026-07-05 MITM recon; `scraper/mobile_api.py:build_advocate_search_params`).
+// The earlier WO-34 "GJ"/"GJG" tokens were WRONG — the eCourts backend returns 0 cases for
+// them (BP-60). Each additional state's token must be packet-verified via the WO-43 MITM recon
+// harness before flipping `verified` → true; the unverified backlog lives in `exec/DATA-GAPS.md`.
 export const STATE_BAR_COUNCILS: StateBarCouncil[] = [
-  // Gujarat: enrollment STATE prefix "G" (⭐ ruling) — distinct from the eCourts tokens GJ/GJG.
-  { id: "GJ", label: "Gujarat", statePrefix: "G", stateCode: 17, hcBarToken: "GJ", dcBarToken: "GJG", verified: true },
+  // Gujarat: enrollment STATE prefix "G" (⭐ ruling) + `barstatecode="G"` for BOTH tiers — the
+  // live-confirmed token (BP-60: "GJ"/"GJG" return 0 cases). Prefix and token coincide here.
+  { id: "GJ", label: "Gujarat", statePrefix: "G", stateCode: 17, hcBarToken: "G", dcBarToken: "G", verified: true },
   // Unverified — enrollment + year are captured and stored; live eCourts bar search is
   // withheld (honest empty-state) until the tokens are packet-verified (WO-43 → DATA-GAPS).
   // `statePrefix` stays null for these until each state's enrollment code is sourced (not guessed).
@@ -143,8 +163,9 @@ export function barSearchScopes(council: StateBarCouncil): BarSearchScope[] {
     scopes.push({ tier: "HC", barState: council.hcBarToken, stateCode: council.stateCode, distCode: 1, courtCode: 1 });
   }
   if (council.dcBarToken) {
-    // court_code_arr "1,5" = the courts in ONE Gujarat district complex (WO-34 capture) —
-    // a partial probe, not statewide district coverage (see the block comment above).
+    // court_code_arr "1,5" = the courts in ONE Gujarat district complex — a partial probe, not
+    // statewide district coverage. (The 2026-07-05 capture returned 22 cases for district 13 with
+    // this complex; full district fan-out — the court worklist per district — is BP-57.)
     scopes.push({ tier: "DC", barState: council.dcBarToken, stateCode: council.stateCode, distCode: 1, courtCodeArr: "1,5" });
   }
   return scopes;

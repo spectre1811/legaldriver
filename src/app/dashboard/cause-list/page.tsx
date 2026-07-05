@@ -2,7 +2,8 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
-import { Card, fmtDate } from "@/components/ui";
+import { Card } from "@/components/ui";
+import { CourtDate, CourtField, EmptyCell, formatCourtDate } from "@/components/court";
 import { CauseListUploader } from "./uploader";
 
 export const metadata = { title: "Cause list · Mukadma" };
@@ -54,7 +55,7 @@ export default async function CauseListPage() {
     const key = r.list_date;
     if (!grouped.has(key)) {
       grouped.set(key, {
-        label: key === today ? t("board.today") : key === tomorrow ? t("board.tomorrow") : fmtDate(key),
+        label: key === today ? t("board.today") : key === tomorrow ? t("board.tomorrow") : (formatCourtDate(key) ?? key),
         rows: [],
       });
     }
@@ -78,7 +79,7 @@ export default async function CauseListPage() {
               <div className="flex items-center gap-3 border-b border-ec-hair bg-ec-brass-tint/30 px-5 py-3">
                 <Icon name="calendar" className="h-4 w-4 shrink-0 text-ec-brass-deep" />
                 <span className="font-semibold text-sm text-ec-ink">{group.label}</span>
-                <span className="ml-auto text-xs text-ec-ink-3">{fmtDate(date)}</span>
+                <span className="ml-auto text-xs text-ec-ink-3"><CourtDate value={date} emptyLabel={tc("states.notOnRecord")} /></span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -94,7 +95,7 @@ export default async function CauseListPage() {
                     {group.rows.map((e) => (
                       <tr key={e.id} className="ec-row border-b border-ec-hair last:border-0 hover:bg-ec-hair/20">
                         <td className="num px-5 py-3 text-xs font-medium text-ec-ink">
-                          {e.item_no ? `#${e.item_no}` : "—"}
+                          {e.item_no ? `#${e.item_no}` : <EmptyCell label={tc("states.notOnRecord")} />}
                         </td>
                         <td className="px-5 py-3">
                           {e.matter ? (
@@ -109,10 +110,10 @@ export default async function CauseListPage() {
                           )}
                         </td>
                         <td className="hidden px-5 py-3 text-ec-ink-3 md:table-cell">
-                          {e.court ?? "—"}
+                          <CourtField value={e.court} field="court" emptyLabel={tc("states.notOnRecord")} />
                         </td>
                         <td className="hidden px-5 py-3 text-xs text-ec-ink-3 lg:table-cell num">
-                          {e.cnr ?? "—"}
+                          <CourtField value={e.cnr} field="cnr" emptyLabel={tc("states.notOnRecord")} />
                         </td>
                       </tr>
                     ))}

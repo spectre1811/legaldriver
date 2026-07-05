@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
+import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
+import { CourtField, CourtChip, EmptyCell } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
@@ -27,6 +28,7 @@ export default async function AdvocatePage({
   if (!ldEnabled()) notFound();
   const t = await getTranslations("advocate");
   const tc = await getTranslations("codeLabels");
+  const tCommon = await getTranslations("common");
   const barId = params.barId.map(decodeURIComponent).join("/");
   const profile = await getAdvocateProfile(barId);
   if (!profile) notFound();
@@ -126,19 +128,17 @@ export default async function AdvocatePage({
           </h1>
           {headerRole.isRole && <p className="mt-1.5 max-w-xl text-xs text-ink-faint">{tc("roleNote", { name: primaryName })}</p>}
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="ec-chip">{t("barLabel", { barId: profile.bar_id })}</span>
+            <CourtChip>{t("barLabel", { barId: profile.bar_id })}</CourtChip>
             {regYear && (
-              <span className="ec-chip ec-chip-success">
+              <CourtChip tone="success">
                 {t("seniorityLabel", { year: regYear, years: seniority ?? 0 })}
-              </span>
+              </CourtChip>
             )}
             {aliases.length > 0 && (
               <>
                 <span className="text-xs text-ink-faint">{t("aliasesLabel")}</span>
                 {aliases.map((alias) => (
-                  <span key={alias} className="ec-chip">
-                    {alias}
-                  </span>
+                  <CourtChip key={alias}>{alias}</CourtChip>
                 ))}
               </>
             )}
@@ -359,7 +359,7 @@ export default async function AdvocatePage({
                             )}
                           </td>
                           <td className="px-3 py-2 text-ink-soft" title={c.case_type ?? undefined}>
-                            {expandCaseType(c.case_type, c.tier).full || "—"}
+                            <CourtField value={expandCaseType(c.case_type, c.tier).full || null} field="case_type" emptyLabel={tCommon("states.notOnRecord")} />
                             {c.registration_year ? (
                               <span className="ml-1 text-xs text-ink-faint">
                                 ({c.registration_year})
@@ -367,25 +367,18 @@ export default async function AdvocatePage({
                             ) : null}
                           </td>
                           <td className="px-3 py-2">
-                            {c.side ? (
-                              <span
-                                className={`ec-chip ${
-                                  (c.side ?? "").toUpperCase().startsWith("PET")
-                                    ? "ec-chip-success"
-                                    : ""
-                                }`}
-                              >
-                                {c.side}
-                              </span>
-                            ) : (
-                              <span className="text-ink-faint">—</span>
-                            )}
+                            <CourtField
+                              value={c.side}
+                              tone={(c.side ?? "").toUpperCase().startsWith("PET") ? "success" : "neutral"}
+                              field="side"
+                              emptyLabel={tCommon("states.notOnRecord")}
+                            />
                           </td>
                           <td className="px-3 py-2">
                             {c.tier ? (
                               <Badge tone={tierTone(c.tier)}>{c.tier}</Badge>
                             ) : (
-                              <span className="text-ink-faint">—</span>
+                              <EmptyCell label={tCommon("states.notOnRecord")} />
                             )}
                           </td>
                           <td className="px-3 py-2">
