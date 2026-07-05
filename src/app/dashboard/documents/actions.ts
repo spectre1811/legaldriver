@@ -7,6 +7,7 @@ import { getTenantId } from "@/lib/court/sync";
 import { logActivity } from "@/lib/activity";
 import { categoryOf } from "@/lib/docs/categories";
 import { fileUploadedDocument } from "@/lib/docs/file-upload";
+import { auditRefileTenant } from "@/lib/docs/audit-refile";
 
 export type DocResult = { ok: boolean; message: string };
 
@@ -96,6 +97,30 @@ export async function resolveReview(documentId: string, matterId: string | null,
   revalidatePath("/dashboard/documents/review");
   revalidatePath("/dashboard/documents");
   return { ok: true, message: matterId ? "Filed to case." : clientId ? "Filed to client." : "Filed." };
+}
+
+// ── WO-33 W4 · Audit-refile — on-demand "Re-scan for matches" ──────────────────────────────
+// Re-derive filing for THIS tenant's unfiled / needs-review docs against the current clients &
+// cases (the same loop the daily cron runs). A doc that had no home when it arrived — because its
+// client/case didn't exist yet — gets auto-filed on a strong match, or a fresh suggestion in review
+// on a fuzzy one. Reuses the RLS server client (tenant-scoped); no migration, no new records.
+export async function rescanUnfiled(): Promise<DocResult & { filed: number; suggested: number }> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant.", filed: 0, suggested: 0 };
+  const s = await auditRefileTenant(supabase, tenantId);
+  revalidatePath("/dashboard/documents/review");
+  revalidatePath("/dashboard/documents");
+  const parts = [
+    s.filed ? `${s.filed} filed` : "",
+    s.suggested ? `${s.suggested} new match${s.suggested > 1 ? "es" : ""}` : "",
+  ].filter(Boolean);
+  return {
+    ok: true,
+    message: parts.length ? `Re-scanned — ${parts.join(", ")}.` : "Re-scanned — no new matches.",
+    filed: s.filed,
+    suggested: s.suggested,
+  };
 }
 
 // ── WO-27 Wave 2 · bulk + reversible delete ───────────────────────────────────────────────

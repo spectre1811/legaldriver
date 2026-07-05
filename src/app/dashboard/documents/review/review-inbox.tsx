@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { Badge } from "@/components/ui";
-import { resolveReview } from "../actions";
+import { resolveReview, rescanUnfiled } from "../actions";
 
 export type ReviewDoc = {
   id: string; filename: string; docType: string | null; confidence: number | null;
   summary: string | null; parties: string[]; cnrs: string[]; sourceLabel: string;
   proposedClientId: string | null; proposedMatterId: string | null;
+  refiled?: boolean; // the audit re-scan found a fresh match for this doc (WO-33 W4)
   suggestedClientName: string | null; suggestedMatterTitle: string | null;
   why: string | null;
 };
@@ -27,6 +28,15 @@ export function ReviewInbox({ docs, clients, matters }: { docs: ReviewDoc[]; cli
   const [active, setActive] = useState(0);
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
+  const [rescanning, setRescanning] = useState(false);
+  const [rescanMsg, setRescanMsg] = useState<string | null>(null);
+
+  const rescan = useCallback(async () => {
+    setRescanning(true);
+    setRescanMsg(null);
+    try { const r = await rescanUnfiled(); setRescanMsg(r.message); router.refresh(); }
+    finally { setRescanning(false); }
+  }, [router]);
   // Per-card picker state, seeded from the AI proposal.
   const [pick, setPick] = useState<Record<string, { c: string; m: string }>>(() =>
     Object.fromEntries(docs.map((d) => [d.id, { c: d.proposedClientId ?? "", m: d.proposedMatterId ?? "" }])),
@@ -73,7 +83,16 @@ export function ReviewInbox({ docs, clients, matters }: { docs: ReviewDoc[]; cli
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-ink-faint">{t("hint")}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-ink-faint">{t("hint")}</p>
+        <div className="flex items-center gap-2">
+          {rescanMsg && <span className="text-xs text-ink-muted">{rescanMsg}</span>}
+          <button onClick={rescan} disabled={rescanning} className="btn-ghost px-2.5 py-1 text-xs">
+            <Icon name="refresh" className={`h-3.5 w-3.5 ${rescanning ? "animate-spin" : ""}`} />
+            <span className="ml-1.5">{rescanning ? t("rescanning") : t("rescan")}</span>
+          </button>
+        </div>
+      </div>
       {visible.map((d, i) => {
         const sel = pick[d.id] ?? { c: "", m: "" };
         const isActive = i === active;
@@ -92,6 +111,7 @@ export function ReviewInbox({ docs, clients, matters }: { docs: ReviewDoc[]; cli
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
                   {d.docType && <Badge>{d.docType}</Badge>}
                   <span>{d.sourceLabel}</span>
+                  {d.refiled && <Badge tone="brand">{t("newMatch")}</Badge>}
                 </div>
               </div>
             </div>

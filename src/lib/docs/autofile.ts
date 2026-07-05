@@ -11,6 +11,12 @@ export interface FilingResult {
   createdClient: boolean;
   createdMatter: boolean;
   matchedClientByContact: boolean; // matched a known client by sender email/phone
+  // Match provenance (WO-33 W4) — did the resolved client/matter come from a STRONG
+  // deterministic signal (LLM shortlist id, sender contact, exact name/CNR/title) vs a
+  // weak fuzzy party match? The audit re-scan uses this to decide auto-file (strong) vs
+  // suggest-in-review (fuzzy), mirroring `decideFiling`'s structural-confidence rule.
+  clientStrong: boolean;
+  matterStrong: boolean;
 }
 
 // Pull the bare address out of "Name <a@b.com>" and normalise.
@@ -63,13 +69,19 @@ export async function resolveFiling(
   sb: DB,
   tenantId: string,
   c: Classification,
-  opts?: { email?: string | null; phone?: string | null },
+  opts?: { email?: string | null; phone?: string | null; matchOnly?: boolean },
 ): Promise<FilingResult> {
   let clientId = c.client_id;
   let matterId = c.matter_id;
   let createdClient = false;
   let createdMatter = false;
   let matchedClientByContact = false;
+  // A shortlist id from the classifier is already a concrete existing record → strong.
+  let clientStrong = Boolean(c.client_id);
+  let matterStrong = Boolean(c.matter_id);
+  // matchOnly (WO-33 W4): link to EXISTING clients/cases only — never insert. Used by the
+  // unattended audit re-scan so a re-run can't spawn junk clients/matters without a human.
+  const matchOnly = opts?.matchOnly === true;
 
   // 1) Client — match a known client by sender contact (deterministic, strongest).
   if (!clientId && opts) {
@@ -77,6 +89,7 @@ export async function resolveFiling(
     if (byContact) {
       clientId = byContact;
       matchedClientByContact = true;
+      clientStrong = true;
     }
   }
   // 2) Client — else by suggested name; create only when it's clearly legal.
@@ -90,7 +103,8 @@ export async function resolveFiling(
       .maybeSingle();
     if (found) {
       clientId = found.id;
-    } else if (c.is_legal) {
+      clientStrong = true;
+    } else if (c.is_legal && !matchOnly) {
       const email = parseEmailAddr(opts?.email);
       const { data } = await sb
         .from("client")
@@ -118,7 +132,8 @@ export async function resolveFiling(
       const { data: found } = await sb.from("matter").select("id").eq("tenant_id", tenantId).eq("cnr", cnr).maybeSingle();
       if (found) {
         matterId = found.id;
-      } else {
+        matterStrong = true; // exact CNR → existing case
+      } else if (!matchOnly) {
         const { data } = await sb
           .from("matter")
           .insert({ tenant_id: tenantId, client_id: clientId, cnr, title: c.suggested_matter_title ?? `Case ${cnr}`, status: "active", source: "gmail" })
@@ -126,12 +141,14 @@ export async function resolveFiling(
           .single();
         matterId = data?.id ?? null;
         createdMatter = !!data;
+        matterStrong = !!data; // a CNR is a deterministic key → strong
       }
     } else if (c.suggested_matter_title) {
       const { data: found } = await sb.from("matter").select("id").eq("tenant_id", tenantId).ilike("title", c.suggested_matter_title).maybeSingle();
       if (found) {
         matterId = found.id;
-      } else {
+        matterStrong = true; // exact title → existing case
+      } else if (!matchOnly) {
         const { data } = await sb
           .from("matter")
           .insert({ tenant_id: tenantId, client_id: clientId, title: c.suggested_matter_title, status: "active", source: "gmail" })
@@ -158,5 +175,5 @@ export async function resolveFiling(
     await sb.from("matter").update({ client_id: clientId }).eq("id", matterId);
   }
 
-  return { clientId, matterId, createdClient, createdMatter, matchedClientByContact };
+  return { clientId, matterId, createdClient, createdMatter, matchedClientByContact, clientStrong, matterStrong };
 }
