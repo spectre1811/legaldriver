@@ -1,0 +1,14 @@
+{
+  "_note": "BP-57 · COMMITTED OFFLINE FALLBACK for scripts/gen-advocate-scopes.mjs. Mirror of the platform court-scope registry served at GET /v1/advocate-scopes?state_code=<int> (ecourts-scraper court.court_scope). The generator prefers the live contract; this snapshot keeps `npm run gen:advocate-scopes`/build working offline. Until the founder-gated masters walk populates court_scope statewide (BP-57 W2), Gujarat's fallback = TODAY's packet-verified reach: the High Court + the one verified district complex (dist_code=1, court_code_arr='1,5', the WO-34 capture). Do NOT hand-add guessed complexes here — widen by populating the platform registry + regenerating (info-integrity: never a guessed scope).",
+  "schema_version": "1.0",
+  "states": {
+    "17": {
+      "label": "Gujarat",
+      "coverage": "hc_plus_one_complex",
+      "scopes": [
+        { "tier": "HC", "dist_code": 1, "court_code_arr": null, "est_name": "High Court" },
+        { "tier": "DC", "dist_code": 1, "court_code_arr": "1,5", "est_name": "main district complex (WO-34 capture) — statewide district fan-out pending BP-57 W2 masters walk" }
+      ]
+    }
+  }
+}
