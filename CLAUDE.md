@@ -70,12 +70,22 @@ P3 Gmail ingest + parsing · P4 polish + demo + deploy.
 ## Conventions inherited from the operator's setup
 
 Per-project CLAUDE.md + TASKBOARD; GitHub Actions CI; `.env` git-ignored; skill authoring via
-the skill-smith workflow (new skills at `~/.claude/skills/`); model routing Sonnet-default,
-Opus for hard architecture.
+the **`skill-smith` agent** (`.claude/agents/skill-smith.md`; a pattern used 3×→a native `.claude/skills/`
+skill); **OpenSpec** installed (`openspec/` + the `openspec-*` skills — spec-first per protocol §10);
+model routing Sonnet-default, Opus for hard architecture.
+
+## Cross-cutting skills — single source, NOT duplicated per repo (WO-38 decision)
+Org-wide discipline skills live once in `~/personal/legalmarketplace/plan/exec/skills/` and are used
+**by pointer** (never copied into repos, to avoid drift on load-bearing governance): `product-depth.md`,
+`ui-polish-bar.md`, `information-integrity.md`, `repo-hygiene.md`, `ship-grade.md`. Read the relevant one
+before the work it governs. Repo-local tooling skills (`.claude/skills/`) + the `skill-smith` agent ARE
+native per repo — grow them here.
 
 ## ⚠️ Git flow — ENFORCED (see `plan/exec/INTEGRATION-DEPLOY.md`)
 Parallel agents share this repo. **NEVER commit to / push / reset `main`.** Work in your own
-`wt/<WO>` worktree (`git worktree add ../legaldriver-<WO> -b wt/<WO> origin/main`), `git push origin
+`wt/<WO>` worktree — **start it with one command:** `plan/exec/new-wt.sh legaldriver <WO>` (fetches →
+ff's local `main` → cuts `wt/<WO>` off fresh `origin/main` → wires hooks; never branch from a stale
+local `main`). Then `git push origin
 wt/<WO>`, **open a PR**, then **SELF-MERGE it once CI is green** — `gh pr merge <n> --merge`, or self-apply
 the **`automerge`** label (`.github/workflows/automerge.yml`) which merges to `main` (serialized) → Vercel deploys.
 **Founder rule (2026-07-05): always self-merge your own PR — never wait for a separate reviewer/integrator to
