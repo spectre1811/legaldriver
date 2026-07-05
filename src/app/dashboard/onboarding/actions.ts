@@ -23,7 +23,7 @@ async function emptyRosterNote(supabase: ReturnType<typeof createClient>, advoca
   const reason = diagnoseEmptyRoster(adv?.bar_registration_number, adv?.state_code);
   switch (reason.kind) {
     case "unparsed":
-      return " No cases were auto-fetched — add the advocate's full enrolment number with year (e.g. GUJ/11240/2025) in Settings for an exact eCourts roster pull.";
+      return " No cases were auto-fetched — add the advocate's full enrolment number with year (e.g. G/702/2020) in Settings for an exact eCourts roster pull.";
     case "unverified":
       return ` No cases were auto-fetched — live eCourts roster search isn't available for the ${reason.council} State Bar Council yet, so we resolved by name only. Add cases by CNR, or check back as more councils go live.`;
     case "no-results":
