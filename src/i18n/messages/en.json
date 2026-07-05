@@ -1051,7 +1051,10 @@
       "skip": "Skip",
       "whyCnr": "Case number {cnr} found in the document",
       "whyEmail": "Arrived by email",
-      "whyParty": "Mentions {party}"
+      "whyParty": "Mentions {party}",
+      "rescan": "Re-scan for matches",
+      "rescanning": "Re-scanning…",
+      "newMatch": "New match"
     },
     "group": {
       "by": "Group by",

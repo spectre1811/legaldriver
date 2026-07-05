@@ -79,6 +79,8 @@ Pick doc_type as the SINGLE best fit from this controlled list (use "other" only
 Set is_legal=true ONLY for genuine legal/court/client matters (court orders, notices, pleadings, agreements, case correspondence, invoices to/from clients). Set is_legal=false for newsletters, marketing, OTPs, security alerts, social, and personal mail.
 When is_legal=true AND no existing client matches, put the client/party name in suggested_client_name (else null). When is_legal=true AND no existing matter matches, put a short case title in suggested_matter_title (else null). Always list any CNR numbers found in extracted.cnrs.
 
+NULL-CONTRACT — only report what the document actually states. Do NOT infer, guess, or fabricate: if a field is not present in the document, return null (for ids and suggested_* names) or an empty array (for extracted.parties/dates/amounts/cnrs). Every value in extracted must appear verbatim in the text above — never a paraphrase, a normalised form, or a plausible default. When in doubt, leave it out: a missing field is corrected downstream, an invented one mis-files the document.
+
 CLIENTS:
 ${clientList}
 

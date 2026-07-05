@@ -40,6 +40,11 @@ export default async function DocumentReviewPage() {
         : wk === "email" ? t("whyEmail")
           : wk === "party" ? t("whyParty", { party: parties[0] })
             : null;
+    // WO-33 W4: the audit re-scan parks a fresh fuzzy match in `refileSuggest*` (it doesn't touch
+    // the filing). Prefer it as the pre-filled proposal when the doc has no filing of its own, so a
+    // doc that couldn't match at ingest shows the now-matchable client/case for one-tap confirm.
+    const suggestClientId = typeof ex.refileSuggestClientId === "string" ? (ex.refileSuggestClientId as string) : null;
+    const suggestMatterId = typeof ex.refileSuggestMatterId === "string" ? (ex.refileSuggestMatterId as string) : null;
     return {
       id: d.id,
       filename: d.filename ?? "—",
@@ -49,8 +54,9 @@ export default async function DocumentReviewPage() {
       parties,
       cnrs,
       sourceLabel: SOURCE[d.source] ?? d.source,
-      proposedClientId: d.client_id,
-      proposedMatterId: d.matter_id,
+      proposedClientId: d.client_id ?? suggestClientId,
+      proposedMatterId: d.matter_id ?? suggestMatterId,
+      refiled: Boolean(suggestClientId || suggestMatterId),
       suggestedClientName: typeof ex.suggestedClientName === "string" ? (ex.suggestedClientName as string) : null,
       suggestedMatterTitle: typeof ex.suggestedMatterTitle === "string" ? (ex.suggestedMatterTitle as string) : null,
       why,
