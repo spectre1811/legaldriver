@@ -163,7 +163,7 @@
       ],
       "statesCovered": ["default", "populated"],
       "statesUncovered": ["loading_search", "empty_search", "error_state", "default_390"],
-      "openBugs": ["F3_was_here_now_fixed", "S1"],
+      "openBugs": ["S1"],
       "fixedBugs": ["F3"],
       "notes": "F3 (duplicate React keys/rows) FIXED WO-42. S1 (100 results, no pagination UI — hardcoded limit:100) still open — search/judgments/page.tsx:116. Wire <Pagination> from WO-39."
     },
