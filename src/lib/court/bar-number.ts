@@ -110,6 +110,15 @@ export interface BarSearchScope {
 // Build the ordered list of live eCourts bar-search scopes for a parsed enrollment +
 // council. Empty when the council isn't verified (→ caller shows an honest empty-state
 // and falls back to name search). HC is tried first (broadest), then the district complex.
+//
+// ⚠️ DISTRICT COVERAGE IS PARTIAL (WO-42, tracked in BACKLOG §D). HC is one court so its
+// scope returns the FULL HC roster. The district scope, by contrast, is a SINGLE hardcoded
+// complex (`dist_code=1, court_code_arr="1,5"` — the WO-34 capture example) — it does NOT
+// cover other Gujarat districts/complexes. Full district coverage needs iterating the
+// state's court/establishment map (`/courts/{state_code}`) → per-(dist_code, court_code_arr)
+// searches — that mapping is unverified (overlaps BP-07's court_id map), so we do NOT guess
+// it here. Callers must treat a district "0 results" as "none in HC + main district", not
+// "none exist" (see `emptyRosterNote`).
 export function barSearchScopes(council: StateBarCouncil): BarSearchScope[] {
   if (!council.verified || council.stateCode == null) return [];
   const scopes: BarSearchScope[] = [];
@@ -117,7 +126,8 @@ export function barSearchScopes(council: StateBarCouncil): BarSearchScope[] {
     scopes.push({ tier: "HC", barState: council.hcBarToken, stateCode: council.stateCode, distCode: 1, courtCode: 1 });
   }
   if (council.dcBarToken) {
-    // court_code_arr "1,5" = the courts in a Gujarat district complex (WO-34 capture).
+    // court_code_arr "1,5" = the courts in ONE Gujarat district complex (WO-34 capture) —
+    // a partial probe, not statewide district coverage (see the block comment above).
     scopes.push({ tier: "DC", barState: council.dcBarToken, stateCode: council.stateCode, distCode: 1, courtCodeArr: "1,5" });
   }
   return scopes;
@@ -128,7 +138,7 @@ export function barSearchScopes(council: StateBarCouncil): BarSearchScope[] {
 export type EmptyRosterReason =
   | { kind: "unparsed" } // couldn't read the enrollment number at all
   | { kind: "unverified"; council: string } // valid enrollment, council not live yet
-  | { kind: "no-results" }; // verified live search ran and genuinely returned nothing
+  | { kind: "no-results" }; // verified search ran but found nothing in the courts we searched (HC + main district only — NOT proof none exist)
 
 export function diagnoseEmptyRoster(barNumber: string | null | undefined, councilId: string | null | undefined): EmptyRosterReason {
   const parsed = parseBarNumber(barNumber);
