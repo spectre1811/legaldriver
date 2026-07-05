@@ -20,6 +20,7 @@ const TSX = "tsx@4.23.0";
 // Secret-free: fully mocked, no network, no .env. These GATE every PR.
 const OFFLINE = [
   "advocate_state_guard",
+  "bp26_case_summary_confidence",
   "ai_gateway",
   "design_tokens_smoke",
   "i18n_coverage",

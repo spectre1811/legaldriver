@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
 import { LogTimeExpense } from "./time-expense";
 import type { CaseSummary } from "@/lib/docs/case-summary";
+import { confidenceBand } from "@/lib/docs/case-summary";
 import { findSimilarCases } from "@/lib/court/similar";
 import { RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm, ProposedDeadlineActions, MatterDiaryDate } from "./case-actions";
 import { CaseTabs, CaseTabPanel } from "./case-tabs";
@@ -86,6 +87,10 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
 
   const parties = (Array.isArray(matter.parties) ? matter.parties : []) as Party[];
   const ai = matter.ai_summary as unknown as CaseSummary | null;
+  // Self-assessed confidence (BP-26). Only briefings generated with a real score carry the
+  // chip/review banner; legacy summaries (no score) render unchanged rather than being mislabelled.
+  const aiConf = ai && typeof ai.confidence === "number" && Number.isFinite(ai.confidence) ? ai.confidence : null;
+  const aiBand = aiConf === null ? null : confidenceBand(aiConf);
   const acts = (matter.act_names ?? []) as string[];
   const detail = (matter.detail ?? {}) as Record<string, unknown>;
 
@@ -200,12 +205,28 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             <Icon name="sparkles" className="h-4 w-4 text-ec-brass-deep" />
             <h2 className="font-display text-base font-medium">{t("ai.title")}</h2>
             {ai?.generated_at && <span className="text-xs text-ec-ink-3">· {fmtAgo(ai.generated_at)}</span>}
+            {aiBand && (
+              <span
+                title={t("ai.confidenceHint", { pct: Math.round((aiConf as number) * 100) })}
+                className={`ec-chip text-[11px] ${aiBand === "high" ? "bg-ec-success-t text-ec-success" : aiBand === "medium" ? "bg-ec-brass-tint text-ec-brass-deep" : "bg-ec-warn-t text-ec-warn"}`}
+              >
+                {t("ai.confidence")}: {t(`ai.confidence_${aiBand}`)}
+              </span>
+            )}
           </div>
           <GenerateSummaryButton matterId={matter.id} has={!!ai} />
         </div>
         <div className="px-5 py-5">
           {ai ? (
             <div className="space-y-5">
+              {aiBand === "low" && (
+                <div className="rounded-ec-m border border-ec-warn/40 bg-ec-warn-t px-4 py-3">
+                  <p className="flex items-center gap-2 text-sm font-medium text-ec-warn">
+                    <Icon name="alert" className="h-4 w-4 shrink-0" /> {t("ai.reviewTitle")}
+                  </p>
+                  <p className="mt-1 text-sm text-ec-ink-2">{t("ai.reviewBody")}</p>
+                </div>
+              )}
               {matter.last_synced_at && ai.generated_at && matter.last_synced_at > ai.generated_at && (
                 <div className="flex items-center gap-2 rounded-ec-m border border-ec-brass bg-ec-brass-tint px-4 py-2.5 text-sm text-ec-brass-deep">
                   <Icon name="alert" className="h-4 w-4 shrink-0" /> {t("ai.stale")}

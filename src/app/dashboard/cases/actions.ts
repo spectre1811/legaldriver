@@ -107,8 +107,12 @@ export async function generateCaseSummary(matterId: string): Promise<ActionResul
 
   await supabase.from("matter").update({ ai_summary: summary as unknown as Database["public"]["Tables"]["matter"]["Update"]["ai_summary"] }).eq("id", matterId);
   await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "case.ai_summary", entity: "matter", entity_id: matterId });
+  // Low-confidence briefings are surfaced for review, never presented as settled fact.
+  if (summary.review) {
+    await logActivity(supabase, tenantId, { matterId, type: "case.ai_review", summary: "AI briefing flagged low-confidence — review before relying", meta: { confidence: summary.confidence } });
+  }
   revalidatePath(`/dashboard/cases/${matterId}`);
-  return { ok: true, message: "AI summary updated." };
+  return { ok: true, message: summary.review ? "Briefing ready, but flagged low-confidence — review each point against the record before relying." : "AI summary updated." };
 }
 
 // Upload a document directly to a case (a file not found in email).
