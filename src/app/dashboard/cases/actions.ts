@@ -378,6 +378,108 @@ export async function deleteMatter(matterId: string): Promise<ActionResult> {
   return { ok: true, message: "Case deleted. Linked documents were kept in the client's library." };
 }
 
+// ── WO-43-W2 · bulk actions on the Cases list ────────────────────────────────────────────────
+// All operate on the selected ids via a single `.in("id", ids)` write (RLS scopes to the tenant),
+// are audited, and are REVERSIBLE (soft-delete + 10s undo; stage change keeps the prior values).
+
+const CASE_LIST_PATHS = ["/dashboard/cases", "/dashboard/calendar", "/dashboard"] as const;
+function revalidateCaseLists() {
+  for (const p of CASE_LIST_PATHS) revalidatePath(p);
+}
+
+// Cancel any pending hearing reminders for these matters (notification has no FK — keyed by the
+// `matter:<id>` payload ref, so we clear them per id).
+async function cancelReminders(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
+  ids: string[],
+) {
+  for (const id of ids) {
+    await supabase
+      .from("notification")
+      .delete()
+      .eq("tenant_id", tenantId)
+      .eq("status", "pending")
+      .contains("payload", { ref: `matter:${id}` });
+  }
+}
+
+export type BulkResult = ActionResult & { count: number };
+// Prior stage values, returned by bulkSetStage so the client can offer an Undo that restores them.
+export type StageSnapshot = { id: string; stage: string | null };
+
+// Soft-delete: mark the selected cases trashed (reversible). `deleted_at` is filtered out by the
+// matter RLS SELECT policy, so a trashed case vanishes from every list at once. Pending reminders
+// are cancelled so a trashed case stays quiet; restore relies on the next sync to reschedule.
+export async function bulkDeleteMatters(ids: string[]): Promise<BulkResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant.", count: 0 };
+  if (!ids.length) return { ok: false, message: "Nothing selected.", count: 0 };
+  await cancelReminders(supabase, tenantId, ids);
+  const { data, error } = await supabase
+    .from("matter")
+    .update({ deleted_at: new Date().toISOString() }) // column added in the WO-43-W2 migration
+    .in("id", ids)
+    .select("id"); // RLS scopes to tenant
+  if (error) return { ok: false, message: error.message, count: 0 };
+  const count = data?.length ?? 0;
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "case.bulk_trash", entity: "matter", after: { count } });
+  revalidateCaseLists();
+  return { ok: count > 0, message: `${count} moved to Trash.`, count };
+}
+
+// Undo path for bulkDeleteMatters: clear `deleted_at` so the cases reappear.
+export async function restoreMatters(ids: string[]): Promise<BulkResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant.", count: 0 };
+  if (!ids.length) return { ok: false, message: "Nothing selected.", count: 0 };
+  // The UPDATE policy still permits a trashed row (it filters on tenant, not deleted_at), so this
+  // restores rows the SELECT policy currently hides.
+  const { data, error } = await supabase
+    .from("matter")
+    .update({ deleted_at: null })
+    .in("id", ids)
+    .select("id");
+  if (error) return { ok: false, message: error.message, count: 0 };
+  const count = data?.length ?? 0;
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "case.bulk_restore", entity: "matter", after: { count } });
+  revalidateCaseLists();
+  return { ok: count > 0, message: `${count} restored.`, count };
+}
+
+// Set the stage on the selected cases, returning the prior per-row values so the client can undo.
+export async function bulkSetStage(ids: string[], stage: string): Promise<BulkResult & { prior: StageSnapshot[] }> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant.", count: 0, prior: [] };
+  if (!ids.length) return { ok: false, message: "Nothing selected.", count: 0, prior: [] };
+  if (!stage.trim()) return { ok: false, message: "No stage given.", count: 0, prior: [] };
+  const { data: prior } = await supabase.from("matter").select("id, stage").in("id", ids); // RLS-scoped
+  const { data, error } = await supabase.from("matter").update({ stage }).in("id", ids).select("id");
+  if (error) return { ok: false, message: error.message, count: 0, prior: [] };
+  const count = data?.length ?? 0;
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "case.bulk_stage", entity: "matter", after: { count, stage } });
+  revalidateCaseLists();
+  return { ok: count > 0, message: `Stage set on ${count}.`, count, prior: (prior ?? []) as StageSnapshot[] };
+}
+
+// Undo path for bulkSetStage: restore each row's prior stage (values differ per row → per-row write).
+export async function bulkRestoreStages(prior: StageSnapshot[]): Promise<BulkResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant.", count: 0 };
+  if (!prior.length) return { ok: false, message: "Nothing to restore.", count: 0 };
+  let count = 0;
+  for (const p of prior) {
+    const { error } = await supabase.from("matter").update({ stage: p.stage }).eq("id", p.id);
+    if (!error) count++;
+  }
+  revalidateCaseLists();
+  return { ok: count > 0, message: `${count} restored.`, count };
+}
+
 export async function refreshCase(matterId: string): Promise<ActionResult> {
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);

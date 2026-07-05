@@ -39,7 +39,7 @@ export async function ingestMail(
   // Tenant shortlist for classification (bounded).
   const [{ data: clients }, { data: matters }] = await Promise.all([
     supabase.from("client").select("id, name").eq("tenant_id", tenantId).limit(100),
-    supabase.from("matter").select("id, title, cnr").eq("tenant_id", tenantId).limit(100),
+    supabase.from("matter").select("id, title, cnr").eq("tenant_id", tenantId).is("deleted_at", null).limit(100), // admin — skip trashed (WO-43-W2)
   ]);
   const clientList = clients ?? [];
   const matterList = matters ?? [];

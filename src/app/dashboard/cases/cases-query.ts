@@ -80,16 +80,94 @@ export function buildCasesQuery(supabase: SupabaseClient<Database>, f: CasesFilt
     query = query.gte("next_hearing_date", today).lte("next_hearing_date", isoDay(end));
   }
 
-  if (f.sort === "created_at") query = query.order("created_at", { ascending: false });
-  else if (f.sort === "title") query = query.order("title", { ascending: true });
-  else query = query.order("next_hearing_date", { ascending: true, nullsFirst: false });
+  applySort(query, f.sort);
 
   return query;
+}
+
+// Sortable columns (WO-43-W2). The header cells write `sort=<key>.<dir>`; we resolve against this
+// allowlist so a hostile/garbage param can never inject an ORDER BY. Legacy bare values
+// (`created_at`, `title`) from older saved views still resolve. All columns are indexed
+// (0036 keyset indexes) or low-cardinality; default stays urgency order (next hearing asc).
+const SORT_COLUMNS: Record<string, string> = {
+  next: "next_hearing_date",
+  title: "title",
+  court: "court",
+  stage: "stage",
+  status: "status",
+  created: "created_at",
+};
+
+// Parse a `sort` param into a validated { column, ascending } or null (→ default order).
+export function parseSort(sort?: string): { column: string; ascending: boolean } | null {
+  if (!sort) return null;
+  if (sort === "created_at") return { column: "created_at", ascending: false }; // legacy saved views
+  if (sort === "title") return { column: "title", ascending: true };
+  const [key, dir] = sort.split(".");
+  const column = SORT_COLUMNS[key];
+  if (!column) return null;
+  return { column, ascending: dir !== "desc" };
+}
+
+function applySort<T>(query: T, sort?: string): T {
+  const parsed = parseSort(sort);
+  const q = query as { order: (c: string, o: object) => T };
+  if (!parsed) return q.order("next_hearing_date", { ascending: true, nullsFirst: false });
+  // Nullable columns sort with NULLs last regardless of direction (empties are never "most urgent").
+  return q.order(parsed.column, { ascending: parsed.ascending, nullsFirst: false });
+}
+
+// Live counts for the saved-view tab strip (WO-43-W2). Each is a HEAD count (no rows transferred),
+// tenant-scoped by RLS and bounded — replaces eyeballing the list. Views are navigation, so the
+// counts are independent of the active free-text/facet filters.
+export interface ViewCounts {
+  all: number;
+  open: number;
+  overdue: number;
+  soon: number; // next hearing within 7 days
+  noDate: number;
+}
+
+export async function fetchViewCounts(supabase: SupabaseClient<Database>): Promise<ViewCounts> {
+  const today = isoDay(new Date());
+  const soon = new Date();
+  soon.setDate(soon.getDate() + 7);
+  const head = () => supabase.from("matter").select("id", { count: "exact", head: true });
+  const [all, open, overdue, soonC, noDate] = await Promise.all([
+    head(),
+    head().eq("status", "open"),
+    head().lt("next_hearing_date", today),
+    head().gte("next_hearing_date", today).lte("next_hearing_date", isoDay(soon)),
+    head().is("next_hearing_date", null),
+  ]);
+  return {
+    all: all.count ?? 0,
+    open: open.count ?? 0,
+    overdue: overdue.count ?? 0,
+    soon: soonC.count ?? 0,
+    noDate: noDate.count ?? 0,
+  };
 }
 
 export interface CasesPageResult {
   rows: MatterRow[];
   total: number;
+}
+
+// Build a CSV of the given matters (WO-43-W2 bulk export). Pure — the client wraps it in a Blob
+// download. RFC-4180 quoting: every field quoted, embedded `"` doubled, CRLF row terminators.
+const CSV_HEADERS = ["Title", "CNR", "Court", "Case type", "Stage", "Status", "Next hearing"] as const;
+export function toCasesCsv(rows: MatterRow[]): string {
+  const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [CSV_HEADERS.map(esc).join(",")];
+  for (const r of rows) {
+    lines.push(
+      [r.title, r.cnr, r.court, r.case_type, r.stage, r.status, r.next_hearing_override ?? r.next_hearing_date]
+        .map(esc)
+        .join(","),
+    );
+  }
+  return lines.join("\r\n");
 }
 
 export async function fetchCasesPage(

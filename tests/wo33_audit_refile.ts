@@ -22,7 +22,7 @@ function makeSb(opts: { clientHit?: { id: string } | null; matterHit?: { id: str
   const from = (table: string) => {
     clientTable = table === "client";
     const b: Record<string, unknown> = {};
-    for (const m of ["select", "eq", "ilike", "contains", "or", "order"]) b[m] = () => b;
+    for (const m of ["select", "eq", "ilike", "contains", "or", "order", "is", "not"]) b[m] = () => b;
     b.limit = () => b; // list path is awaited via `then`
     b.insert = (v: unknown) => { inserts.push(v); return b; };
     b.update = () => b;

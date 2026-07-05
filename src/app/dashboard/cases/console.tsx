@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
-import { saveView, deleteView } from "./view-actions";
+import { saveView } from "./view-actions";
 
 // Query keys the console owns. Used to (re)build the URL and to snapshot a saved view.
 const KEYS = ["q", "court", "case_type", "stage", "status", "advocate", "act", "next", "sort"] as const;
@@ -17,14 +17,12 @@ export function Console({
   stages,
   advocates,
   acts,
-  views,
 }: {
   courts: string[];
   caseTypes: string[];
   stages: string[];
   advocates: string[];
   acts: string[];
-  views: SavedView[];
 }) {
   const t = useTranslations("cases.console");
   const router = useRouter();
@@ -41,13 +39,6 @@ export function Console({
     const next = new URLSearchParams(sp.toString());
     if (value) next.set(key, value);
     else next.delete(key);
-    push(next);
-  };
-
-  const applyView = (query: Record<string, string>) => {
-    const next = new URLSearchParams();
-    for (const k of KEYS) if (query[k]) next.set(k, query[k]);
-    setQ(query.q ?? "");
     push(next);
   };
 
@@ -68,12 +59,6 @@ export function Console({
         setName("");
         setSaving(false);
       }
-    });
-
-  const onDelete = (id: string) =>
-    startTransition(async () => {
-      const res = await deleteView(id);
-      if (!res.ok) setMsg(res.message);
     });
 
   return (
@@ -142,24 +127,8 @@ export function Console({
         </select>
       </div>
 
+      {/* Saved views render as the tab strip (CasesTabs); the Console just saves the current query. */}
       <div className="flex flex-wrap items-center gap-2">
-        {views.map((v) => (
-          <span key={v.id} className="ec-chip inline-flex items-center gap-1.5">
-            <button type="button" onClick={() => applyView(v.query)} className="hover:text-ec-brass-deep">
-              {v.name}
-            </button>
-            <button
-              type="button"
-              onClick={() => onDelete(v.id)}
-              disabled={pending}
-              aria-label={t("deleteView", { name: v.name })}
-              className="text-ec-ink-3 hover:text-ec-danger"
-            >
-              ×
-            </button>
-          </span>
-        ))}
-
         {saving ? (
           <span className="flex items-center gap-1.5">
             <input

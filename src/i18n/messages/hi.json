@@ -211,6 +211,27 @@
     }
   },
   "cases": {
+    "bulk": {
+      "selected": "{n} चुने गए",
+      "selectAll": "सभी चुनें",
+      "selectRow": "{title} चुनें",
+      "setStage": "चरण बदलें…",
+      "export": "CSV निर्यात करें",
+      "exportFilename": "cases-export.csv",
+      "delete": "हटाएँ",
+      "undo": "पूर्ववत करें",
+      "clear": "चयन साफ़ करें"
+    },
+    "views": {
+      "aria": "सहेजे गए दृश्य",
+      "all": "सभी",
+      "open": "खुले",
+      "soon": "सुनवाई ≤7 दिन",
+      "overdue": "अतिदेय",
+      "noDate": "कोई तिथि नहीं",
+      "deleteView": "दृश्य {name} हटाएँ",
+      "deleteConfirm": "सहेजा गया दृश्य \"{name}\" हटाएँ?"
+    },
     "title": "मुकदमे",
     "subtitle": "CNR से मुकदमा जोड़ें; हम उसका विवरण लाते हैं और रोज़ाना समन्वयन से अद्यतन रखते हैं।",
     "count": "{count, plural, one {# मुकदमा} other {# मुकदमे}}",

@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
   const { data: matters, error } = await supabase
     .from("matter")
     .select("id, cnr, tenant_id, next_hearing_date, last_synced_at, status")
+    .is("deleted_at", null) // service-role bypasses RLS — skip trashed matters (WO-43-W2 soft-delete)
     .not("cnr", "is", null);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

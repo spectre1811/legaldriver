@@ -42,7 +42,7 @@ export async function ingestInbound(
   // Bounded tenant shortlist for classification (same shape as mail ingest).
   const [{ data: clients }, { data: matters }] = await Promise.all([
     admin.from("client").select("id, name").eq("tenant_id", tenantId).limit(100),
-    admin.from("matter").select("id, title, cnr").eq("tenant_id", tenantId).limit(100),
+    admin.from("matter").select("id, title, cnr").eq("tenant_id", tenantId).is("deleted_at", null).limit(100), // skip trashed (WO-43-W2)
   ]);
   const clientList = clients ?? [];
   const matterList = matters ?? [];

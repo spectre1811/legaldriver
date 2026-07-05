@@ -129,7 +129,7 @@ export async function resolveFiling(
   if (!matterId && c.is_legal) {
     const cnr = c.extracted.cnrs?.[0]?.trim().toUpperCase();
     if (cnr) {
-      const { data: found } = await sb.from("matter").select("id").eq("tenant_id", tenantId).eq("cnr", cnr).maybeSingle();
+      const { data: found } = await sb.from("matter").select("id").eq("tenant_id", tenantId).eq("cnr", cnr).is("deleted_at", null).maybeSingle(); // never auto-file to a trashed matter (WO-43-W2)
       if (found) {
         matterId = found.id;
         matterStrong = true; // exact CNR → existing case
@@ -144,7 +144,7 @@ export async function resolveFiling(
         matterStrong = !!data; // a CNR is a deterministic key → strong
       }
     } else if (c.suggested_matter_title) {
-      const { data: found } = await sb.from("matter").select("id").eq("tenant_id", tenantId).ilike("title", c.suggested_matter_title).maybeSingle();
+      const { data: found } = await sb.from("matter").select("id").eq("tenant_id", tenantId).ilike("title", c.suggested_matter_title).is("deleted_at", null).maybeSingle(); // skip trashed (WO-43-W2)
       if (found) {
         matterId = found.id;
         matterStrong = true; // exact title → existing case
@@ -160,7 +160,7 @@ export async function resolveFiling(
     } else if (c.extracted.parties?.length) {
       // Fuzzy-match party names against existing cases' party_names[] (WO-33 W2, match-only — never
       // create a case from a fuzzy party; that needs a CNR or an explicit title).
-      const { data: matters } = await sb.from("matter").select("id, title, party_names").eq("tenant_id", tenantId).limit(500);
+      const { data: matters } = await sb.from("matter").select("id, title, party_names").eq("tenant_id", tenantId).is("deleted_at", null).limit(500); // skip trashed (WO-43-W2)
       const cands = (matters ?? []).flatMap((m) => {
         const names = (m.party_names && m.party_names.length ? m.party_names : [m.title]).filter(Boolean) as string[];
         return names.map((n) => ({ id: m.id as string, name: n }));

@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: parsed.reason ?? "could not recognise a case-details or cause-list page" }, { status: 422, headers: CORS });
     }
     try {
-      const { data: matters } = await admin.from("matter").select("id, title, party_names, detail, next_hearing_date").eq("tenant_id", tenantId);
+      const { data: matters } = await admin.from("matter").select("id, title, party_names, detail, next_hearing_date").eq("tenant_id", tenantId).is("deleted_at", null); // admin bypasses RLS — skip trashed (WO-43-W2)
       const byParty = new Map<string, string>();
       const byReg = new Map<string, string>();
       for (const m of matters ?? []) {
