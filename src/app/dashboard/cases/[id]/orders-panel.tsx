@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { fmtDate } from "@/components/ui";
+import { CourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 
 type Order = { id: string; order_date: string | null; title: string | null; url: string | null; raw: unknown };
@@ -54,7 +54,7 @@ function OrderRow({ o }: { o: Order }) {
     <li className="px-5 py-3 text-sm">
       <div className="flex items-center gap-3">
         <Icon name="notices" className="h-4 w-4 shrink-0 text-ec-ink-3" />
-        <span className="num w-24 shrink-0 text-ec-ink-3">{fmtDate(o.order_date)}</span>
+        <span className="w-24 shrink-0 text-ec-ink-3"><CourtDate value={o.order_date} kind="business" emptyLabel={t("empty.onRecord")} /></span>
         {orderId ? (
           <a href={`/api/court/order-pdf?order=${o.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate font-medium text-ec-brass-deep hover:text-ec-brass">
             <span className="truncate">{o.title}</span>
