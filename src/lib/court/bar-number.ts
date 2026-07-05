@@ -1,19 +1,23 @@
 // WO-42 · Advocate bar-enrollment parsing + State Bar Council → eCourts token map.
 //
-// THE IDENTIFIER LANDSCAPE (researched — web + our own captured eCourts params):
-//   • A State Bar Council ENROLLMENT NUMBER is canonically  STATE / SERIAL / YEAR
-//     (e.g. "MAH/1234/1982", "G/702/2020", "GUJ/11240/2025"). The SERIAL *is* the
-//     "eCourts bar code" — there is no separate third id. The old 3-box form (bar no.
-//     + separate "eCourts bar code" + state) split one identifier into three and was
-//     the source of the founder-reported confusion.
-//   • The AIBE / BCI certificate number is a *separate national* id — irrelevant to
-//     eCourts. We never ask for it.
+// ⭐ CANONICAL FORMAT — founder-ruled 2026-07-05 (exec/LEARNINGS.md ⭐; do NOT re-litigate):
+// a State Bar Council enrollment number is  STATE / SERIAL / YEAR, e.g. **`G/702/2020`**,
+// `G/4732/1999` (Gujarat) or `MAH/1234/1982`. `STATE` = the state bar-council code
+// (**Gujarat = `G`**); `SERIAL` = the ACTUAL bar code/number; `YEAR` = enrollment year (required).
+//   ⚠️ A number like `11240` is NOT a serial — it is an INTERNAL eCourts system/display code
+//   (the value that rides inline in `pet_adv` as `MR YASH J PATEL(11240)`). NEVER search the
+//   roster by it. The eCourts search's `barcode` param is the SERIAL (`702`), not `11240`.
+//   • The AIBE / BCI certificate number is a *separate national* id — irrelevant to eCourts.
 //
-// WHY VALID ADVOCATES GOT "0 CASES": the eCourts bar-code search
-// (`searchByAdvocateName.php`, `checkedSearchByRadioValue:"2"`) REQUIRES four params —
-// `barstatecode` (tier-dependent: "GJ" for High Court, "GJG" for Gujarat district),
-// `barcode` (the serial), **`year` (enrollment year)**, and numeric `state_code` (17).
+// WHY VALID ADVOCATES GOT "0 CASES": the eCourts bar search (`searchByAdvocateName.php`,
+// `checkedSearchByRadioValue:"2"`) REQUIRES four params — `barstatecode` (tier-dependent:
+// "GJ" High Court / "GJG" Gujarat district — the eCourts token, distinct from the enrollment
+// `STATE` letter "G"), `barcode` (the SERIAL), **`year`**, and numeric `state_code` (17).
 // Onboarding never collected the year, so the search fell through to a lossy name match.
+//   NB (founder probe, S-WO41ingest): even with the correct SERIAL + scope + warmed session the
+//   live mobile search still returned 0 for advocates tried — getting a live NON-EMPTY roster is
+//   a SEPARATE open engineering step (scope/session/tier), not a format question. The format is
+//   settled; the empty-state stays honest until live retrieval is proven.
 //
 // This module is PURE (no I/O) so it is unit-tested offline. Token maps are SOURCED,
 // never guessed: only councils whose tokens were packet-verified carry `verified:true`
@@ -21,14 +25,14 @@
 // name search with an honest empty-state (unverified tokens tracked in exec/DATA-GAPS.md).
 
 export interface ParsedBarNumber {
-  stateBar: string; // the state prefix as entered, uppercased (e.g. "GUJ", "MAH", "G")
-  serial: number; // the numeric barcode/serial (e.g. 11240)
+  stateBar: string; // the enrollment STATE code as entered, uppercased (e.g. "G", "MAH")
+  serial: number; // the ACTUAL bar serial (e.g. 702) — NOT an eCourts internal code like 11240
   year: number; // enrollment year — REQUIRED by the eCourts bar search
   canonical: string; // normalized display string "STATE/SERIAL/YEAR"
 }
 
 // STATE (1-4 letters) / SERIAL (1-6 digits) / YEAR (4 digits, 19xx or 20xx).
-// Separators (/, -, space) are optional so we accept "GUJ 11240 2025" and "G/702/2020"
+// Separators (/, -, space) are optional so we accept "G 702 2020" and "G/702/2020"
 // alike; the trailing 4-digit 19|20 year anchors the parse even without separators.
 const BAR_RE = /^([A-Za-z]{1,4})[\/\-\s.]*(\d{1,6})[\/\-\s.]*((?:19|20)\d{2})$/;
 
@@ -45,8 +49,9 @@ export function parseBarNumber(input: string | null | undefined): ParsedBarNumbe
 }
 
 export interface StateBarCouncil {
-  id: string; // stable <select> value + stored state token (e.g. "GJ")
+  id: string; // stable <select> value + stored token, matches the CNR state prefix (e.g. "GJ")
   label: string; // human name of the statutory body
+  statePrefix: string | null; // the ENROLLMENT STATE letter(s) — Gujarat = "G" (⭐ ruling); distinct from the eCourts token
   stateCode: number | null; // eCourts numeric state_code (null until sourced)
   hcBarToken: string | null; // `barstatecode` for a High Court bar search
   dcBarToken: string | null; // `barstatecode` for a District bar search
@@ -63,35 +68,47 @@ export interface StateBarCouncil {
 // verified via the WO-43 MITM recon harness before flipping `verified` → true; the
 // unverified backlog lives in `exec/DATA-GAPS.md`.
 export const STATE_BAR_COUNCILS: StateBarCouncil[] = [
-  { id: "GJ", label: "Gujarat", stateCode: 17, hcBarToken: "GJ", dcBarToken: "GJG", verified: true },
+  // Gujarat: enrollment STATE prefix "G" (⭐ ruling) — distinct from the eCourts tokens GJ/GJG.
+  { id: "GJ", label: "Gujarat", statePrefix: "G", stateCode: 17, hcBarToken: "GJ", dcBarToken: "GJG", verified: true },
   // Unverified — enrollment + year are captured and stored; live eCourts bar search is
   // withheld (honest empty-state) until the tokens are packet-verified (WO-43 → DATA-GAPS).
-  { id: "MH", label: "Maharashtra & Goa", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "DL", label: "Delhi", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "UP", label: "Uttar Pradesh", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "RJ", label: "Rajasthan", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "MP", label: "Madhya Pradesh", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "KA", label: "Karnataka", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "TN", label: "Tamil Nadu & Puducherry", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "TG", label: "Telangana", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "AP", label: "Andhra Pradesh", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "KL", label: "Kerala", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "WB", label: "West Bengal", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "PB", label: "Punjab & Haryana", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "BR", label: "Bihar", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "OD", label: "Odisha", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "AS", label: "Assam, Nagaland, Mizoram, Arunachal, Sikkim", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "JH", label: "Jharkhand", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "CT", label: "Chhattisgarh", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "UK", label: "Uttarakhand", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "HP", label: "Himachal Pradesh", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "JK", label: "Jammu & Kashmir and Ladakh", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
-  { id: "OTHER", label: "Other / not listed", stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  // `statePrefix` stays null for these until each state's enrollment code is sourced (not guessed).
+  { id: "MH", label: "Maharashtra & Goa", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "DL", label: "Delhi", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "UP", label: "Uttar Pradesh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "RJ", label: "Rajasthan", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "MP", label: "Madhya Pradesh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "KA", label: "Karnataka", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "TN", label: "Tamil Nadu & Puducherry", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "TG", label: "Telangana", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "AP", label: "Andhra Pradesh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "KL", label: "Kerala", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "WB", label: "West Bengal", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "PB", label: "Punjab & Haryana", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "BR", label: "Bihar", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "OD", label: "Odisha", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "AS", label: "Assam, Nagaland, Mizoram, Arunachal, Sikkim", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "JH", label: "Jharkhand", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "CT", label: "Chhattisgarh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "UK", label: "Uttarakhand", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "HP", label: "Himachal Pradesh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "JK", label: "Jammu & Kashmir and Ladakh", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
+  { id: "OTHER", label: "Other / not listed", statePrefix: null, stateCode: null, hcBarToken: null, dcBarToken: null, verified: false },
 ];
 
 export function stateBarCouncil(id: string | null | undefined): StateBarCouncil | null {
   if (!id) return null;
   return STATE_BAR_COUNCILS.find((c) => c.id === id.toUpperCase()) ?? null;
+}
+
+// Resolve a council from the ENROLLMENT state prefix (e.g. "G" → Gujarat) — the letters an
+// advocate actually writes, which differ from the eCourts token/id (Gujarat: prefix "G", id
+// "GJ"). Used only as a fallback when the dropdown didn't record the council. Matches on the
+// sourced `statePrefix`, so an unsourced state (statePrefix=null) never false-matches.
+export function councilByStatePrefix(prefix: string | null | undefined): StateBarCouncil | null {
+  if (!prefix) return null;
+  const p = prefix.toUpperCase();
+  return STATE_BAR_COUNCILS.find((c) => c.statePrefix != null && c.statePrefix === p) ?? null;
 }
 
 // The scope of a single eCourts bar search. HC and District differ ONLY in scope:
@@ -143,7 +160,9 @@ export type EmptyRosterReason =
 export function diagnoseEmptyRoster(barNumber: string | null | undefined, councilId: string | null | undefined): EmptyRosterReason {
   const parsed = parseBarNumber(barNumber);
   if (!parsed) return { kind: "unparsed" };
-  const council = stateBarCouncil(councilId) ?? stateBarCouncil(parsed.stateBar);
+  // Prefer the stored council token (dropdown), else infer from the enrollment STATE prefix
+  // (e.g. "G" → Gujarat) — NOT the token id, since the advocate writes "G/…", not "GJ/…".
+  const council = stateBarCouncil(councilId) ?? councilByStatePrefix(parsed.stateBar);
   if (!council || !council.verified) return { kind: "unverified", council: council?.label ?? parsed.stateBar };
   return { kind: "no-results" };
 }
