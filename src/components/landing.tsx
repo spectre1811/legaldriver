@@ -41,7 +41,7 @@ export async function Landing() {
         <div className="ml-auto flex items-center gap-2">
           <LanguageSwitcher className="hidden sm:inline-flex" />
           <Link href="/login" className="rounded-ec-s px-3 py-1.5 text-sm font-medium text-ec-ink-2 hover:bg-ec-paper-3">{t("nav.login")}</Link>
-          <Link href="/login" className="ec-btn ec-btn-ink">{t("nav.startFree")}</Link>
+          <Link href="/login?mode=signup" className="ec-btn ec-btn-ink">{t("nav.startFree")}</Link>
         </div>
       </nav>
 
@@ -54,7 +54,7 @@ export async function Landing() {
           </h1>
           <p className="mt-4 max-w-md text-[17px] leading-relaxed text-ec-ink-2">{t("hero.sub")}</p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Link href="/login" className="ec-btn ec-btn-ink">{t("hero.ctaStart")}</Link>
+            <Link href="/login?mode=signup" className="ec-btn ec-btn-ink">{t("hero.ctaStart")}</Link>
             <a href={links.publicSearch} className="ec-btn ec-btn-ghost">{t("hero.ctaSearch")}</a>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ec-ink-3">
@@ -153,7 +153,7 @@ export async function Landing() {
         )}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {pricing.tiers.map((tier) => {
-            const cta = tier.cta === "talk" ? "/contact" : "/login";
+            const cta = tier.cta === "talk" ? "/contact" : "/login?mode=signup";
             return (
               <div key={tier.id} className={`relative flex flex-col rounded-ec-m border bg-ec-paper p-6 ${tier.hot ? "border-ec-brass shadow-ec-2" : "border-ec-hair"}`}>
                 {tier.hot && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-ec-brass px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">{t("pricing.mostChosen")}</span>}
