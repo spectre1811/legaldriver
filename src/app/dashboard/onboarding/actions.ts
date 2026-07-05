@@ -10,8 +10,14 @@ import { diagnoseEmptyRoster } from "@/lib/court/bar-number";
 export type OnboardingActionResult = { ok: boolean; message: string; runId?: string };
 
 // WO-42: never present a bare "0 cases" as truth — when a roster fetch found nothing,
-// say WHY (missing year / council not live yet / genuinely none) so the advocate isn't
-// misled into thinking they have no cases when the query was simply under-specified.
+// say WHY (missing year / council not live yet / we only searched a subset of courts)
+// so the advocate isn't misled into thinking they have no cases when the query was
+// simply under-specified OR when we didn't search every court they could appear in.
+//
+// IMPORTANT (WO-42 district-coverage caveat): the live bar search today covers the High
+// Court fully but only the MAIN district complex (one `court_code_arr`) — NOT every
+// Gujarat district. So a "0 results" is NOT proof of "no cases" for a district advocate;
+// we must say so, not imply a clean zero. Full district coverage is tracked in BACKLOG §D.
 async function emptyRosterNote(supabase: ReturnType<typeof createClient>, advocateId: string): Promise<string> {
   const { data: adv } = await supabase.from("advocate").select("bar_registration_number, state_code").eq("id", advocateId).maybeSingle();
   const reason = diagnoseEmptyRoster(adv?.bar_registration_number, adv?.state_code);
@@ -21,7 +27,9 @@ async function emptyRosterNote(supabase: ReturnType<typeof createClient>, advoca
     case "unverified":
       return ` No cases were auto-fetched — live eCourts roster search isn't available for the ${reason.council} State Bar Council yet, so we resolved by name only. Add cases by CNR, or check back as more councils go live.`;
     case "no-results":
-      return " No cases matched this enrolment number on eCourts — double-check the state, serial and year, or add cases by CNR.";
+      // We searched the High Court + the main district complex — deliberately NOT claiming
+      // "no cases exist", because we haven't yet searched every Gujarat district.
+      return " No cases found in the High Court or the main district complex for this enrolment number. Wider district coverage is rolling out — meanwhile double-check the serial and year, or add cases directly by CNR.";
   }
 }
 
