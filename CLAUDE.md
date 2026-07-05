@@ -11,7 +11,7 @@ pack at `~/personal/legalmarketplace/plan/exec/`: **`00-OPERATING-PROTOCOL.md`**
 `TRACKER.md` (in-flight), `BACKLOG.md` §A (what to pull next), `KICKOFF.md`, **`LEARNINGS.md`**
 (cross-agent gotchas — read before non-trivial work). Facts/numbers come **only** from
 `plan/context/00-INPUTS.md` — never invent them.
-- **Plan-linked work only** — every task ties to a work order + a `TRACKER.md` row; claim it (🟡 + session id) before editing.
+- **Plan-linked work only** — every task ties to a work order + a `TRACKER.md` row; **claim it (🟡 + session id) BEFORE editing — atomically via `new-wt.sh`** (it stamps the §A row IN-PROGRESS before the worktree exists; the pre-push hook blocks an unclaimed `wt/<WO>`). Never edit before the row is claimed (BP-60/BP-61 collisions).
 - **Founder-gated → STOP + present before merge:** DB migrations, RLS/tenancy, auth, billing/payments.
 - **Gates before "done":** `npm run typecheck` + `lint` + `build` + the relevant `tests/*.ts` — all green. No "done" with red/skipped.
 - **Tests + types + docs in the SAME change;** update `TRACKER.md` + append `SESSION-LOG.md` per wave; promote reusable gotchas to `LEARNINGS.md`.
@@ -100,4 +100,6 @@ the **`automerge`** label (`.github/workflows/automerge.yml`) which merges to `m
 land it.** Self-merging *through a PR* is not "touching `main`" — you still never commit/push/reset `main`
 directly (a `pre-push` hook blocks direct/force pushes; `branch-guardian` alarms on any force-move).
 `plan/exec/integrate.sh` is only a fallback.
-**New clone/worktree, run once:** `git config core.hooksPath .githooks`.
+**New clone/worktree, run once:** `git config core.hooksPath .githooks` (`new-wt.sh` does this for you).
+
+**⭐ Claim-first — ENFORCED (WO-47, 2026-07-05).** `new-wt.sh` **stamps the WO's `TRACKER.md` §A row 🟡 IN-PROGRESS BEFORE it creates the worktree**, and refuses if the WO is already claimed or its `wt/<WO>` branch exists — so you can never start editing an unclaimed WO (the exact BP-60/BP-61 duplicate-work bug). Set `MUKADMA_SESSION=<your session id>` first so the claim records you; back off cleanly with `new-wt.sh unclaim <repo> <WO>`. The **`pre-push` hook is the backstop** — it blocks pushing any `wt/<WO>` whose §A row isn't claimed (`plan/exec/claim.py check-branch`); `CLAIM_SKIP=1 git push …` overrides for a genuine non-WO branch. **Never hand-create a worktree and edit before the row is claimed.**

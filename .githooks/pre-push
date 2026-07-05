@@ -1,8 +1,9 @@
 #!/bin/sh
-# Anti-clobber (INTEGRATION-DEPLOY.md). Rules for pushes to main:
-#  - non-integrator: BLOCKED entirely (push wt/<WO> + open a PR).
-#  - integrator (GIT_INTEGRATOR=1): allowed ONLY as a fast-forward — a non-ff push
-#    (force/clobber) is refused even for the integrator, so no one can orphan commits.
+# Anti-clobber + claim-first (see plan/exec/INTEGRATION-DEPLOY.md + plan/exec/claim.py). Rules:
+#  - push to main : non-integrator BLOCKED; integrator (GIT_INTEGRATOR=1) fast-forward only.
+#  - push wt/<WO> : BLOCKED unless the WO's TRACKER §A row is CLAIMED. Start work via
+#                   exec/new-wt.sh (it stamps the row IN-PROGRESS *before* the worktree exists).
+#                   This is the backstop for the BP-60/BP-61 "edited files before claiming" collisions.
 z=0000000000000000000000000000000000000000
 while read lref lsha rref rsha; do
   case "$rref" in
@@ -16,6 +17,18 @@ while read lref lsha rref rsha; do
         echo "✋ pre-push BLOCKED: non-fast-forward push to 'main' would ORPHAN commits — refused even for the integrator." >&2
         echo "   Merge origin/main into your integration branch first, then push (ff)." >&2
         exit 1
+      fi
+      ;;
+    refs/heads/wt/*)
+      [ "$lsha" = "$z" ] && continue      # a branch DELETE needs no claim
+      exec_dir="${MUKADMA_ROOT:-$HOME/personal}/legalmarketplace/plan/exec"
+      if [ "${CLAIM_SKIP:-}" != "1" ] && command -v python3 >/dev/null 2>&1 && [ -f "$exec_dir/claim.py" ]; then
+        if ! python3 "$exec_dir/claim.py" check-branch "${rref#refs/heads/}" >&2; then
+          echo "✋ pre-push BLOCKED: '${rref#refs/heads/}' is not CLAIMED in TRACKER §A." >&2
+          echo "   Claim FIRST — start work via  exec/new-wt.sh <repo> <WO>  (it stamps the row)," >&2
+          echo "   or:  python3 \$exec_dir/claim.py stamp <WO> <your-session>.   Override (rare, non-WO branch): CLAIM_SKIP=1 git push …" >&2
+          exit 1
+        fi
       fi
       ;;
   esac
