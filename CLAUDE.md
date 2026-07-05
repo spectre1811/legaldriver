@@ -15,10 +15,10 @@ pack at `~/personal/legalmarketplace/plan/exec/`: **`00-OPERATING-PROTOCOL.md`**
 - **Founder-gated → STOP + present before merge:** DB migrations, RLS/tenancy, auth, billing/payments.
 - **Gates before "done":** `npm run typecheck` + `lint` + `build` + the relevant `tests/*.ts` — all green. No "done" with red/skipped.
 - **Tests + types + docs in the SAME change;** update `TRACKER.md` + append `SESSION-LOG.md` per wave; promote reusable gotchas to `LEARNINGS.md`.
-- **Small, reviewed, in waves** — branch per work order (`wt/<id>`); a second agent reviews (author never self-approves).
+- **Small, in waves** — branch per work order (`wt/<id>`). Independent review is advisory (run it for risky/complex changes); **you self-merge your own PR once CI is green — don't wait for a reviewer to land it** (founder rule 2026-07-05). The hard gates are CI + the PR + the serialized merge queue + the `pre-push` hook.
 - **Cheapest capable model** — Sonnet by default; Opus only for schema/RLS/security/product-wide-interface (say so).
 - **No hacks** — diagnose the root cause; never disable a gate, swallow an error, or silently degrade.
-- **Deploy discipline:** `main` **auto-deploys** to Vercel via native git-integration on merge (WO-09 ✅) — do **NOT** run `vercel --prod` manually. **Integration is automated (see Git flow below):** push `wt/<id>` → open a PR → CI green → a reviewer applies the **`automerge`** label → the queue lands it on `main` + it deploys. Env/crons are on the Vercel project.
+- **Deploy discipline:** `main` **auto-deploys** to Vercel via native git-integration on merge (WO-09 ✅) — do **NOT** run `vercel --prod` manually. **Ship your own PR:** push `wt/<id>` → open a PR → CI green → **self-merge** (`gh pr merge <n> --merge`, or self-apply the **`automerge`** label) → it lands on `main` + deploys. **Always self-merge — never wait for a separate reviewer/integrator** (founder rule 2026-07-05). Env/crons are on the Vercel project.
 - **Parallel sessions run concurrently** — touch only your work order's files; edit only your own TRACKER/SESSION-LOG rows; flag shared-config (package.json/CI) changes first.
 
 ## Stack
