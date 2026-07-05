@@ -7,6 +7,7 @@ import { LegalDriverClient } from "@/lib/court/legaldriver";
 
 type Call = { url: string; method: string; apiKey?: string };
 const calls: Call[] = [];
+const allUrls: string[] = []; // BP-11: every URL the client ever hits (never reset) — see the keyed-surface assertion
 let nextBody: unknown = {};
 let nextOk = true;
 
@@ -14,6 +15,7 @@ let nextOk = true;
 (globalThis as unknown as { fetch: unknown }).fetch = async (input: unknown, init?: { method?: string; headers?: Record<string, string> }) => {
   const headers = (init?.headers ?? {}) as Record<string, string>;
   calls.push({ url: String(input), method: init?.method ?? "GET", apiKey: headers["X-API-Key"] });
+  allUrls.push(String(input));
   return { ok: nextOk, json: async () => nextBody } as unknown as Response;
 };
 
@@ -75,6 +77,12 @@ async function main() {
   await client.getCaseByCNR("GJHC240009992026");
   console.warn = origWarn;
   assert(warnings.some((w) => w.includes("schema_version=2.0")), "warns on MAJOR schema mismatch");
+
+  // 6) BP-11 (FG-2): legaldriver is the KEYED consumer — it must ONLY ever hit `/v1/*`
+  // and NEVER the suppression-clean public `/v1/public/*` surface (that's for peshi/SEO/MCP).
+  assert(allUrls.length > 0 && allUrls.every((u) => u.includes("/v1/")), "every request targets the versioned /v1 surface");
+  assert(allUrls.every((u) => !u.includes("/v1/public/")), "keyed client NEVER calls the public /v1/public/* surface");
+  assert(calls.every((c) => c.apiKey === "test-key"), "every keyed request carries the X-API-Key");
 
   console.log(failed === 0 ? "\nWO-01 SYNC CONTRACT: PASS" : `\nWO-01 SYNC CONTRACT: FAIL (${failed})`);
   process.exit(failed === 0 ? 0 : 1);
