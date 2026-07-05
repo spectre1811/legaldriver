@@ -28,8 +28,11 @@ check("rejects implausible year (1800)", parseBarNumber("GUJ/11240/1800") === nu
 // ── State Bar Council map ─────────────────────────────────────────────────────
 const gujarat = stateBarCouncil("GJ");
 check("Gujarat is verified", !!gujarat && gujarat.verified === true);
-check("Gujarat HC token = GJ", gujarat?.hcBarToken === "GJ");
-check("Gujarat district token = GJG", gujarat?.dcBarToken === "GJG");
+// BP-60: capture-verified — barstatecode must be the single-letter "G" for BOTH tiers.
+// "GJ"/"GJG" (the old WO-34 tokens) return 0 cases; regression-guard them here.
+check("Gujarat HC token = G (not GJ)", gujarat?.hcBarToken === "G");
+check("Gujarat district token = G (not GJG)", gujarat?.dcBarToken === "G");
+check("neither Gujarat token is the losing GJ/GJG", gujarat?.hcBarToken !== "GJ" && gujarat?.dcBarToken !== "GJG");
 check("Gujarat state_code = 17", gujarat?.stateCode === 17);
 check("lookup is case-insensitive", stateBarCouncil("gj")?.id === "GJ");
 check("unknown council → null", stateBarCouncil("ZZ") === null);
@@ -39,8 +42,9 @@ check("no unverified council leaks a token (never guessed)", STATE_BAR_COUNCILS.
 // ── barSearchScopes ───────────────────────────────────────────────────────────
 const scopes = barSearchScopes(gujarat!);
 check("verified council → 2 scopes (HC + district)", scopes.length === 2);
-check("HC scope first, uses court_code", scopes[0].tier === "HC" && scopes[0].barState === "GJ" && scopes[0].courtCode === 1 && scopes[0].courtCodeArr === undefined);
-check("district scope uses court_code_arr", scopes[1].tier === "DC" && scopes[1].barState === "GJG" && scopes[1].courtCodeArr === "1,5");
+check("HC scope first, uses court_code", scopes[0].tier === "HC" && scopes[0].barState === "G" && scopes[0].courtCode === 1 && scopes[0].courtCodeArr === undefined);
+check("district scope uses court_code_arr", scopes[1].tier === "DC" && scopes[1].barState === "G" && scopes[1].courtCodeArr === "1,5");
+check("both live scopes send barstatecode=G", scopes.every((s) => s.barState === "G"));
 check("every scope carries numeric state_code", scopes.every((s) => s.stateCode === 17));
 check("unverified council → no live scopes", barSearchScopes(stateBarCouncil("MH")!).length === 0);
 
