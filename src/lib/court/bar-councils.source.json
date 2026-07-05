@@ -27,7 +27,7 @@
     {
       "id": "MH",
       "alpha": null,
-      "label": "Maharashtra & Goa",
+      "label": "Maharashtra & Goa (incl. Dadra & Nagar Haveli, Daman & Diu)",
       "ecourts_state_code": null,
       "hc_bar_token": null,
       "dc_bar_token": null,
@@ -126,7 +126,7 @@
     {
       "id": "KL",
       "alpha": null,
-      "label": "Kerala",
+      "label": "Kerala (incl. Lakshadweep)",
       "ecourts_state_code": null,
       "hc_bar_token": null,
       "dc_bar_token": null,
@@ -137,7 +137,7 @@
     {
       "id": "WB",
       "alpha": null,
-      "label": "West Bengal",
+      "label": "West Bengal (incl. Andaman & Nicobar Islands)",
       "ecourts_state_code": null,
       "hc_bar_token": null,
       "dc_bar_token": null,
@@ -148,7 +148,7 @@
     {
       "id": "PB",
       "alpha": null,
-      "label": "Punjab & Haryana",
+      "label": "Punjab, Haryana & Chandigarh",
       "ecourts_state_code": null,
       "hc_bar_token": null,
       "dc_bar_token": null,

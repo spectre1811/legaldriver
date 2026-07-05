@@ -67,7 +67,9 @@ check("unverified council → no live scopes", barSearchScopes(stateBarCouncil("
 check("bare display code → 'unparsed'", diagnoseEmptyRoster("11240", "GJ").kind === "unparsed");
 check("valid enrolment, unverified council → 'unverified'", diagnoseEmptyRoster("MAH/1234/1982", "MH").kind === "unverified");
 const unv = diagnoseEmptyRoster("MAH/1234/1982", "MH");
-check("unverified names the council", unv.kind === "unverified" && unv.council === "Maharashtra & Goa");
+// Label text is platform-data (may carry UT hints e.g. "… (incl. Daman & Diu)") — assert it
+// NAMES the council, not an exact string, so a registry label tweak doesn't break this test.
+check("unverified names the council", unv.kind === "unverified" && (unv.council ?? "").includes("Maharashtra"));
 check("valid enrolment + verified council → 'no-results'", diagnoseEmptyRoster("G/702/2020", "GJ").kind === "no-results");
 check("council inferred from enrolment PREFIX 'G' when token absent", diagnoseEmptyRoster("G/702/2020", null).kind === "no-results");
 
