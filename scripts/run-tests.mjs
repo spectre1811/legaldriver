@@ -21,6 +21,7 @@ const TSX = "tsx@4.23.0";
 const OFFLINE = [
   "advocate_state_guard",
   "ai_gateway",
+  "bp17_court_kit",
   "design_tokens_smoke",
   "i18n_coverage",
   "timeline_sort",
