@@ -76,5 +76,14 @@ for (const tier of ["HIGH", "DISTRICT"] as const) {
 }
 ok("no known acronym is title-cased into a fake word", mangled === 0);
 
+// ── BP-05 W2: the master is now sourced from the platform /v1/dictionaries contract ──
+// (display-ready, title-cased) rather than the raw ALL-CAPS CSV. `smartTitleCase` is idempotent,
+// so resolution output is unchanged either way — but guard that we stay on the contract form so a
+// regression back to per-app raw derivation is caught.
+ok("W2: master is contract-sourced (title-cased, not raw ALL-CAPS)",
+  CASE_TYPE_MASTER.ANY["CR A"] === "Criminal Appeal" && CASE_TYPE_MASTER.DISTRICT["CC"] === "Criminal Case");
+ok("W2: no master value is a raw ALL-CAPS run (would mean the CSV leaked back in)",
+  !Object.values(CASE_TYPE_MASTER.ANY).some((v) => /[A-Z]{4,}/.test(v) && v === v.toUpperCase()));
+
 console.log(failed === 0 ? "\nPASS" : `\nFAIL (${failed})`);
 process.exit(failed === 0 ? 0 : 1);
