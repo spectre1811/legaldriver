@@ -657,7 +657,9 @@
       "features": "Features",
       "pricing": "Pricing",
       "login": "Login",
-      "startFree": "Start free"
+      "startFree": "Start free",
+      "products": "Products",
+      "search": "Free search"
     },
     "hero": {
       "overline": "आज की पेशी, कल की तैयारी।",
@@ -668,7 +670,8 @@
       "ctaPricing": "See pricing",
       "note": "No card. No clerk calls.",
       "overline2": "आज की पेशी",
-      "miniFoot": "Tomorrow's list reaches WhatsApp before 8 pm"
+      "miniFoot": "Tomorrow's list reaches WhatsApp before 8 pm",
+      "ctaSearch": "Search a case — free"
     },
     "proof": {
       "hc": "Gujarat High Court",
@@ -707,7 +710,8 @@
             "digest": "Daily WhatsApp digest",
             "clients": "10 clients & matters",
             "search": "Search 18.6M judgments"
-          }
+          },
+          "summary": "Get started and track your practice at no cost."
         },
         "basic": {
           "name": "Basic",
@@ -716,7 +720,8 @@
             "alerts": "Per-case WhatsApp alerts",
             "invoicing": "Invoicing + UPI collection",
             "credits": "100 AI credits / mo"
-          }
+          },
+          "summary": "For a growing solo practice."
         },
         "pro": {
           "name": "Pro",
@@ -725,7 +730,8 @@
             "credits": "500 AI credits / mo",
             "portal": "Client portal, unlimited seats",
             "marketplace": "Marketplace inquiry priority"
-          }
+          },
+          "summary": "For busy advocates who want the lot."
         },
         "enterprise": {
           "name": "Enterprise",
@@ -734,14 +740,17 @@
             "audit": "Audit logs & custom rules",
             "pooled": "Pooled AI credits",
             "support": "Dedicated support, SLA"
-          }
+          },
+          "summary": "For firms and chambers, with SSO and dedicated support."
         }
       },
       "cta": {
         "start": "Start free",
         "choose": "Choose plan",
         "talk": "Talk to us"
-      }
+      },
+      "soon": "Plans and limits are being finalised — full pricing goes live shortly. Every tier starts with a free way in.",
+      "tbd": "Coming soon"
     },
     "footer": {
       "tagline": "Making Indian litigation legible — for the advocates who run it and the citizens who live through it.",
@@ -765,7 +774,32 @@
           "c": "Data corrections"
         }
       },
-      "compliance": "Case data is sourced from public court records and refreshed daily. Mukadma is practice software and a neutral directory; it does not rank, recommend or endorse advocates. © 2026 Mukadma."
+      "compliance": "Case data is sourced from public court records and refreshed daily. Mukadma is practice software and a neutral directory; it does not rank, recommend or endorse advocates. © 2026 Mukadma.",
+      "publicSearch": "Free public case search",
+      "grievance": {
+        "label": "Grievance Officer",
+        "pending": "being appointed — reach us via Contact until then"
+      }
+    },
+    "family": {
+      "eyebrow": "one workflow, three ways in",
+      "title": "Everything a case touches — one Mukadma.",
+      "sub": "Run a whole practice, look up a single case, or just get tomorrow's board on WhatsApp. Same court data, three ways to use it.",
+      "app": {
+        "title": "Mukadma for advocates",
+        "body": "Track every case by CNR, keep your cause list and diary current, and bill clients — your entire practice in one place.",
+        "cta": "Start free"
+      },
+      "search": {
+        "title": "Free public case search",
+        "body": "Look up any case, judge or advocate across 18.6M judgments — no account, no cost. Built on the same court record.",
+        "cta": "Search a case"
+      },
+      "alerts": {
+        "title": "WhatsApp alerts",
+        "body": "Tomorrow's cause list — court, item number, stage — reaches your WhatsApp before 8 pm. Add your cases once; the alerts keep coming.",
+        "cta": "Get alerts"
+      }
     }
   },
   "pages": {
