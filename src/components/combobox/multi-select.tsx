@@ -78,9 +78,9 @@ export function MultiSelect<T extends string | number = string>({
       key={String(o.value)}
       value={o.value}
       disabled={o.disabled}
-      className="group flex cursor-pointer select-none items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink data-[focus]:bg-brand-50 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40"
+      className="group flex cursor-pointer select-none items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink data-[focus]:bg-ec-brass-tint data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40"
     >
-      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-line group-data-[selected]:border-brand-600 group-data-[selected]:bg-brand-600">
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-line group-data-[selected]:border-ec-brass group-data-[selected]:bg-ec-brass">
         <Icon name="check" className="h-3 w-3 text-white opacity-0 group-data-[selected]:opacity-100" />
       </span>
       <span className="min-w-0">
@@ -104,13 +104,13 @@ export function MultiSelect<T extends string | number = string>({
         {selectedOptions.length > 0 && (
           <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
             {visible.map((o) => (
-              <span key={String(o.value)} className="chip bg-brand-50 text-brand-700">
+              <span key={String(o.value)} className="chip bg-ec-brass-tint text-ec-brass-deep">
                 <span className="max-w-[10rem] truncate">{o.label}</span>
                 <button
                   type="button"
                   aria-label={t("remove", { label: o.label })}
                   onClick={() => removeAt(o.value)}
-                  className="rounded-full p-0.5 hover:bg-brand-100"
+                  className="rounded-full p-0.5 hover:bg-ec-brass/20"
                 >
                   <Icon name="close" className="h-3 w-3" />
                 </button>
@@ -161,7 +161,7 @@ export function MultiSelect<T extends string | number = string>({
               <button
                 type="button"
                 onClick={() => onChange(allOn ? [] : selectAllValues(options))}
-                className="mb-1 w-full rounded-lg px-3 py-1.5 text-left text-xs font-medium text-brand-700 hover:bg-brand-50"
+                className="mb-1 w-full rounded-lg px-3 py-1.5 text-left text-xs font-medium text-ec-brass-deep hover:bg-ec-brass-tint"
               >
                 {allOn ? t("deselectAll") : t("selectAll")}
               </button>
@@ -169,7 +169,7 @@ export function MultiSelect<T extends string | number = string>({
             {loading ? (
               <div className="px-3 py-2 text-sm text-ink-faint">{loadingText ?? t("loading")}</div>
             ) : error ? (
-              <div className="px-3 py-2 text-sm text-rose-600">{t("error")}</div>
+              <div className="px-3 py-2 text-sm text-ec-danger">{t("error")}</div>
             ) : shown.length === 0 ? (
               <div className="px-3 py-2 text-sm text-ink-faint">{emptyText ?? t("noResults")}</div>
             ) : (
