@@ -22,7 +22,7 @@ import { getTimeline, type TimelineEvent } from "@/lib/court/legaldriver-api";
 import { expandCaseType, cleanPurpose } from "@/lib/court/code-labels";
 import { CourtField, MaskedName } from "@/components/court";
 import { isMaskedName, maskTitle } from "@/lib/court/mask";
-import { selectCaseDetailRows, type CaseDetailFieldId } from "@/lib/court/case-detail-fields";
+import { selectCaseDetailRows, extractCaseDetailValues, type CaseDetailFieldId } from "@/lib/court/case-detail-fields";
 
 type Party = { name?: string; side?: string; advocate?: string; masked?: boolean };
 
@@ -108,24 +108,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   // localized labels. `sourced` fields are what the eCourts mobile API actually carries → an empty
   // one is truthfully "not on record"; not-sourced empties are dropped (never a false "not on
   // record"); a pending case's decision date reads "not applicable".
-  const detailValues: Partial<Record<CaseDetailFieldId, string | null>> = {
-    registrationNo: str(detail.registrationNumber),
-    filingNo: str(detail.filingNumber),
-    registrationDate: detail.registrationDate ? fmtDate(str(detail.registrationDate)) : null,
-    filingDate: detail.filingDate ? fmtDate(str(detail.filingDate)) : null,
-    firstHearingDate: detail.first_hearing_date ? fmtDate(str(detail.first_hearing_date)) : null,
-    district: str(detail.district),
-    state: str(detail.state),
-    category: str(detail.category),
-    subCategory: str(detail.sub_category),
-    benchType: str(detail.bench_type),
-    judicialBranch: str(detail.judicial_branch),
-    subordinateCourt: str(detail.subordinate_court),
-    filedBy: str(detail.filed_by),
-    decidedOn: detail.decisionDate ? fmtDate(str(detail.decisionDate)) : null,
-    firNo: detail.firNo ? `${str(detail.firNo)}${detail.firYear ? `/${str(detail.firYear)}` : ""}` : null,
-    policeStation: str(detail.policeStation),
-  };
+  // WO-54: the raw detail→field mapping is now the shared `extractCaseDetailValues` (so the Cases-list
+  // detail drawer renders identical fields). The page keeps its legacy `fmtDate` presentation.
+  const detailValues = extractCaseDetailValues(detail, (r) => fmtDate(r));
   const detailLabels: Record<CaseDetailFieldId, string> = {
     registrationNo: t("detail.registrationNo"), filingNo: t("detail.filingNo"),
     registrationDate: t("detail.registrationDate"), filingDate: t("detail.filingDate"),

@@ -249,6 +249,25 @@
     "diary": "डायरी",
     "past": "बीत गई",
     "noDate": "तारीख़ नहीं",
+    "urgency": {
+      "today": "आज",
+      "tomorrow": "कल",
+      "soon": "{n} दिन में",
+      "overdue": "{n} दिन विलंबित"
+    },
+    "drawer": {
+      "close": "बंद करें",
+      "openAria": "{title} का विवरण",
+      "identifiers": "पहचान",
+      "caseNo": "मुकदमा सं.",
+      "caseType": "मुकदमे का प्रकार",
+      "petitioner": "याचिकाकर्ता",
+      "respondent": "प्रतिवादी",
+      "advocates": "अधिवक्ता",
+      "judges": "न्यायाधीश",
+      "viewFull": "पूरा मुकदमा देखें",
+      "provenance": "स्रोत {source} · अद्यतन {ago}।"
+    },
     "delete": "मुकदमा हटाएँ",
     "empty": {
       "title": "अभी कोई मुकदमा नहीं",

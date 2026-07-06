@@ -13,9 +13,12 @@ import { Icon } from "@/components/icons";
 import { fmtDate, fmtAgo } from "@/components/ui";
 import { cleanPurpose } from "@/lib/court/code-labels";
 import { maskTitle } from "@/lib/court/mask";
+import { CourtChip } from "@/components/court";
 import {
   useSelection, useUndo, BulkBar, bulkBtn, RowCheckbox, SelectAllCheckbox, UndoToast,
 } from "@/components/selection";
+import { CaseDetailDrawer, UrgencyChip } from "@/components/cases/case-detail-drawer";
+import { hearingUrgency, courtCaseNo } from "./cases-row";
 import { parseSort, toCasesCsv } from "./cases-query";
 import type { MatterRow } from "./cases-query";
 import {
@@ -37,6 +40,8 @@ export function CasesTable({ rows, today, stages }: { rows: MatterRow[]; today: 
   const sel = useSelection(orderedIds);
   const { undo, show: showUndo, dismiss: dismissUndo } = useUndo();
   const [busy, setBusy] = useState(false);
+  // WO-54 W3: the row's "peek" — a right-side drawer with the fuller record (progressive disclosure).
+  const [drawerRow, setDrawerRow] = useState<MatterRow | null>(null);
   // Prior stages captured by the last bulk stage-change, so its Undo can restore per-row values.
   const [stageUndo, setStageUndo] = useState<StageSnapshot[] | null>(null);
 
@@ -119,6 +124,7 @@ export function CasesTable({ rows, today, stages }: { rows: MatterRow[]; today: 
               <SortHeader label={t("th.status")} col="status" active={active} onSort={setSort} className="hidden sm:table-cell" />
               <SortHeader label={t("th.next")} col="next" active={active} onSort={setSort} />
               <th className="ec-label hidden px-5 py-3 lg:table-cell">{t("th.source")}</th>
+              <th className="w-10 px-3 py-3" aria-hidden="true" />
             </tr>
           </thead>
           <tbody>
@@ -126,6 +132,11 @@ export function CasesTable({ rows, today, stages }: { rows: MatterRow[]; today: 
               const eff = m.next_hearing_override ?? m.next_hearing_date;
               const overdue = eff != null && eff < today;
               const checked = sel.isSelected(m.id);
+              // WO-54 at-a-glance signals — all from stored fields (no fabrication).
+              const detail = (m.detail ?? {}) as Record<string, unknown>;
+              const caseNo = courtCaseNo(m.case_type, detail);
+              const tier = typeof detail.tier === "string" && detail.tier.trim() ? detail.tier.trim() : null;
+              const urg = hearingUrgency(eff, today);
               return (
                 <tr key={m.id} className={`ec-row group border-b border-ec-hair last:border-0 ${checked ? "bg-ec-brass-tint" : ""}`}>
                   <td className="px-5 py-3.5">
@@ -135,7 +146,13 @@ export function CasesTable({ rows, today, stages }: { rows: MatterRow[]; today: 
                     <Link href={`/dashboard/cases/${m.id}`} className="font-display font-medium text-ec-ink group-hover:text-ec-brass-deep">
                       {maskTitle(m.title, tcd("maskedTitle"))}
                     </Link>
-                    {m.cnr && <div className="num mt-0.5 text-[0.7rem] text-ec-ink-3">{m.cnr}</div>}
+                    {(caseNo || tier || m.cnr) && (
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[0.7rem] text-ec-ink-3">
+                        {caseNo && <span className="num text-ec-ink-2">{caseNo}</span>}
+                        {tier && <CourtChip tone="neutral">{tier}</CourtChip>}
+                        {m.cnr && <span className="num">{m.cnr}</span>}
+                      </div>
+                    )}
                   </td>
                   <td className="hidden px-5 py-3.5 text-ec-ink-2 lg:table-cell">{m.client?.name ?? <span className="text-ec-ink-3">—</span>}</td>
                   <td className="hidden px-5 py-3.5 text-ec-ink-2 md:table-cell">{m.court ?? "—"}</td>
@@ -144,9 +161,25 @@ export function CasesTable({ rows, today, stages }: { rows: MatterRow[]; today: 
                     {m.status ? <span className={`ec-chip ${m.status === "disposed" ? "" : "ec-chip-hot"}`}>{st(m.status)}</span> : <span className="text-ec-ink-3">—</span>}
                   </td>
                   <td className="num px-5 py-3.5">
-                    {eff ? <span className={overdue ? "font-medium text-ec-danger" : "text-ec-ink-2"}>{fmtDate(eff)}{m.next_hearing_override ? ` · ${t("diary")}` : ""}{overdue ? ` · ${t("past")}` : ""}</span> : <span className="text-xs text-ec-ink-3">{t("noDate")}</span>}
+                    {eff ? (
+                      <span className="inline-flex flex-wrap items-center gap-1.5">
+                        <span className={overdue ? "font-medium text-ec-danger" : "text-ec-ink-2"}>{fmtDate(eff)}</span>
+                        {m.next_hearing_override && <span className="text-[0.7rem] text-ec-ink-3">{t("diary")}</span>}
+                        <UrgencyChip urg={urg} t={t} />
+                      </span>
+                    ) : <span className="text-xs text-ec-ink-3">{t("noDate")}</span>}
                   </td>
                   <td className="num hidden px-5 py-3.5 text-xs text-ec-ink-3 lg:table-cell">{m.source ?? "—"} · {fmtAgo(m.last_synced_at)}</td>
+                  <td className="px-3 py-3.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setDrawerRow(m)}
+                      aria-label={t("drawer.openAria", { title: m.title })}
+                      className="rounded-full p-1.5 text-ec-ink-3 opacity-70 transition hover:bg-ec-hair hover:text-ec-brass-deep focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ec-brass group-hover:opacity-100"
+                    >
+                      <Icon name="eye" className="h-4 w-4" />
+                    </button>
+                  </td>
                 </tr>
               );
             })}
@@ -171,6 +204,9 @@ export function CasesTable({ rows, today, stages }: { rows: MatterRow[]; today: 
       </BulkBar>
 
       <UndoToast undo={undo} actionLabel={t("bulk.undo")} onUndo={onUndo} />
+
+      {/* WO-54 W3 · detail drawer — renders from the already-fetched row (no second query). */}
+      <CaseDetailDrawer row={drawerRow} today={today} onClose={() => setDrawerRow(null)} />
     </>
   );
 }

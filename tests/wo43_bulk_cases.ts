@@ -32,7 +32,8 @@ ok("bad direction defaults to asc (not injected)", parseSort("title.sideways")?.
 const row = (o: Partial<MatterRow>): MatterRow => ({
   id: "x", cnr: null, title: "", court: null, case_type: null, stage: null, status: null,
   next_hearing_date: null, next_hearing_override: null, last_synced_at: null, source: null,
-  party_names: null, client: null, ...o,
+  party_names: null, advocate_names: null, act_names: null, judge_names: null, detail: null,
+  client: null, ...o,
 });
 
 const csv = toCasesCsv([

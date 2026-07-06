@@ -32,11 +32,18 @@ export interface MatterRow {
   last_synced_at: string | null;
   source: string | null;
   party_names: string[] | null;
+  // WO-54: surfaced on the row (tier/case-no) + rendered in the detail drawer without a second fetch.
+  // `detail` is the eCourts jsonb (tier, district, coram, registration/filing nos, FIR, regional…);
+  // the name arrays already back the facet filters. Bounded by pagination — no extra query, no N+1.
+  advocate_names: string[] | null;
+  act_names: string[] | null;
+  judge_names: string[] | null;
+  detail: Record<string, unknown> | null;
   client: { name?: string } | null;
 }
 
 const SELECT =
-  "id, cnr, title, court, case_type, stage, status, next_hearing_date, next_hearing_override, last_synced_at, source, party_names, client:client_id(name)";
+  "id, cnr, title, court, case_type, stage, status, next_hearing_date, next_hearing_override, last_synced_at, source, party_names, advocate_names, act_names, judge_names, detail, client:client_id(name)";
 
 function isoDay(d: Date) {
   return d.toISOString().slice(0, 10);

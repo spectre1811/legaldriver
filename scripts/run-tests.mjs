@@ -57,6 +57,7 @@ const OFFLINE = [
   "bp57_advocate_scopes",
   "wo53_pricing_gate",
   "wo56_pagination_adoption",
+  "wo54_cases_row_depth",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the
