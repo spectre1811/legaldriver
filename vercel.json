@@ -7,6 +7,6 @@
     { "path": "/api/cron/gmail", "schedule": "0 4 * * *" },
     { "path": "/api/cron/audit-refile", "schedule": "0 5 * * *" },
     { "path": "/api/cron/onboarding-drain", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/ld-api-canary", "schedule": "0 */6 * * *" }
+    { "path": "/api/cron/ld-api-canary", "schedule": "0 7 * * *" }
   ]
 }
