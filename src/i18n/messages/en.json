@@ -1565,6 +1565,14 @@
     "running": "Running…",
     "timeout": "Still assembling your practice — this can take a moment on a large roster. We'll keep going in the background; anything already found is saved.",
     "retry": "Try again",
+    "runDetails": "Run details",
+    "practice": {
+      "title": "Your practice",
+      "count": "{n, plural, one {# case on file} other {# cases on file}}",
+      "viewAll": "View all in Cases",
+      "nextHearing": "Next hearing {date}",
+      "noHearing": "No hearing scheduled"
+    },
     "stage": {
       "queued": "Starting…",
       "causelist": "Reading your cause list",
