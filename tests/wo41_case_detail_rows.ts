@@ -64,11 +64,24 @@ ok("manual has no empty decidedOn (empty in fixture)", byId(manual, "decidedOn")
 const withCategory = selectCaseDetailRows({ ...founderCase, category: "Bail Application" }, { isCourtSourced: true, isDisposed: false });
 ok("populated not-sourced category is shown", byId(withCategory, "category")?.value === "Bail Application");
 
-// 8. Taxonomy invariant: the six classification fields are the not-sourced set; the rest are sourced.
+// 7b. WO-69: the new mobile-sourced-but-partial fields (category tri-level / subordinate court /
+// nature of disposal) show when present and are omitted when empty (never a false "not on record").
+const wo69 = selectCaseDetailRows(
+  { ...founderCase, category: "CRIMINAL MISC", subSubCategory: "REGULAR BAIL",
+    subordinateCourt: "DISTRICT COURT, MAHESANA", natureOfDisposal: "ALLOWED" },
+  { isCourtSourced: true, isDisposed: true });
+ok("WO-69 subSubCategory shown when present", byId(wo69, "subSubCategory")?.value === "REGULAR BAIL");
+ok("WO-69 subordinate court shown when present", byId(wo69, "subordinateCourt")?.value === "DISTRICT COURT, MAHESANA");
+ok("WO-69 nature of disposal shown when present", byId(wo69, "natureOfDisposal")?.value === "ALLOWED");
+ok("WO-69 empty natureOfDisposal omitted (partial-coverage, not a false claim)",
+  byId(court, "natureOfDisposal") === undefined);
+
+// 8. Taxonomy invariant: the classification + partial-coverage fields are the not-sourced set.
 const notSourced = CASE_DETAIL_FIELDS.filter((f) => !f.sourced).map((f) => f.id).sort();
-ok("exactly the 6 classification fields are not-sourced",
+ok("exactly the classification + WO-69 partial fields are not-sourced",
   JSON.stringify(notSourced) === JSON.stringify(
-    ["benchType", "category", "filedBy", "judicialBranch", "subCategory", "subordinateCourt"]));
+    ["benchType", "category", "filedBy", "judicialBranch", "natureOfDisposal",
+     "subCategory", "subSubCategory", "subordinateCourt"]));
 
 console.log(failed ? `\n${failed} FAILED` : "\nALL PASS");
 process.exit(failed ? 1 : 0);

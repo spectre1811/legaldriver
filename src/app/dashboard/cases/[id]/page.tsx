@@ -116,9 +116,11 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     registrationDate: t("detail.registrationDate"), filingDate: t("detail.filingDate"),
     firstHearingDate: t("detail.firstHearingDate"), district: t("detail.district"),
     state: t("detail.state"), category: t("detail.category"), subCategory: t("detail.subCategory"),
+    subSubCategory: t("detail.subSubCategory"),
     benchType: t("detail.benchType"), judicialBranch: t("detail.judicialBranch"),
     subordinateCourt: t("detail.subordinateCourt"), filedBy: t("detail.filedBy"),
-    decidedOn: t("detail.decidedOn"), firNo: t("detail.firNo"), policeStation: t("detail.policeStation"),
+    decidedOn: t("detail.decidedOn"), natureOfDisposal: t("detail.natureOfDisposal"),
+    firNo: t("detail.firNo"), policeStation: t("detail.policeStation"),
   };
   const caseDetails = selectCaseDetailRows(detailValues, { isCourtSourced, isDisposed }).map((r) => ({
     label: detailLabels[r.id],
@@ -152,6 +154,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const effectiveTimeline = timelineEvents.length ? liveTimeline : dbTimeline;
 
   const processes = (Array.isArray(detail.processes) ? detail.processes : []) as { process_id?: string; process_date?: string; title?: string }[];
+  // WO-69: eCourts filings + registry objections (distinct from the app's own document store).
+  const courtFilings = (Array.isArray(detail.documents) ? detail.documents : []) as { docNo?: number | string; document?: string | null; filedBy?: string | null; advocate?: string | null; filedDate?: string | null }[];
+  const objections = (Array.isArray(detail.objections) ? detail.objections : []) as { srNo?: string | null; objection?: string | null; scrutinyDate?: string | null; receiptDate?: string | null; complianceDate?: string | null }[];
   const advocateBars = (detail.advocateBars ?? {}) as Record<string, string>;
   const regional = (detail.regional ?? {}) as { pet_name?: string | null; res_name?: string | null };
 
@@ -563,6 +568,43 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 <Icon name="alert" className="h-4 w-4 shrink-0 text-ec-warn" />
                 <span className="num w-24 shrink-0 text-ec-ink-3">{fmtDate(p.process_date)}</span>
                 <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{p.title ?? t("processes.fallback")}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {courtFilings.length > 0 && (
+        <div className="ec-card">
+          <div className="border-b border-ec-hair px-5 py-4">
+            <h2 className="font-display text-base font-medium">{t("courtFilings.title")} <span className="text-ec-ink-3">({courtFilings.length})</span></h2>
+            <p className="mt-0.5 text-xs text-ec-ink-3">{t("courtFilings.help")}</p>
+          </div>
+          <ul className="divide-y divide-ec-hair">
+            {courtFilings.map((f, i) => (
+              <li key={f.docNo ?? i} className="flex items-center gap-3 px-5 py-3 text-sm">
+                <Icon name="documents" className="h-4 w-4 shrink-0 text-ec-ink-3" />
+                <span className="num w-24 shrink-0 text-ec-ink-3">{fmtDate(f.filedDate)}</span>
+                <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{f.document ?? "—"}</span>
+                {f.advocate && <span className="shrink-0 truncate text-ec-ink-3">{f.advocate}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {objections.length > 0 && (
+        <div className="ec-card">
+          <div className="border-b border-ec-hair px-5 py-4">
+            <h2 className="font-display text-base font-medium">{t("objections.title")} <span className="text-ec-ink-3">({objections.length})</span></h2>
+            <p className="mt-0.5 text-xs text-ec-ink-3">{t("objections.help")}</p>
+          </div>
+          <ul className="divide-y divide-ec-hair">
+            {objections.map((o, i) => (
+              <li key={o.srNo ?? i} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0 text-ec-ink-3" />
+                <span className="num w-24 shrink-0 text-ec-ink-3">{fmtDate(o.scrutinyDate)}</span>
+                <span className="min-w-0 flex-1 text-ec-ink">{o.objection ?? t("objections.raised")}{o.complianceDate ? ` · ${t("objections.complyBy")} ${fmtDate(o.complianceDate)}` : ""}</span>
               </li>
             ))}
           </ul>

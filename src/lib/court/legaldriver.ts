@@ -36,6 +36,13 @@ type RawCase = {
   filing_number?: string | null; filing_date?: string | null; first_hearing_date?: string | null;
   registration_date?: string | null; district?: string | null; state?: string | null;
   coram?: string | null; fir_no?: string | null; fir_year?: number | null; police_station?: string | null; source?: string;
+  // WO-69: rich case-detail blocks eCourts sends as composite strings (parsed platform-side). FIR is
+  // above; these are the remaining sections the case page was missing.
+  disposal_nature?: string | null;
+  category?: { category?: string | null; sub_category?: string | null; sub_sub_category?: string | null } | null;
+  subordinate_court?: { decision_date?: string | null; case_number?: string | null; court?: string | null; district?: string | null } | null;
+  documents?: { doc_no?: number | string; document?: string | null; filed_by?: string | null; advocate?: string | null; filed_date?: string | null }[];
+  objections?: { sr_no?: string | null; objection?: string | null; scrutiny_date?: string | null; receipt_date?: string | null; compliance_date?: string | null }[];
   regional?: Record<string, string | null>;
   parties?: { side?: string; name?: string; name_regional?: string | null }[];
   advocates?: { name?: string; bar_id?: string | null; side?: string }[];
@@ -209,6 +216,26 @@ export class LegalDriverClient implements CourtDataClient {
         registrationDate: r.registration_date, district: r.district, state: r.state,
         decisionDate: r.decision_date, coram,
         firNo: r.fir_no, firYear: r.fir_year, policeStation: r.police_station,
+        // WO-69: nature-of-disposal + category (tri-level) + subordinate court + court filings +
+        // objections. Category/subordinate feed the info grid (show-if-present, `sourced:false` so a
+        // civil case with none is silently omitted, never a false "not on record"); documents +
+        // objections render as their own on-record sections.
+        disposal_nature: r.disposal_nature ?? null,
+        category: r.category?.category ?? null,
+        sub_category: r.category?.sub_category ?? null,
+        sub_sub_category: r.category?.sub_sub_category ?? null,
+        subordinate_court: r.subordinate_court
+          ? ([r.subordinate_court.court, r.subordinate_court.case_number].filter(Boolean).map((x) => decode(x)).join(" · ") || null)
+          : null,
+        subordinateCourt: r.subordinate_court ?? null,
+        documents: (r.documents ?? []).map((d) => ({
+          docNo: d.doc_no, document: decode(d.document) || null, filedBy: decode(d.filed_by) || null,
+          advocate: decode(d.advocate) || null, filedDate: d.filed_date ?? null,
+        })),
+        objections: (r.objections ?? []).map((o) => ({
+          srNo: o.sr_no ?? null, objection: decode(o.objection) || null,
+          scrutinyDate: o.scrutiny_date ?? null, receiptDate: o.receipt_date ?? null, complianceDate: o.compliance_date ?? null,
+        })),
         regional: r.regional ?? {}, processes: r.processes ?? [], advocateBars: advBars,
         liveSource: r._source, fetchedMs: r._fetched_ms,
       },

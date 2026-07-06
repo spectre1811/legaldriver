@@ -60,9 +60,11 @@ export function CaseDetailDrawer({
     registrationDate: tcd("detail.registrationDate"), filingDate: tcd("detail.filingDate"),
     firstHearingDate: tcd("detail.firstHearingDate"), district: tcd("detail.district"),
     state: tcd("detail.state"), category: tcd("detail.category"), subCategory: tcd("detail.subCategory"),
+    subSubCategory: tcd("detail.subSubCategory"),
     benchType: tcd("detail.benchType"), judicialBranch: tcd("detail.judicialBranch"),
     subordinateCourt: tcd("detail.subordinateCourt"), filedBy: tcd("detail.filedBy"),
-    decidedOn: tcd("detail.decidedOn"), firNo: tcd("detail.firNo"), policeStation: tcd("detail.policeStation"),
+    decidedOn: tcd("detail.decidedOn"), natureOfDisposal: tcd("detail.natureOfDisposal"),
+    firNo: tcd("detail.firNo"), policeStation: tcd("detail.policeStation"),
   };
   const detailRows = selectCaseDetailRows(values, { isCourtSourced, isDisposed });
 
