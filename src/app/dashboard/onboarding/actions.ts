@@ -18,13 +18,14 @@ export type OnboardingActionResult = { ok: boolean; message: string; runId?: str
 // client). The UI polls this while `startOnboarding` runs so the user sees real progress, not a spinner.
 export type OnboardingStatus = {
   stage: string; status: string; counts: Record<string, number>; message: string | null; updatedAt: string;
+  cursor: Record<string, unknown> | null; // WO-61: carries `fetch_pending` for the "still gathering" state
 } | null;
 
 export async function getOnboardingStatus(advocateId: string): Promise<OnboardingStatus> {
   const supabase = createClient();
   const { data } = await supabase
     .from("onboarding_run")
-    .select("stage, status, counts, message, updated_at")
+    .select("stage, status, counts, message, updated_at, cursor")
     .eq("advocate_id", advocateId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -34,6 +35,7 @@ export async function getOnboardingStatus(advocateId: string): Promise<Onboardin
     stage: data.stage, status: data.status,
     counts: (data.counts ?? {}) as Record<string, number>,
     message: data.message, updatedAt: data.updated_at,
+    cursor: (data.cursor ?? null) as Record<string, unknown> | null,
   };
 }
 

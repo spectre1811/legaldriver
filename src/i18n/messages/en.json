@@ -1562,6 +1562,29 @@
     },
     "rerun": "Re-run",
     "run": "Run onboarding",
+    "running": "Running…",
+    "timeout": "Still assembling your practice — this can take a moment on a large roster. We'll keep going in the background; anything already found is saved.",
+    "retry": "Try again",
+    "stage": {
+      "queued": "Starting…",
+      "causelist": "Reading your cause list",
+      "fetch": "Fetching your cases",
+      "enrich": "Enriching case details",
+      "deadlines": "Proposing deadlines",
+      "inbox": "Filing emails",
+      "closed": "Finding closed cases",
+      "summaries": "Queuing AI briefings",
+      "done": "Done",
+      "error": "Something went wrong",
+      "working": "Working…"
+    },
+    "background": {
+      "title": "Still gathering your full roster",
+      "body": "We're pulling your complete case history from the court record in the background. You can leave this page — new cases file automatically as they arrive.",
+      "check": "Check for new cases",
+      "checking": "Checking…",
+      "arrived": "{n, plural, one {# new case just filed} other {# new cases just filed}}"
+    },
     "stat": {
       "causelist": "Cause-list",
       "casesFetched": "Cases fetched",

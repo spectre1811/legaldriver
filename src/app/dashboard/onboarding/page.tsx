@@ -4,8 +4,9 @@ import { PageHeader, Card, Badge, Stat, fmtDate } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
-import { RunOnboardingButton, DeleteOnboardingButton } from "./onboarding-ui";
+import { RunOnboardingButton, DeleteOnboardingButton, OnboardingBackground } from "./onboarding-ui";
 import { AdvocateForm } from "../settings/advocate-form";
+import { isGathering } from "@/lib/services/onboarding/progress";
 
 export const dynamic = "force-dynamic";
 // BP-71: onboarding runs multi-stage server-side (fetch → enrich per-CNR → …). Give the server action
@@ -22,7 +23,7 @@ export default async function OnboardingPage() {
   const [{ data: advocates }, { data: runs }] = tenantId
     ? await Promise.all([
         supabase.from("advocate").select("id, name, bar_registration_number, state_code").order("created_at", { ascending: true }),
-        supabase.from("onboarding_run").select("id, advocate_id, stage, status, counts, message, updated_at").order("updated_at", { ascending: false }).limit(10),
+        supabase.from("onboarding_run").select("id, advocate_id, stage, status, counts, message, updated_at, cursor").order("updated_at", { ascending: false }).limit(10),
       ])
     : [{ data: [] }, { data: [] }];
 
@@ -68,6 +69,12 @@ export default async function OnboardingPage() {
                   </div>
                   {run && (
                     <>
+                      {run.status === "error" && run.message && (
+                        <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">{run.message}</p>
+                      )}
+                      {isGathering({ cursor: run.cursor as Record<string, unknown> | null, updatedAt: run.updated_at }, Date.now()) && (
+                        <OnboardingBackground advocateId={a.id} />
+                      )}
                       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-9">
                         <Stat label={t("stat.causelist")} value={String(c.causelist ?? 0)} />
                         <Stat label={t("stat.casesFetched")} value={String(c.cases_fetched ?? 0)} />
@@ -79,7 +86,7 @@ export default async function OnboardingPage() {
                         <Stat label={t("stat.closedFound")} value={String(c.closed_found ?? 0)} />
                         <Stat label={t("stat.briefingsQueued")} value={String(c.summaries_queued ?? 0)} />
                       </div>
-                      <p className="mt-2 text-xs text-ink-faint">{t("lastRun", { date: fmtDate(run.updated_at) })}{run.message ? ` · ${run.message}` : ""}</p>
+                      <p className="mt-2 text-xs text-ink-faint">{t("lastRun", { date: fmtDate(run.updated_at) })}{run.status !== "error" && run.message ? ` · ${run.message}` : ""}</p>
                     </>
                   )}
                 </li>
