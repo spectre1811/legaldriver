@@ -56,6 +56,7 @@ const OFFLINE = [
   "wo46_bar_councils",
   "bp57_advocate_scopes",
   "wo53_pricing_gate",
+  "wo55_combobox",
   "wo56_pagination_adoption",
 ];
 
