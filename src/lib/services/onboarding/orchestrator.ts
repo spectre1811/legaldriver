@@ -110,25 +110,32 @@ async function stepFetch(ctx: StageCtx, counts: OnboardingCounts, cursor: Record
   const { supabase, tenantId, adv } = ctx;
   let fetchNote: string | null = null;
   const nextCursor: Record<string, unknown> = { ...cursor };
-  const { enabledAdvocateProviders, fetchAdvocateCasesWithMeta, startLiveAdvocateRefresh } = await import("@/lib/court/advocate-cases");
+  const { enabledAdvocateProviders, fetchAdvocateCasesWithMeta, startLiveAdvocateRefresh, onboardingFetchNote } = await import("@/lib/court/advocate-cases");
   const advQ = { name: adv.name, barNumber: adv.bar_registration_number, stateCode: adv.state_code };
-  if (enabledAdvocateProviders().length === 0) {
-    // Honest, actionable — never imply the advocate simply has no cases when NO source is configured.
-    fetchNote = "Court-data source isn’t configured here, so cases can’t be auto-fetched (an administrator must set LD_API_KEY). Your cause list and add-by-CNR still work.";
+  const providersConfigured = enabledAdvocateProviders().length > 0;
+  if (!providersConfigured) {
+    fetchNote = onboardingFetchNote({ providersConfigured: false, casesFetched: counts.cases_fetched, livePending: false, errors: [] });
   } else {
     try {
       const { cases, errors } = await fetchAdvocateCasesWithMeta({ ...advQ, live: true });
       counts.cases_fetched += await seedFetchedMatters(supabase, tenantId, cases);
+      // If the warehouse read got a 401/403, the key is bad — the async refresh POST would only 401 too.
+      // Don't fire it, and never let the UI say "still fetching…" for a hard auth failure (WO-64).
+      const authFailed = errors.some((e) => e.kind === "auth");
       // Fire the LIVE roster refresh (async, off-box fleet — never bursts the box EIP). It returns no
       // cases now; the fleet ingests the full roster into our warehouse, harvested below/on poll.
-      const livePending = startLiveAdvocateRefresh({ ...advQ, live: true });
-      if (livePending) { nextCursor.fetch_pending = true; nextCursor.fetch_started_at = new Date().toISOString(); }
-      if (errors.length) {
-        // Do NOT swallow (senior-engineer reflex §12): name the sources that failed (source names only, no PII).
-        fetchNote = `Some court-data sources didn’t respond (${errors.map((e) => e.source).join(", ")}) — we’ll keep trying in the background.`;
-      } else if (counts.cases_fetched === 0 && livePending) {
-        fetchNote = "Fetching your cases from the court record — this can take a moment; they’ll appear as they arrive.";
+      const livePending = !authFailed && startLiveAdvocateRefresh({ ...advQ, live: true });
+      if (livePending) {
+        nextCursor.fetch_pending = true;
+        nextCursor.fetch_started_at = new Date().toISOString();
+      } else if (authFailed) {
+        // Auth is broken → the fleet refresh can't be in flight. Clear any stale pending flag from a
+        // prior run so the "still gathering…" UI (isGathering) stops lying alongside the honest note.
+        delete nextCursor.fetch_pending;
+        delete nextCursor.fetch_started_at;
       }
+      // Pick the honest note from the classified outcome (auth vs source-down vs still-fetching vs quiet).
+      fetchNote = onboardingFetchNote({ providersConfigured: true, casesFetched: counts.cases_fetched, livePending, errors });
     } catch (e) {
       fetchNote = `Couldn’t auto-fetch cases (${e instanceof Error ? e.message : "unexpected error"}). Your cause list and add-by-CNR still work.`;
     }

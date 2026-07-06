@@ -24,6 +24,7 @@ const OFFLINE = [
   "bp73_onboarding_drain",
   "wo49_warehouse_barid",
   "wo58_onboarding_honesty",
+  "wo64_auth_honesty",
   "bp24_cases_pii_honest",
   "bp26_case_summary_confidence",
   "ai_gateway",
