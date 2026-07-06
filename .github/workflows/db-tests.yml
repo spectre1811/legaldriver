@@ -1,23 +1,25 @@
 name: DB Tests
 
-# WO-11 · DB/RLS integration tests — DORMANT until the founder adds a test env.
-# These tests hit a LIVE Supabase (service-role) and read a `.env` file, so they
-# can't run on placeholder creds. Deliberately a SEPARATE workflow (name != "CI")
-# so it never feeds the automerge queue's workflow_run / "build" check — it stays
-# advisory until promoted. When empty, the job self-skips and passes (green no-op).
+# WO-67 · DB/RLS integration tests on a SELF-CONTAINED, EPHEMERAL local Supabase.
 #
-# TO ACTIVATE (founder): create a THROWAWAY test Supabase project (never prod),
-# apply supabase/migrations, seed a demo tenant, then add one repo secret
-# `TEST_ENV_FILE` = the full contents of a working `.env` (must include
-# NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
-# CRON_SECRET, REPLY_TO). See docs/CI.md.
+# History (the bug this fixes): this job used to point at a long-lived, hand-seeded
+# REMOTE throwaway Supabase (the `TEST_ENV_FILE` secret). Nothing ever re-migrated
+# that project — so when WO-54 added `matter.tier` to prod, the SEPARATE test DB
+# drifted: `matter.tier` was ABSENT there and every DB test died at `p1_smoke`
+# ("Could not find the 'tier' column of 'matter'") before reaching its RLS/tenancy
+# assertions. The tenant-isolation smoke tests silently stopped protecting anyone.
 #
-# Deliberately NOT triggered on `pull_request`: a fast dormant PR check could, in a
-# runner-contention window, register green before the CI `build` check exists and
-# nudge automerge's label-path fallback (`build.length ? build : all-checks`) into
-# merging early. Running post-merge + on demand avoids that with no automerge change.
-# To PR-gate these once activated, add `pull_request` back AND a branch-protection
-# required check (founder decision) — see docs/CI.md.
+# Fix (drift-proof, secret-free): bring up an EPHEMERAL Supabase on the runner with
+# `supabase start`. It applies ALL of `supabase/migrations/*` from a CLEAN STATE on
+# every run (drift is impossible) with a fresh PostgREST schema cache, then we seed
+# the demo tenant and run the DB group. No `TEST_ENV_FILE`, no remote DB to rot.
+# `config.toml` is generated in-CI by `supabase init` so it always matches the
+# installed CLI (no committed-config-vs-CLI schema drift; the migrations are the
+# only committed contract). See docs/CI.md.
+#
+# Advisory / post-merge: runs on push to `main` + on demand — NOT on `pull_request`,
+# so it never feeds the automerge queue's `build` check. Promote to a required check
+# via branch protection to gate merges once desired (docs/CI.md).
 
 on:
   push:
@@ -33,23 +35,41 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - id: env
-        # Secrets aren't readable in a job-level `if:`, so detect presence in a step.
-        env:
-          TEST_ENV_FILE: ${{ secrets.TEST_ENV_FILE }}
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start ephemeral Supabase (clean migrate + fresh schema cache every run)
         run: |
-          if [ -n "$TEST_ENV_FILE" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.env.outputs.present == 'false'
-        run: echo "::notice::DB tests dormant — set the TEST_ENV_FILE secret to activate (see docs/CI.md)."
-      - if: steps.env.outputs.present == 'true'
-        env:
-          TEST_ENV_FILE: ${{ secrets.TEST_ENV_FILE }}
-        run: printf '%s' "$TEST_ENV_FILE" > .env
-      - if: steps.env.outputs.present == 'true'
+          # Generate config.toml against the installed CLI (nothing committed to drift).
+          [ -f supabase/config.toml ] || supabase init < /dev/null
+          # `supabase start` applies every supabase/migrations/*.sql from empty, then
+          # brings up Postgres + Auth (GoTrue) + PostgREST with a fresh schema cache.
+          supabase start
+
+      - name: Point .env at the local stack
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            # p1_smoke signs in with demo-pass-1234 — seed the demo user with THAT
+            # password (seed-demo.ts's default is peshi-demo-1234, which would 401).
+            echo "DEMO_PASSWORD=demo-pass-1234"
+            echo "CRON_SECRET=ci-cron-secret"
+            echo "REPLY_TO=ci@example.test"
+          } > .env
+
+      - name: Install deps
         run: npm ci
-      - if: steps.env.outputs.present == 'true'
+
+      - name: Seed the demo tenant + user
+        run: npx --yes tsx@4.23.0 scripts/seed-demo.ts
+
+      - name: DB / RLS / tenancy tests
         run: node scripts/run-tests.mjs db
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup || true
