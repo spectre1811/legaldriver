@@ -64,6 +64,13 @@ whole class of drift: the **next** additive migration can't re-break it (no manu
 `config.toml` is generated in-CI by `supabase init` so it always matches the installed CLI (the
 committed contract is the migrations, not a config file that could drift against the CLI version).
 
+Two local-stack parity steps the job handles (they differ from hosted Supabase): **(1)** it renames
+the WO-41 grandfathered duplicate-version migration (`0031_profile_notification_prefs` → `0037…`) in
+the ephemeral checkout only — the local migrator keys `schema_migrations` by version and rejects the
+dup that hosted (Management-API-applied) tolerates; **(2)** it grants `anon`/`authenticated`/
+`service_role` on `public` after migrate — hosted auto-grants these, local does not, and without them
+the service_role gets `permission denied` (which would also mask RLS in the isolation tests).
+
 **To run the exact same suite locally** (needs Docker):
 ```
 supabase start
