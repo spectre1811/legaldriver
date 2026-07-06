@@ -9,6 +9,7 @@ import { Console, type SavedView } from "./console";
 import { CasesTable } from "./cases-table";
 import { CasesTabs } from "./cases-tabs";
 import { CasesTierTabs } from "./cases-tier-tabs";
+import { CasesAttention } from "./cases-attention";
 import { Pagination } from "@/components/pagination";
 import { fetchCasesPage, fetchViewCounts, fetchTierCounts, type CasesFilters } from "./cases-query";
 import { parseDensity, DENSITY_COOKIE } from "./density";
@@ -26,8 +27,8 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const supabase = createClient();
   const t = await getTranslations("cases");
   const tc = await getTranslations("common");
-  const { q, tier, court, case_type, stage, status, advocate, act, next, sort } = searchParams;
-  const filters: CasesFilters = { q, tier, court, case_type, stage, status, advocate, act, next, sort };
+  const { q, tier, court, case_type, stage, status, statuses, advocate, act, next, sort } = searchParams;
+  const filters: CasesFilters = { q, tier, court, case_type, stage, status, statuses, advocate, act, next, sort };
   const page = parsePage(searchParams.page);
   const per = clampPerPage(searchParams.per);
   const today = isoDay(new Date());
@@ -39,7 +40,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   // to replace the 1000-row scan is the founder-gated follow-up.
   const [{ rows: matters, total }, { data: facetRows }, { data: viewRows }, viewCounts, tierCounts] = await Promise.all([
     fetchCasesPage(supabase, filters, page, per),
-    supabase.from("matter").select("court, case_type, stage, advocate_names, act_names").limit(1000),
+    supabase.from("matter").select("court, case_type, stage, status, advocate_names, act_names").limit(1000),
     supabase
       .from("saved_view")
       .select("id, name, query")
@@ -49,11 +50,14 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
     fetchTierCounts(supabase),
   ]);
 
-  const distinct = (key: "court" | "case_type" | "stage") =>
+  const distinct = (key: "court" | "case_type" | "stage" | "status") =>
     [...new Set((facetRows ?? []).map((r) => r[key]).filter(Boolean) as string[])].sort();
   const courts = distinct("court");
   const caseTypes = distinct("case_type");
   const stages = distinct("stage");
+  // Real distinct status strings as stored ("Pending"/"Disposed"/…) — the "according to cases"
+  // status filter (WO-59), separate from the Open/Disposed semantic tabs.
+  const statusValues = distinct("status");
 
   const distinctArray = (key: "advocate_names" | "act_names") =>
     [...new Set((facetRows ?? []).flatMap((r) => (r[key] ?? []) as string[]).filter(Boolean))].sort();
@@ -64,11 +68,11 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
     id: v.id,
     name: v.name,
     query: (v.query && typeof v.query === "object" && !Array.isArray(v.query)
-      ? (v.query as Record<string, string>)
+      ? (v.query as Record<string, string | string[]>)
       : {}),
   }));
 
-  const activeFilters = Boolean(q || court || case_type || stage || status || advocate || act || next || sort);
+  const activeFilters = Boolean(q || tier || court || case_type || stage || status || statuses || advocate || act || next || sort);
 
   return (
     <div className="space-y-6">
@@ -79,13 +83,15 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
 
       <CourtProviderBanner />
 
+      <CasesAttention counts={viewCounts} />
+
       <div className="ec-card p-5">
         {/* ?track=<CNR> — the login deep link (WO-50/WO-51): prefill + auto-submit
             the add-by-CNR form so "track this case" survives the auth round-trip. */}
         <AddCaseForm autoCnr={sanitizeTrack(searchParams.track) ?? undefined} />
       </div>
 
-      <Console courts={courts} caseTypes={caseTypes} stages={stages} advocates={advocates} acts={acts} />
+      <Console courts={courts} caseTypes={caseTypes} stages={stages} statuses={statusValues} advocates={advocates} acts={acts} />
 
       {/* WO-54 W2: court-tier segmentation (primary axis) sits above the saved-view tabs. */}
       <div className="space-y-2.5">

@@ -65,6 +65,7 @@ const OFFLINE = [
   "wo54_tier",
   "wo54_tier_tabs",
   "wo54_density",
+  "wo59_status_semantics",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the

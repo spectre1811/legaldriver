@@ -4,24 +4,28 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
-import { Combobox, type ComboOption, RENDER_ALL_MAX } from "@/components/combobox";
+import { Combobox, MultiSelect, type ComboOption, RENDER_ALL_MAX } from "@/components/combobox";
 import { saveView } from "./view-actions";
 
-// Query keys the console owns. Used to (re)build the URL and to snapshot a saved view.
-const KEYS = ["q", "court", "case_type", "stage", "status", "advocate", "act", "next", "sort"] as const;
+// Query keys the console owns. Used to (re)build the URL and to snapshot a saved view. The facet
+// filters are MULTI (repeated params); `status` (semantic tab), `q`, `next`, `sort` are single.
+const KEYS = ["q", "court", "case_type", "stage", "status", "statuses", "advocate", "act", "next", "sort"] as const;
+const MULTI = new Set<string>(["court", "case_type", "stage", "statuses", "advocate", "act"]);
 
-export type SavedView = { id: string; name: string; query: Record<string, string> };
+export type SavedView = { id: string; name: string; query: Record<string, string | string[]> };
 
 export function Console({
   courts,
   caseTypes,
   stages,
+  statuses,
   advocates,
   acts,
 }: {
   courts: string[];
   caseTypes: string[];
   stages: string[];
+  statuses: string[];
   advocates: string[];
   acts: string[];
 }) {
@@ -36,22 +40,28 @@ export function Console({
 
   const push = (next: URLSearchParams) => router.push(next.toString() ? `/dashboard/cases?${next.toString()}` : "/dashboard/cases");
 
+  // A changed filter always returns to page 1 (the old page number is meaningless against a new set).
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(sp.toString());
     if (value) next.set(key, value);
     else next.delete(key);
+    next.delete("page");
     push(next);
   };
 
-  // A searchable single-select filter → sets/clears the URL param. `null` (cleared) = "all"/default.
+  // Multi-valued facet → repeated params (`?court=A&court=B`), comma-safe for values with commas.
+  const setMulti = (key: string, values: string[]) => {
+    const next = new URLSearchParams(sp.toString());
+    next.delete(key);
+    next.delete("page");
+    for (const v of values) next.append(key, v);
+    push(next);
+  };
+
   const asOptions = (values: string[]): ComboOption[] => values.map((v) => ({ value: v, label: v }));
-  const filter = (
-    key: string,
-    label: string,
-    placeholder: string,
-    options: ComboOption[],
-    width: string,
-  ) => (
+
+  // A searchable single-select filter (hearing window, sort) → sets/clears one URL param.
+  const single = (key: string, label: string, placeholder: string, options: ComboOption[], width: string) => (
     <Combobox
       label={label}
       placeholder={placeholder}
@@ -63,10 +73,34 @@ export function Console({
     />
   );
 
+  // A searchable multi-select facet (WO-59) → repeated URL params, select-all + chips + search.
+  const multi = (key: string, label: string, placeholder: string, options: ComboOption[], width: string, selectAll = true) => (
+    <MultiSelect
+      label={label}
+      placeholder={placeholder}
+      options={options}
+      value={sp.getAll(key)}
+      onChange={(v) => setMulti(key, v)}
+      showSelectAll={selectAll}
+      virtualized={options.length > RENDER_ALL_MAX}
+      className={width}
+    />
+  );
+
   const currentQuery = () => {
-    const out: Record<string, string> = {};
+    const out: Record<string, string | string[]> = {};
     for (const k of KEYS) {
-      const v = k === "q" ? q.trim() : sp.get(k);
+      if (k === "q") {
+        const v = q.trim();
+        if (v) out.q = v;
+        continue;
+      }
+      if (MULTI.has(k)) {
+        const vs = sp.getAll(k);
+        if (vs.length) out[k] = vs.length === 1 ? vs[0] : vs;
+        continue;
+      }
+      const v = sp.get(k);
       if (v) out[k] = v;
     }
     return out;
@@ -84,43 +118,42 @@ export function Console({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setParam("q", q.trim());
-          }}
-          className="relative min-w-[14rem] flex-1"
-        >
-          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ec-ink-3" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t("searchPlaceholder")}
-            className="input pl-9"
-            aria-label={t("searchAria")}
-          />
-        </form>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          setParam("q", q.trim());
+        }}
+        className="relative"
+      >
+        <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ec-ink-3" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t("searchPlaceholder")}
+          className="input pl-9"
+          aria-label={t("searchAria")}
+        />
+      </form>
 
-        {filter("court", t("court"), t("allCourts"), asOptions(courts), "min-w-[10rem] max-w-[13rem]")}
-        {filter("case_type", t("caseType"), t("allTypes"), asOptions(caseTypes), "min-w-[10rem] max-w-[12rem]")}
-        {filter("stage", t("stage"), t("allStages"), asOptions(stages), "min-w-[10rem] max-w-[12rem]")}
-        {filter("status", t("status"), t("allStatuses"), [
-          { value: "open", label: t("open") },
-          { value: "disposed", label: t("disposed") },
-        ], "min-w-[9rem] max-w-[11rem]")}
-        {filter("advocate", t("advocate"), t("allAdvocates"), asOptions(advocates), "min-w-[10rem] max-w-[13rem]")}
-        {filter("act", t("act"), t("allActs"), asOptions(acts), "min-w-[10rem] max-w-[13rem]")}
-        {filter("next", t("nextHearing"), t("anyHearing"), [
+      {/* Modern filter bar (WO-62 adopted the combobox; WO-59 upgrades the facets to multi-select +
+          adds the real-status control). Facet filters are multi; hearing-window + sort stay single. */}
+      <div data-testid="cases-filter-bar" className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {multi("court", t("court"), t("allCourts"), asOptions(courts), "")}
+        {multi("case_type", t("caseType"), t("allTypes"), asOptions(caseTypes), "")}
+        {multi("stage", t("stage"), t("allStages"), asOptions(stages), "")}
+        {multi("statuses", t("status"), t("allStatuses"), asOptions(statuses), "")}
+        {multi("advocate", t("advocate"), t("allAdvocates"), asOptions(advocates), "", false)}
+        {multi("act", t("act"), t("allActs"), asOptions(acts), "", false)}
+        {single("next", t("nextHearing"), t("anyHearing"), [
           { value: "overdue", label: t("overdue") },
           { value: "7d", label: t("next7") },
           { value: "30d", label: t("next30") },
           { value: "none", label: t("noHearing") },
-        ], "min-w-[9rem] max-w-[12rem]")}
-        {filter("sort", t("sort"), t("sortNext"), [
+        ], "")}
+        {single("sort", t("sort"), t("sortNext"), [
           { value: "created_at", label: t("sortRecent") },
           { value: "title", label: t("sortTitle") },
-        ], "min-w-[10rem] max-w-[12rem]")}
+        ], "")}
       </div>
 
       {/* Saved views render as the tab strip (CasesTabs); the Console just saves the current query. */}

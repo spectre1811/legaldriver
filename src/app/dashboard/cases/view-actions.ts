@@ -8,7 +8,8 @@ export type ViewResult = { ok: boolean; message: string };
 
 // Persist the current console filter/sort state as a named saved view (kind='cases').
 // RLS scopes reads/writes to the tenant; we still set tenant_id explicitly.
-export async function saveView(name: string, query: Record<string, string>): Promise<ViewResult> {
+// `query` values are string OR string[] (WO-59: multi-select facets snapshot every picked value).
+export async function saveView(name: string, query: Record<string, string | string[]>): Promise<ViewResult> {
   const trimmed = name.trim();
   if (!trimmed) return { ok: false, message: "Give the view a name." };
 

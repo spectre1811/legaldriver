@@ -226,11 +226,21 @@
       "aria": "Saved views",
       "all": "All",
       "open": "Open",
+      "disposed": "Disposed",
       "soon": "Hearing ≤7d",
       "overdue": "Overdue",
       "noDate": "No date",
       "deleteView": "Delete view {name}",
       "deleteConfirm": "Delete the saved view \"{name}\"?"
+    },
+    "attention": {
+      "title": "Needs attention",
+      "allClear": "You're all caught up — nothing overdue or due this week.",
+      "showingAll": "Showing these — tap to clear",
+      "filterAria": "Show {label} cases",
+      "overdue": { "label": "Overdue", "hint": "Reschedule or follow up" },
+      "soon": { "label": "Due this week", "hint": "Prepare & confirm the hearing" },
+      "noDate": { "label": "No hearing date", "hint": "Set a diary date" }
     },
     "title": "Cases",
     "subtitle": "Add a case by CNR; we fetch its details and keep it fresh on a nightly sync.",
