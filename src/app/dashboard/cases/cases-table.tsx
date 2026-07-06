@@ -19,6 +19,7 @@ import {
 } from "@/components/selection";
 import { CaseDetailDrawer, UrgencyChip } from "@/components/cases/case-detail-drawer";
 import { hearingUrgency, courtCaseNo } from "./cases-row";
+import { DENSITIES, DENSITY_COOKIE, type Density } from "./density";
 import { parseSort, toCasesCsv } from "./cases-query";
 import type { MatterRow } from "./cases-query";
 import {
@@ -28,7 +29,14 @@ import {
 // A sortable column: `key` is the `sort` param key resolved by cases-query's allowlist.
 type SortKey = "title" | "court" | "stage" | "status" | "next";
 
-export function CasesTable({ rows, today, stages }: { rows: MatterRow[]; today: string; stages: string[] }) {
+export function CasesTable({
+  rows, today, stages, initialDensity = "cozy",
+}: {
+  rows: MatterRow[];
+  today: string;
+  stages: string[];
+  initialDensity?: Density;
+}) {
   const t = useTranslations("cases");
   const te = useTranslations("enum");
   const tcd = useTranslations("caseDetail");
@@ -40,6 +48,15 @@ export function CasesTable({ rows, today, stages }: { rows: MatterRow[]; today: 
   const sel = useSelection(orderedIds);
   const { undo, show: showUndo, dismiss: dismissUndo } = useUndo();
   const [busy, setBusy] = useState(false);
+  // WO-54 W4: per-user list density. Seeded from the server cookie (no flash); applied instantly on
+  // change (client state) and persisted to the cookie so the next visit renders it server-side.
+  const [density, setDensity] = useState<Density>(initialDensity);
+  const changeDensity = (d: Density) => {
+    setDensity(d);
+    if (typeof document !== "undefined") {
+      document.cookie = `${DENSITY_COOKIE}=${d}; path=/; max-age=31536000; SameSite=Lax`;
+    }
+  };
   // WO-54 W3: the row's "peek" — a right-side drawer with the fuller record (progressive disclosure).
   const [drawerRow, setDrawerRow] = useState<MatterRow | null>(null);
   // Prior stages captured by the last bulk stage-change, so its Undo can restore per-row values.
@@ -106,8 +123,28 @@ export function CasesTable({ rows, today, stages }: { rows: MatterRow[]; today: 
 
   return (
     <>
+      {/* WO-54 W4 · density control — a segmented toggle; instant + persisted, no save button. */}
+      <div className="mb-2.5 flex items-center justify-end">
+        <div className="inline-flex items-center gap-0.5 rounded-full border border-ec-hair-strong p-0.5" role="group" aria-label={t("density.aria")}>
+          {DENSITIES.map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => changeDensity(d)}
+              aria-pressed={density === d}
+              title={t(`density.${d}`)}
+              className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                density === d ? "bg-ec-ink text-paper" : "text-ec-ink-3 hover:text-ec-ink"
+              }`}
+            >
+              {t(`density.${d}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="ec-card overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="cases-table w-full text-sm" data-density={density}>
           <thead>
             <tr className="border-b border-ec-hair-strong text-left">
               <th className="w-10 px-5 py-3">
@@ -147,7 +184,7 @@ export function CasesTable({ rows, today, stages }: { rows: MatterRow[]; today: 
                       {maskTitle(m.title, tcd("maskedTitle"))}
                     </Link>
                     {(caseNo || tier || m.cnr) && (
-                      <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[0.7rem] text-ec-ink-3">
+                      <div className="cases-subline mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[0.7rem] text-ec-ink-3">
                         {caseNo && <span className="num text-ec-ink-2">{caseNo}</span>}
                         {tier && <CourtChip tone="neutral">{tier}</CourtChip>}
                         {m.cnr && <span className="num">{m.cnr}</span>}

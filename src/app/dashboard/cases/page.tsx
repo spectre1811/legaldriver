@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
@@ -10,6 +11,7 @@ import { CasesTabs } from "./cases-tabs";
 import { CasesTierTabs } from "./cases-tier-tabs";
 import { Pagination } from "@/components/pagination";
 import { fetchCasesPage, fetchViewCounts, fetchTierCounts, type CasesFilters } from "./cases-query";
+import { parseDensity, DENSITY_COOKIE } from "./density";
 import { parsePage, clampPerPage } from "@/lib/paginate";
 import { maskTitle } from "@/lib/court/mask";
 import { sanitizeTrack } from "@/lib/auth/redirects";
@@ -29,6 +31,8 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const page = parsePage(searchParams.page);
   const per = clampPerPage(searchParams.per);
   const today = isoDay(new Date());
+  // WO-54 W4: per-user list density from the cookie → correct first paint (no hydration flash).
+  const density = parseDensity(cookies().get(DENSITY_COOKIE)?.value);
 
   // Numbered-page pagination (WO-39): fetch just this page's slice + an exact total count.
   // Was `.limit(500)` silent truncation. Facets/views still read the wider set — a facet RPC
@@ -100,7 +104,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
             )}
           </div>
 
-          <CasesTable rows={matters} today={today} stages={stages} />
+          <CasesTable rows={matters} today={today} stages={stages} initialDensity={density} />
 
           <Pagination page={page} perPage={per} total={total} />
         </>

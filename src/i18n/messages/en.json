@@ -249,6 +249,12 @@
     "diary": "diary",
     "past": "past",
     "noDate": "no date",
+    "density": {
+      "aria": "Row density",
+      "comfortable": "Comfortable",
+      "cozy": "Cozy",
+      "compact": "Compact"
+    },
     "tierTabs": {
       "aria": "Filter by court tier",
       "label": "Court",
