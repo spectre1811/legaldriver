@@ -2079,5 +2079,17 @@
     "role": "role",
     "roleAria": "Court role, not an individual advocate",
     "roleNote": "“{name}” is a court role (e.g. Public Prosecutor / Government Pleader), not an individual advocate. These State-counsel entries are aggregated across many cases."
+  },
+  "combobox": {
+    "search": "Search…",
+    "clear": "Clear",
+    "clearAll": "Clear all",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "loading": "Searching…",
+    "error": "Could not load options",
+    "noResults": "No matches",
+    "remove": "Remove {label}",
+    "more": "+{count} more"
   }
 }

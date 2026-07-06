@@ -23,6 +23,7 @@
     "@anthropic-ai/sdk": "^0.106.0",
     "@aws-sdk/client-athena": "^3.1075.0",
     "@aws-sdk/client-s3": "^3.1075.0",
+    "@headlessui/react": "^2.2.10",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.45.4",
     "@xenova/transformers": "^2.17.2",
@@ -37,12 +38,12 @@
     "unpdf": "^1.6.2"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@playwright/test": "^1.61.1",
     "@types/node": "^20.16.11",
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
-    "@axe-core/playwright": "^4.10.1",
-    "@playwright/test": "^1.61.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.15",
