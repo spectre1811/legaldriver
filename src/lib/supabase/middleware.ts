@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/db/database.types";
+import { postAuthPath } from "@/lib/auth/redirects";
 
 // Refreshes the auth session on every request and gates protected routes.
 export async function updateSession(request: NextRequest) {
@@ -40,9 +41,14 @@ export async function updateSession(request: NextRequest) {
   const confirmed = Boolean(user && (user.email_confirmed_at || user.confirmed_at));
 
   if ((isProtected || isPortalRoute) && !confirmed) {
+    // Remember where they were headed so /login can send them back (?next= — WO-50).
+    const dest = request.nextUrl.pathname + request.nextUrl.search;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    if (user && !confirmed) url.searchParams.set("message", "Please confirm your email — check your inbox — before signing in.");
+    url.search = "";
+    if (dest !== "/dashboard") url.searchParams.set("next", dest);
+    // i18n code, not prose — the login page renders translated copy (EN+HI).
+    if (user && !confirmed) url.searchParams.set("notice", "confirmEmail");
     return NextResponse.redirect(url);
   }
 
@@ -57,7 +63,16 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     };
     if (isPortal && (isProtected || path === "/login" || path === "/")) return go("/portal");
-    if (!isPortal && (isPortalRoute || path === "/login")) return go("/dashboard");
+    if (!isPortal && path === "/login") {
+      // Already signed in at the front door: honour the deep-link intent
+      // (?next= / ?track=<CNR>) instead of dropping it (WO-50/WO-51).
+      const dest = postAuthPath(
+        request.nextUrl.searchParams.get("next"),
+        request.nextUrl.searchParams.get("track"),
+      );
+      return NextResponse.redirect(new URL(dest, request.url));
+    }
+    if (!isPortal && isPortalRoute) return go("/dashboard");
   }
 
   void isAuthRoute;

@@ -566,20 +566,89 @@
       "inbox": "Gmail auto-filed against the right client & case",
       "notices": "Legal-notice escalation that runs itself"
     },
-    "welcome": "Welcome back",
-    "subtitle": "Sign in to your workspace, or create a new one.",
     "google": "Continue with Google",
+    "googlePending": "Opening Google…",
     "or": "or",
-    "fullName": "Full name",
-    "fullNameHint": "(sign up)",
     "email": "Email",
     "password": "Password",
     "ph": {
-      "fullName": "Adv. Meera Joshi",
       "email": "you@firm.in"
     },
-    "signIn": "Sign in",
-    "createWorkspace": "Create a workspace",
+    "signin": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your workspace.",
+      "cta": "Sign in",
+      "pending": "Signing in…",
+      "forgot": "Forgot password?",
+      "noAccountYet": "New to mukadma?",
+      "switchCta": "Sign in instead"
+    },
+    "signup": {
+      "title": "Create your workspace",
+      "subtitle": "Track your first case in minutes — no card needed.",
+      "cta": "Create account",
+      "pending": "Creating account…",
+      "passwordHint": "At least 6 characters.",
+      "haveAccount": "Already have an account?",
+      "switchCta": "Create an account"
+    },
+    "confirm": {
+      "title": "Check your inbox",
+      "body": "We've emailed a confirmation link to {email}. Click it to activate your workspace.",
+      "hint": "Not there after a minute? Check your spam folder, or resend it below.",
+      "resend": "Resend confirmation email",
+      "resendPending": "Resending…",
+      "resent": "Sent again — give it a minute to arrive.",
+      "changeEmail": "Use a different email",
+      "signInInstead": "Already confirmed? Sign in"
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a reset link.",
+      "cta": "Send reset link",
+      "pending": "Sending…",
+      "back": "Back to sign in",
+      "sentTitle": "Check your inbox",
+      "sentBody": "If {email} has an account, a password-reset link is on its way. It stays valid for about an hour."
+    },
+    "reset": {
+      "title": "Set a new password",
+      "subtitle": "You're signed in via the reset link — choose a new password to finish.",
+      "newPassword": "New password",
+      "cta": "Update password",
+      "pending": "Updating…",
+      "expiredTitle": "This reset link has expired",
+      "expiredBody": "Reset links are single-use and expire after a while. Request a fresh one and try again.",
+      "requestNew": "Request a new link"
+    },
+    "callbackError": {
+      "title": "Sign-in didn't complete",
+      "provider": "Google didn't finish signing you in — the request was cancelled or refused.",
+      "missing": "That sign-in link is incomplete or was already used.",
+      "exchange": "We couldn't finish signing you in — the link may have expired or been used already.",
+      "retry": "Try again",
+      "hint": "If this keeps happening, request a fresh link or contact support."
+    },
+    "notice": {
+      "confirmEmail": "Please confirm your email first — the link is in your inbox."
+    },
+    "errors": {
+      "wrongPassword": "That password doesn't match this account. Try again, or reset it below.",
+      "noAccount": "No account exists for this email yet.",
+      "invalidCredentials": "Email or password is incorrect — or the account doesn't exist yet.",
+      "unconfirmed": "This email hasn't been confirmed yet — check your inbox for the link.",
+      "accountExists": "An account with this email already exists.",
+      "weakPassword": "That password is too short — use at least 6 characters.",
+      "samePassword": "The new password must be different from your current one.",
+      "rateLimited": "Too many attempts — wait a minute, then try again.",
+      "googleUnavailable": "Google sign-in isn't switched on for this workspace yet — use email and password for now.",
+      "googleFailed": "Google sign-in failed — please try again, or use email and password.",
+      "sessionExpired": "Your reset link has expired — request a new one.",
+      "resetFailed": "We couldn't send the reset email — please try again.",
+      "resendFailed": "We couldn't resend the email — please try again in a minute.",
+      "callbackFailed": "Sign-in didn't complete — please try again.",
+      "unknown": "Something went wrong — please try again."
+    },
     "disclaimer": "By continuing you agree this is informational only and not legal advice."
   },
   "invoices": {

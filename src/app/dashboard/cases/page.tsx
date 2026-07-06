@@ -10,12 +10,14 @@ import { CasesTabs } from "./cases-tabs";
 import { Pagination } from "@/components/pagination";
 import { fetchCasesPage, fetchViewCounts, type CasesFilters } from "./cases-query";
 import { parsePage, clampPerPage } from "@/lib/paginate";
+import { maskTitle } from "@/lib/court/mask";
+import { sanitizeTrack } from "@/lib/auth/redirects";
 
 function isoDay(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-type Search = CasesFilters & { page?: string; per?: string };
+type Search = CasesFilters & { page?: string; per?: string; track?: string };
 
 export default async function CasesPage({ searchParams }: { searchParams: Search }) {
   const supabase = createClient();
@@ -72,7 +74,9 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
       <CourtProviderBanner />
 
       <div className="ec-card p-5">
-        <AddCaseForm />
+        {/* ?track=<CNR> — the login deep link (WO-50/WO-51): prefill + auto-submit
+            the add-by-CNR form so "track this case" survives the auth round-trip. */}
+        <AddCaseForm autoCnr={sanitizeTrack(searchParams.track) ?? undefined} />
       </div>
 
       <Console courts={courts} caseTypes={caseTypes} stages={stages} advocates={advocates} acts={acts} />

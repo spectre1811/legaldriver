@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -19,12 +19,26 @@ function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: st
   );
 }
 
-export function AddCaseForm() {
+export function AddCaseForm({ autoCnr }: { autoCnr?: string }) {
   const t = useTranslations("cases");
   const router = useRouter();
   const [state, formAction] = useFormState(addCaseByCnr, initial);
   const [manualState, manualAction] = useFormState(createManualMatter, manualInitial);
   const [manualOpen, setManualOpen] = useState(false);
+  const cnrFormRef = useRef<HTMLFormElement>(null);
+  const autoFired = useRef(false);
+
+  // ?track=<CNR> deep link from /login (WO-50/WO-51): submit the prefilled CNR
+  // once, then strip the param so a refresh doesn't re-fire the lookup.
+  useEffect(() => {
+    if (autoCnr && !autoFired.current) {
+      autoFired.current = true;
+      cnrFormRef.current?.requestSubmit();
+    }
+  }, [autoCnr]);
+  useEffect(() => {
+    if (autoCnr && state.message) router.replace("/dashboard/cases", { scroll: false });
+  }, [autoCnr, state.message, router]);
 
   // A failed CNR lookup is the moment the "add it manually" promise must lead somewhere:
   // reveal the manual form so the advocate never hits a dead end (WO-35 #2).
@@ -40,13 +54,14 @@ export function AddCaseForm() {
 
   return (
     <div className="space-y-3">
-      <form action={formAction} className="space-y-3">
+      <form ref={cnrFormRef} action={formAction} className="space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">
             <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ec-ink-3" />
             <input
               name="cnr"
               required
+              defaultValue={autoCnr}
               placeholder={t("add.placeholder")}
               aria-label={t("add.aria")}
               className="input num pl-9 uppercase"
