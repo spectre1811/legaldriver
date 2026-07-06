@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
 import type { NormalizedCase } from "./types";
 import { scheduleReminders } from "@/lib/notify/schedule";
+import { normalizeTier } from "./tier";
 
 type DB = SupabaseClient<Database>;
 
@@ -59,6 +60,10 @@ export async function upsertCase(
     last_synced_at: c.fetchedAt,
     source: c.source,
     detail: (c.detail ?? null) as Database["public"]["Tables"]["matter"]["Insert"]["detail"],
+    // WO-54 W1: promote the court tier to an indexed, NORMALIZED column (raw `detail.tier` is
+    // un-normalized) so the Cases tier tabs/facets query an index, not a jsonb full-scan. Additive +
+    // nullable → a null (unknown/manual case) never breaks the sync.
+    tier: normalizeTier((c.detail as Record<string, unknown> | null)?.tier),
     party_names: partyNames,
     advocate_names: advocateNames,
     judge_names: judgeNames,
