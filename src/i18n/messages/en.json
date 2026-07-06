@@ -1259,6 +1259,7 @@
   "portfolio": {
     "title": "Portfolio",
     "subtitle": "Firm-wide risk at a glance — upcoming hearings, at-risk cases, deadlines nearing limitation, and cases needing attention.",
+    "capped": "Showing your {count} soonest open cases — totals below may not include cases beyond this. Open the Cases workspace for the full list.",
     "stat": {
       "openCases": "Open cases",
       "hearings7d": "Hearings ≤7d",

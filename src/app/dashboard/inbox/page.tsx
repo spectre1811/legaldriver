@@ -9,15 +9,28 @@ import { FiledInbox, type InboxGroup } from "./filed-inbox";
 import { ReviewInbox } from "./review-inbox";
 import { GmailQueryForm } from "./gmail-query-form";
 import { DisconnectButton, LoadEarlierButton } from "./connect-controls";
+import { Pagination } from "@/components/pagination";
+import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
 
-export default async function InboxPage({ searchParams }: { searchParams: { connected?: string; error?: string } }) {
+// The needs-review triage queue is meant to be worked down, so a bounded window is
+// enough; the filed archive grows without limit and gets true numbered pagination.
+const REVIEW_WINDOW = 50;
+
+export default async function InboxPage({ searchParams }: { searchParams: { connected?: string; error?: string; page?: string; per?: string } }) {
   const t = await getTranslations("inbox");
   const supabase = createClient();
-  const [{ data: conn }, { data: clients }, { data: matters }, { data: emails }] = await Promise.all([
+  const page = parsePage(searchParams.page);
+  const per = clampPerPage(searchParams.per);
+  const { from, to } = rangeFor(page, per);
+  // WO-56: split the old single .limit(200) fetch into two purpose-built queries — the
+  // review queue (bounded window) and the filed archive (paginated, exact count). The
+  // former "pending" rows were fetched but never rendered, so they're dropped here.
+  const [{ data: conn }, { data: clients }, { data: matters }, { data: reviewEmails }, { data: filedEmails, count: filedTotal }] = await Promise.all([
     supabase.from("oauth_connection").select("id, status, gmail_query").eq("provider", "google").eq("status", "active").maybeSingle(),
     supabase.from("client").select("id, name").order("name"),
     supabase.from("matter").select("id, title").order("title"),
-    supabase.from("email_message").select("id, subject, from_addr, received_at, confidence, status, classified_client_id, classified_matter_id").in("status", ["pending", "filed", "needs_review"]).order("received_at", { ascending: false }).limit(200),
+    supabase.from("email_message").select("id, subject, from_addr, confidence, classified_client_id, classified_matter_id").eq("status", "needs_review").order("received_at", { ascending: false }).range(0, REVIEW_WINDOW - 1),
+    supabase.from("email_message").select("id, subject, from_addr, received_at, classified_client_id, classified_matter_id", { count: "exact" }).eq("status", "filed").order("received_at", { ascending: false }).range(from, to),
   ]);
 
   const clientOpts = (clients ?? []).map((c) => ({ id: c.id, label: c.name }));
@@ -25,8 +38,8 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
   const clientName = new Map((clients ?? []).map((c) => [c.id, c.name]));
   const matterName = new Map((matters ?? []).map((m) => [m.id, m.title]));
 
-  const review = (emails ?? []).filter((e) => e.status === "needs_review");
-  const filed = (emails ?? []).filter((e) => e.status === "filed");
+  const review = reviewEmails ?? [];
+  const filed = filedEmails ?? [];
 
   // Surface the attachments each email pulled (WO-29): filename → the filed document.
   const filedIds = filed.map((e) => e.id);
@@ -97,7 +110,10 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
           <EmptyState icon="inbox" title={t("empty.title")} body={t("empty.body")} />
         </section>
       ) : (
-        <FiledInbox groups={filedGroups} />
+        <>
+          <FiledInbox groups={filedGroups} />
+          <Pagination page={page} perPage={per} total={filedTotal ?? 0} />
+        </>
       )}
 
       <p className="text-xs text-ink-faint">{t("footer")}</p>

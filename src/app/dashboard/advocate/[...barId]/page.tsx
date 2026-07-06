@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { getAdvocateProfile, ldEnabled } from "@/lib/court/legaldriver-api";
 import { TrackCaseButton } from "@/components/track-case-button";
+import { Pagination } from "@/components/pagination";
+import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
 import { expandCaseType, advocateRole } from "@/lib/court/code-labels";
 
 export const dynamic = "force-dynamic";
@@ -22,8 +24,10 @@ const TIER_TONE: Record<string, "brand" | "neutral"> = {
 // arrives as multiple path segments — rejoin them.
 export default async function AdvocatePage({
   params,
+  searchParams,
 }: {
   params: { barId: string[] };
+  searchParams: { page?: string; per?: string };
 }) {
   if (!ldEnabled()) notFound();
   const t = await getTranslations("advocate");
@@ -33,10 +37,21 @@ export default async function AdvocatePage({
   const profile = await getAdvocateProfile(barId);
   if (!profile) notFound();
 
-  // ── Which of these CNRs does the firm already track? ──────────────────────
+  // ── Caseload pagination (WO-56) ───────────────────────────────────────────
+  // The analytics below run over the WHOLE returned array (they're aggregates);
+  // only the caseload TABLE is windowed so a 1000s-case roster doesn't dump every
+  // row into the DOM. The header already states the true total ("showing N of M").
+  const page = parsePage(searchParams.page);
+  const per = clampPerPage(searchParams.per);
+  const { from, to } = rangeFor(page, per);
+  const pageCases = profile.cases.slice(from, to + 1);
+
+  // ── Which of the ON-SCREEN CNRs does the firm already track? ──────────────
+  // Scope the lookup to the current page (not the whole roster) — the "tracked"
+  // badge only needs the rows we render.
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
-  const cnrs = profile.cases.map((c) => c.cnr).filter(Boolean);
+  const cnrs = pageCases.map((c) => c.cnr).filter(Boolean);
   const { data: tracked } = tenantId && cnrs.length
     ? await supabase
         .from("matter")
@@ -342,7 +357,7 @@ export default async function AdvocatePage({
                     </tr>
                   </thead>
                   <tbody>
-                    {profile.cases.map((c) => {
+                    {pageCases.map((c) => {
                       const mid = byCnr.get(c.cnr);
                       return (
                         <tr key={c.cnr} className="border-t border-line hover:bg-paper">
@@ -407,6 +422,11 @@ export default async function AdvocatePage({
               </div>
             ) : (
               <EmptyState icon="scale" title={t("emptyTitle")} body={t("emptyBody")} />
+            )}
+            {profile.cases.length > 0 && (
+              <div className="border-t border-line px-5 py-3">
+                <Pagination page={page} perPage={per} total={profile.cases.length} />
+              </div>
             )}
             <p className="px-5 py-3 text-xs text-ink-faint">{t("sourceNote")}</p>
           </Card>

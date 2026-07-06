@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader, Card, Stat, EmptyState, fmtDate } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
+import { fetchPortfolio, OPEN_SCAN_CAP, type PortfolioMatter } from "./portfolio-query";
 
 export const dynamic = "force-dynamic";
 
@@ -17,18 +18,17 @@ export default async function PortfolioPage() {
   const tenantId = await getTenantId(supabase);
   const today = iso(new Date());
 
-  const [{ data: matters }, { data: deadlines }, { data: docs }] = tenantId
+  // WO-56: bounded + indexed (see portfolio-query.ts) — no more fetch-all matter/document
+  // scans. `open` is the tenant's open caseload (capped, soonest-hearing first); the
+  // effective-date coalesce + risk buckets are computed over it below.
+  const [{ open, latestDocByMatter: latestDoc, capped }, { data: deadlines }] = tenantId
     ? await Promise.all([
-        supabase.from("matter").select("id, title, cnr, status, court, next_hearing_date, next_hearing_override, last_synced_at").eq("tenant_id", tenantId).limit(1000),
+        fetchPortfolio(supabase, tenantId, today, plusDays(7)),
         supabase.from("deadline").select("id, matter_id, kind, due_date, jurisdiction_rule").eq("tenant_id", tenantId).eq("status", "open").gte("due_date", today).lte("due_date", plusDays(15)).order("due_date"),
-        supabase.from("document").select("matter_id, created_at").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(3000),
       ])
-    : [{ data: [] }, { data: [] }, { data: [] }];
+    : [{ open: [] as PortfolioMatter[], latestDocByMatter: new Map<string, string>(), capped: false }, { data: [] }];
 
-  const open = (matters ?? []).filter((m) => !/dispos|closed/i.test(m.status ?? ""));
-  const eff = (m: (typeof open)[number]) => m.next_hearing_override ?? m.next_hearing_date;
-  const latestDoc = new Map<string, string>();
-  for (const d of docs ?? []) if (d.matter_id && !latestDoc.has(d.matter_id)) latestDoc.set(d.matter_id, d.created_at);
+  const eff = (m: PortfolioMatter) => m.next_hearing_override ?? m.next_hearing_date;
   const titleOf = new Map(open.map((m) => [m.id, m.title] as const));
 
   const upcoming = open.filter((m) => { const e = eff(m); return e && e >= today && e <= plusDays(30); }).sort((a, b) => (eff(a)! < eff(b)! ? -1 : 1));
@@ -52,6 +52,12 @@ export default async function PortfolioPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
+
+      {capped && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800" role="status">
+          {t("capped", { count: OPEN_SCAN_CAP })}
+        </p>
+      )}
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Stat label={t("stat.openCases")} value={String(open.length)} />
