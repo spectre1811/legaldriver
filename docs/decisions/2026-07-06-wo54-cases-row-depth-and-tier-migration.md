@@ -58,19 +58,51 @@ Tier-first tabs + per-tier facets (Wave 2) must be **bounded + indexed** (ship-g
 "built for demo" complaint is the 1000-row facet scan). Today `tier`/`district`/`court establishment`/
 `bench` live only in `matter.detail` jsonb, so tier filtering/faceting would be a jsonb full-scan.
 
-**Recommendation: promote the tier-defining fields to real, indexed `matter` columns, backfilled from
-`detail` (no eCourts re-fetch — mirrors WO-41's promote-then-backfill), kept fresh by `upsertCase`.**
-Additive, RLS-unaffected. Proposed SQL (to become the real migration once approved, via
-`supabase migration new wo54_matter_court_columns`):
+**Recommendation: plain, indexed `matter` columns written through a pure normalization layer** — *not*
+generated columns and *not* raw jsonb indexes. The deciding fact: `upsertCase`/`legaldriver.ts` stores
+`detail.tier` **verbatim from the platform API** (`tier: r.tier`, no normalization — it's even used as a
+fallback court-name string), so the raw jsonb value is a dirty, open-ended string, not a clean enum.
 
+### The options, and why plain-columns-with-normalization wins
+
+| Option | Mechanism | Verdict |
+|---|---|---|
+| **A. Plain indexed columns + normalizer** | `add column` + `upsertCase` writes `normalizeTier(detail)`; backfill; partial indexes | ✅ **Recommended** |
+| **B. Generated `STORED` columns** | `add column tier … generated always as (detail->>'tier') stored` | ✗ here |
+| **C. Expression / GIN index on jsonb** | `create index on matter ((detail->>'tier'))` / `gin(detail)` | ✗ here |
+
+- **B (generated columns) is the more elegant mechanism *in the abstract*** — the column is always exactly
+  `detail->>'tier'`, so there is **zero dual-write drift** (it directly kills the WO-41 "detail updated, the
+  mirror didn't" bug class). **It loses here only because the value is un-normalized:** a generated column
+  (or a raw expression/GIN index) would surface `HC`, `High Court`, bench names, etc. as **separate
+  tabs/facets** — the same fragmentation already logged in `DATA-GAPS` for the advocate facet (`Y J PATEL`
+  vs `MR YASH J PATEL` counted apart). And a generated column's expression can't evolve (new state, refined
+  mapping) without another full-table rewrite. **If the pre-check below shows the values are already
+  clean, flip to B** — it's strictly nicer when normalization isn't needed.
+- **C (raw jsonb indexes)** shares B's dirty-value problem and gives clumsier queries + weaker planner
+  stats; a GIN index also can't serve the `DISTINCT` facet-option-list query. Rejected.
+- **A's one weakness vs B — drift** — is closed cheaply by a **guardrail test asserting
+  `column === normalize(detail)`** (same style as `wo54_cases_row_depth`), so we get B's safety without its
+  rigidity.
+
+**Pre-check before finalizing (settles A vs B):**
 ```sql
--- Additive, nullable → no RLS change, no backfill lock. Populated from matter.detail (no re-fetch).
-alter table matter add column if not exists tier text;                 -- 'HC' | 'DISTRICT' | …
+select distinct detail->>'tier' as tier, count(*) from matter group by 1 order by 2 desc;
+```
+Clean, small, stable set (`HC`/`DISTRICT`) → use **B** (generated columns). Dirty/varied (expected) → **A**.
+
+### Proposed migration (Option A), via `supabase migration new wo54_matter_court_columns`
+```sql
+-- Additive, nullable → no RLS change, no rewrite lock (unlike a STORED generated column). Populated by
+-- upsertCase going forward + one backfill pass below.
+alter table matter add column if not exists tier text;                 -- normalized enum: HC|DISTRICT|TRIBUNAL|SC
 alter table matter add column if not exists district text;
 alter table matter add column if not exists court_establishment text;
 alter table matter add column if not exists bench text;
 
--- Backfill from the existing jsonb (one pass, no eCourts calls).
+-- Backfill from the existing jsonb (one pass, no eCourts calls). NB: the app-side normalizeTier()/
+-- normalizeCourt() is the source of truth; this SQL is a first-cut and should be superseded by a
+-- backfill script that runs the SAME normalizer the app uses (so backfill == live write).
 update matter set
   tier                = coalesce(tier,                nullif(detail->>'tier', '')),
   district            = coalesce(district,            nullif(detail->>'district', '')),
@@ -83,18 +115,20 @@ create index if not exists matter_tier_idx     on matter (tenant_id, tier);
 create index if not exists matter_district_idx on matter (tenant_id, district) where tier = 'DISTRICT';
 ```
 
-- `upsertCase` (`src/lib/court/legaldriver.ts`) writes these columns alongside `detail` on every sync.
+- **Normalizer:** a pure `normalizeTier()` (raw → closed enum) + `normalizeCourt()`/`normalizeDistrict()`
+  that **consume the BP-05 dictionaries + BP-03 entity-resolution** already normalizing court/establishment
+  codes — do **not** hand-roll a second normalizer. `upsertCase` writes the normalized value alongside
+  `detail`; a guardrail test asserts `column === normalize(detail)`.
 - **Also (ship-grade):** replace the remaining 1000-row facet scan in `cases/page.tsx` with a
-  **distinct-values RPC / bounded aggregate** so per-tier facet option lists are indexed, not
-  client-derived.
-- **Alternative considered:** expression indexes on `detail->>'tier'` (no columns) — rejected: clumsier
-  queries, weaker planner stats, and it doesn't clean up the facet scan. Columns mirror WO-41 and are the
-  cleaner base for Wave 2.
+  **distinct-values RPC / bounded aggregate** so per-tier facet option lists are indexed, not client-derived.
+- **Lock note:** on a large `matter` table, A's nullable-add + batched backfill holds locks for less time
+  than B's atomic table rewrite; at pilot scale either is fine.
 
-**Founder decision needed:** approve the columns + backfill (recommended) vs. jsonb expression indexes;
-confirm default tab (**All** recommended) and tier set (Gujarat = HC + District today). On approval, Wave 2
-claims a fresh worktree, adds the real timestamped migration, and builds tier tabs + tier-aware facets on
-top of these columns. Tracked in FOUNDER-ACTIONS + BACKLOG §D.
+**Founder decision needed:** approve **A (plain columns + normalizer)** — or **B** if the pre-check shows
+already-clean values; confirm default tab (**All** recommended) and tier set (Gujarat = HC + District
+today). On approval, Wave 2 opens a fresh branch, adds the real timestamped migration + the normalizer +
+its guardrail test, and builds tier tabs + tier-aware facets on top. Tracked in FOUNDER-ACTIONS #16 +
+BACKLOG §D.
 
 ## Gates
 typecheck ✓ · lint ✓ · build ✓ · offline suite **39/39** (new `wo54_cases_row_depth`, 36 checks; pure
