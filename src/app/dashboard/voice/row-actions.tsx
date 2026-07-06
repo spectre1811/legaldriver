@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
+import { Combobox } from "@/components/combobox";
 import { transcribeRecording, saveManualTranscript, tagRecording } from "./actions";
 
 type Opt = { id: string; label: string };
@@ -80,14 +81,18 @@ export function RowActions({
 
       {mode === "tag" && (
         <div className="flex flex-wrap items-center gap-2">
-          <select value={c} onChange={(e) => setC(e.target.value)} className="input max-w-[12rem]">
-            <option value="">{t("actions.noClientOption")}</option>
-            {clients.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-          </select>
-          <select value={m} onChange={(e) => setM(e.target.value)} className="input max-w-[12rem]">
-            <option value="">{t("actions.noCaseOption")}</option>
-            {matters.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-          </select>
+          <Combobox
+            label={t("actions.noClientOption")} placeholder={t("actions.noClientOption")}
+            options={clients.map((o) => ({ value: o.id, label: o.label }))}
+            value={c || null} onChange={(v) => setC(v ?? "")}
+            className="min-w-[11rem] max-w-[13rem]"
+          />
+          <Combobox
+            label={t("actions.noCaseOption")} placeholder={t("actions.noCaseOption")}
+            options={matters.map((o) => ({ value: o.id, label: o.label }))}
+            value={m || null} onChange={(v) => setM(v ?? "")}
+            className="min-w-[11rem] max-w-[13rem]"
+          />
           <button onClick={() => run(() => tagRecording(id, c || null, m || null))} disabled={pending} className="btn-primary !px-3 !py-1.5 text-xs">
             {t("actions.save")}
           </button>

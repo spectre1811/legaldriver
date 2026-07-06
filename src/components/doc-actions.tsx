@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
+import { Combobox } from "@/components/combobox";
 import { relinkDocument, deleteDocument, toggleDocShare } from "@/app/dashboard/documents/actions";
 
 type Opt = { id: string; label: string };
@@ -92,17 +93,21 @@ export function DocActions({
                 {/* Client-first: the client is the primary, required-in-spirit target. */}
                 <div>
                   <p className="mb-1 text-xs font-semibold text-ink">{t("docActions.fileUnderClient")}</p>
-                  <select value={c} onChange={(e) => setC(e.target.value)} className="input w-full py-2 text-sm" aria-label={t("docActions.client")} autoFocus>
-                    <option value="">{t("docActions.clientOption")}</option>
-                    {clients.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                  </select>
+                  <Combobox
+                    label={t("docActions.client")} placeholder={t("docActions.clientOption")}
+                    options={clients.map((o) => ({ value: o.id, label: o.label }))}
+                    value={c || null} onChange={(v) => setC(v ?? "")}
+                    className="w-full"
+                  />
                 </div>
                 <div>
                   <p className="mb-1 text-xs text-ink-muted">{t("docActions.caseLabelOptional")}</p>
-                  <select value={m} onChange={(e) => setM(e.target.value)} className="input w-full py-2 text-sm" aria-label={t("docActions.case")}>
-                    <option value="">{t("docActions.noCaseOption")}</option>
-                    {matters.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                  </select>
+                  <Combobox
+                    label={t("docActions.case")} placeholder={t("docActions.noCaseOption")}
+                    options={matters.map((o) => ({ value: o.id, label: o.label }))}
+                    value={m || null} onChange={(v) => setM(v ?? "")}
+                    className="w-full"
+                  />
                 </div>
                 <div className="flex items-center gap-2 pt-0.5">
                   <button disabled={pending || !canSave} onClick={() => start(async () => { await relinkDocument(documentId, m || null, c || null); close(); router.refresh(); })} className="btn-primary flex-1 justify-center px-3 py-2 text-sm disabled:opacity-50">{pending ? t("docActions.filing") : t("docActions.fileHere")}</button>
