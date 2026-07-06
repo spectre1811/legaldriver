@@ -80,6 +80,33 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Diagnose auth-trigger seeding (temp, WO-67)
+        run: |
+          eval "$(supabase status -o env)"
+          echo "--- trigger + function present? ---"
+          psql "$DB_URL" -c "select tgname, tgenabled from pg_trigger where tgname='on_auth_user_created';" || true
+          psql "$DB_URL" -c "select proname from pg_proc where proname='handle_new_user';" || true
+          echo "--- createUser via GoTrue then read profile ---"
+          node -e '
+          const fs=require("fs");for(const l of fs.readFileSync(".env","utf8").split("\n")){const m=l.match(/^([A-Z0-9_]+)=(.*)$/);if(m)process.env[m[1]]=m[2];}
+          const {createClient}=require("@supabase/supabase-js");
+          const a=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
+          (async()=>{
+            const u=await a.auth.admin.createUser({email:"probe@lexdriver.test",password:"demo-pass-1234",email_confirm:true});
+            console.log("createUser err:",u.error&&u.error.message,"id:",u.data&&u.data.user&&u.data.user.id);
+            const uid=u.data&&u.data.user&&u.data.user.id;
+            const p=await a.from("profile").select("id,tenant_id").eq("id",uid);
+            console.log("probe profile rows:",JSON.stringify(p.data),"err:",p.error&&p.error.message);
+            const c=await a.from("profile").select("id",{count:"exact",head:true});
+            console.log("total profiles:",c.count,c.error&&c.error.message);
+            const t=await a.from("tenant").select("id",{count:"exact",head:true});
+            console.log("total tenants:",t.count,t.error&&t.error.message);
+          })().catch(e=>{console.error("probe threw:",e.message);process.exit(0)});
+          '
+          echo "--- direct auth.users insert (fires the trigger at DB level) ---"
+          psql "$DB_URL" -c "insert into auth.users (instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,created_at,updated_at) values ('00000000-0000-0000-0000-000000000000',gen_random_uuid(),'authenticated','authenticated','probe2@lexdriver.test','x',now(),now(),now());" || echo "direct insert errored (see above)"
+          psql "$DB_URL" -c "select count(*) as profiles_after_direct_insert from profile;" || true
+
       - name: Seed the demo tenant + user
         run: npx --yes tsx@4.23.0 scripts/seed-demo.ts
 
