@@ -9,8 +9,8 @@ import { saveView } from "./view-actions";
 
 // Query keys the console owns. Used to (re)build the URL and to snapshot a saved view. The facet
 // filters are MULTI (repeated params); `status` (semantic tab), `q`, `next`, `sort` are single.
-const KEYS = ["q", "court", "case_type", "stage", "status", "statuses", "advocate", "act", "next", "sort"] as const;
-const MULTI = new Set<string>(["court", "case_type", "stage", "statuses", "advocate", "act"]);
+const KEYS = ["q", "court", "case_type", "stage", "status", "statuses", "advocate", "act", "judge", "next", "sort"] as const;
+const MULTI = new Set<string>(["court", "case_type", "stage", "statuses", "advocate", "act", "judge"]);
 
 export type SavedView = { id: string; name: string; query: Record<string, string | string[]> };
 
@@ -21,6 +21,7 @@ export function Console({
   statuses,
   advocates,
   acts,
+  judges,
 }: {
   courts: string[];
   caseTypes: string[];
@@ -28,6 +29,7 @@ export function Console({
   statuses: string[];
   advocates: string[];
   acts: string[];
+  judges: string[];
 }) {
   const t = useTranslations("cases.console");
   const router = useRouter();
@@ -144,6 +146,7 @@ export function Console({
         {multi("statuses", t("status"), t("allStatuses"), asOptions(statuses), "")}
         {multi("advocate", t("advocate"), t("allAdvocates"), asOptions(advocates), "", false)}
         {multi("act", t("act"), t("allActs"), asOptions(acts), "", false)}
+        {multi("judge", t("judge"), t("allJudges"), asOptions(judges), "", false)}
         {single("next", t("nextHearing"), t("anyHearing"), [
           { value: "overdue", label: t("overdue") },
           { value: "7d", label: t("next7") },

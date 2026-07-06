@@ -20,6 +20,7 @@ export interface CasesFilters {
   statuses?: string | string[]; // real distinct status values from the console multi-select
   advocate?: string | string[];
   act?: string | string[];
+  judge?: string | string[]; // WO-54 W2b: judge/coram facet (judge_names array column)
   next?: string;
   sort?: string;
 }
@@ -129,6 +130,8 @@ export function buildCasesQuery(supabase: SupabaseClient<Database>, f: CasesFilt
   if (advocates.length) query = query.overlaps("advocate_names", advocates);
   const acts = asArray(f.act);
   if (acts.length) query = query.overlaps("act_names", acts);
+  const judges = asArray(f.judge); // WO-54 W2b: judge_names is an array column → overlaps (any-of)
+  if (judges.length) query = query.overlaps("judge_names", judges);
 
   if (f.next === "overdue") query = query.lt("next_hearing_date", today);
   else if (f.next === "none") query = query.is("next_hearing_date", null);
