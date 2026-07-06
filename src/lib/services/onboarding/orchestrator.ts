@@ -19,29 +19,66 @@ export { DRAIN_BUDGET_MS, type OnboardingCounts } from "./drain";
 // Seed tenant matters from fetched advocate cases (de-duped by CNR, else title). Returns how many NEW
 // matters were inserted. Shared by the onboarding fetch stage AND the background harvest (WO-58), so the
 // two paths seed identically. Idempotent: an already-present CNR/title is skipped, so re-runs are safe.
-export async function seedFetchedMatters(supabase: DB, tenantId: string, fetched: FetchedAdvocateCase[], cap = 80): Promise<number> {
-  let seeded = 0;
-  for (const fc of fetched.slice(0, cap)) {
+//
+// WO-65: seeds the FULL roster (cap raised 80 → SEED_MAX) and does it in BULK — one existence query per
+// 300 CNRs + chunked bulk inserts — instead of the old two-round-trips-per-case loop, so a 257-case (or
+// larger) roster imports fast and complete within one stage's budget.
+export async function seedFetchedMatters(supabase: DB, tenantId: string, fetched: FetchedAdvocateCase[], cap = SEED_MAX): Promise<number> {
+  const slice = fetched.slice(0, cap);
+  if (!slice.length) return 0;
+
+  // Which CNRs do we already hold? One `.in()` query per 300 (partial-unique index makes this cheap),
+  // so a re-run doesn't re-insert — no per-case existence round-trip.
+  const cnrs = [...new Set(slice.map((f) => f.cnr).filter((c): c is string => !!c))];
+  const existing = new Set<string>();
+  for (let i = 0; i < cnrs.length; i += 300) {
+    const { data } = await supabase.from("matter").select("cnr").eq("tenant_id", tenantId).in("cnr", cnrs.slice(i, i + 300));
+    for (const m of data ?? []) if (m.cnr) existing.add(m.cnr);
+  }
+
+  // Build the genuinely-new rows (dedupe within the batch too). Title-only rows (no CNR — rare, from the
+  // corpus/IK name providers) keep the per-row ilike check since the CNR index can't help there.
+  const rows: Database["public"]["Tables"]["matter"]["Insert"][] = [];
+  const seenCnr = new Set<string>();
+  for (const fc of slice) {
     if (fc.cnr) {
-      const { data: ex } = await supabase.from("matter").select("id").eq("tenant_id", tenantId).eq("cnr", fc.cnr).maybeSingle();
-      if (ex) continue;
+      if (existing.has(fc.cnr) || seenCnr.has(fc.cnr)) continue;
+      seenCnr.add(fc.cnr);
     } else if (fc.title) {
       const { data: ex } = await supabase.from("matter").select("id").eq("tenant_id", tenantId).ilike("title", fc.title).maybeSingle();
       if (ex) continue;
     } else continue;
-    const { error } = await supabase.from("matter").insert({
+    rows.push({
       tenant_id: tenantId, cnr: fc.cnr ?? null, title: fc.title || fc.caseNumber || fc.cnr || "Case",
       court: fc.court ?? null, status: fc.decided ? "disposed" : "active",
       next_hearing_date: fc.nextHearingDate ?? null, source: fc.source,
     });
-    if (!error) seeded++;
+  }
+  if (!rows.length) return 0;
+
+  // Bulk insert in chunks. If a chunk fails (e.g. a concurrent harvest raced a duplicate CNR into the
+  // unique index), fall back to per-row inserts for that chunk so one collision never drops the rest.
+  let seeded = 0;
+  for (let i = 0; i < rows.length; i += 200) {
+    const batch = rows.slice(i, i + 200);
+    const { data, error } = await supabase.from("matter").insert(batch).select("id");
+    if (!error) { seeded += data?.length ?? 0; continue; }
+    for (const r of batch) {
+      const { error: e1 } = await supabase.from("matter").insert(r);
+      if (!e1) seeded++;
+    }
   }
   return seeded;
 }
 
 const LOOKAHEAD_DAYS = 7;
-// Upper bound on per-CNR live enrichment per run (the chunker walks this set ENRICH_CHUNK at a time).
-const ENRICH_CAP = 25;
+// WO-65: onboarding must land the advocate's FULL roster, not a token slice. Both caps are generous
+// SAFETY bounds (not the demo-era 80/25) so a pathological roster can't blow one stage's budget; the
+// stalest-first nightly refresh cron backstops anything beyond them, so nothing is silently dropped.
+// SEED_MAX  — how many roster cases we import as matters in the fetch stage (bulk insert).
+// ENRICH_MAX — how many thin matters onboarding pulls full warehouse detail for (chunked + resumable).
+const SEED_MAX = 2000;
+const ENRICH_MAX = 500;
 
 function isoIn(days: number): string {
   const d = new Date();
@@ -118,6 +155,9 @@ async function stepFetch(ctx: StageCtx, counts: OnboardingCounts, cursor: Record
   } else {
     try {
       const { cases, errors } = await fetchAdvocateCasesWithMeta({ ...advQ, live: true });
+      // WO-65: M = the advocate's full roster size, for the honest "N of M imported" coverage UX. Kept as
+      // a max so an idempotent re-run (cases_fetched=0, nothing new) never shrinks the known total.
+      counts.roster_total = Math.max(counts.roster_total, cases.length);
       counts.cases_fetched += await seedFetchedMatters(supabase, tenantId, cases);
       // If the warehouse read got a 401/403, the key is bad — the async refresh POST would only 401 too.
       // Don't fire it, and never let the UI say "still fetching…" for a hard auth failure (WO-64).
@@ -143,38 +183,35 @@ async function stepFetch(ctx: StageCtx, counts: OnboardingCounts, cursor: Record
   return { counts, cursor: nextCursor, message: fetchNote };
 }
 
-// Stage 2: per-CNR enrich → upsertCase (puts hearings on calendar + reminders). CHUNKED (BP-73): the
-// full CNR set is captured in the cursor on first entry, then processed ENRICH_CHUNK at a time so no
-// single invocation runs all the LIVE read-throughs at once (60s-cap safety + pacing the source).
+// Stage 2: per-CNR enrich → upsertCase (puts hearings on calendar + reminders). WO-65: reads each case's
+// full detail from our WAREHOUSE via the CACHED `GET /v1/cases/{cnr}` (getCaseCached), NOT the old LIVE
+// `POST …/refresh` — so onboarding never bursts eCourts (freshness is the nightly refresh cron's job; a
+// warehouse copy at onboarding-second-0 is already all we need). The thin (un-enriched) matters are
+// captured once into the cursor (`last_synced_at IS NULL` = seeded-but-not-detailed; upsertCase stamps
+// it), then walked ENRICH_CHUNK at a time — run CONCURRENTLY since cached reads are cheap — so a large
+// roster finishes fast without any single invocation blocking on all of it (BP-73 resumable machinery).
 async function stepEnrich(ctx: StageCtx, counts: OnboardingCounts, cursor: Record<string, unknown>): Promise<{ counts: OnboardingCounts; cursor: Record<string, unknown>; more: boolean }> {
   const { supabase, tenantId } = ctx;
-  const court = getCourtDataClient();
 
-  // Capture a STABLE ordered CNR list on first entry (subsequent chunks read it from the cursor).
+  // Capture a STABLE ordered CNR list of thin matters on first entry (subsequent chunks read the cursor).
+  // Bounded by ENRICH_MAX; the stalest-first nightly cron enriches any tail beyond it, so nothing is lost.
   let cnrs = Array.isArray(cursor.enrich_cnrs) ? (cursor.enrich_cnrs as string[]) : null;
   if (!cnrs) {
-    const { data: matters } = await supabase.from("matter").select("cnr").eq("tenant_id", tenantId).eq("status", "active").not("cnr", "is", null).order("created_at", { ascending: true }).limit(ENRICH_CAP);
+    const { data: matters } = await supabase.from("matter").select("cnr").eq("tenant_id", tenantId).is("last_synced_at", null).not("cnr", "is", null).order("created_at", { ascending: true }).limit(ENRICH_MAX);
     cnrs = (matters ?? []).map((m) => m.cnr).filter((c): c is string => !!c);
   }
   const offset = typeof cursor.enrich_offset === "number" ? cursor.enrich_offset : 0;
   const { chunk, nextOffset, more } = enrichChunk(cnrs, offset);
 
   if (chunk.length > 0) {
-    let live: Awaited<ReturnType<typeof court.refreshCases>> = [];
-    try {
-      live = await court.refreshCases(chunk); // LIVE eCourts read-through for this chunk only
-    } catch { /* live refresh unavailable → cached fallback below */ }
-    const liveCnrs = new Set(live.map((c) => c.cnr));
-    for (const c of live) {
-      try { await upsertCase(supabase, tenantId, c); counts.enriched++; } catch { /* skip one */ }
-    }
-    for (const cnr of chunk) {
-      if (liveCnrs.has(cnr)) continue; // already live-refreshed above
+    const results = await Promise.all(chunk.map(async (cnr) => {
       try {
-        const res = await getCaseCached(cnr);
-        if (res.case) { await upsertCase(supabase, tenantId, res.case); counts.enriched++; }
-      } catch { /* keep going; stays at cause-list depth, flagged for HITL */ }
-    }
+        const res = await getCaseCached(cnr); // CACHED warehouse read (no live eCourts burst — WO-65)
+        if (res.case) { await upsertCase(supabase, tenantId, res.case); return true; }
+      } catch { /* keep going; stays at cause-list depth, the nightly refresh cron retries it */ }
+      return false;
+    }));
+    counts.enriched += results.filter(Boolean).length;
   }
   return { counts, cursor: { ...cursor, enrich_cnrs: cnrs, enrich_offset: nextOffset }, more };
 }

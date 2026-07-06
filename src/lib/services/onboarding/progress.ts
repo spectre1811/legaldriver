@@ -71,18 +71,47 @@ export function isGathering(
   return nowMs - started < GATHERING_WINDOW_MS;
 }
 
-// A short honest one-liner of what's been seeded so far, from the run's counts. Only shows non-zero
-// tallies so an early stage doesn't read as "0 cases, 0 matters" (which looks like a failure).
+// WO-65: honest import coverage from a run's counts. `total` (M) = the advocate's FULL roster size; the
+// bulk seed lands all M as matters (`onFile`), then enrich pulls each one's warehouse detail (`detailed`,
+// E). Pure + offline-tested so the "N of M imported" UX can never drift from the tallies. Robust to an
+// older run with no `roster_total` (falls back to what was seeded this run) so it never shows a false 0.
+export interface OnboardingCoverage {
+  total: number;    // M — advocate's full roster size (0 = not yet fetched / unknown)
+  onFile: number;   // N — roster cases now imported as matters (== total once the seed lands)
+  detailed: number; // E — matters enriched with full detail (hearings on the calendar)
+  filling: boolean; // true while detail is still being pulled (E < M)
+}
+
+const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+
+export function onboardingCoverage(counts: Record<string, number> | null | undefined): OnboardingCoverage {
+  const c = counts || {};
+  const total = num(c.roster_total);
+  const onFile = total > 0 ? total : num(c.cases_fetched) + num(c.matters_seeded);
+  const detailed = total > 0 ? Math.min(num(c.enriched), total) : num(c.enriched);
+  return { total, onFile, detailed, filling: total > 0 && detailed < total };
+}
+
+// A short honest one-liner of what's landed so far, from the run's counts. Leads with roster coverage
+// ("M cases on file · N of M detailed") so the user watches their FULL practice arrive — not just what
+// was new this run (cases_fetched reads 0 on an idempotent re-run). Only shows non-zero tallies so an
+// early stage never reads as "0 cases, 0 matters" (which looks like a failure).
 export function onboardingCountsSummary(counts: Record<string, number> | null | undefined): string {
   const c = counts || {};
+  const cov = onboardingCoverage(counts);
   const parts: string[] = [];
-  const add = (n: unknown, one: string, many: string) => {
-    const v = typeof n === "number" ? n : 0;
-    if (v > 0) parts.push(`${v} ${v === 1 ? one : many}`);
-  };
-  add(c.cases_fetched, "case on file", "cases on file");
-  add(c.matters_seeded, "from your cause list", "from your cause list");
-  add(c.enriched, "detailed", "detailed");
-  add(c.deadlines_proposed, "deadline", "deadlines");
+  if (cov.total > 0) {
+    parts.push(`${cov.total} ${cov.total === 1 ? "case on file" : "cases on file"}`);
+    if (cov.detailed > 0) parts.push(cov.filling ? `${cov.detailed} of ${cov.total} detailed` : "all details in");
+  } else {
+    const v = num(c.cases_fetched);
+    if (v > 0) parts.push(`${v} ${v === 1 ? "case on file" : "cases on file"}`);
+    const e = num(c.enriched);
+    if (e > 0) parts.push(`${e} detailed`);
+  }
+  const cl = num(c.matters_seeded);
+  if (cl > 0) parts.push(`${cl} from your cause list`);
+  const dl = num(c.deadlines_proposed);
+  if (dl > 0) parts.push(`${dl} ${dl === 1 ? "deadline" : "deadlines"}`);
   return parts.join(" · ");
 }

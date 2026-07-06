@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 // room so it isn't killed mid-run (Vercel's short default would leave a stuck "running" run + 0 counts).
 export const maxDuration = 60;
 
-interface Counts { causelist?: number; cases_fetched?: number; matters_seeded?: number; enriched?: number; deadlines_proposed?: number; inbox_filed?: number; docs_attached?: number; closed_found?: number; summaries_queued?: number }
+interface Counts { causelist?: number; cases_fetched?: number; matters_seeded?: number; enriched?: number; deadlines_proposed?: number; inbox_filed?: number; docs_attached?: number; closed_found?: number; summaries_queued?: number; roster_total?: number }
 
 export default async function OnboardingPage() {
   const supabase = createClient();
@@ -120,6 +120,7 @@ export default async function OnboardingPage() {
                           {t("runDetails")}
                         </summary>
                         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                          <Stat label={t("stat.rosterTotal")} value={String(c.roster_total ?? c.cases_fetched ?? 0)} />
                           <Stat label={t("stat.casesFetched")} value={String(c.cases_fetched ?? 0)} />
                           <Stat label={t("stat.mattersSeeded")} value={String(c.matters_seeded ?? 0)} />
                           <Stat label={t("stat.causelist")} value={String(c.causelist ?? 0)} />

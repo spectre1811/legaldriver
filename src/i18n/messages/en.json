@@ -1610,7 +1610,8 @@
     },
     "stat": {
       "causelist": "Cause-list",
-      "casesFetched": "Cases fetched",
+      "rosterTotal": "Cases on file",
+      "casesFetched": "New this run",
       "mattersSeeded": "Matters seeded",
       "enriched": "Enriched",
       "deadlinesProposed": "Deadlines proposed",
