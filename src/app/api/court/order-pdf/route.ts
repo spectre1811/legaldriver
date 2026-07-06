@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { classifyOrderPdf, isPdfContentType } from "@/lib/court/order-pdf-response";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -57,14 +58,37 @@ export async function GET(request: NextRequest) {
     if (attempt < 3) await new Promise((r) => setTimeout(r, 3500)); // wait for the on-demand fetch, then retry
   }
 
-  if (!upstream || upstream.status === 202) return page("Fetching the order…", "This district order’s copy is being retrieved from the court portal — it usually lands within a minute.", order.matter_id, 202);
-  const ct = upstream.headers.get("content-type") ?? "";
-  if (!upstream.ok || !upstream.body || !/pdf|octet-stream/i.test(ct)) {
-    return page("Couldn’t open this order’s PDF", "The court may not publish a PDF for this order, or the portal is throttling. Try again shortly.", order.matter_id, upstream.status === 404 ? 404 : 503);
+  if (!upstream) return page("Court service unavailable", "The court data service didn’t respond just now. Please try again shortly.", order.matter_id, 503);
+
+  const ct = upstream.headers.get("content-type");
+  // Fast path: real PDF bytes → stream them straight through (never buffer the body).
+  if (upstream.ok && upstream.body && isPdfContentType(ct)) {
+    return new NextResponse(upstream.body, {
+      status: 200,
+      headers: { "content-type": "application/pdf", "content-disposition": `inline; filename="order-${providerId}.pdf"`, "cache-control": "private, max-age=300" },
+    });
   }
-  // Stream the fresh bytes straight through.
-  return new NextResponse(upstream.body, {
-    status: 200,
-    headers: { "content-type": "application/pdf", "content-disposition": `inline; filename="order-${providerId}.pdf"`, "cache-control": "private, max-age=300" },
-  });
+
+  // Otherwise the box returned a small JSON control response (BP-75). Read its `status` so we can
+  // tell a TERMINAL "no doc on the eCourts record" (200 {unavailable}) apart from a genuine transient
+  // failure — the founder's "not able to view order pdf on some cases" was every one of these
+  // rendering as a retriable error, so the click dead-ended forever.
+  let bodyStatus: string | undefined;
+  try {
+    bodyStatus = ((await upstream.json()) as { status?: string } | null)?.status;
+  } catch {
+    /* non-JSON body (e.g. an upstream error page) → classify by status code alone */
+  }
+
+  switch (classifyOrderPdf({ ok: upstream.ok, status: upstream.status, contentType: ct }, bodyStatus)) {
+    case "unavailable":
+      // Terminal, honest, 200 — NOT an error and NOT a retry prompt (there is nothing to retry).
+      return page("No document on the court record", "The eCourts record has no order PDF filed for this order. There’s nothing to open — the court didn’t publish a document here.", order.matter_id, 200);
+    case "retrieving":
+      return page("Fetching the order…", "This district order’s copy is being retrieved from the court portal — it usually lands within a minute.", order.matter_id, 202);
+    case "notFound":
+      return page("Order not found", "This order isn’t on the court record anymore.", order.matter_id, 404);
+    default:
+      return page("Couldn’t open this order’s PDF", "The court data service is having trouble reaching the portal just now. Please try again shortly.", order.matter_id, 503);
+  }
 }
