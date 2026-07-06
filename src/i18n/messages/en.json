@@ -425,12 +425,14 @@
       "state": "State",
       "category": "Category",
       "subCategory": "Sub-category",
+      "subSubCategory": "Sub-sub-category",
       "benchType": "Bench type",
       "judicialBranch": "Judicial branch",
       "subordinateCourt": "Subordinate court",
       "filedBy": "Filed by",
       "coram": "Coram",
       "decidedOn": "Decided on",
+      "natureOfDisposal": "Nature of disposal",
       "firNo": "FIR no.",
       "policeStation": "Police station"
     },
@@ -491,6 +493,16 @@
       "title": "Processes",
       "help": "Warrants / summons / notices on the court record.",
       "fallback": "Process"
+    },
+    "courtFilings": {
+      "title": "Filings on the court record",
+      "help": "Documents filed with the court (source: eCourts) — distinct from documents you upload here."
+    },
+    "objections": {
+      "title": "Registry objections",
+      "help": "Scrutiny objections raised by the court registry (source: eCourts).",
+      "raised": "Objection raised",
+      "complyBy": "comply by"
     },
     "documents": {
       "title": "Documents",

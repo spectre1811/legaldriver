@@ -12,8 +12,8 @@
 
 export type CaseDetailFieldId =
   | "registrationNo" | "filingNo" | "registrationDate" | "filingDate" | "firstHearingDate"
-  | "district" | "state" | "category" | "subCategory" | "benchType" | "judicialBranch"
-  | "subordinateCourt" | "filedBy" | "decidedOn" | "firNo" | "policeStation";
+  | "district" | "state" | "category" | "subCategory" | "subSubCategory" | "benchType" | "judicialBranch"
+  | "subordinateCourt" | "filedBy" | "decidedOn" | "natureOfDisposal" | "firNo" | "policeStation";
 
 export type CaseDetailField = {
   id: CaseDetailFieldId;
@@ -36,13 +36,18 @@ export const CASE_DETAIL_FIELDS: CaseDetailField[] = [
   { id: "firstHearingDate", sourced: true },
   { id: "district", sourced: true },
   { id: "state", sourced: true },
+  // WO-69: now sourced from the mobile API (category_details / subordinateCourtInfoStr / disp_name),
+  // but kept `sourced:false` = render only when present — coverage is partial (not every case type
+  // carries them) so an empty one is omitted, never a false "not on record at eCourts".
   { id: "category", sourced: false },
   { id: "subCategory", sourced: false },
+  { id: "subSubCategory", sourced: false },
   { id: "benchType", sourced: false },
   { id: "judicialBranch", sourced: false },
   { id: "subordinateCourt", sourced: false },
   { id: "filedBy", sourced: false },
   { id: "decidedOn", sourced: true, naWhen: "pending" },
+  { id: "natureOfDisposal", sourced: false, naWhen: "pending" },
   { id: "firNo", sourced: true },
   { id: "policeStation", sourced: true },
 ];
@@ -77,11 +82,13 @@ export function extractCaseDetailValues(
     state: s(detail.state),
     category: s(detail.category),
     subCategory: s(detail.sub_category),
+    subSubCategory: s(detail.sub_sub_category),
     benchType: s(detail.bench_type),
     judicialBranch: s(detail.judicial_branch),
     subordinateCourt: s(detail.subordinate_court),
     filedBy: s(detail.filed_by),
     decidedOn: d(detail.decisionDate),
+    natureOfDisposal: s(detail.disposal_nature),
     firNo: fir ? `${fir}${detail.firYear ? `/${String(detail.firYear)}` : ""}` : null,
     policeStation: s(detail.policeStation),
   };
