@@ -5,7 +5,7 @@
 // + 10s Undo), reversible bulk stage-change, CSV export, and sortable column headers. The server
 // page still does the fetch + pagination; this owns the client-side selection/sort interactions.
 
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -121,6 +121,17 @@ export function CasesTable({
     downloadCsv(selected, t("bulk.exportFilename"));
   }
 
+  // WO-54 W4b · keyboard row navigation. Arrow up/down moves row focus (roving tabindex); Enter opens
+  // the detail drawer. Gated on the <tr> being the event TARGET, so a keypress inside an inner control
+  // (checkbox, title link, Details button) is never hijacked — the row handler only fires when the row
+  // itself holds focus.
+  function onRowKeyDown(e: KeyboardEvent<HTMLTableRowElement>, m: MatterRow) {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); (e.currentTarget.nextElementSibling as HTMLElement | null)?.focus(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); (e.currentTarget.previousElementSibling as HTMLElement | null)?.focus(); }
+    else if (e.key === "Enter") { e.preventDefault(); setDrawerRow(m); }
+  }
+
   return (
     <>
       {/* WO-54 W4 · density control — a segmented toggle; instant + persisted, no save button. */}
@@ -175,7 +186,13 @@ export function CasesTable({
               const tier = typeof detail.tier === "string" && detail.tier.trim() ? detail.tier.trim() : null;
               const urg = hearingUrgency(eff, today);
               return (
-                <tr key={m.id} className={`ec-row group border-b border-ec-hair last:border-0 ${checked ? "bg-ec-brass-tint" : ""}`}>
+                <tr
+                  key={m.id}
+                  tabIndex={0}
+                  onKeyDown={(e) => onRowKeyDown(e, m)}
+                  aria-label={t("row.aria", { title: m.title })}
+                  className={`ec-row group border-b border-ec-hair last:border-0 focus:outline-none focus-visible:bg-ec-brass-tint focus-visible:shadow-[inset_2px_0_0_0_var(--brass)] ${checked ? "bg-ec-brass-tint" : ""}`}
+                >
                   <td className="px-5 py-3.5">
                     <RowCheckbox checked={checked} onSelect={(shift) => sel.onRowClick(m.id, shift)} label={t("bulk.selectRow", { title: m.title })} />
                   </td>

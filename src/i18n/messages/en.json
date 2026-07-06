@@ -259,6 +259,9 @@
     "diary": "diary",
     "past": "past",
     "noDate": "no date",
+    "row": {
+      "aria": "Case {title} — press Enter for details, arrow keys to move"
+    },
     "density": {
       "aria": "Row density",
       "comfortable": "Comfortable",
