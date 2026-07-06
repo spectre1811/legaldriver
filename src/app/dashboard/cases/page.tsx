@@ -9,6 +9,7 @@ import { Console, type SavedView } from "./console";
 import { CasesTable } from "./cases-table";
 import { CasesTabs } from "./cases-tabs";
 import { CasesTierTabs } from "./cases-tier-tabs";
+import { CasesAttention } from "./cases-attention";
 import { Pagination } from "@/components/pagination";
 import { fetchCasesPage, fetchViewCounts, fetchTierCounts, type CasesFilters } from "./cases-query";
 import { parseDensity, DENSITY_COOKIE } from "./density";
@@ -81,6 +82,8 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
       </header>
 
       <CourtProviderBanner />
+
+      <CasesAttention counts={viewCounts} />
 
       <div className="ec-card p-5">
         {/* ?track=<CNR> — the login deep link (WO-50/WO-51): prefill + auto-submit
