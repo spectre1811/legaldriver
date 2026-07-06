@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useTranslations } from "next-intl";
 import { createNotice, type ActionResult } from "./actions";
+import { Combobox } from "@/components/combobox";
 
 const initial: ActionResult = { ok: false, message: "" };
 
@@ -14,16 +16,20 @@ function Submit() {
 
 export function NoticeForm({ matters }: { matters: { id: string; title: string }[] }) {
   const t = useTranslations("notices");
+  const [matterId, setMatterId] = useState<string | null>(null);
   const [state, action] = useFormState(createNotice, initial);
   return (
     <form action={action} className="space-y-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <input name="type" required placeholder={t("form.typePlaceholder")} className="input" aria-label={t("form.typeLabel")} />
         <input name="response_due" required type="date" className="input" aria-label={t("form.responseDueLabel")} />
-        <select name="matter_id" className="input" aria-label={t("form.linkedCaseLabel")}>
-          <option value="">{t("form.noLinkedCase")}</option>
-          {matters.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
-        </select>
+        {/* Combobox is controlled; a hidden input carries the value into the form's FormData. */}
+        <input type="hidden" name="matter_id" value={matterId ?? ""} />
+        <Combobox
+          label={t("form.linkedCaseLabel")} placeholder={t("form.noLinkedCase")}
+          options={matters.map((m) => ({ value: m.id, label: m.title }))}
+          value={matterId} onChange={setMatterId}
+        />
       </div>
       <Submit />
       {state.message && (

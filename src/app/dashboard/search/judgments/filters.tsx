@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
+import { Combobox, type ComboOption, RENDER_ALL_MAX } from "@/components/combobox";
 import { expandDisposal } from "@/lib/court/code-labels";
 import { COURT_NAMES } from "@/lib/court/corpus-athena";
 
@@ -61,6 +62,15 @@ export function Filters() {
 
   const hasFilters = Boolean(sp.get("q") || sp.get("court") || sp.get("year") || sp.get("disposal") || sp.get("judge"));
 
+  // Searchable single-select facet → URL param (`null`/cleared = "all"). WO-62.
+  const facet = (key: string, label: string, placeholder: string, options: ComboOption[], width: string) => (
+    <Combobox
+      label={label} placeholder={placeholder} options={options}
+      value={sp.get(key) ?? null} onChange={(v) => setParam(key, v ?? "")}
+      virtualized={options.length > RENDER_ALL_MAX} className={width}
+    />
+  );
+
   return (
     <div className="space-y-2">
       {/* Row 1: text search + judge search + submit */}
@@ -93,18 +103,9 @@ export function Filters() {
 
       {/* Row 2: court + year + disposal facets */}
       <div className="flex flex-wrap items-center gap-2">
-        <select value={sp.get("court") ?? ""} onChange={(e) => setParam("court", e.target.value)} className="input max-w-[16rem]" aria-label={t("courtAria")}>
-          <option value="">{t("allCourts")}</option>
-          {COURTS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-        </select>
-        <select value={sp.get("year") ?? ""} onChange={(e) => setParam("year", e.target.value)} className="input max-w-[9rem]" aria-label={t("yearAria")}>
-          <option value="">{t("allYears")}</option>
-          {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
-        <select value={sp.get("disposal") ?? ""} onChange={(e) => setParam("disposal", e.target.value)} className="input max-w-[14rem]" aria-label={t("disposalAria")}>
-          <option value="">{t("allDisposals")}</option>
-          {DISPOSAL_NATURES.map((d) => <option key={d} value={d}>{expandDisposal(d).full}</option>)}
-        </select>
+        {facet("court", t("courtAria"), t("allCourts"), COURTS.map((c) => ({ value: c.value, label: c.label })), "min-w-[12rem] max-w-[16rem]")}
+        {facet("year", t("yearAria"), t("allYears"), YEARS.map((y) => ({ value: String(y), label: String(y) })), "min-w-[8rem] max-w-[10rem]")}
+        {facet("disposal", t("disposalAria"), t("allDisposals"), DISPOSAL_NATURES.map((d) => ({ value: d, label: expandDisposal(d).full })), "min-w-[11rem] max-w-[15rem]")}
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
+import { Combobox } from "@/components/combobox";
 import { uploadRecording } from "./actions";
 
 type Opt = { id: string; label: string };
@@ -15,6 +16,7 @@ export function VoiceUploader({ clients }: { clients: Opt[] }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState("");
   const [consent, setConsent] = useState(false);
+  const [clientId, setClientId] = useState<string | null>(null);
   const ref = useRef<HTMLFormElement>(null);
   const router = useRouter();
 
@@ -28,7 +30,7 @@ export function VoiceUploader({ clients }: { clients: Opt[] }) {
         start(async () => {
           const r = await uploadRecording(fd);
           setMsg(r.message);
-          if (r.ok) { ref.current?.reset(); setConsent(false); router.refresh(); }
+          if (r.ok) { ref.current?.reset(); setConsent(false); setClientId(null); router.refresh(); }
         });
       }}
       className="space-y-3"
@@ -44,15 +46,18 @@ export function VoiceUploader({ clients }: { clients: Opt[] }) {
         </label>
       </div>
 
-      <label className="block">
+      <div className="block">
         <span className="label">{t("uploader.tagToClient")}</span>
-        <select name="client_id" defaultValue="" className="input mt-1.5">
-          <option value="">{t("uploader.unfiledOption")}</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>{c.label}</option>
-          ))}
-        </select>
-      </label>
+        {/* Combobox is controlled; a hidden input carries the value into the submitted FormData. */}
+        <input type="hidden" name="client_id" value={clientId ?? ""} />
+        <div className="mt-1.5">
+          <Combobox
+            label={t("uploader.tagToClient")} placeholder={t("uploader.unfiledOption")}
+            options={clients.map((c) => ({ value: c.id, label: c.label }))}
+            value={clientId} onChange={setClientId}
+          />
+        </div>
+      </div>
 
       <label className="flex items-start gap-2.5 rounded-xl border border-line bg-paper p-3 text-sm">
         <input

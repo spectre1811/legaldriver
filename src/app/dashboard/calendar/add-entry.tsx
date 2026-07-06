@@ -5,6 +5,7 @@ import { useFormState, useFormStatus } from "react-dom";
 import { useTranslations } from "next-intl";
 import { addCalendarEntry, type ActionResult } from "./actions";
 import { Icon } from "@/components/icons";
+import { Combobox } from "@/components/combobox";
 
 const initial: ActionResult = { ok: false, message: "" };
 
@@ -16,6 +17,7 @@ function Submit() {
 
 export function AddEntry({ matters }: { matters: { id: string; title: string }[] }) {
   const [open, setOpen] = useState(false);
+  const [matterId, setMatterId] = useState<string | null>(null);
   const [state, action] = useFormState(addCalendarEntry, initial);
   const t = useTranslations("calendar");
 
@@ -43,10 +45,13 @@ export function AddEntry({ matters }: { matters: { id: string; title: string }[]
           <option value="deadline">{t("addEntry.kindDeadline")}</option>
         </select>
       </div>
-      <select name="matter_id" className="input" aria-label={t("addEntry.matterLabel")}>
-        <option value="">{t("addEntry.noLinkedCase")}</option>
-        {matters.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
-      </select>
+      {/* Combobox is controlled; a hidden input carries the value into the form's FormData. */}
+      <input type="hidden" name="matter_id" value={matterId ?? ""} />
+      <Combobox
+        label={t("addEntry.matterLabel")} placeholder={t("addEntry.noLinkedCase")}
+        options={matters.map((m) => ({ value: m.id, label: m.title }))}
+        value={matterId} onChange={setMatterId}
+      />
       <Submit />
       {state.message && (
         <p role="status" className={`rounded-lg px-3 py-2 text-xs ${state.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>

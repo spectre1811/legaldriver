@@ -61,6 +61,7 @@ const OFFLINE = [
   "bp57_advocate_scopes",
   "wo53_pricing_gate",
   "wo55_combobox",
+  "wo62_combobox_adoption",
   "wo56_pagination_adoption",
   "wo54_cases_row_depth",
   "wo54_tier",
