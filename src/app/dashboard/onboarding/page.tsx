@@ -8,6 +8,9 @@ import { RunOnboardingButton, DeleteOnboardingButton } from "./onboarding-ui";
 import { AdvocateForm } from "../settings/advocate-form";
 
 export const dynamic = "force-dynamic";
+// BP-71: onboarding runs multi-stage server-side (fetch → enrich per-CNR → …). Give the server action
+// room so it isn't killed mid-run (Vercel's short default would leave a stuck "running" run + 0 counts).
+export const maxDuration = 60;
 
 interface Counts { causelist?: number; cases_fetched?: number; matters_seeded?: number; enriched?: number; deadlines_proposed?: number; inbox_filed?: number; docs_attached?: number; closed_found?: number; summaries_queued?: number }
 
