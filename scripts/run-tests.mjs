@@ -58,6 +58,7 @@ const OFFLINE = [
   "wo53_pricing_gate",
   "wo55_combobox",
   "wo56_pagination_adoption",
+  "wo54_cases_row_depth",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the

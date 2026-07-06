@@ -54,6 +54,40 @@ export type CaseDetailRow = {
 };
 
 /**
+ * WO-54 · Map the raw eCourts `matter.detail` jsonb to the `CaseDetailFieldId → value` shape that
+ * `selectCaseDetailRows` consumes. Pure + i18n-free so the case-detail page and the Cases-list
+ * detail drawer render the SAME fields from the SAME keys (no drift). Date fields are formatted by
+ * the caller-supplied `fmt` so each surface controls its own date presentation (the page's legacy
+ * `fmtDate`, the drawer's TZ-correct court-kit `formatCourtDate`).
+ */
+export function extractCaseDetailValues(
+  detail: Record<string, unknown>,
+  fmt: (raw: string) => string,
+): Partial<Record<CaseDetailFieldId, string | null>> {
+  const s = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const d = (v: unknown) => { const t = s(v); return t ? fmt(t) : null; };
+  const fir = s(detail.firNo);
+  return {
+    registrationNo: s(detail.registrationNumber),
+    filingNo: s(detail.filingNumber),
+    registrationDate: d(detail.registrationDate),
+    filingDate: d(detail.filingDate),
+    firstHearingDate: d(detail.first_hearing_date),
+    district: s(detail.district),
+    state: s(detail.state),
+    category: s(detail.category),
+    subCategory: s(detail.sub_category),
+    benchType: s(detail.bench_type),
+    judicialBranch: s(detail.judicial_branch),
+    subordinateCourt: s(detail.subordinate_court),
+    filedBy: s(detail.filed_by),
+    decidedOn: d(detail.decisionDate),
+    firNo: fir ? `${fir}${detail.firYear ? `/${String(detail.firYear)}` : ""}` : null,
+    policeStation: s(detail.policeStation),
+  };
+}
+
+/**
  * Pick + annotate the rows to render.
  *  - Manual case (no eCourts record to mirror): only fields that actually have a value.
  *  - Court-sourced: populated values + honest empties for MOBILE-sourced fields; empty

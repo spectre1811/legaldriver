@@ -249,6 +249,25 @@
     "diary": "diary",
     "past": "past",
     "noDate": "no date",
+    "urgency": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "soon": "in {n}d",
+      "overdue": "{n}d overdue"
+    },
+    "drawer": {
+      "close": "Close",
+      "openAria": "Details for {title}",
+      "identifiers": "Identifiers",
+      "caseNo": "Case no.",
+      "caseType": "Case type",
+      "petitioner": "Petitioner",
+      "respondent": "Respondent",
+      "advocates": "Advocates",
+      "judges": "Judges",
+      "viewFull": "View full case",
+      "provenance": "Source {source} · updated {ago}."
+    },
     "delete": "Delete case",
     "empty": {
       "title": "No cases yet",
