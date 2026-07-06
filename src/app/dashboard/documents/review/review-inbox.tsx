@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { Badge } from "@/components/ui";
+import { Combobox } from "@/components/combobox";
 import { resolveReview, rescanUnfiled } from "../actions";
 
 export type ReviewDoc = {
@@ -127,20 +128,22 @@ export function ReviewInbox({ docs, clients, matters }: { docs: ReviewDoc[]; cli
             {/* Proposed filing — prefilled, editable */}
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="text-xs text-ink-faint">{t("fileTo")}</span>
-              <select
-                value={sel.c} onChange={(e) => setPick((p) => ({ ...p, [d.id]: { ...sel, c: e.target.value } }))}
-                className="input max-w-[12rem] py-1.5 text-xs" aria-label={t("client")}
-              >
-                <option value="">{t("clientOption")}{d.suggestedClientName ? ` (${d.suggestedClientName})` : ""}</option>
-                {clients.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
-              <select
-                value={sel.m} onChange={(e) => setPick((p) => ({ ...p, [d.id]: { ...sel, m: e.target.value } }))}
-                className="input max-w-[12rem] py-1.5 text-xs" aria-label={t("case")}
-              >
-                <option value="">{t("caseOption")}{d.suggestedMatterTitle ? ` (${d.suggestedMatterTitle})` : ""}</option>
-                {matters.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-              </select>
+              <Combobox
+                label={t("client")}
+                placeholder={`${t("clientOption")}${d.suggestedClientName ? ` (${d.suggestedClientName})` : ""}`}
+                options={clients.map((c) => ({ value: c.id, label: c.label }))}
+                value={sel.c || null}
+                onChange={(v) => setPick((p) => ({ ...p, [d.id]: { ...sel, c: v ?? "" } }))}
+                className="min-w-[11rem] max-w-[13rem]"
+              />
+              <Combobox
+                label={t("case")}
+                placeholder={`${t("caseOption")}${d.suggestedMatterTitle ? ` (${d.suggestedMatterTitle})` : ""}`}
+                options={matters.map((m) => ({ value: m.id, label: m.label }))}
+                value={sel.m || null}
+                onChange={(v) => setPick((p) => ({ ...p, [d.id]: { ...sel, m: v ?? "" } }))}
+                className="min-w-[11rem] max-w-[13rem]"
+              />
               <button onClick={() => file(d)} disabled={busy === d.id || (!sel.c && !sel.m)} className="btn-primary px-3 py-1.5 text-xs">
                 {busy === d.id ? t("filing") : t("file")}
               </button>

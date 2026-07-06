@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
+import { Combobox, type ComboOption, RENDER_ALL_MAX } from "@/components/combobox";
 import { CATEGORIES } from "@/lib/docs/categories";
 
 type Opt = { id: string; label: string };
@@ -21,6 +22,19 @@ export function FilterBar({ types, clients }: { types: string[]; clients: Opt[] 
     router.push(`/dashboard/documents?${next.toString()}`);
   };
 
+  // Searchable single-select filter → URL param (`null`/cleared = "all"). WO-62.
+  const combo = (key: string, label: string, placeholder: string, options: ComboOption[], width: string) => (
+    <Combobox
+      label={label}
+      placeholder={placeholder}
+      options={options}
+      value={sp.get(key) ?? null}
+      onChange={(v) => setParam(key, v ?? "")}
+      virtualized={options.length > RENDER_ALL_MAX}
+      className={width}
+    />
+  );
+
   return (
     <div className="flex flex-wrap items-center gap-2">
       <form
@@ -30,29 +44,18 @@ export function FilterBar({ types, clients }: { types: string[]; clients: Opt[] 
         <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("filter.searchPlaceholder")} className="input pl-9" aria-label={t("filter.searchAria")} />
       </form>
-      <select value={sp.get("client") ?? ""} onChange={(e) => setParam("client", e.target.value)} className="input max-w-[12rem]" aria-label={t("filter.clientAria")}>
-        <option value="">{t("filter.allClients")}</option>
-        {clients.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-      </select>
-      <select value={sp.get("category") ?? ""} onChange={(e) => setParam("category", e.target.value)} className="input max-w-[12rem]" aria-label={t("filter.categoryAria")}>
-        <option value="">{t("filter.allCategories")}</option>
-        {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{t(`filter.category.${c.key}`)}</option>)}
-      </select>
-      <select value={sp.get("source") ?? ""} onChange={(e) => setParam("source", e.target.value)} className="input max-w-[10rem]" aria-label={t("filter.sourceAria")}>
-        <option value="">{t("filter.allSources")}</option>
-        <option value="gmail">{t("filter.source.gmail")}</option>
-        <option value="upload">{t("filter.source.upload")}</option>
-        <option value="court_order">{t("filter.source.court_order")}</option>
-      </select>
-      <select value={sp.get("type") ?? ""} onChange={(e) => setParam("type", e.target.value)} className="input max-w-[11rem]" aria-label={t("filter.typeAria")}>
-        <option value="">{t("filter.allTypes")}</option>
-        {types.map((t2) => <option key={t2} value={t2}>{t2}</option>)}
-      </select>
-      <select value={sp.get("filed") ?? ""} onChange={(e) => setParam("filed", e.target.value)} className="input max-w-[9rem]" aria-label={t("filter.filedAria")}>
-        <option value="">{t("filter.all")}</option>
-        <option value="filed">{t("filter.filed")}</option>
-        <option value="unfiled">{t("filter.unfiled")}</option>
-      </select>
+      {combo("client", t("filter.clientAria"), t("filter.allClients"), clients.map((c) => ({ value: c.id, label: c.label })), "min-w-[10rem] max-w-[13rem]")}
+      {combo("category", t("filter.categoryAria"), t("filter.allCategories"), CATEGORIES.map((c) => ({ value: c.key, label: t(`filter.category.${c.key}`) })), "min-w-[10rem] max-w-[12rem]")}
+      {combo("source", t("filter.sourceAria"), t("filter.allSources"), [
+        { value: "gmail", label: t("filter.source.gmail") },
+        { value: "upload", label: t("filter.source.upload") },
+        { value: "court_order", label: t("filter.source.court_order") },
+      ], "min-w-[9rem] max-w-[11rem]")}
+      {combo("type", t("filter.typeAria"), t("filter.allTypes"), types.map((t2) => ({ value: t2, label: t2 })), "min-w-[10rem] max-w-[12rem]")}
+      {combo("filed", t("filter.filedAria"), t("filter.all"), [
+        { value: "filed", label: t("filter.filed") },
+        { value: "unfiled", label: t("filter.unfiled") },
+      ], "min-w-[8rem] max-w-[10rem]")}
     </div>
   );
 }
