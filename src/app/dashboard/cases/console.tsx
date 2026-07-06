@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
+import { Combobox, type ComboOption, RENDER_ALL_MAX } from "@/components/combobox";
 import { saveView } from "./view-actions";
 
 // Query keys the console owns. Used to (re)build the URL and to snapshot a saved view.
@@ -41,6 +42,26 @@ export function Console({
     else next.delete(key);
     push(next);
   };
+
+  // A searchable single-select filter → sets/clears the URL param. `null` (cleared) = "all"/default.
+  const asOptions = (values: string[]): ComboOption[] => values.map((v) => ({ value: v, label: v }));
+  const filter = (
+    key: string,
+    label: string,
+    placeholder: string,
+    options: ComboOption[],
+    width: string,
+  ) => (
+    <Combobox
+      label={label}
+      placeholder={placeholder}
+      options={options}
+      value={sp.get(key) ?? null}
+      onChange={(v) => setParam(key, v ?? "")}
+      virtualized={options.length > RENDER_ALL_MAX}
+      className={width}
+    />
+  );
 
   const currentQuery = () => {
     const out: Record<string, string> = {};
@@ -81,50 +102,25 @@ export function Console({
           />
         </form>
 
-        <select value={sp.get("court") ?? ""} onChange={(e) => setParam("court", e.target.value)} className="input max-w-[12rem]" aria-label={t("court")}>
-          <option value="">{t("allCourts")}</option>
-          {courts.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-
-        <select value={sp.get("case_type") ?? ""} onChange={(e) => setParam("case_type", e.target.value)} className="input max-w-[11rem]" aria-label={t("caseType")}>
-          <option value="">{t("allTypes")}</option>
-          {caseTypes.map((ct) => <option key={ct} value={ct}>{ct}</option>)}
-        </select>
-
-        <select value={sp.get("stage") ?? ""} onChange={(e) => setParam("stage", e.target.value)} className="input max-w-[11rem]" aria-label={t("stage")}>
-          <option value="">{t("allStages")}</option>
-          {stages.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-
-        <select value={sp.get("status") ?? ""} onChange={(e) => setParam("status", e.target.value)} className="input max-w-[10rem]" aria-label={t("status")}>
-          <option value="">{t("allStatuses")}</option>
-          <option value="open">{t("open")}</option>
-          <option value="disposed">{t("disposed")}</option>
-        </select>
-
-        <select value={sp.get("advocate") ?? ""} onChange={(e) => setParam("advocate", e.target.value)} className="input max-w-[12rem]" aria-label={t("advocate")}>
-          <option value="">{t("allAdvocates")}</option>
-          {advocates.map((a) => <option key={a} value={a}>{a}</option>)}
-        </select>
-
-        <select value={sp.get("act") ?? ""} onChange={(e) => setParam("act", e.target.value)} className="input max-w-[12rem]" aria-label={t("act")}>
-          <option value="">{t("allActs")}</option>
-          {acts.map((a) => <option key={a} value={a}>{a}</option>)}
-        </select>
-
-        <select value={sp.get("next") ?? ""} onChange={(e) => setParam("next", e.target.value)} className="input max-w-[11rem]" aria-label={t("nextHearing")}>
-          <option value="">{t("anyHearing")}</option>
-          <option value="overdue">{t("overdue")}</option>
-          <option value="7d">{t("next7")}</option>
-          <option value="30d">{t("next30")}</option>
-          <option value="none">{t("noHearing")}</option>
-        </select>
-
-        <select value={sp.get("sort") ?? ""} onChange={(e) => setParam("sort", e.target.value)} className="input max-w-[12rem]" aria-label={t("sort")}>
-          <option value="">{t("sortNext")}</option>
-          <option value="created_at">{t("sortRecent")}</option>
-          <option value="title">{t("sortTitle")}</option>
-        </select>
+        {filter("court", t("court"), t("allCourts"), asOptions(courts), "min-w-[10rem] max-w-[13rem]")}
+        {filter("case_type", t("caseType"), t("allTypes"), asOptions(caseTypes), "min-w-[10rem] max-w-[12rem]")}
+        {filter("stage", t("stage"), t("allStages"), asOptions(stages), "min-w-[10rem] max-w-[12rem]")}
+        {filter("status", t("status"), t("allStatuses"), [
+          { value: "open", label: t("open") },
+          { value: "disposed", label: t("disposed") },
+        ], "min-w-[9rem] max-w-[11rem]")}
+        {filter("advocate", t("advocate"), t("allAdvocates"), asOptions(advocates), "min-w-[10rem] max-w-[13rem]")}
+        {filter("act", t("act"), t("allActs"), asOptions(acts), "min-w-[10rem] max-w-[13rem]")}
+        {filter("next", t("nextHearing"), t("anyHearing"), [
+          { value: "overdue", label: t("overdue") },
+          { value: "7d", label: t("next7") },
+          { value: "30d", label: t("next30") },
+          { value: "none", label: t("noHearing") },
+        ], "min-w-[9rem] max-w-[12rem]")}
+        {filter("sort", t("sort"), t("sortNext"), [
+          { value: "created_at", label: t("sortRecent") },
+          { value: "title", label: t("sortTitle") },
+        ], "min-w-[10rem] max-w-[12rem]")}
       </div>
 
       {/* Saved views render as the tab strip (CasesTabs); the Console just saves the current query. */}
