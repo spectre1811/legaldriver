@@ -171,9 +171,6 @@ const legaldriverProvider: AdvocateCaseProvider = {
     const get = async (path: string) => {
       try { const r = await fetch(`${base}${path}`, { headers: H, signal: sig() }); return r.ok ? await r.json() : null; } catch { return null; }
     };
-    const post = async (path: string) => {
-      try { const r = await fetch(`${base}${path}`, { method: "POST", headers: H, signal: sig() }); return r.ok ? await r.json() : null; } catch { return null; }
-    };
     const map = (c: LdProfileCase): FetchedAdvocateCase => ({
       cnr: c.cnr, caseNumber: null, title: `${c.case_type ?? "Case"}${c.registration_year ? ` (${c.registration_year})` : ""}`,
       court: c.tier ?? null, status: c.status ?? null, nextHearingDate: null, parties: [], pdfUrl: null,
@@ -189,31 +186,36 @@ const legaldriverProvider: AdvocateCaseProvider = {
     // Stored council token first (dropdown); else infer from the enrollment STATE prefix
     // ("G" → Gujarat), NOT the token id — the advocate writes "G/702/2020", not "GJ/…".
     const council = stateBarCouncil(q.stateCode) ?? (parsed ? councilByStatePrefix(parsed.stateBar) : null);
+    const whId = warehouseBarId(parsed, q.barNumber);
 
-    // LIVE path (onboarding): full tuple + retry HC then district. `/advocate/{serial}/refresh`
-    // ingests each returned case and re-reads the warehouse profile, so its `cases` is the roster.
+    // BP-71 (fix, 2026-07-06): READ THE WAREHOUSE FIRST — the cases we already hold. This must NOT be
+    // gated behind the now-ASYNC live refresh (which returns a 202 job ticket, no cases, and can take
+    // ~16s/scope to fetch the roster). Reading held cases first means onboarding seeds them fast +
+    // reliably instead of hanging on the "fetch" stage. Exact CANONICAL bar id when known (WO-49 — the
+    // warehouse keys on the full "STATE/SERIAL/YEAR", not the bare serial), else fuzzy by name.
+    if (whId) {
+      collect(await get(`/advocate/${encodeURIComponent(whId)}`));
+    } else if (q.name) {
+      const s = await get(`/search/advocate?name=${encodeURIComponent(q.name)}`);
+      const barIds = [...new Set(((s?.results ?? []) as { bar_id?: string }[]).map((r) => r.bar_id).filter((b): b is string => !!b))].slice(0, 3);
+      for (const bar of barIds) collect(await get(`/advocate/${encodeURIComponent(bar)}`));
+    }
+
+    // THEN kick off the LIVE refresh, FIRE-AND-FORGET — it ENQUEUES the roster for the rotating-IP fleet
+    // (BP-71 async, 202) so newly-fetched cases land in the warehouse in the background. We do NOT await
+    // it (the ~16s/scope roster fetch must never stall onboarding — held cases were already collected
+    // above) and we do NOT read its response (it carries no cases). It runs during the remaining
+    // onboarding stages. Best-effort: a slow/failed scope is swallowed.
     if (q.live && parsed && council?.verified) {
       const serial = String(parsed.serial);
-      for (const scope of barSearchScopes(council)) {
+      const refreshTimeout = Number(process.env.LD_REFRESH_TIMEOUT_MS ?? "20000");
+      void Promise.allSettled(barSearchScopes(council).map((scope) => {
         const p = new URLSearchParams({ year: String(parsed.year), bar_state: scope.barState, state_code: String(scope.stateCode), tier: scope.tier });
         if (scope.courtCodeArr) p.set("court_code_arr", scope.courtCodeArr);
         else { p.set("dist_code", String(scope.distCode ?? 1)); p.set("court_code", String(scope.courtCode ?? 1)); }
-        const prof = await post(`/advocate/${encodeURIComponent(serial)}/refresh?${p.toString()}`);
-        if (prof && !prof.error) collect(prof);
-      }
-    }
-
-    // Warehouse / name fallback: exact CANONICAL bar id when known (WO-49 — the warehouse keys on
-    // the full "STATE/SERIAL/YEAR", not the bare serial), else fuzzy by name.
-    if (!out.length) {
-      let barIds: string[] = [];
-      const whId = warehouseBarId(parsed, q.barNumber);
-      if (whId) barIds = [whId];
-      else if (q.name) {
-        const s = await get(`/search/advocate?name=${encodeURIComponent(q.name)}`);
-        barIds = [...new Set(((s?.results ?? []) as { bar_id?: string }[]).map((r) => r.bar_id).filter((b): b is string => !!b))].slice(0, 3);
-      }
-      for (const bar of barIds) collect(await get(`/advocate/${encodeURIComponent(bar)}`));
+        return fetch(`${base}/advocate/${encodeURIComponent(serial)}/refresh?${p.toString()}`,
+          { method: "POST", headers: H, signal: AbortSignal.timeout(refreshTimeout) }).catch(() => null);
+      }));
     }
     return out;
   },
