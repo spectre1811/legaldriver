@@ -50,3 +50,12 @@ PostgREST schema cache**, then seeds the demo tenant and runs `run-tests.mjs db`
   warning gone). If the post-merge run surfaces a CLI/stack wrinkle, fix-forward — nobody is blocked
   (advisory job).
 - Closes the drift class: the next additive migration cannot silently re-disarm the isolation tests.
+- **WO-41 grandfathered-`0031` interaction (found on the first post-merge run):** the local
+  `supabase start` migrator keys `supabase_migrations.schema_migrations` by filename version and
+  rejects the two migrations that share version `0031` (`0031_email_status_archive` +
+  `0031_profile_notification_prefs`) — a pair WO-41 deliberately grandfathers because prod applied
+  both via the Management API (which doesn't key by version). Rather than reverse WO-41 in the repo
+  (a founder-gated migration change, out of scope for this CI WO), the job renames the later file to
+  `0032_…` **in the ephemeral checkout only** (identical SQL, order preserved) so the clean migrate
+  proceeds. The committed repo keeps WO-41's grandfathered pair untouched. A future founder-gated WO
+  could rename it for real to make every migration version globally unique.

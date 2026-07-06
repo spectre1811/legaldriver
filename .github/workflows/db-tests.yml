@@ -43,6 +43,19 @@ jobs:
         run: |
           # Generate config.toml against the installed CLI (nothing committed to drift).
           [ -f supabase/config.toml ] || supabase init < /dev/null
+
+          # WO-41 deliberately GRANDFATHERS two migrations that share version 0031
+          # (0031_email_status_archive + 0031_profile_notification_prefs). Prod applied
+          # both via the Supabase Management API, which does NOT key by version, so the
+          # repo keeps the pair as-is (see scripts/check-migrations.mjs). But the LOCAL
+          # `supabase start` migrator keys supabase_migrations.schema_migrations by the
+          # filename version and rejects the duplicate ("schema_migrations_pkey"). Give
+          # the later file a unique version in THIS EPHEMERAL CHECKOUT ONLY — identical
+          # SQL, order preserved (0031 < 0032) — so the clean-migrate-per-run proceeds
+          # WITHOUT reversing WO-41's grandfathered pair in the committed repo.
+          dup=supabase/migrations/0031_profile_notification_prefs.sql
+          [ -f "$dup" ] && mv "$dup" supabase/migrations/0032_profile_notification_prefs.sql || true
+
           # `supabase start` applies every supabase/migrations/*.sql from empty, then
           # brings up Postgres + Auth (GoTrue) + PostgREST with a fresh schema cache.
           supabase start
