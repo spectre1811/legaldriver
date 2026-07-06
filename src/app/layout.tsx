@@ -3,6 +3,7 @@ import { Inter, Fraunces, Noto_Sans_Devanagari, Noto_Sans_Gujarati } from "next/
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { brand } from "@/lib/brand";
+import { stripGatedPricing } from "@/lib/i18n-gate";
 import "./globals.css";
 
 const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
-  const messages = await getMessages();
+  const messages = stripGatedPricing(await getMessages());
   const fontVars = `${sans.variable} ${serif.variable} ${notoDeva.variable} ${notoGuj.variable}`;
   return (
     <html lang={locale} className={fontVars}>
