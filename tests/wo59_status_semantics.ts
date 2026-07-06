@@ -81,6 +81,34 @@ const realCalls = statusCalls("Pending,Disposed");
 ok("buildCasesQuery(real) uses IN(status, values)", realCalls.some((c) => c[0] === "in" && c[1][0] === "status"));
 ok("buildCasesQuery(real) never does eq(status)", !realCalls.some((c) => c[0] === "eq" && c[1][0] === "status"));
 
+// ── 2b. multi-select facet filters — repeated params → `.in` / `.overlaps`, never `.eq` ──
+function filterCalls(f: Record<string, unknown>): Call[] {
+  const calls: Call[] = [];
+  buildCasesQuery(makeSupabase(calls), f as never);
+  return calls;
+}
+const has = (calls: Call[], m: string, col: string, val?: unknown) =>
+  calls.some((c) => c[0] === m && c[1][0] === col && (val === undefined || JSON.stringify(c[1][1]) === JSON.stringify(val)));
+
+// Scalar columns → `.in` (OR within a facet), single or multi, and never the old `.eq`.
+const courtMulti = filterCalls({ court: ["HC", "District"] });
+ok("court[] → in(court, [..])", has(courtMulti, "in", "court", ["HC", "District"]));
+ok("court[] never eq(court)", !courtMulti.some((c) => c[0] === "eq" && c[1][0] === "court"));
+ok("single court string → in(court, [one])", has(filterCalls({ court: "HC" }), "in", "court", ["HC"]));
+ok("case_type[] → in(case_type)", has(filterCalls({ case_type: ["SCA", "CC"] }), "in", "case_type", ["SCA", "CC"]));
+ok("stage[] → in(stage)", has(filterCalls({ stage: ["Hearing"] }), "in", "stage", ["Hearing"]));
+ok("statuses[] → in(status)", has(filterCalls({ statuses: ["Pending", "Contested"] }), "in", "status", ["Pending", "Contested"]));
+
+// Array columns → `.overlaps` (row shares ≥1 picked value), never the old single-value `.contains`.
+const advMulti = filterCalls({ advocate: ["A. Sharma", "B. Patel"] });
+ok("advocate[] → overlaps(advocate_names)", has(advMulti, "overlaps", "advocate_names", ["A. Sharma", "B. Patel"]));
+ok("advocate[] never contains(advocate_names)", !advMulti.some((c) => c[0] === "contains"));
+ok("act[] → overlaps(act_names)", has(filterCalls({ act: ["Indian Penal Code, 1860"] }), "overlaps", "act_names", ["Indian Penal Code, 1860"]));
+// Empty / whitespace-only multi params add no filter (no phantom `.in [""]`).
+const empties = filterCalls({ court: ["", "  "], advocate: [] });
+ok("blank multi values add no court filter", !empties.some((c) => c[0] === "in" && c[1][0] === "court"));
+ok("empty advocate array adds no overlaps", !empties.some((c) => c[0] === "overlaps"));
+
 // ── 3. fetchViewCounts routes open/disposed through the same filter ──────────
 async function main() {
   const calls: Call[] = [];

@@ -10,14 +10,24 @@ import { rangeFor } from "@/lib/paginate";
 export interface CasesFilters {
   q?: string;
   tier?: string; // WO-54 W2: court-tier segmentation (HC/DISTRICT/…) — indexed matter.tier column
-  court?: string;
-  case_type?: string;
-  stage?: string;
-  status?: string;
-  advocate?: string;
-  act?: string;
+  // WO-59: facet filters are multi-select. Repeated URL params (`?court=A&court=B`) — NOT a
+  // comma-joined string — because facet values legitimately contain commas (act names like
+  // "Indian Penal Code, 1860"). Next.js hands a repeated param through as `string[]`.
+  court?: string | string[];
+  case_type?: string | string[];
+  stage?: string | string[];
+  status?: string; // semantic grouping token from the tabs (open/disposed/all)
+  statuses?: string | string[]; // real distinct status values from the console multi-select
+  advocate?: string | string[];
+  act?: string | string[];
   next?: string;
   sort?: string;
+}
+
+// Normalize a repeated/absent/single URL param into a clean value array (trimmed, non-empty).
+function asArray(v: string | string[] | undefined): string[] {
+  if (v == null) return [];
+  return (Array.isArray(v) ? v : [v]).map((s) => s.trim()).filter(Boolean);
 }
 
 export interface MatterRow {
@@ -104,12 +114,21 @@ export function buildCasesQuery(supabase: SupabaseClient<Database>, f: CasesFilt
     }
   }
   if (f.tier) query = query.eq("tier", f.tier); // WO-54 W2: tier tab scope (uses matter_tier_idx)
-  if (f.court) query = query.eq("court", f.court);
-  if (f.case_type) query = query.eq("case_type", f.case_type);
-  if (f.stage) query = query.eq("stage", f.stage);
+  // Scalar columns: `.in` matches any of the picked values (OR within a facet). Array columns
+  // (advocate_names / act_names): `.overlaps` matches a row whose array shares ≥1 picked value.
+  const courts = asArray(f.court);
+  if (courts.length) query = query.in("court", courts);
+  const caseTypes = asArray(f.case_type);
+  if (caseTypes.length) query = query.in("case_type", caseTypes);
+  const stages = asArray(f.stage);
+  if (stages.length) query = query.in("stage", stages);
   if (f.status) query = applyStatusFilter(query, f.status);
-  if (f.advocate) query = query.contains("advocate_names", [f.advocate]);
-  if (f.act) query = query.contains("act_names", [f.act]);
+  const statuses = asArray(f.statuses);
+  if (statuses.length) query = query.in("status", statuses);
+  const advocates = asArray(f.advocate);
+  if (advocates.length) query = query.overlaps("advocate_names", advocates);
+  const acts = asArray(f.act);
+  if (acts.length) query = query.overlaps("act_names", acts);
 
   if (f.next === "overdue") query = query.lt("next_hearing_date", today);
   else if (f.next === "none") query = query.is("next_hearing_date", null);
