@@ -1610,7 +1610,8 @@
     },
     "stat": {
       "causelist": "पेशी सूची",
-      "casesFetched": "लाए मुकदमे",
+      "rosterTotal": "दर्ज मुकदमे",
+      "casesFetched": "इस रन में नए",
       "mattersSeeded": "सीड किए मुकदमे",
       "enriched": "समृद्ध",
       "deadlinesProposed": "प्रस्तावित समय-सीमाएँ",

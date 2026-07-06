@@ -6,10 +6,14 @@
 export interface OnboardingCounts {
   causelist: number; cases_fetched: number; matters_seeded: number; enriched: number;
   deadlines_proposed: number; inbox_filed: number; docs_attached: number; closed_found: number; summaries_queued: number;
+  // WO-65: the advocate's FULL roster size (M) — the total cases the warehouse holds for them, so the UI
+  // can say "N of M imported" honestly. Distinct from `cases_fetched` (NEW matters seeded this run, which
+  // is 0 on an idempotent re-run) — `roster_total` is stable across re-runs, so coverage never lies.
+  roster_total: number;
 }
 
 export function emptyCounts(): OnboardingCounts {
-  return { causelist: 0, cases_fetched: 0, matters_seeded: 0, enriched: 0, deadlines_proposed: 0, inbox_filed: 0, docs_attached: 0, closed_found: 0, summaries_queued: 0 };
+  return { causelist: 0, cases_fetched: 0, matters_seeded: 0, enriched: 0, deadlines_proposed: 0, inbox_filed: 0, docs_attached: 0, closed_found: 0, summaries_queued: 0, roster_total: 0 };
 }
 
 // Coerce a persisted `counts` JSON (any shape) back into a full OnboardingCounts so resuming a run
@@ -24,12 +28,14 @@ export function normalizeCounts(raw: unknown): OnboardingCounts {
   return c;
 }
 
-// enrich does LIVE per-CNR eCourts read-throughs — the stage that historically pushed a large roster
-// past Vercel Hobby's 60s server-action cap. Process it in small cursor-tracked chunks so no single
-// drain invocation runs them all at once, and so it paces the source. Kept SMALL (3) because the budget
-// is only checked BETWEEN chunks — one chunk of live reads must comfortably fit in the headroom left
-// under the 60s function cap (3 live reads « 60s guarantees forward progress every invocation).
-export const ENRICH_CHUNK = 3;
+// enrich reads each CNR's full detail from our WAREHOUSE (WO-65: cached `GET /v1/cases/{cnr}`, NOT a
+// live eCourts `POST …/refresh` — no source burst, freshness is the nightly cron's job). Processed in
+// cursor-tracked chunks the orchestrator runs CONCURRENTLY, so no single drain invocation blocks on all
+// of them and the budget is re-checked between chunks. Bumped 3→5 now that a chunk is cheap cached reads
+// (~0.3s each) rather than slow live fetches (~3-6s) — 5 concurrent cached reads stay well under the 60s
+// function cap while letting a ~257-case roster finish in a single invocation. (Kept < 6 so a 12-CNR
+// roster still spans ≥3 chunks — the resumable state machine's mid-chunk budget-stop stays exercised.)
+export const ENRICH_CHUNK = 5;
 
 // Default per-invocation wall-clock budget for the interactive path (client action, 60s cap). The
 // budget gates STARTING a new unit, so it must leave room for one more (possibly slow, live) unit to

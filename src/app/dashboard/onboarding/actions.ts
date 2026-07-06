@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
 import { drainOnboarding, seedFetchedMatters, DRAIN_BUDGET_MS, type OnboardingCounts } from "@/lib/services/onboarding/orchestrator";
+import { onboardingCoverage } from "@/lib/services/onboarding/progress";
 import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
 import { diagnoseEmptyRoster } from "@/lib/court/bar-number";
 import type { Database } from "@/lib/db/database.types";
@@ -73,8 +74,13 @@ async function emptyRosterNote(supabase: ReturnType<typeof createClient>, advoca
 // advocate has none". Shared by the single-shot (`startOnboarding`) and resumable (`continueOnboarding`)
 // completion paths so both report identically.
 async function finishMessage(supabase: ReturnType<typeof createClient>, advocateId: string, counts: OnboardingCounts): Promise<string> {
-  const note = counts.cases_fetched === 0 && counts.matters_seeded === 0 ? await emptyRosterNote(supabase, advocateId) : "";
-  return `Done — ${counts.cases_fetched} cases auto-fetched, ${counts.matters_seeded} from cause-list, ${counts.enriched} enriched, ${counts.deadlines_proposed} deadlines proposed, ${counts.inbox_filed} emails filed, ${counts.docs_attached} docs auto-filed, ${counts.closed_found} closed cases found, ${counts.summaries_queued} AI briefings queued.${note}`;
+  const cov = onboardingCoverage(counts as unknown as Record<string, number>);
+  // WO-65: report the FULL roster on file (M), not just what was new this run — cases_fetched reads 0 on
+  // an idempotent re-run. And only append the "why 0?" note when we genuinely found nothing (roster empty
+  // AND nothing seeded), never after a re-run of an already-imported advocate.
+  const note = cov.onFile === 0 && counts.matters_seeded === 0 ? await emptyRosterNote(supabase, advocateId) : "";
+  const onFile = cov.total > 0 ? cov.total : counts.cases_fetched;
+  return `Done — ${onFile} cases on file, ${counts.enriched} enriched, ${counts.matters_seeded} from cause-list, ${counts.deadlines_proposed} deadlines proposed, ${counts.inbox_filed} emails filed, ${counts.docs_attached} docs auto-filed, ${counts.closed_found} closed cases found, ${counts.summaries_queued} AI briefings queued.${note}`;
 }
 
 // Start (or re-run) onboarding for an advocate. BP-73: runs only the first bounded chunk (~45s, safely
@@ -152,6 +158,9 @@ export async function harvestOnboarding(advocateId: string): Promise<{ added: nu
     if (run) {
       const counts = { ...((run.counts as Record<string, number> | null) ?? {}) };
       counts.cases_fetched = (counts.cases_fetched ?? 0) + added;
+      // WO-65: keep the roster total (M) current as the fleet lands more of a cold advocate's cases, so
+      // the "N of M imported" coverage grows honestly rather than freezing at the first run's number.
+      counts.roster_total = Math.max(counts.roster_total ?? 0, cases.length);
       await supabase.from("onboarding_run")
         .update({ counts: counts as unknown as Database["public"]["Tables"]["onboarding_run"]["Update"]["counts"], updated_at: new Date().toISOString() })
         .eq("id", run.id);
