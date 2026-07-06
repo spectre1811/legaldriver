@@ -10,10 +10,13 @@ export const maxDuration = 60;
 // backstop never double-drains a run a client is actively finishing (the coordination is the staleness
 // gate; drain itself has no cross-process lock). Tune via env.
 const STALE_MINUTES = Number(process.env.ONBOARDING_DRAIN_STALE_MINUTES ?? "10");
-const MAX_RUNS_PER_TICK = Number(process.env.ONBOARDING_DRAIN_MAX_RUNS ?? "10");
-// Leave headroom under maxDuration so the last drain returns before Vercel kills the function.
-const TICK_BUDGET_MS = 50_000;
-const PER_RUN_BUDGET_MS = 45_000;
+const MAX_RUNS_PER_TICK = Number(process.env.ONBOARDING_DRAIN_MAX_RUNS ?? "6");
+// The whole tick shares one 60s function cap. Budgets gate STARTING work, and a live enrich chunk can
+// still run a while after it starts — so keep both conservative: stop starting new runs at 40s, and
+// give each run only a 25s drain budget (25s + a ≤3-read chunk finishes under 60s). A run that needs
+// more advances on the next tick (drain is resumable + idempotent) — never a FUNCTION_INVOCATION_TIMEOUT.
+const TICK_BUDGET_MS = 40_000;
+const PER_RUN_BUDGET_MS = 25_000;
 
 // BP-73 backstop. Vercel Cron hits this with `Authorization: Bearer <CRON_SECRET>`. Resumes onboarding
 // runs left mid-flight (the user closed the tab before the client finished draining a large roster), so

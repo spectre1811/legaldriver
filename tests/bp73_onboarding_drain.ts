@@ -80,7 +80,7 @@ function recorder() {
   const { state, done } = await driveDrain(fresh(), step, { budgetMs: Number.POSITIVE_INFINITY, now: () => 0, persist });
   check("A: reaches done", done && state.stage === "done");
   check("A: every CNR enriched exactly once", state.counts.enriched === 12);
-  check("A: enrich ran 3 chunks (5+5+2)", visited.filter((s) => s === "enrich").length === 3);
+  check("A: enrich ran ⌈12/chunk⌉ chunks", visited.filter((s) => s === "enrich").length === Math.ceil(cnrs12.length / ENRICH_CHUNK));
   check("A: each pipeline stage visited", PIPELINE_STAGES.every((s) => visited.includes(s)));
   check("A: last persist marks done", persisted[persisted.length - 1].done === true && persisted[persisted.length - 1].stage === "done");
   check("A: fetch message persisted", persisted.some((p) => p.message === "still fetching…"));
@@ -93,14 +93,15 @@ function recorder() {
   const { persisted, persist } = recorder();
   const first = await driveDrain(fresh(), step, { budgetMs: 100, now: () => clock.t, persist });
   // budget 100, 30ms/step → checks pass at 0,30,60,90 then stop → 4 steps: causelist, fetch, enrich, enrich
+  const twoChunks = 2 * ENRICH_CHUNK;
   check("B: stopped, not done", !first.done && first.state.stage === "enrich");
-  check("B: partial enrich = 10 (two chunks)", first.state.counts.enriched === 10 && first.state.cursor.enrich_offset === 10);
+  check("B: partial enrich = two chunks", first.state.counts.enriched === twoChunks && first.state.cursor.enrich_offset === twoChunks);
   check("B: exactly 4 steps ran before budget", visited.length === 4);
   const lastPersist = persisted[persisted.length - 1];
-  check("B: persisted state is resumable (enrich @ offset 10)", lastPersist.stage === "enrich" && lastPersist.offset === 10 && lastPersist.done === false);
+  check("B: persisted state is resumable (enrich mid-way)", lastPersist.stage === "enrich" && lastPersist.offset === twoChunks && lastPersist.done === false);
 
   // Resume from EXACTLY what was persisted (fresh clock + unbounded budget, same roster).
-  const resumeState: DrainState = { stage: lastPersist.stage, cursor: { enrich_offset: 10 }, counts: normalizeCounts({ enriched: 10 }), message: null };
+  const resumeState: DrainState = { stage: lastPersist.stage, cursor: { enrich_offset: lastPersist.offset as number }, counts: normalizeCounts({ enriched: lastPersist.enriched }), message: null };
   const { step: step2, visited: v2 } = fakeStep(cnrs12);
   const rec2 = recorder();
   const second = await driveDrain(resumeState, step2, { budgetMs: Number.POSITIVE_INFINITY, now: () => 0, persist: rec2.persist });
