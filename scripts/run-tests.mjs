@@ -71,6 +71,7 @@ const OFFLINE = [
   "wo54_facets",
   "wo54_keyboard",
   "wo59_status_semantics",
+  "wo63_deploy_freshness",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the
