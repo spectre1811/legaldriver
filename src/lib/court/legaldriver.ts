@@ -36,6 +36,8 @@ type RawCase = {
   filing_number?: string | null; filing_date?: string | null; first_hearing_date?: string | null;
   registration_date?: string | null; district?: string | null; state?: string | null;
   coram?: string | null; fir_no?: string | null; fir_year?: number | null; police_station?: string | null; source?: string;
+  // WO-69b: bench type + judicial branch (coram is the real judge platform-side now; state above).
+  bench_type?: string | null; judicial_branch?: string | null;
   // WO-69: rich case-detail blocks eCourts sends as composite strings (parsed platform-side). FIR is
   // above; these are the remaining sections the case page was missing.
   disposal_nature?: string | null;
@@ -214,6 +216,8 @@ export class LegalDriverClient implements CourtDataClient {
         // WO-41: keys match exactly what cases/[id]/page.tsx reads (mixed case is intentional).
         filingNumber: r.filing_number, filingDate: r.filing_date, first_hearing_date: r.first_hearing_date,
         registrationDate: r.registration_date, district: r.district, state: r.state,
+        // WO-69b: bench type + judicial branch feed the info grid (sourced:false, show-if-present).
+        bench_type: r.bench_type, judicial_branch: r.judicial_branch,
         decisionDate: r.decision_date, coram,
         firNo: r.fir_no, firYear: r.fir_year, policeStation: r.police_station,
         // WO-69: nature-of-disposal + category (tri-level) + subordinate court + court filings +
