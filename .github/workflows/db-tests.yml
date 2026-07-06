@@ -50,11 +50,14 @@ jobs:
           # repo keeps the pair as-is (see scripts/check-migrations.mjs). But the LOCAL
           # `supabase start` migrator keys supabase_migrations.schema_migrations by the
           # filename version and rejects the duplicate ("schema_migrations_pkey"). Give
-          # the later file a unique version in THIS EPHEMERAL CHECKOUT ONLY — identical
-          # SQL, order preserved (0031 < 0032) — so the clean-migrate-per-run proceeds
-          # WITHOUT reversing WO-41's grandfathered pair in the committed repo.
+          # the later file a unique version in THIS EPHEMERAL CHECKOUT ONLY so the
+          # clean-migrate-per-run proceeds WITHOUT reversing WO-41's grandfathered pair
+          # in the committed repo. Renumber to 0037 (highest committed numeric is 0036;
+          # 0032–0036 are already taken): `notification_prefs` is a LEAF table — nothing
+          # else references it and it only depends on profile/tenant (0001) — so applying
+          # it later is semantically identical (same SQL, same end state).
           dup=supabase/migrations/0031_profile_notification_prefs.sql
-          [ -f "$dup" ] && mv "$dup" supabase/migrations/0032_profile_notification_prefs.sql || true
+          [ -f "$dup" ] && mv "$dup" supabase/migrations/0037_profile_notification_prefs.sql || true
 
           # `supabase start` applies every supabase/migrations/*.sql from empty, then
           # brings up Postgres + Auth (GoTrue) + PostgREST with a fresh schema cache.
