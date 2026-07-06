@@ -1,7 +1,7 @@
 # Modern combobox adoption sweep (WO-62 · continues WO-55)
 
 - **Date:** 2026-07-06
-- **Status:** Accepted (Waves W2 + W3a shipped; W3b/W4/W5 tracked as follow-ups)
+- **Status:** Accepted (PR #114: W2 + W3a · PR #2 [this]: W3b + missed pickers + W5 guardrail. Only the 2 dark bulk-bar action-triggers remain — need a compact `onDark` combobox variant)
 - **Work order:** WO-62 (adoption sweep) — implements the adoption WO-55 built the primitive for
 - **Author session:** S-WO62-opus-20260706
 
@@ -57,6 +57,34 @@ Adopt the primitive surface-by-surface, highest-pain first, each wave independen
   Deliberately **after** full adoption — it would false-fail on the not-yet-swapped natives above.
 - **Multi-select "is any of"** for Cases status/stage: needs `cases-query.ts` (`IN (...)`) changes that
   WO-59 owns right now → coordinate after WO-59 lands, then swap those two to `<MultiSelect>`.
+
+## Update — second wave (this PR): finished the sweep bar the dark bulk-bars
+After the founder asked to actually finish "everywhere", a corrected inventory found the real
+surface is ~18 files (the first pass's grep missed `cases/cases-table.tsx`, `inbox/review-inbox.tsx`,
+`search/judgments/filters.tsx`, `pagination.tsx`). This wave swapped:
+- **Missed controlled/URL pickers:** `inbox/review-inbox.tsx` (client+case), `search/judgments/filters.tsx`
+  (court+year+disposal facets), `cases/[id]/deadline-rules.tsx` (rule).
+- **W3b form-field pickers** (hidden-input mirror pattern): `calendar/add-entry.tsx` (matter),
+  `notices/notice-form.tsx` (matter), `voice/uploader.tsx` (client) — each renders
+  `<input type="hidden" name=… value={val ?? ""}>` beside the controlled `<Combobox>` so the value
+  still reaches the server action's `FormData`; `voice/uploader` also resets the state on a successful
+  submit (native `form.reset()` doesn't touch React state).
+- **W5 guardrail:** `tests/wo62_combobox_adoption.ts` (offline, registered in `run-tests.mjs`) — fails
+  on any un-allowlisted native `<select>`, asserts the flagship surfaces import the Combobox, and
+  asserts each form picker kept its hidden input. The allowlist encodes the "fixed-enum-native-OK" line.
+
+### Deliberately KEPT native (guardrail-allowlisted — tiny fixed enum, search adds nothing)
+`components/pagination.tsx` (page-size 25/50/100), `clients/client-intake.tsx` (type),
+`ip/ip-form.tsx` (type), `cases/[id]/time-expense.tsx` (category), `calendar/add-entry.tsx` (kind),
+`assistant/draft/draft-ui.tsx` (language). A search box over ≤6 fixed options is worse UX; converting
+would only add hidden-input plumbing for no user benefit.
+
+### Still open (needs a primitive variant, tracked in BACKLOG §D)
+`documents/documents-browser.tsx` (file-to-client / file-to-case) and `cases/cases-table.tsx` (bulk
+set-stage) are **compact action-triggers on a dark bulk bar** (`bg-paper/15 text-paper`, `py-1`,
+rounded-full). The current combobox skin is a 2.75rem light input — dropping it there breaks the bar's
+size/tone rhythm, and these are momentary pickers, not persistent filters. They need a compact
+`onDark` Combobox variant (a real design task) before swap — deferred rather than shipped ill-fitting.
 
 ## Consequences
 - Every swept dropdown is now searchable, keyboard-navigable (APG), scroll-bounded, and clearable — a

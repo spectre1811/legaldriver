@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Combobox } from "@/components/combobox";
 import { applyDeadlineRule } from "../actions";
 
 export type Rule = { id: string; kind: string; days: number; jurisdiction: string; description: string | null };
@@ -23,12 +24,12 @@ export function DeadlineRuleForm({ matterId, rules }: { matterId: string; rules:
   return (
     <div className="space-y-2">
       <div className="flex flex-col gap-2 sm:flex-row">
-        <select value={ruleId} onChange={(e) => setRuleId(e.target.value)} className="input py-1.5 text-sm sm:flex-1" aria-label={t("deadlineRules.ruleAria")}>
-          <option value="">{t("deadlineRules.rulePlaceholder")}</option>
-          {rules.map((r) => (
-            <option key={r.id} value={r.id}>{r.jurisdiction} · {kindLabel(r.kind)} (+{r.days}d)</option>
-          ))}
-        </select>
+        <Combobox
+          label={t("deadlineRules.ruleAria")} placeholder={t("deadlineRules.rulePlaceholder")}
+          options={rules.map((r) => ({ value: r.id, label: `${r.jurisdiction} · ${kindLabel(r.kind)} (+${r.days}d)` }))}
+          value={ruleId || null} onChange={(v) => setRuleId(v ?? "")}
+          className="sm:flex-1"
+        />
         <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="input py-1.5 text-sm sm:w-44" aria-label={t("deadlineRules.clockStartAria")} />
         <button
           disabled={pending || !ruleId || !date}

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
+import { Combobox } from "@/components/combobox";
 import { confirmEmail, deleteEmails, archiveEmails } from "./actions";
 import { useInboxSelection } from "./use-inbox-selection";
 import { BulkBar, UndoToast, SelectBox } from "./bulk-ui";
@@ -35,14 +36,18 @@ function ReviewRow({ email, clients, matters, checked, onToggle }: {
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="input max-w-[11rem] py-1.5 text-xs" aria-label={t("review.assignClient")}>
-            <option value="">{t("review.clientOption")}</option>
-            {clients.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-          </select>
-          <select value={matterId} onChange={(e) => setMatterId(e.target.value)} className="input max-w-[11rem] py-1.5 text-xs" aria-label={t("review.assignCase")}>
-            <option value="">{t("review.caseOption")}</option>
-            {matters.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-          </select>
+          <Combobox
+            label={t("review.assignClient")} placeholder={t("review.clientOption")}
+            options={clients.map((c) => ({ value: c.id, label: c.label }))}
+            value={clientId || null} onChange={(v) => setClientId(v ?? "")}
+            className="min-w-[10rem] max-w-[12rem]"
+          />
+          <Combobox
+            label={t("review.assignCase")} placeholder={t("review.caseOption")}
+            options={matters.map((m) => ({ value: m.id, label: m.label }))}
+            value={matterId || null} onChange={(v) => setMatterId(v ?? "")}
+            className="min-w-[10rem] max-w-[12rem]"
+          />
           <button
             onClick={() => start(async () => { await confirmEmail(email.id, clientId || null, matterId || null); router.refresh(); })}
             disabled={pending || (!clientId && !matterId)}
