@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
-import { runOnboarding } from "@/lib/services/onboarding/orchestrator";
+import { runOnboarding, seedFetchedMatters } from "@/lib/services/onboarding/orchestrator";
+import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
 import { diagnoseEmptyRoster } from "@/lib/court/bar-number";
+import type { Database } from "@/lib/db/database.types";
 
 export type OnboardingActionResult = { ok: boolean; message: string; runId?: string };
 
@@ -43,6 +45,11 @@ export async function getOnboardingStatus(advocateId: string): Promise<Onboardin
 // Gujarat district. So a "0 results" is NOT proof of "no cases" for a district advocate;
 // we must say so, not imply a clean zero. Full district coverage is tracked in BACKLOG §D.
 async function emptyRosterNote(supabase: ReturnType<typeof createClient>, advocateId: string): Promise<string> {
+  // WO-58: a zero when NO court-data source is configured is not "you have no cases" — it's a
+  // deployment gap. Say so first (and actionably), before the enrolment-quality diagnostics below.
+  if (enabledAdvocateProviders().length === 0) {
+    return " No cases were auto-fetched because no court-data source is configured here — an administrator must set LD_API_KEY (see FOUNDER-ACTIONS #1). Your cause list and add-by-CNR still work.";
+  }
   const { data: adv } = await supabase.from("advocate").select("bar_registration_number, state_code").eq("id", advocateId).maybeSingle();
   const reason = diagnoseEmptyRoster(adv?.bar_registration_number, adv?.state_code);
   switch (reason.kind) {
@@ -85,6 +92,39 @@ export async function startOnboarding(advocateId: string): Promise<OnboardingAct
     revalidatePath("/dashboard/onboarding");
     return { ok: false, runId: run.id, message: "Onboarding hit an error — partial progress saved; you can re-run." };
   }
+}
+
+// WO-58: harvest cases the background fleet has since ingested into our warehouse INTO the tenant. The
+// live roster refresh (`startLiveAdvocateRefresh`) is async — the rotating-IP fleet stores the advocate's
+// cases in our warehouse over the following minutes. This re-reads the warehouse (WAREHOUSE-ONLY,
+// `live:false` — never a live eCourts burst) and seeds any newly-available matters, bumping the latest
+// run's `cases_fetched`. Safe + cheap to call repeatedly; the UI polls it while a fetch is pending so a
+// cold advocate fills in without the user re-running. Returns how many NEW matters were seeded this call.
+export async function harvestOnboarding(advocateId: string): Promise<{ added: number }> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { added: 0 };
+
+  const { data: adv } = await supabase.from("advocate").select("name, bar_registration_number, state_code").eq("id", advocateId).maybeSingle();
+  if (!adv) return { added: 0 };
+
+  const { fetchAdvocateCases } = await import("@/lib/court/advocate-cases");
+  const cases = await fetchAdvocateCases({ name: adv.name, barNumber: adv.bar_registration_number, stateCode: adv.state_code, live: false });
+  const added = await seedFetchedMatters(supabase, tenantId, cases);
+  if (added > 0) {
+    const { data: run } = await supabase.from("onboarding_run").select("id, counts").eq("advocate_id", advocateId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (run) {
+      const counts = { ...((run.counts as Record<string, number> | null) ?? {}) };
+      counts.cases_fetched = (counts.cases_fetched ?? 0) + added;
+      await supabase.from("onboarding_run")
+        .update({ counts: counts as unknown as Database["public"]["Tables"]["onboarding_run"]["Update"]["counts"], updated_at: new Date().toISOString() })
+        .eq("id", run.id);
+    }
+    revalidatePath("/dashboard/onboarding");
+    revalidatePath("/dashboard/cases");
+    revalidatePath("/dashboard/calendar");
+  }
+  return { added };
 }
 
 // Delete (undo) an onboarding: remove the advocate, its onboarding runs, and the cases

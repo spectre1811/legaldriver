@@ -4,9 +4,33 @@ import { getCourtDataClient } from "@/lib/court/client";
 import { getCaseCached } from "@/lib/court/gateway";
 import { upsertCase } from "@/lib/court/sync";
 import { corpusEnabled, searchCasesByAdvocate } from "@/lib/court/corpus-athena";
+import type { FetchedAdvocateCase } from "@/lib/court/advocate-cases";
 
 type DB = SupabaseClient<Database>;
 type Json = Database["public"]["Tables"]["onboarding_run"]["Update"]["counts"];
+
+// Seed tenant matters from fetched advocate cases (de-duped by CNR, else title). Returns how many NEW
+// matters were inserted. Shared by the onboarding fetch stage AND the background harvest (WO-58), so the
+// two paths seed identically. Idempotent: an already-present CNR/title is skipped, so re-runs are safe.
+export async function seedFetchedMatters(supabase: DB, tenantId: string, fetched: FetchedAdvocateCase[], cap = 80): Promise<number> {
+  let seeded = 0;
+  for (const fc of fetched.slice(0, cap)) {
+    if (fc.cnr) {
+      const { data: ex } = await supabase.from("matter").select("id").eq("tenant_id", tenantId).eq("cnr", fc.cnr).maybeSingle();
+      if (ex) continue;
+    } else if (fc.title) {
+      const { data: ex } = await supabase.from("matter").select("id").eq("tenant_id", tenantId).ilike("title", fc.title).maybeSingle();
+      if (ex) continue;
+    } else continue;
+    const { error } = await supabase.from("matter").insert({
+      tenant_id: tenantId, cnr: fc.cnr ?? null, title: fc.title || fc.caseNumber || fc.cnr || "Case",
+      court: fc.court ?? null, status: fc.decided ? "disposed" : "active",
+      next_hearing_date: fc.nextHearingDate ?? null, source: fc.source,
+    });
+    if (!error) seeded++;
+  }
+  return seeded;
+}
 
 export interface OnboardingCounts {
   causelist: number; cases_fetched: number; matters_seeded: number; enriched: number;
@@ -22,11 +46,12 @@ function isoIn(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-async function setRun(supabase: DB, runId: string, fields: { stage?: string; status?: string; counts?: OnboardingCounts; message?: string | null }) {
+async function setRun(supabase: DB, runId: string, fields: { stage?: string; status?: string; counts?: OnboardingCounts; message?: string | null; cursor?: Record<string, unknown> }) {
   await supabase.from("onboarding_run").update({
     ...(fields.stage ? { stage: fields.stage } : {}),
     ...(fields.status ? { status: fields.status } : {}),
     ...(fields.counts ? { counts: fields.counts as unknown as Json } : {}),
+    ...(fields.cursor ? { cursor: fields.cursor as unknown as Json } : {}),
     ...(fields.message !== undefined ? { message: fields.message } : {}),
     updated_at: new Date().toISOString(),
   }).eq("id", runId);
@@ -80,32 +105,40 @@ export async function runOnboarding(
   }
   await setRun(supabase, runId, { counts });
 
-  // ── Stage 1b: AUTO-FETCH the advocate's cases by name from compliant sources
-  // (our open corpus by default; licensed APIs when keyed) — no manual upload. ──
+  // ── Stage 1b: AUTO-FETCH the advocate's cases by name from compliant sources ──
+  // WO-58: onboarding must NEVER be a silent blackhole. We surface the fetch outcome honestly on the
+  // run: "no court-data source configured" (e.g. LD_API_KEY unset in this env) is NOT the same as "we
+  // searched and you have none" — and a live async fetch that's still filling the warehouse is flagged
+  // `fetch_pending` so the UI can say "still fetching…" and the harvest (actions.harvestOnboarding)
+  // seeds the rest as the fleet lands them. `fetchNote` rides through to the terminal message.
   await setRun(supabase, runId, { stage: "fetch" });
-  try {
-    const { fetchAdvocateCases } = await import("@/lib/court/advocate-cases");
-    // WO-42: pass the SAME parsed enrollment the cause-list stage uses (canonical
-    // "STATE/SERIAL/YEAR" — carries the year eCourts requires) and fetch LIVE so a
-    // verified council drives the full-tuple bar search across HC + district tiers.
-    const fetched = await fetchAdvocateCases({ name: adv.name, barNumber: adv.bar_registration_number, stateCode: adv.state_code, live: true });
-    for (const fc of fetched.slice(0, 80)) {
-      // De-dupe: by CNR when present, else by title (avoids re-creating on re-run).
-      if (fc.cnr) {
-        const { data: ex } = await supabase.from("matter").select("id").eq("tenant_id", tenantId).eq("cnr", fc.cnr).maybeSingle();
-        if (ex) continue;
-      } else if (fc.title) {
-        const { data: ex } = await supabase.from("matter").select("id").eq("tenant_id", tenantId).ilike("title", fc.title).maybeSingle();
-        if (ex) continue;
-      } else continue;
-      const { error } = await supabase.from("matter").insert({
-        tenant_id: tenantId, cnr: fc.cnr ?? null, title: fc.title || fc.caseNumber || fc.cnr || "Case",
-        court: fc.court ?? null, status: fc.decided ? "disposed" : "active",
-        next_hearing_date: fc.nextHearingDate ?? null, source: fc.source,
-      });
-      if (!error) counts.cases_fetched++;
+  let fetchNote: string | null = null;
+  const { enabledAdvocateProviders, fetchAdvocateCasesWithMeta, startLiveAdvocateRefresh } = await import("@/lib/court/advocate-cases");
+  const advQ = { name: adv.name, barNumber: adv.bar_registration_number, stateCode: adv.state_code };
+  if (enabledAdvocateProviders().length === 0) {
+    // Honest, actionable — never imply the advocate simply has no cases when NO source is configured.
+    fetchNote = "Court-data source isn’t configured here, so cases can’t be auto-fetched (an administrator must set LD_API_KEY). Your cause list and add-by-CNR still work.";
+    await setRun(supabase, runId, { message: fetchNote });
+  } else {
+    try {
+      const { cases, errors } = await fetchAdvocateCasesWithMeta({ ...advQ, live: true });
+      counts.cases_fetched += await seedFetchedMatters(supabase, tenantId, cases);
+      // Fire the LIVE roster refresh (async, off-box fleet — never bursts the box EIP). It returns no
+      // cases now; the fleet ingests the full roster into our warehouse, harvested below/on poll.
+      const livePending = startLiveAdvocateRefresh({ ...advQ, live: true });
+      if (livePending) await setRun(supabase, runId, { cursor: { fetch_pending: true, fetch_started_at: new Date().toISOString() } });
+      if (errors.length) {
+        // Do NOT swallow (senior-engineer reflex §12): name the sources that failed (source names only, no PII).
+        fetchNote = `Some court-data sources didn’t respond (${errors.map((e) => e.source).join(", ")}) — we’ll keep trying in the background.`;
+      } else if (counts.cases_fetched === 0 && livePending) {
+        fetchNote = "Fetching your cases from the court record — this can take a moment; they’ll appear as they arrive.";
+      }
+      if (fetchNote) await setRun(supabase, runId, { message: fetchNote });
+    } catch (e) {
+      fetchNote = `Couldn’t auto-fetch cases (${e instanceof Error ? e.message : "unexpected error"}). Your cause list and add-by-CNR still work.`;
+      await setRun(supabase, runId, { message: fetchNote });
     }
-  } catch { /* auto-fetch is best-effort; cause-list/manual paths still apply */ }
+  }
   await setRun(supabase, runId, { counts });
 
   // ── Stage 2: per-CNR enrich → upsertCase (puts hearings on calendar + reminders) ──
@@ -184,6 +217,8 @@ export async function runOnboarding(
   const { count } = await supabase.from("matter").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).is("ai_summary", null);
   counts.summaries_queued = count ?? 0;
 
-  await setRun(supabase, runId, { stage: "done", status: "done", counts, message: null });
+  // Keep the honest fetch note (e.g. "not configured" / "still fetching…") on the finished run so the
+  // page explains a zero instead of showing a bare, misleading "0 cases". WO-58.
+  await setRun(supabase, runId, { stage: "done", status: "done", counts, message: fetchNote });
   return counts;
 }
