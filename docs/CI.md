@@ -7,7 +7,7 @@ What runs on every PR, what's dormant, and how to activate the rest.
 | Workflow | File | Gates a PR? | What it does |
 |---|---|---|---|
 | **CI** | `.github/workflows/ci.yml` | ✅ yes (`build` check) | `npm ci` → `lint` → `typecheck` → `build` → **secret-free test suite** (`node scripts/run-tests.mjs offline`). |
-| **DB Tests** | `.github/workflows/db-tests.yml` | ⏸ dormant | DB/RLS integration tests. Runs on push to `main` + on demand (`workflow_dispatch`) — **not** on `pull_request` (see below). Self-skips (green no-op) until the `TEST_ENV_FILE` secret exists. Separate workflow so it never feeds the automerge queue. |
+| **DB Tests** | `.github/workflows/db-tests.yml` | advisory (post-merge) | DB/RLS integration tests against an **ephemeral local Supabase** (`supabase start`) spun up fresh on the runner — no secret, no remote DB. Runs on push to `main` + on demand (`workflow_dispatch`) — **not** on `pull_request` (see below). Separate workflow so it never feeds the automerge queue. |
 | automerge | `.github/workflows/automerge.yml` | — | Label-gated merge queue (unchanged by WO-11). |
 
 ## The test suite (`scripts/run-tests.mjs`)
@@ -17,8 +17,8 @@ failure. The runner groups them so CI can gate on the secret-free ones and keep 
 rest opt-in:
 
 ```
-node scripts/run-tests.mjs offline   # mocked tests (18 today) — no network, no .env → CI `build` gate
-node scripts/run-tests.mjs db        #  4 tests — need a live Supabase + .env → DB Tests workflow
+node scripts/run-tests.mjs offline   # the secret-free suite — no network, no .env → CI `build` gate
+node scripts/run-tests.mjs db        #  4 tests — need a Supabase + .env → DB Tests workflow (ephemeral local stack)
 node scripts/run-tests.mjs net       #  5 tests — need a running server / LLM / court-API → manual only ($)
 node scripts/run-tests.mjs all       # everything (run locally with .env sourced)
 ```
@@ -43,22 +43,37 @@ job would produce a `test` check that the label path ignores — merges wouldn't
 it. Running the offline suite as a step of the `build` job puts it under the one check
 automerge actually enforces, on both its triggers.
 
-## The DB tests (active)
+## The DB tests (self-contained — WO-67)
 
-The 4 DB/RLS tests hit a live Supabase with the service role, so they run against a dedicated
-**throwaway** test project — never prod. This is **already wired**: the `TEST_ENV_FILE` repo
-secret is set, and the DB Tests workflow writes it to `.env` and runs `run-tests.mjs db`.
+The 4 DB/RLS tests hit a live Supabase with the service role, so the job spins up an **ephemeral
+local Supabase on the runner** (`supabase start`) — never prod, and no long-lived remote DB to
+rot. Every run: `supabase start` applies **all** `supabase/migrations/*` from a **clean state**
+(so drift is impossible) with a **fresh PostgREST schema cache**, then the job seeds the demo
+tenant and runs `run-tests.mjs db`. **No `TEST_ENV_FILE` secret is needed** — the job is entirely
+self-contained.
 
-The 4 tests all pass headless against a seeded demo tenant: `p1_smoke` (sign-in + RLS tenant
+The 4 tests pass headless against the freshly-seeded demo tenant: `p1_smoke` (sign-in + RLS tenant
 scope), `rls_isolation` + `portal_isolation` (cross-tenant / portal isolation), `wo01_tenancy_sync`.
 
-To reproduce / rotate the throwaway DB:
-1. Create a **throwaway** Supabase project (Management API `POST /v1/projects`; free tier).
-2. Apply every `supabase/migrations/*.sql` in order (Management API `POST /v1/projects/{ref}/database/query`).
-3. Seed the demo tenant with the test password: `DEMO_PASSWORD=demo-pass-1234 tsx scripts/seed-demo.ts`
-   (against the test project's `.env` — the seed creates `demo@lexdriver.test` that `p1_smoke` signs in as).
-4. Set the `TEST_ENV_FILE` repo secret = the test project's full `.env`
-   (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `REPLY_TO`).
+**Why this replaced the old remote-throwaway-DB wiring:** the previous job pointed at a hand-seeded
+remote test project that nothing re-migrated. When WO-54 added `matter.tier` to prod, that separate
+DB drifted (`matter.tier` absent) and every DB test died at `p1_smoke` before its RLS assertions —
+the isolation tests silently stopped protecting anyone. A clean-migrate-per-run stack closes that
+whole class of drift: the **next** additive migration can't re-break it (no manual reseed).
+
+`config.toml` is generated in-CI by `supabase init` so it always matches the installed CLI (the
+committed contract is the migrations, not a config file that could drift against the CLI version).
+
+**To run the exact same suite locally** (needs Docker):
+```
+supabase start
+eval "$(supabase status -o env)"
+printf 'NEXT_PUBLIC_SUPABASE_URL=%s\nNEXT_PUBLIC_SUPABASE_ANON_KEY=%s\nSUPABASE_SERVICE_ROLE_KEY=%s\nDEMO_PASSWORD=demo-pass-1234\nCRON_SECRET=x\nREPLY_TO=x@x.test\n' \
+  "$API_URL" "$ANON_KEY" "$SERVICE_ROLE_KEY" > .env
+DEMO_PASSWORD=demo-pass-1234 npx tsx scripts/seed-demo.ts
+node scripts/run-tests.mjs db
+supabase stop
+```
 
 Promote the DB Tests check to required via branch protection once you want it to gate merges
 (today it runs on `push:[main]` + `workflow_dispatch`, advisory).

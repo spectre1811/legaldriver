@@ -59,6 +59,7 @@ const OFFLINE = [
   "wo61_enrolment_validation",
   "wo61_onboarding_progress",
   "wo46_bar_councils",
+  "wo50_auth_flows",
   "bp57_advocate_scopes",
   "wo53_pricing_gate",
   "wo55_combobox",
