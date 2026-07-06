@@ -54,6 +54,7 @@ const OFFLINE = [
   "wo41_migration_guard",
   "wo42_qa_fixes",
   "wo42_bar_number",
+  "wo61_enrolment_validation",
   "wo46_bar_councils",
   "bp57_advocate_scopes",
   "wo53_pricing_gate",

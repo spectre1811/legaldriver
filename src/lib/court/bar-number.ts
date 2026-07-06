@@ -172,3 +172,39 @@ export function diagnoseEmptyRoster(barNumber: string | null | undefined, counci
   if (!council || !council.verified) return { kind: "unverified", council: council?.label ?? parsed.stateBar };
   return { kind: "no-results" };
 }
+
+// WO-61 · Live, PURE validation of the enrolment input for the guided onboarding form.
+// Drives the inline chip the user sees as they type AND the gate on the primary
+// "Add & fetch my cases" action. Reuses the settled parse + council lookup — the
+// canonical STATE/SERIAL/YEAR format is founder-ruled, not re-litigated here.
+//   • empty       → nothing entered yet (neutral hint)
+//   • needs-year  → typed something, but no parseable STATE/SERIAL/YEAR (usually the year is missing)
+//   • parsed      → a valid enrolment, but its State Bar Council isn't live for roster search yet
+//                   (we still onboard: name corpus + cause list + honest empty-state) — `live:false`
+//   • ready       → a valid enrolment on a verified council → we can pull the exact eCourts roster — `live:true`
+export type EnrolmentCheck =
+  | { state: "empty" }
+  | { state: "needs-year" }
+  | { state: "parsed"; canonical: string; council: string | null; serial: number; year: number; live: false }
+  | { state: "ready"; canonical: string; council: string; serial: number; year: number; live: true };
+
+export function checkEnrolment(rawBar: string | null | undefined, councilId?: string | null): EnrolmentCheck {
+  const raw = (rawBar ?? "").trim();
+  if (!raw) return { state: "empty" };
+  const parsed = parseBarNumber(raw);
+  if (!parsed) return { state: "needs-year" };
+  // Prefer the explicitly-selected council; else infer from the enrolment STATE prefix ("G" → Gujarat).
+  const council = stateBarCouncil(councilId) ?? councilByStatePrefix(parsed.stateBar);
+  if (council?.verified) {
+    return { state: "ready", canonical: parsed.canonical, council: council.label, serial: parsed.serial, year: parsed.year, live: true };
+  }
+  return { state: "parsed", canonical: parsed.canonical, council: council?.label ?? null, serial: parsed.serial, year: parsed.year, live: false };
+}
+
+// Whether the entered enrolment is complete enough to drive the primary "Add & fetch my cases"
+// path (a parseable STATE/SERIAL/YEAR — the year is what the eCourts bar search requires). The
+// guided form gates its primary button on this; `addAdvocate` enforces it server-side unless the
+// user explicitly chose the name-only ("cause-list only") secondary path. (Founder ruling 2026-07-06.)
+export function canFetchRoster(rawBar: string | null | undefined): boolean {
+  return parseBarNumber((rawBar ?? "").trim()) != null;
+}

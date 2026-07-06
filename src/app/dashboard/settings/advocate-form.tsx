@@ -1,44 +1,159 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useTranslations } from "next-intl";
 import { addAdvocate, type ActionResult } from "./actions";
-import { STATE_BAR_COUNCILS } from "@/lib/court/bar-number";
+import {
+  STATE_BAR_COUNCILS,
+  parseBarNumber,
+  councilByStatePrefix,
+  checkEnrolment,
+  canFetchRoster,
+} from "@/lib/court/bar-number";
+import { Combobox } from "@/components/combobox/combobox";
+import { Icon, type IconName } from "@/components/icons";
 
 const initial: ActionResult = { ok: false, message: "" };
 
-function Submit() {
-  const { pending } = useFormStatus();
-  const t = useTranslations("settings");
-  return <button type="submit" disabled={pending} className="btn-primary">{pending ? t("advocates.saving") : t("advocates.add")}</button>;
+const COUNCIL_OPTIONS = STATE_BAR_COUNCILS.map((c) => ({
+  value: c.id,
+  label: `${c.label}${c.verified ? " ✓" : ""}`,
+}));
+
+// A small inline status chip under the enrolment field — the live feedback that turns the old
+// "fill it, wait 60s, learn you needed the year" trap into an as-you-type signal.
+function Chip({ tone, icon, children }: { tone: "amber" | "green" | "brand"; icon: IconName; children: React.ReactNode }) {
+  const tones = {
+    amber: "bg-amber-50 text-amber-800",
+    green: "bg-emerald-50 text-emerald-700",
+    brand: "bg-brand-50 text-brand-700",
+  } as const;
+  return (
+    <p className={`flex items-start gap-1.5 rounded-lg px-3 py-2 text-xs ${tones[tone]}`}>
+      <Icon name={icon} className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <span>{children}</span>
+    </p>
+  );
 }
 
-// WO-42: one structured enrollment field + an explicit State Bar Council select
-// (replaces the confusing bar-no + separate "eCourts bar code" + free-text state trio
-// that split ONE identifier into three and never collected the enrollment year).
+function EnrolmentChip({ raw, councilId }: { raw: string; councilId: string }) {
+  const t = useTranslations("settings.advocates");
+  const check = checkEnrolment(raw, councilId || null);
+  if (check.state === "empty") return null;
+  if (check.state === "needs-year") return <Chip tone="amber" icon="alert">{t("checkNeedsYear")}</Chip>;
+  if (check.state === "ready")
+    return <Chip tone="green" icon="check">{t("checkReady", { council: check.council, serial: check.serial, year: check.year })}</Chip>;
+  // parsed but the council isn't live for roster search yet
+  return check.council ? (
+    <Chip tone="brand" icon="check">{t("checkParsed", { council: check.council, serial: check.serial, year: check.year })}</Chip>
+  ) : (
+    <Chip tone="brand" icon="check">{t("checkParsedNoCouncil", { canonical: check.canonical })}</Chip>
+  );
+}
+
+// The two submit buttons live in a child so they can read the form's pending state.
+function Actions({ nameOnly, canPrimary, canName, onToggle }: {
+  nameOnly: boolean; canPrimary: boolean; canName: boolean; onToggle: (v: boolean) => void;
+}) {
+  const t = useTranslations("settings.advocates");
+  const { pending } = useFormStatus();
+  return nameOnly ? (
+    <div className="space-y-2">
+      <button type="submit" name="mode" value="name-only" disabled={pending || !canName} className="btn-primary">
+        {pending ? t("saving") : t("nameOnlyCta")}
+      </button>
+      <button type="button" onClick={() => onToggle(false)} className="block text-xs text-brand-600 hover:underline">
+        {t("nameOnlyBack")}
+      </button>
+    </div>
+  ) : (
+    <div className="space-y-2">
+      <button type="submit" name="mode" value="fetch" disabled={pending || !canPrimary} className="btn-primary">
+        <Icon name={pending ? "refresh" : "sparkles"} className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} /> {pending ? t("saving") : t("fetchCta")}
+      </button>
+      <p className="text-xs text-ink-faint">
+        {t("nameOnlyToggle")}{" "}
+        <button type="button" onClick={() => onToggle(true)} className="text-brand-600 hover:underline">{t("nameOnlyAction")}</button>
+      </p>
+    </div>
+  );
+}
+
+// WO-61: a guided, live-validated advocate entry (supersedes the WO-42 three-field form). The
+// primary path REQUIRES a parseable enrolment with year (the input that actually fetches cases —
+// founder ruling 2026-07-06); a clearly-secondary "add by name only" path stays for cause-list
+// alerts. Live inline validation removes the "submit → wait 60s → learn you needed the year" trap.
 export function AdvocateForm() {
   const t = useTranslations("settings");
   const [state, action] = useFormState(addAdvocate, initial);
+
+  const [name, setName] = useState("");
+  const [raw, setRaw] = useState("");
+  const [councilId, setCouncilId] = useState("");
+  const [councilTouched, setCouncilTouched] = useState(false);
+  const [nameOnly, setNameOnly] = useState(false);
+
+  // Auto-infer the State Bar Council from the enrolment's state prefix ("G/…" → Gujarat) until the
+  // user picks one explicitly — one less field to think about, never overriding a manual choice.
+  const inferredCouncil = useMemo(() => {
+    const p = parseBarNumber(raw);
+    return p ? councilByStatePrefix(p.stateBar)?.id ?? null : null;
+  }, [raw]);
+  const effectiveCouncil = councilTouched ? councilId : inferredCouncil ?? "";
+
+  // Reset the form once an add succeeds (controlled inputs don't clear on their own).
+  useEffect(() => {
+    if (state.ok) {
+      setName(""); setRaw(""); setCouncilId(""); setCouncilTouched(false); setNameOnly(false);
+    }
+  }, [state]);
+
+  const canPrimary = name.trim().length > 0 && canFetchRoster(raw);
+  const canName = name.trim().length > 0;
+
   return (
     <form action={action} className="space-y-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <input name="name" required placeholder={t("advocates.nameLabel")} className="input" aria-label={t("advocates.nameLabel")} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <input
-          name="bar_registration_number"
-          placeholder={t("advocates.barPlaceholder")}
-          className="input font-mono uppercase"
-          aria-label={t("advocates.barLabel")}
-          autoCapitalize="characters"
+          name="name" required value={name} onChange={(e) => setName(e.target.value)}
+          placeholder={t("advocates.nameLabel")} className="input" aria-label={t("advocates.nameLabel")}
         />
-        <select name="state_bar_council" defaultValue="" className="input" aria-label={t("advocates.councilLabel")}>
-          <option value="" disabled>{t("advocates.councilPlaceholder")}</option>
-          {STATE_BAR_COUNCILS.map((c) => (
-            <option key={c.id} value={c.id}>{c.label}{c.verified ? " ✓" : ""}</option>
-          ))}
-        </select>
+        {!nameOnly && (
+          <input
+            name="bar_registration_number" value={raw} onChange={(e) => setRaw(e.target.value.toUpperCase())}
+            placeholder={t("advocates.barPlaceholder")} className="input font-mono uppercase"
+            aria-label={t("advocates.barLabel")} autoCapitalize="characters" autoComplete="off" spellCheck={false}
+          />
+        )}
       </div>
-      <p className="text-xs text-ink-faint">{t.rich("advocates.hint", { b: (c) => <strong>{c}</strong> })}</p>
-      <Submit />
+
+      {!nameOnly && (
+        <>
+          <EnrolmentChip raw={raw} councilId={effectiveCouncil} />
+          <input type="hidden" name="state_bar_council" value={effectiveCouncil} />
+          <div className="max-w-sm">
+            <Combobox
+              label={t("advocates.councilLabel")}
+              placeholder={t("advocates.councilPlaceholder")}
+              options={COUNCIL_OPTIONS}
+              value={effectiveCouncil || null}
+              onChange={(v) => { setCouncilTouched(true); setCouncilId(v ?? ""); }}
+            />
+          </div>
+          <p className="text-xs text-ink-faint">{t.rich("advocates.hint", { b: (c) => <strong>{c}</strong> })}</p>
+        </>
+      )}
+
+      {nameOnly && <Chip tone="brand" icon="bulb">{t("advocates.nameOnlyNote")}</Chip>}
+
+      <Actions
+        nameOnly={nameOnly}
+        canPrimary={canPrimary}
+        canName={canName}
+        onToggle={(v) => setNameOnly(v)}
+      />
+
       {state.message && (
         <p role="status" className={`rounded-xl px-3.5 py-2.5 text-sm ${state.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
           {state.message}
