@@ -44,11 +44,19 @@ PostgREST schema cache**, then seeds the demo tenant and runs `run-tests.mjs db`
 - `DB Tests` runs on push to `main` + `workflow_dispatch` (still not on `pull_request`, so it never
   feeds the automerge `build` check). It adds ~1–2 min of Docker startup to each main-push run —
   acceptable for an advisory, post-merge safety net.
-- **Verification honesty:** authored without a local Docker/Supabase CLI on the dev box, so the
-  *green DB Tests* proof is the **post-merge run on `main`** (the job's only automatic trigger). The
-  offline change (`wo50_auth_flows` classification) is locally proven (55/55 offline green, orphan
-  warning gone). If the post-merge run surfaces a CLI/stack wrinkle, fix-forward — nobody is blocked
-  (advisory job).
+- **Verification:** the offline change (`wo50_auth_flows` classification) is locally proven (55/55
+  offline green, orphan warning gone). The full DB job was iterated to green via `workflow_dispatch`
+  on the branch (the job also runs on `workflow_dispatch`, so it can be proven WITHOUT merging to
+  `main`) — final run: clean migrate → grant → seed → **4/4 DB tests pass** (`p1_smoke`,
+  `portal_isolation`, `rls_isolation`, `wo01_tenancy_sync`). Two local-stack gotchas surfaced and
+  are handled in the job (below).
+- **Local-stack gotcha #2 — role grants (the seed's "permission denied for table profile"):** hosted
+  Supabase auto-grants `anon`/`authenticated`/`service_role` on every `public` table; our migrations
+  rely on that. Local `supabase start` does NOT grant them on migration-created tables, so the
+  service_role hit `permission denied` — which would *also* mask RLS in the isolation tests (a grant
+  error, not a row-level denial). The job applies the standard grants + default privileges after
+  migrate and reloads PostgREST — hosted-parity, and required for the RLS tests to genuinely exercise
+  RLS.
 - Closes the drift class: the next additive migration cannot silently re-disarm the isolation tests.
 - **WO-41 grandfathered-`0031` interaction (found on the first post-merge run):** the local
   `supabase start` migrator keys `supabase_migrations.schema_migrations` by filename version and
