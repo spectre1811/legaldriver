@@ -74,7 +74,7 @@ export function CasesAttention({ counts }: { counts: ViewCounts }) {
                 data-testid={`attention-${b.key}`}
                 data-active={on ? "true" : "false"}
                 aria-label={t("filterAria", { label: t(`${b.key}.label`) })}
-                className={`ec-card group flex items-center gap-3 p-3.5 text-left transition hover:-translate-y-px ${
+                className={`ec-card group flex items-center gap-3 p-3.5 text-left transition motion-safe:hover:-translate-y-px ${
                   on ? `ring-1 ${tone.ring}` : "hover:border-ec-hair-strong"
                 }`}
               >
