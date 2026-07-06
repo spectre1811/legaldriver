@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
-import { startOnboarding, deleteOnboarding, getOnboardingStatus, type OnboardingStatus } from "./actions";
+import { startOnboarding, deleteOnboarding, getOnboardingStatus, harvestOnboarding, type OnboardingStatus } from "./actions";
 import { onboardingProgress, onboardingCountsSummary } from "@/lib/services/onboarding/progress";
 
 // BP-71 W2: a live progress bar over the real onboarding_run record (stage + counts), so the user sees
@@ -35,6 +35,24 @@ export function RunOnboardingButton({ advocateId, label }: { advocateId: string;
   const [prog, setProg] = useState<OnboardingStatus>(null);
   const router = useRouter();
   const stopRef = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
+
+  // WO-58: the live roster refresh is async — the rotating-IP fleet ingests the advocate's full roster
+  // into our warehouse over the following minutes. Poll the warehouse harvest so those cases land in the
+  // account WITHOUT a manual re-run (a cold advocate was the blackhole). Bounded + self-terminating:
+  // stops after two consecutive empty passes, and never touches state after the component unmounts.
+  const harvest = async () => {
+    let empty = 0;
+    for (let i = 0; i < 8 && empty < 2 && mounted.current; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      if (!mounted.current) return;
+      let added = 0;
+      try { added = (await harvestOnboarding(advocateId)).added; } catch { /* transient — keep trying */ }
+      if (added > 0) { empty = 0; if (mounted.current) { setMsg((m) => `${m} · +${added} more just arrived`); router.refresh(); } }
+      else empty++;
+    }
+  };
 
   const run = () =>
     start(async () => {
@@ -65,6 +83,7 @@ export function RunOnboardingButton({ advocateId, label }: { advocateId: string;
         await poll;
         setProg(null);
         router.refresh();
+        void harvest();   // background: pull in cases as the async fleet lands them (WO-58)
       }
     });
 

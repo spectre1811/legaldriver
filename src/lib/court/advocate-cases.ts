@@ -183,16 +183,13 @@ const legaldriverProvider: AdvocateCaseProvider = {
     };
 
     const parsed = parseBarNumber(q.barNumber);
-    // Stored council token first (dropdown); else infer from the enrollment STATE prefix
-    // ("G" → Gujarat), NOT the token id — the advocate writes "G/702/2020", not "GJ/…".
-    const council = stateBarCouncil(q.stateCode) ?? (parsed ? councilByStatePrefix(parsed.stateBar) : null);
     const whId = warehouseBarId(parsed, q.barNumber);
 
-    // BP-71 (fix, 2026-07-06): READ THE WAREHOUSE FIRST — the cases we already hold. This must NOT be
-    // gated behind the now-ASYNC live refresh (which returns a 202 job ticket, no cases, and can take
-    // ~16s/scope to fetch the roster). Reading held cases first means onboarding seeds them fast +
-    // reliably instead of hanging on the "fetch" stage. Exact CANONICAL bar id when known (WO-49 — the
-    // warehouse keys on the full "STATE/SERIAL/YEAR", not the bare serial), else fuzzy by name.
+    // READ THE WAREHOUSE — the cases we already hold. Exact CANONICAL bar id when known (WO-49 — the
+    // warehouse keys on the full "STATE/SERIAL/YEAR", not the bare serial), else fuzzy by name. This is
+    // synchronous + fast; the LIVE roster refresh is fired SEPARATELY by the caller (onboarding) via
+    // `startLiveAdvocateRefresh` and its results are HARVESTED by re-reading the warehouse — so this
+    // provider is a pure, side-effect-free read (also reused as the harvest primitive). See WO-58.
     if (whId) {
       collect(await get(`/advocate/${encodeURIComponent(whId)}`));
     } else if (q.name) {
@@ -200,26 +197,38 @@ const legaldriverProvider: AdvocateCaseProvider = {
       const barIds = [...new Set(((s?.results ?? []) as { bar_id?: string }[]).map((r) => r.bar_id).filter((b): b is string => !!b))].slice(0, 3);
       for (const bar of barIds) collect(await get(`/advocate/${encodeURIComponent(bar)}`));
     }
-
-    // THEN kick off the LIVE refresh, FIRE-AND-FORGET — it ENQUEUES the roster for the rotating-IP fleet
-    // (BP-71 async, 202) so newly-fetched cases land in the warehouse in the background. We do NOT await
-    // it (the ~16s/scope roster fetch must never stall onboarding — held cases were already collected
-    // above) and we do NOT read its response (it carries no cases). It runs during the remaining
-    // onboarding stages. Best-effort: a slow/failed scope is swallowed.
-    if (q.live && parsed && council?.verified) {
-      const serial = String(parsed.serial);
-      const refreshTimeout = Number(process.env.LD_REFRESH_TIMEOUT_MS ?? "20000");
-      void Promise.allSettled(barSearchScopes(council).map((scope) => {
-        const p = new URLSearchParams({ year: String(parsed.year), bar_state: scope.barState, state_code: String(scope.stateCode), tier: scope.tier });
-        if (scope.courtCodeArr) p.set("court_code_arr", scope.courtCodeArr);
-        else { p.set("dist_code", String(scope.distCode ?? 1)); p.set("court_code", String(scope.courtCode ?? 1)); }
-        return fetch(`${base}/advocate/${encodeURIComponent(serial)}/refresh?${p.toString()}`,
-          { method: "POST", headers: H, signal: AbortSignal.timeout(refreshTimeout) }).catch(() => null);
-      }));
-    }
     return out;
   },
 };
+
+// Fire the LIVE eCourts roster refresh, FIRE-AND-FORGET. The scraper endpoint is ASYNC (BP-71): each
+// scope POST returns 202 + enqueues the advocate's CNR spine for the rotating-IP fleet, which ingests
+// the FULL roster into our warehouse OFF-BOX (never bursting the box EIP into the BP-66 WAF). We never
+// await or read the response (it carries no cases). Onboarding later HARVESTS the ingested cases by
+// re-reading the warehouse (a plain `fetchAdvocateCases` warehouse read — see actions.harvestOnboarding).
+// Returns true iff a refresh was actually dispatched (LD_API_KEY set + a parsed enrolment + a verified
+// council) — the caller records that so the UI can honestly say "still fetching your cases…". WO-58.
+export function startLiveAdvocateRefresh(q: AdvocateQuery): boolean {
+  const key = process.env.LD_API_KEY;
+  if (!key) return false;
+  const parsed = parseBarNumber(q.barNumber);
+  // Stored council token first (dropdown); else infer from the enrolment STATE prefix ("G" → Gujarat),
+  // NOT the token id — the advocate writes "G/702/2020", not "GJ/…".
+  const council = stateBarCouncil(q.stateCode) ?? (parsed ? councilByStatePrefix(parsed.stateBar) : null);
+  if (!parsed || !council?.verified) return false;
+  const base = process.env.LD_API_BASE || "http://13.202.148.71:8080";
+  const H = { "X-API-Key": key };
+  const serial = String(parsed.serial);
+  const refreshTimeout = Number(process.env.LD_REFRESH_TIMEOUT_MS ?? "20000");
+  void Promise.allSettled(barSearchScopes(council).map((scope) => {
+    const p = new URLSearchParams({ year: String(parsed.year), bar_state: scope.barState, state_code: String(scope.stateCode), tier: scope.tier });
+    if (scope.courtCodeArr) p.set("court_code_arr", scope.courtCodeArr);
+    else { p.set("dist_code", String(scope.distCode ?? 1)); p.set("court_code", String(scope.courtCode ?? 1)); }
+    return fetch(`${base}/advocate/${encodeURIComponent(serial)}/refresh?${p.toString()}`,
+      { method: "POST", headers: H, signal: AbortSignal.timeout(refreshTimeout) }).catch(() => null);
+  }));
+  return true;
+}
 
 const PROVIDERS = [legaldriverProvider, corpusProvider, indianKanoonProvider, vakeel360Provider];
 
@@ -237,14 +246,29 @@ export function enabledAdvocateProviders(): string[] {
 // a bar id + state are given, name-only rows are kept only if their CNR's state prefix
 // matches; cross-state / unverifiable (no-CNR) rows are dropped rather than seeded as
 // this advocate's. (No bar id → name-only search → unchanged: keep everything.)
-export async function fetchAdvocateCases(q: AdvocateQuery): Promise<FetchedAdvocateCase[]> {
-  if (!q.name || q.name.trim().length < 3) return [];
-  const results = await Promise.all(PROVIDERS.filter((p) => p.enabled()).map((p) => p.fetchByAdvocate(q).catch(() => [])));
+export interface AdvocateFetchMeta {
+  cases: FetchedAdvocateCase[];
+  providers: string[];                            // sources that were enabled + queried
+  errors: { source: string; error: string }[];    // per-provider failures — RECORDED, never swallowed
+}
+
+// Fetch across enabled providers, returning the merged cases AND diagnostics. WO-58: a provider that
+// throws is captured in `errors` (not silently `.catch(() => [])`'d into a blank zero) so onboarding can
+// tell the user WHY a fetch came back empty ("a source didn't respond") vs. "you genuinely have none"
+// vs. "no source is configured" (empty `providers`). This is the anti-blackhole contract.
+export async function fetchAdvocateCasesWithMeta(q: AdvocateQuery): Promise<AdvocateFetchMeta> {
+  const enabled = PROVIDERS.filter((p) => p.enabled());
+  const providers = enabled.map((p) => p.source);
+  if (!q.name || q.name.trim().length < 3) return { cases: [], providers, errors: [] };
+  const settled = await Promise.all(enabled.map((p) =>
+    p.fetchByAdvocate(q)
+      .then((cases) => ({ source: p.source, cases, error: null as string | null }))
+      .catch((e) => ({ source: p.source, cases: [] as FetchedAdvocateCase[], error: e instanceof Error ? e.message : "fetch failed" }))));
   const stateGuard = q.barNumber && q.stateCode ? q.stateCode.trim().toUpperCase() : null;
   const merged: FetchedAdvocateCase[] = [];
   const seen = new Set<string>();
-  for (const list of results) {
-    for (const c of list) {
+  for (const r of settled) {
+    for (const c of r.cases) {
       // Authoritative bar-lookup rows always pass; fuzzy name rows must match the state.
       if (!passesStateGuard(c, stateGuard)) continue;
       const key = (c.cnr || c.caseNumber || c.title || "").trim().toUpperCase();
@@ -253,5 +277,9 @@ export async function fetchAdvocateCases(q: AdvocateQuery): Promise<FetchedAdvoc
       merged.push(c);
     }
   }
-  return merged;
+  return { cases: merged, providers, errors: settled.filter((r) => r.error).map((r) => ({ source: r.source, error: r.error! })) };
+}
+
+export async function fetchAdvocateCases(q: AdvocateQuery): Promise<FetchedAdvocateCase[]> {
+  return (await fetchAdvocateCasesWithMeta(q)).cases;
 }
