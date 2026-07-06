@@ -20,9 +20,14 @@ export async function addAdvocate(_prev: ActionResult, formData: FormData): Prom
   const name = String(formData.get("name") ?? "").trim();
   const rawBar = String(formData.get("bar_registration_number") ?? "").trim().toUpperCase();
   const councilId = String(formData.get("state_bar_council") ?? "").trim().toUpperCase();
+  // WO-61: the guided form submits `mode` — "fetch" (primary: pull the eCourts roster) or
+  // "name-only" (secondary: cause-list alerts only). "fetch" REQUIRES a parseable enrolment
+  // with year (founder ruling 2026-07-06) so we never accept a year-less number that dead-ends
+  // at "0 cases — go back and add the year" only after a 60s onboarding run.
+  const mode = String(formData.get("mode") ?? "fetch").trim();
   if (!name) return { ok: false, message: t("form.nameRequired") };
-
   const parsed = parseBarNumber(rawBar);
+  if (mode !== "name-only" && !parsed) return { ok: false, message: t("form.needsEnrolment") };
   const council = stateBarCouncil(councilId);
   // Canonical enrollment string carries the year; fall back to the raw entry if unparsed.
   const barDisplay = parsed?.canonical ?? (rawBar || null);

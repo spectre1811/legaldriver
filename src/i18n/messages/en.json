@@ -1649,6 +1649,16 @@
       "barLabel": "Bar enrolment number",
       "councilLabel": "State Bar Council",
       "councilPlaceholder": "Select State Bar Council…",
+      "fetchCta": "Add & fetch my cases",
+      "nameOnlyCta": "Add by name only",
+      "nameOnlyToggle": "Only need cause-list alerts?",
+      "nameOnlyAction": "Add by name instead",
+      "nameOnlyBack": "Fetch my full case roster instead",
+      "nameOnlyNote": "Cause-list alerts only — no automatic case fetch. Add the Bar enrolment number any time to pull your full roster.",
+      "checkNeedsYear": "Add the enrolment year — e.g. G/702/2020. The year is what pulls your exact eCourts roster.",
+      "checkReady": "Ready — {council} · serial {serial} · enrolled {year}. We'll pull your exact eCourts roster.",
+      "checkParsed": "{council} · serial {serial} · enrolled {year}. Live roster search isn't live for this State Bar Council yet — we'll add by name + cause list.",
+      "checkParsedNoCouncil": "{canonical} looks valid — pick your State Bar Council below, or we'll add by name + cause list.",
       "hint": "Enter your full State Bar Council enrolment number — <b>state, serial and year</b> (e.g. G/702/2020). The year is what lets us pull your exact eCourts case roster; a ✓ marks councils with live roster search today."
     },
     "billing": {
@@ -1731,6 +1741,7 @@
       "noTenant": "No tenant.",
       "added": "Added advocate {name}.",
       "addedNoYear": "Added {name}. Add your enrolment year (e.g. G/702/2020) — the year lets us pull your exact eCourts case roster.",
+      "needsEnrolment": "Enter your full Bar enrolment number with year (e.g. G/702/2020) to fetch your cases — or use \"Add by name only\" for cause-list alerts.",
       "deleted": "Deleted."
     }
   },
