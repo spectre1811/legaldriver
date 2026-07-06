@@ -9,6 +9,7 @@ import { rangeFor } from "@/lib/paginate";
 
 export interface CasesFilters {
   q?: string;
+  tier?: string; // WO-54 W2: court-tier segmentation (HC/DISTRICT/…) — indexed matter.tier column
   court?: string;
   case_type?: string;
   stage?: string;
@@ -68,6 +69,7 @@ export function buildCasesQuery(supabase: SupabaseClient<Database>, f: CasesFilt
       );
     }
   }
+  if (f.tier) query = query.eq("tier", f.tier); // WO-54 W2: tier tab scope (uses matter_tier_idx)
   if (f.court) query = query.eq("court", f.court);
   if (f.case_type) query = query.eq("case_type", f.case_type);
   if (f.stage) query = query.eq("stage", f.stage);
@@ -153,6 +155,36 @@ export async function fetchViewCounts(supabase: SupabaseClient<Database>): Promi
     overdue: overdue.count ?? 0,
     soon: soonC.count ?? 0,
     noDate: noDate.count ?? 0,
+  };
+}
+
+// WO-54 W2 · Live counts for the court-tier tab strip. HEAD counts (no rows), tenant-scoped by RLS
+// and index-backed (matter_tier_idx) — bounded, not a scan. Independent of the active filters (tier
+// is a navigation axis, like the saved-view tabs). `all` counts every matter; the per-tier counts
+// only the normalized `matter.tier` values (a null-tier / manual case shows under All, never a tier).
+export interface TierCounts {
+  all: number;
+  HC: number;
+  DISTRICT: number;
+  TRIBUNAL: number;
+  SC: number;
+}
+
+export async function fetchTierCounts(supabase: SupabaseClient<Database>): Promise<TierCounts> {
+  const head = () => supabase.from("matter").select("id", { count: "exact", head: true });
+  const [all, hc, dist, trib, sc] = await Promise.all([
+    head(),
+    head().eq("tier", "HC"),
+    head().eq("tier", "DISTRICT"),
+    head().eq("tier", "TRIBUNAL"),
+    head().eq("tier", "SC"),
+  ]);
+  return {
+    all: all.count ?? 0,
+    HC: hc.count ?? 0,
+    DISTRICT: dist.count ?? 0,
+    TRIBUNAL: trib.count ?? 0,
+    SC: sc.count ?? 0,
   };
 }
 

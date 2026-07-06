@@ -7,8 +7,9 @@ import { CourtProviderBanner } from "@/components/court-provider-banner";
 import { Console, type SavedView } from "./console";
 import { CasesTable } from "./cases-table";
 import { CasesTabs } from "./cases-tabs";
+import { CasesTierTabs } from "./cases-tier-tabs";
 import { Pagination } from "@/components/pagination";
-import { fetchCasesPage, fetchViewCounts, type CasesFilters } from "./cases-query";
+import { fetchCasesPage, fetchViewCounts, fetchTierCounts, type CasesFilters } from "./cases-query";
 import { parsePage, clampPerPage } from "@/lib/paginate";
 import { maskTitle } from "@/lib/court/mask";
 import { sanitizeTrack } from "@/lib/auth/redirects";
@@ -23,8 +24,8 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const supabase = createClient();
   const t = await getTranslations("cases");
   const tc = await getTranslations("common");
-  const { q, court, case_type, stage, status, advocate, act, next, sort } = searchParams;
-  const filters: CasesFilters = { q, court, case_type, stage, status, advocate, act, next, sort };
+  const { q, tier, court, case_type, stage, status, advocate, act, next, sort } = searchParams;
+  const filters: CasesFilters = { q, tier, court, case_type, stage, status, advocate, act, next, sort };
   const page = parsePage(searchParams.page);
   const per = clampPerPage(searchParams.per);
   const today = isoDay(new Date());
@@ -32,7 +33,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   // Numbered-page pagination (WO-39): fetch just this page's slice + an exact total count.
   // Was `.limit(500)` silent truncation. Facets/views still read the wider set — a facet RPC
   // to replace the 1000-row scan is the founder-gated follow-up.
-  const [{ rows: matters, total }, { data: facetRows }, { data: viewRows }, viewCounts] = await Promise.all([
+  const [{ rows: matters, total }, { data: facetRows }, { data: viewRows }, viewCounts, tierCounts] = await Promise.all([
     fetchCasesPage(supabase, filters, page, per),
     supabase.from("matter").select("court, case_type, stage, advocate_names, act_names").limit(1000),
     supabase
@@ -41,6 +42,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
       .eq("kind", "cases")
       .order("created_at", { ascending: true }),
     fetchViewCounts(supabase),
+    fetchTierCounts(supabase),
   ]);
 
   const distinct = (key: "court" | "case_type" | "stage") =>
@@ -81,7 +83,11 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
 
       <Console courts={courts} caseTypes={caseTypes} stages={stages} advocates={advocates} acts={acts} />
 
-      <CasesTabs counts={viewCounts} views={views} />
+      {/* WO-54 W2: court-tier segmentation (primary axis) sits above the saved-view tabs. */}
+      <div className="space-y-2.5">
+        <CasesTierTabs counts={tierCounts} />
+        <CasesTabs counts={viewCounts} views={views} />
+      </div>
 
       {total > 0 ? (
         <>
