@@ -249,6 +249,15 @@
     "diary": "diary",
     "past": "past",
     "noDate": "no date",
+    "tierTabs": {
+      "aria": "Filter by court tier",
+      "label": "Court",
+      "all": "All",
+      "HC": "High Court",
+      "DISTRICT": "District & Sessions",
+      "TRIBUNAL": "Tribunals",
+      "SC": "Supreme Court"
+    },
     "urgency": {
       "today": "Today",
       "tomorrow": "Tomorrow",
