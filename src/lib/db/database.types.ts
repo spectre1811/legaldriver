@@ -1926,6 +1926,7 @@ export type Database = {
           stage: string | null
           status: string
           tenant_id: string
+          tier: string | null
           title: string
         }
         Insert: {
@@ -1952,6 +1953,7 @@ export type Database = {
           stage?: string | null
           status?: string
           tenant_id: string
+          tier?: string | null
           title: string
         }
         Update: {
@@ -1978,6 +1980,7 @@ export type Database = {
           stage?: string | null
           status?: string
           tenant_id?: string
+          tier?: string | null
           title?: string
         }
         Relationships: [
