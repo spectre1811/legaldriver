@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
-import { runOnboarding, seedFetchedMatters } from "@/lib/services/onboarding/orchestrator";
+import { runOnboarding, drainOnboarding, seedFetchedMatters, DRAIN_BUDGET_MS, type OnboardingCounts } from "@/lib/services/onboarding/orchestrator";
 import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
 import { diagnoseEmptyRoster } from "@/lib/court/bar-number";
 import type { Database } from "@/lib/db/database.types";
 
-export type OnboardingActionResult = { ok: boolean; message: string; runId?: string };
+// `done` (BP-73): false while a large roster is still draining in bounded chunks — the client keeps
+// calling `continueOnboarding(runId)` until it flips true. Absent/true on the single-shot completion path.
+export type OnboardingActionResult = { ok: boolean; message: string; runId?: string; done?: boolean };
 
 // BP-71 W2: the live status of the advocate's most-recent onboarding run, for the progress bar. Reads the
 // record `runOnboarding` writes stage-by-stage (RLS scopes to the tenant automatically via the server
@@ -64,6 +66,15 @@ async function emptyRosterNote(supabase: ReturnType<typeof createClient>, advoca
   }
 }
 
+// The honest terminal summary shown when onboarding finishes. If neither the roster fetch nor the
+// cause-list found anything, appends WHY (empty-roster note) instead of a bare "0" that reads as "this
+// advocate has none". Shared by the single-shot (`startOnboarding`) and resumable (`continueOnboarding`)
+// completion paths so both report identically.
+async function finishMessage(supabase: ReturnType<typeof createClient>, advocateId: string, counts: OnboardingCounts): Promise<string> {
+  const note = counts.cases_fetched === 0 && counts.matters_seeded === 0 ? await emptyRosterNote(supabase, advocateId) : "";
+  return `Done — ${counts.cases_fetched} cases auto-fetched, ${counts.matters_seeded} from cause-list, ${counts.enriched} enriched, ${counts.deadlines_proposed} deadlines proposed, ${counts.inbox_filed} emails filed, ${counts.docs_attached} docs auto-filed, ${counts.closed_found} closed cases found, ${counts.summaries_queued} AI briefings queued.${note}`;
+}
+
 // Start (or re-run) onboarding for an advocate. Deterministic stages run inline;
 // AI briefings are left to the background worker. Idempotent + safe to re-run.
 export async function startOnboarding(advocateId: string): Promise<OnboardingActionResult> {
@@ -80,17 +91,35 @@ export async function startOnboarding(advocateId: string): Promise<OnboardingAct
     const admin = createAdminClient();
     const counts = await runOnboarding(supabase, admin, { tenantId, advocateId, runId: run.id });
     revalidatePath("/dashboard/onboarding");
-    // Honest empty-state: if neither the roster fetch nor the cause-list found anything,
-    // explain why instead of reporting a clean "0" that reads as "this advocate has none".
-    const note = counts.cases_fetched === 0 && counts.matters_seeded === 0 ? await emptyRosterNote(supabase, advocateId) : "";
-    return {
-      ok: true, runId: run.id,
-      message: `Done — ${counts.cases_fetched} cases auto-fetched, ${counts.matters_seeded} from cause-list, ${counts.enriched} enriched, ${counts.deadlines_proposed} deadlines proposed, ${counts.inbox_filed} emails filed, ${counts.docs_attached} docs auto-filed, ${counts.closed_found} closed cases found, ${counts.summaries_queued} AI briefings queued.${note}`,
-    };
+    return { ok: true, runId: run.id, done: true, message: await finishMessage(supabase, advocateId, counts) };
   } catch (e) {
     await supabase.from("onboarding_run").update({ status: "error", message: e instanceof Error ? e.message : "failed", updated_at: new Date().toISOString() }).eq("id", run.id);
     revalidatePath("/dashboard/onboarding");
     return { ok: false, runId: run.id, message: "Onboarding hit an error — partial progress saved; you can re-run." };
+  }
+}
+
+// BP-73: resume an in-flight onboarding run in bounded chunks. On Vercel Hobby a server action is
+// hard-capped at 60s, so a large roster (≥255 cases) can't enrich everything in one call — `drainOnboarding`
+// does ~45s of work then returns `done:false`, and the client keeps calling this until `done:true`
+// (a daily cron backstop finishes any run the user abandoned). Idempotent + safe to call repeatedly:
+// every stage is idempotent and the run's stage+cursor track exactly where to resume.
+export async function continueOnboarding(runId: string): Promise<OnboardingActionResult> {
+  const supabase = createClient();
+  const admin = createAdminClient();
+  try {
+    const res = await drainOnboarding(supabase, admin, runId, { budgetMs: DRAIN_BUDGET_MS });
+    revalidatePath("/dashboard/onboarding");
+    if (!res.done) {
+      return { ok: true, runId, done: false, message: "Fetching and enriching your cases — this keeps running; they appear as they’re ready." };
+    }
+    const { data: run } = await supabase.from("onboarding_run").select("advocate_id").eq("id", runId).maybeSingle();
+    const message = run?.advocate_id ? await finishMessage(supabase, run.advocate_id, res.counts) : "Onboarding complete.";
+    return { ok: true, runId, done: true, message };
+  } catch (e) {
+    await supabase.from("onboarding_run").update({ status: "error", message: e instanceof Error ? e.message : "failed", updated_at: new Date().toISOString() }).eq("id", runId);
+    revalidatePath("/dashboard/onboarding");
+    return { ok: false, runId, done: false, message: "Onboarding hit an error — partial progress saved; you can re-run." };
   }
 }
 
