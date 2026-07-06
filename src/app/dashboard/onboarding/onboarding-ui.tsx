@@ -51,12 +51,21 @@ export function RunOnboardingButton({ advocateId, label }: { advocateId: string;
           await new Promise((r) => setTimeout(r, 1500));
         }
       })();
-      const r = await startOnboarding(advocateId);
-      stopRef.current = true;
-      await poll;
-      setProg(null);
-      setMsg(r.message);
-      router.refresh();
+      try {
+        const r = await startOnboarding(advocateId);
+        setMsg(r.message);
+      } catch {
+        // The onboarding server action can be KILLED by Vercel's 60s function cap (Hobby) on a long run
+        // (large roster → the per-CNR enrich stage). The cases seeded by the EARLY stages are already
+        // persisted — so never let the action's rejection propagate to the error boundary ("Something
+        // went wrong" crashes the whole page). Show a graceful note and refresh to surface what landed.
+        setMsg("Still assembling your practice — this can take a moment on a large roster. We'll keep going in the background; refresh to see what's ready.");
+      } finally {
+        stopRef.current = true;
+        await poll;
+        setProg(null);
+        router.refresh();
+      }
     });
 
   return (
