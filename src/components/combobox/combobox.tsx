@@ -70,7 +70,7 @@ export function Combobox<T extends string | number = string>({
       key={String(o.value)}
       value={o.value}
       disabled={o.disabled}
-      className="group flex cursor-pointer select-none items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-ink data-[focus]:bg-brand-50 data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40"
+      className="group flex cursor-pointer select-none items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-ink data-[focus]:bg-ec-brass-tint data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40"
     >
       <span className="min-w-0">
         {renderOption ? (
@@ -82,7 +82,7 @@ export function Combobox<T extends string | number = string>({
           </>
         )}
       </span>
-      <Icon name="check" className="h-4 w-4 shrink-0 text-brand-600 opacity-0 group-data-[selected]:opacity-100" />
+      <Icon name="check" className="h-4 w-4 shrink-0 text-ec-brass opacity-0 group-data-[selected]:opacity-100" />
     </ComboboxOption>
   );
 
@@ -136,7 +136,7 @@ export function Combobox<T extends string | number = string>({
             {loading ? (
               <div className="px-3 py-2 text-sm text-ink-faint">{loadingText ?? t("loading")}</div>
             ) : error ? (
-              <div className="px-3 py-2 text-sm text-rose-600">{t("error")}</div>
+              <div className="px-3 py-2 text-sm text-ec-danger">{t("error")}</div>
             ) : shown.length === 0 ? (
               <div className="px-3 py-2 text-sm text-ink-faint">{emptyText ?? t("noResults")}</div>
             ) : (
