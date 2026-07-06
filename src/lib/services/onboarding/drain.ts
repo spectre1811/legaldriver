@@ -26,12 +26,16 @@ export function normalizeCounts(raw: unknown): OnboardingCounts {
 
 // enrich does LIVE per-CNR eCourts read-throughs — the stage that historically pushed a large roster
 // past Vercel Hobby's 60s server-action cap. Process it in small cursor-tracked chunks so no single
-// drain invocation runs them all at once, and so it paces the source.
-export const ENRICH_CHUNK = 5;
+// drain invocation runs them all at once, and so it paces the source. Kept SMALL (3) because the budget
+// is only checked BETWEEN chunks — one chunk of live reads must comfortably fit in the headroom left
+// under the 60s function cap (3 live reads « 60s guarantees forward progress every invocation).
+export const ENRICH_CHUNK = 3;
 
-// Default per-invocation wall-clock budget. Kept well under Vercel Hobby's 60s hard cap so a drain
-// always returns gracefully (with resumable state persisted) before the platform can kill it.
-export const DRAIN_BUDGET_MS = 45_000;
+// Default per-invocation wall-clock budget for the interactive path (client action, 60s cap). The
+// budget gates STARTING a new unit, so it must leave room for one more (possibly slow, live) unit to
+// finish under the cap: 35s budget + a ≤3-read enrich chunk stays well under 60s. The cron backstop
+// passes an even smaller budget (its 60s function cap is shared across several runs per tick).
+export const DRAIN_BUDGET_MS = 35_000;
 
 // The working stages in execution order (terminal "done" excluded). Mirrors progress.ts
 // ONBOARDING_STAGES and the setRun labels the UI polls.
