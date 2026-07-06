@@ -21,6 +21,7 @@ const TSX = "tsx@4.23.0";
 const OFFLINE = [
   "advocate_state_guard",
   "bp71_onboarding_progress",
+  "bp73_onboarding_drain",
   "wo49_warehouse_barid",
   "wo58_onboarding_honesty",
   "bp24_cases_pii_honest",
