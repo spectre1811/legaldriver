@@ -67,6 +67,7 @@ const OFFLINE = [
   "wo54_tier",
   "wo54_tier_tabs",
   "wo54_density",
+  "wo54_facets",
   "wo59_status_semantics",
 ];
 

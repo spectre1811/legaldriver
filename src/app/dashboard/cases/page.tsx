@@ -27,8 +27,8 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const supabase = createClient();
   const t = await getTranslations("cases");
   const tc = await getTranslations("common");
-  const { q, tier, court, case_type, stage, status, statuses, advocate, act, next, sort } = searchParams;
-  const filters: CasesFilters = { q, tier, court, case_type, stage, status, statuses, advocate, act, next, sort };
+  const { q, tier, court, case_type, stage, status, statuses, advocate, act, judge, next, sort } = searchParams;
+  const filters: CasesFilters = { q, tier, court, case_type, stage, status, statuses, advocate, act, judge, next, sort };
   const page = parsePage(searchParams.page);
   const per = clampPerPage(searchParams.per);
   const today = isoDay(new Date());
@@ -38,9 +38,13 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   // Numbered-page pagination (WO-39): fetch just this page's slice + an exact total count.
   // Was `.limit(500)` silent truncation. Facets/views still read the wider set — a facet RPC
   // to replace the 1000-row scan is the founder-gated follow-up.
+  // WO-54 W2b: the facet option lists are scoped to the ACTIVE TIER (uses matter_tier_idx) so the
+  // dropdowns adapt per tier — on the High Court tab you only see HC courts/case-types/judges, etc.
+  let facetQuery = supabase.from("matter").select("court, case_type, stage, status, advocate_names, act_names, judge_names").limit(1000);
+  if (tier) facetQuery = facetQuery.eq("tier", tier);
   const [{ rows: matters, total }, { data: facetRows }, { data: viewRows }, viewCounts, tierCounts] = await Promise.all([
     fetchCasesPage(supabase, filters, page, per),
-    supabase.from("matter").select("court, case_type, stage, status, advocate_names, act_names").limit(1000),
+    facetQuery,
     supabase
       .from("saved_view")
       .select("id, name, query")
@@ -59,10 +63,11 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   // status filter (WO-59), separate from the Open/Disposed semantic tabs.
   const statusValues = distinct("status");
 
-  const distinctArray = (key: "advocate_names" | "act_names") =>
+  const distinctArray = (key: "advocate_names" | "act_names" | "judge_names") =>
     [...new Set((facetRows ?? []).flatMap((r) => (r[key] ?? []) as string[]).filter(Boolean))].sort();
   const advocates = distinctArray("advocate_names");
   const acts = distinctArray("act_names");
+  const judges = distinctArray("judge_names"); // WO-54 W2b: Judge facet (tier-scoped like the rest)
 
   const views: SavedView[] = (viewRows ?? []).map((v) => ({
     id: v.id,
@@ -72,7 +77,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
       : {}),
   }));
 
-  const activeFilters = Boolean(q || tier || court || case_type || stage || status || statuses || advocate || act || next || sort);
+  const activeFilters = Boolean(q || tier || court || case_type || stage || status || statuses || advocate || act || judge || next || sort);
 
   return (
     <div className="space-y-6">
@@ -91,7 +96,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
         <AddCaseForm autoCnr={sanitizeTrack(searchParams.track) ?? undefined} />
       </div>
 
-      <Console courts={courts} caseTypes={caseTypes} stages={stages} statuses={statusValues} advocates={advocates} acts={acts} />
+      <Console courts={courts} caseTypes={caseTypes} stages={stages} statuses={statusValues} advocates={advocates} acts={acts} judges={judges} />
 
       {/* WO-54 W2: court-tier segmentation (primary axis) sits above the saved-view tabs. */}
       <div className="space-y-2.5">
