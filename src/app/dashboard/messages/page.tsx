@@ -4,6 +4,8 @@ import { PageHeader, Card, Badge, EmptyState, fmtAgo } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { Composer } from "./composer";
 import { SuggestedReply } from "./suggested-reply";
+import { Pagination } from "@/components/pagination";
+import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
 
 const CHANNELS = [
   { key: "", labelKey: "all" },
@@ -18,20 +20,27 @@ const CHANNEL_TONE: Record<string, "green" | "brand" | "neutral"> = {
   email: "neutral",
 };
 
-export default async function MessagesPage({ searchParams }: { searchParams: { channel?: string } }) {
+export default async function MessagesPage({ searchParams }: { searchParams: { channel?: string; page?: string; per?: string } }) {
   const t = await getTranslations("messages");
   const supabase = createClient();
   const channel = searchParams.channel;
+  const page = parsePage(searchParams.page);
+  const per = clampPerPage(searchParams.per);
+  const { from, to } = rangeFor(page, per);
 
-  const MSG_CAP = 300;
+  // WO-56: numbered pagination over messages (newest first) replaces the old .limit(300)
+  // hard cap, so the whole archive is reachable. Messages are still grouped into threads
+  // PER PAGE — true thread-level paging (a thread never split across pages) needs a
+  // thread-aggregation view and is filed as a follow-up (BACKLOG §D). The provenance note
+  // states this honestly.
   let query = supabase
     .from("msg_message")
-    .select("id, channel, direction, provider, from_addr, to_addr, body, status, thread_key, client_id, matter_id, confidence, suggested_reply, created_at")
+    .select("id, channel, direction, provider, from_addr, to_addr, body, status, thread_key, client_id, matter_id, confidence, suggested_reply, created_at", { count: "exact" })
     .order("created_at", { ascending: false })
-    .limit(MSG_CAP);
+    .range(from, to);
   if (channel) query = query.eq("channel", channel);
 
-  const [{ data: messages }, { data: clients }, { data: matters }] = await Promise.all([
+  const [{ data: messages, count: msgTotal }, { data: clients }, { data: matters }] = await Promise.all([
     query,
     supabase.from("client").select("id, name"),
     supabase.from("matter").select("id, title"),
@@ -40,10 +49,6 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
   const clientName = new Map((clients ?? []).map((c) => [c.id, c.name]));
   const matterName = new Map((matters ?? []).map((m) => [m.id, m.title]));
   const rows = messages ?? [];
-  // Honest cap (WO-39 / ship-grade §2): this thread-grouped view isn't yet keyset-paged
-  // (threads span pages → needs thread-level paging, a W2 follow-up). Until then, surface
-  // the cap instead of silently dropping message 301.
-  const capped = rows.length >= MSG_CAP;
 
   // Group by thread_key, latest thread first (threads ordered by newest message).
   type Row = (typeof rows)[number];
@@ -132,11 +137,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: { c
         </div>
       )}
 
-      {capped && (
-        <p className="rounded-xl border border-line bg-paper px-4 py-2.5 text-xs text-ink-muted" role="status">
-          {t("cappedNote", { count: MSG_CAP })}
-        </p>
-      )}
+      {threads.size > 0 && <Pagination page={page} perPage={per} total={msgTotal ?? 0} />}
 
       <p className="text-xs text-ink-faint">
         {t("provenance")}

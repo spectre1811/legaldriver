@@ -7,16 +7,21 @@ import { CATEGORIES, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/docs/categorie
 import { FilterBar } from "./filter-bar";
 import { DocumentsUpload } from "./documents-upload";
 import { DocumentsBrowser, type DocRow } from "./documents-browser";
+import { Pagination } from "@/components/pagination";
+import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
 
 const CATEGORY_ICON: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.icon]));
 
 export default async function DocumentsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; source?: string; type?: string; filed?: string; client?: string; category?: string; trash?: string; group?: string };
+  searchParams: { q?: string; source?: string; type?: string; filed?: string; client?: string; category?: string; trash?: string; group?: string; page?: string; per?: string };
 }) {
   const t = await getTranslations("documents");
   const isTrash = searchParams.trash === "1";
+  const page = parsePage(searchParams.page);
+  const per = clampPerPage(searchParams.per);
+  const { from, to } = rangeFor(page, per);
   const SOURCE: Record<string, string> = {
     gmail: t("source.gmail"),
     upload: t("source.upload"),
@@ -30,11 +35,14 @@ export default async function DocumentsPage({
   const { data: matters } = await supabase.from("matter").select("id, title, client_id");
   const matterClient = new Map((matters ?? []).map((m) => [m.id, m.client_id]));
 
+  // WO-56: numbered-page pagination (range + exact count) replaces the old .limit(300)
+  // silent cap — the whole library is now reachable, one page at a time. Each page's
+  // slice is grouped below; the summary states the true total from `count`.
   let query = supabase
     .from("document")
-    .select("id, filename, doc_type, category, source, client_id, matter_id, mime, size_bytes, storage_path, parsed_text, portal_shared, created_at")
+    .select("id, filename, doc_type, category, source, client_id, matter_id, mime, size_bytes, storage_path, parsed_text, portal_shared, created_at", { count: "exact" })
     .order("created_at", { ascending: false })
-    .limit(300);
+    .range(from, to);
   if (q) query = query.textSearch("fts", q, { type: "websearch" });
   if (source) query = query.eq("source", source);
   if (type) query = query.eq("doc_type", type);
@@ -54,7 +62,7 @@ export default async function DocumentsPage({
     ? query.not("extracted->>deletedAt", "is", null)
     : query.filter("extracted->>deletedAt", "is", null);
 
-  const [{ data: docs }, { data: clients }, { data: typeRows }, { count: trashCount }, { count: reviewCount }] = await Promise.all([
+  const [{ data: docs, count: docsTotal }, { data: clients }, { data: typeRows }, { count: trashCount }, { count: reviewCount }] = await Promise.all([
     query,
     supabase.from("client").select("id, name"),
     supabase.from("document").select("doc_type").not("doc_type", "is", null).limit(1000),
@@ -163,11 +171,12 @@ export default async function DocumentsPage({
         <>
           <div className="text-xs text-ink-faint">
             {isTrash
-              ? t("trash.count", { docs: (docs ?? []).length })
-              : t("summary.count", { docs: (docs ?? []).length, categories: sectionData.length })}
+              ? t("trash.count", { docs: docsTotal ?? 0 })
+              : t("summary.count", { docs: docsTotal ?? 0, categories: sectionData.length })}
             {activeFilters ? ` · ${t("summary.filtered")}` : ""}
           </div>
           <DocumentsBrowser sections={sectionData} orderedIds={orderedIds} matterOpts={matterOpts} clientOpts={clientOpts} trash={isTrash} />
+          <Pagination page={page} perPage={per} total={docsTotal ?? 0} />
         </>
       ) : (
         <EmptyState

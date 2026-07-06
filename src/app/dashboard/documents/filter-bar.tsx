@@ -17,6 +17,7 @@ export function FilterBar({ types, clients }: { types: string[]; clients: Opt[] 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(sp.toString());
     if (value) next.set(key, value); else next.delete(key);
+    next.delete("page"); // WO-56: a filter change resets pagination to page 1
     router.push(`/dashboard/documents?${next.toString()}`);
   };
 

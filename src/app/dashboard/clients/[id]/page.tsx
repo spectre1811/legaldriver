@@ -10,35 +10,55 @@ import { ClientDocUpload } from "./client-docs";
 import { Communications } from "@/components/communications";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/docs/categories";
+import { Pagination } from "@/components/pagination";
+import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
 import { deleteClient } from "./actions";
 
-export default async function ClientDetailPage({ params }: { params: { id: string } }) {
+export default async function ClientDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { page?: string; per?: string; dpage?: string; dper?: string };
+}) {
   const t = await getTranslations("clients");
   const supabase = createClient();
   const { data: client } = await supabase.from("client").select("*").eq("id", params.id).maybeSingle();
   if (!client) notFound();
 
-  const [{ data: matters }, { data: portal }, { data: messages }, { data: allClients }, { data: allMatters }] = await Promise.all([
-    supabase.from("matter").select("id, title, cnr, status, next_hearing_date").eq("client_id", client.id).order("next_hearing_date", { ascending: true, nullsFirst: false }),
+  // WO-56: two independent paginated lists on this page — the client's matters (`page`/
+  // `per`) and its document library (`dpage`/`dper`). A lightweight id+title fetch of ALL
+  // the client's matters still backs the doc cross-reference + "filed under" labels (docs
+  // can belong to any of the client's cases, not just the visible page).
+  const mPage = parsePage(searchParams.page);
+  const mPer = clampPerPage(searchParams.per);
+  const mRange = rangeFor(mPage, mPer);
+  const dPage = parsePage(searchParams.dpage);
+  const dPer = clampPerPage(searchParams.dper);
+
+  const [{ data: matters, count: matterTotal }, { data: clientMatters }, { data: portal }, { data: messages }, { data: allClients }, { data: allMatters }] = await Promise.all([
+    supabase.from("matter").select("id, title, cnr, status, next_hearing_date", { count: "exact" }).eq("client_id", client.id).order("next_hearing_date", { ascending: true, nullsFirst: false }).range(mRange.from, mRange.to),
+    supabase.from("matter").select("id, title").eq("client_id", client.id),
     supabase.from("portal_user").select("id").eq("client_id", client.id).maybeSingle(),
     supabase.from("portal_message").select("id, sender, body, created_at").eq("client_id", client.id).order("created_at", { ascending: true }).limit(100),
     supabase.from("client").select("id, name"),
     supabase.from("matter").select("id, title"),
   ]);
 
-  // Every document filed under this client directly, or under one of its cases.
-  const matterIds = (matters ?? []).map((m) => m.id);
+  // Every document filed under this client directly, or under one of its cases — paginated.
+  const matterIds = (clientMatters ?? []).map((m) => m.id);
   const orFilter = matterIds.length
     ? `client_id.eq.${client.id},matter_id.in.(${matterIds.join(",")})`
     : `client_id.eq.${client.id}`;
-  const { data: docs } = await supabase
+  const dRange = rangeFor(dPage, dPer);
+  const { data: docs, count: docTotal } = await supabase
     .from("document")
-    .select("id, filename, doc_type, category, source, client_id, matter_id, size_bytes, portal_shared, created_at")
+    .select("id, filename, doc_type, category, source, client_id, matter_id, size_bytes, portal_shared, created_at", { count: "exact" })
     .or(orFilter)
     .order("created_at", { ascending: false })
-    .limit(300);
+    .range(dRange.from, dRange.to);
 
-  const matterName = new Map((matters ?? []).map((m) => [m.id, m.title]));
+  const matterName = new Map((clientMatters ?? []).map((m) => [m.id, m.title]));
   const clientOpts = (allClients ?? []).map((c) => ({ id: c.id, label: c.name }));
   const matterOpts = (allMatters ?? []).map((m) => ({ id: m.id, label: m.title }));
 
@@ -84,23 +104,28 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
 
       {/* Matters */}
       <Card className="overflow-hidden">
-        <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">{t("casesHeading")} <span className="text-ink-faint">({matters?.length ?? 0})</span></h2></div>
+        <div className="border-b border-line px-5 py-4"><h2 className="text-base font-medium">{t("casesHeading")} <span className="text-ink-faint">({matterTotal ?? 0})</span></h2></div>
         {matters && matters.length ? (
-          <ul className="divide-y divide-line">
-            {matters.map((m) => (
-              <li key={m.id} className="flex items-center justify-between px-5 py-3 text-sm">
-                <Link href={`/dashboard/cases/${m.id}`} className="font-medium text-ink hover:text-brand-600">{m.title}</Link>
-                <span className="text-xs text-ink-muted">{m.cnr ?? "—"} · {t("nextPrefix")} {fmtDate(m.next_hearing_date)}</span>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="divide-y divide-line">
+              {matters.map((m) => (
+                <li key={m.id} className="flex items-center justify-between px-5 py-3 text-sm">
+                  <Link href={`/dashboard/cases/${m.id}`} className="font-medium text-ink hover:text-brand-600">{m.title}</Link>
+                  <span className="text-xs text-ink-muted">{m.cnr ?? "—"} · {t("nextPrefix")} {fmtDate(m.next_hearing_date)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="border-t border-line px-5 py-3">
+              <Pagination page={mPage} perPage={mPer} total={matterTotal ?? 0} />
+            </div>
+          </>
         ) : <p className="px-5 py-8 text-center text-sm text-ink-faint">{t("noCases")}</p>}
       </Card>
 
       {/* Document library — everything filed under this client or its cases */}
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3">
-          <h2 className="text-base font-medium">{t("documentsHeading")} <span className="text-ink-faint">({docs?.length ?? 0})</span></h2>
+          <h2 className="text-base font-medium">{t("documentsHeading")} <span className="text-ink-faint">({docTotal ?? 0})</span></h2>
           <ClientDocUpload clientId={client.id} />
         </div>
         {docGroups.length ? (
@@ -149,6 +174,11 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
             ))}
           </div>
         ) : <p className="px-5 py-8 text-center text-sm text-ink-faint">{t("noDocuments")}</p>}
+        {(docTotal ?? 0) > 0 && (
+          <div className="border-t border-line px-5 py-3">
+            <Pagination page={dPage} perPage={dPer} total={docTotal ?? 0} pageKey="dpage" perKey="dper" />
+          </div>
+        )}
       </Card>
 
       {/* Communications timeline (email + WhatsApp/SMS filed to this client) */}

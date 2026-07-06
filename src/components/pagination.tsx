@@ -8,14 +8,23 @@ import { PAGE_SIZE_OPTIONS, pageCount, pageWindow } from "@/lib/paginate";
 // rows-per-page selector, and "showing X–Y of N". URL-driven (`?page`/`?per`) so it's
 // bookmarkable, server-rendered, and preserves whatever filters are already in the URL.
 // Palette-neutral tokens so it sits on either the `ec-*` (cases) or `line/ink` surfaces.
+//
+// `pageKey`/`perKey` (WO-56) let a single page host TWO independent paginated lists
+// (e.g. client-detail's matters + documents) by giving each its own query params; they
+// default to `page`/`per`, so every existing caller is unchanged. Navigating one list
+// preserves the other's params because `go()` merges into the current search string.
 export function Pagination({
   page,
   perPage,
   total,
+  pageKey = "page",
+  perKey = "per",
 }: {
   page: number;
   perPage: number;
   total: number;
+  pageKey?: string;
+  perKey?: string;
 }) {
   const t = useTranslations("pagination");
   const router = useRouter();
@@ -30,8 +39,8 @@ export function Pagination({
     for (const [k, v] of Object.entries(params)) sp.set(k, v);
     router.push(`${pathname}?${sp.toString()}`);
   };
-  const gotoPage = (n: number) => go({ page: String(n) });
-  const changePer = (n: number) => go({ per: String(n), page: "1" }); // resizing resets to page 1
+  const gotoPage = (n: number) => go({ [pageKey]: String(n) });
+  const changePer = (n: number) => go({ [perKey]: String(n), [pageKey]: "1" }); // resizing resets to page 1
 
   const from = total === 0 ? 0 : (cur - 1) * perPage + 1;
   const to = Math.min(total, cur * perPage);
@@ -42,6 +51,7 @@ export function Pagination({
   return (
     <div
       data-testid="pagination"
+      data-list={pageKey}
       data-page={cur}
       data-per-page={perPage}
       data-total={total}

@@ -8,13 +8,21 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { getJudge, ldEnabled } from "@/lib/court/legaldriver-api";
 import { TrackCaseButton } from "@/components/track-case-button";
+import { Pagination } from "@/components/pagination";
+import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
 import { expandCaseType, expandDisposal } from "@/lib/court/code-labels";
 
 export const dynamic = "force-dynamic";
 
 // Browsable judge dossier ("know your judge") from /judge/{id}: caseload, disposal
 // mix, decisions-by-year, tier breakdown, and advocate/case-type cross-link panel.
-export default async function JudgePage({ params }: { params: { judgeId: string } }) {
+export default async function JudgePage({
+  params,
+  searchParams,
+}: {
+  params: { judgeId: string };
+  searchParams: { page?: string; per?: string };
+}) {
   const t = await getTranslations("judge");
   const tCommon = await getTranslations("common");
   if (!ldEnabled()) notFound();
@@ -78,16 +86,21 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10);
 
-  // Recent decisions (latest 15 disposed cases with decision dates)
-  const recent = [...disposed]
+  // Decisions, newest first (all disposed cases that carry a decision date). WO-56:
+  // paginate the full set instead of the old `.slice(0, 15)` that hid the real size —
+  // the analytics above stay over the whole returned array.
+  const decisions = [...disposed]
     .filter((c) => c.decision_date)
-    .sort((a, b) => String(b.decision_date).localeCompare(String(a.decision_date)))
-    .slice(0, 15);
+    .sort((a, b) => String(b.decision_date).localeCompare(String(a.decision_date)));
+  const page = parsePage(searchParams.page);
+  const per = clampPerPage(searchParams.per);
+  const { from, to } = rangeFor(page, per);
+  const pageDecisions = decisions.slice(from, to + 1);
 
-  // ── Supabase: which CNRs are tracked by this firm? ─────────────────────────
+  // ── Supabase: which of the ON-SCREEN CNRs are tracked by this firm? ────────
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
-  const cnrs = j.cases.map((c) => c.cnr);
+  const cnrs = pageDecisions.map((c) => c.cnr);
   const { data: tracked } = tenantId && cnrs.length
     ? await supabase.from("matter").select("id, cnr").eq("tenant_id", tenantId).in("cnr", cnrs)
     : { data: [] };
@@ -232,7 +245,7 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
             <div className="border-b border-line px-5 py-4">
               <p className="font-medium">{t("recentDecisions")}</p>
             </div>
-            {recent.length > 0 ? (
+            {decisions.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -246,7 +259,7 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
                     </tr>
                   </thead>
                   <tbody>
-                    {recent.map((c) => {
+                    {pageDecisions.map((c) => {
                       const mid = byCnr.get(c.cnr);
                       return (
                         <tr key={c.cnr} className="border-t border-line hover:bg-paper">
@@ -289,6 +302,11 @@ export default async function JudgePage({ params }: { params: { judgeId: string 
               </div>
             ) : (
               <EmptyState icon="scale" title={t("emptyDecisions")} />
+            )}
+            {decisions.length > 0 && (
+              <div className="border-t border-line px-5 py-3">
+                <Pagination page={page} perPage={per} total={decisions.length} />
+              </div>
             )}
             <p className="px-5 py-3 text-xs text-ink-faint">
               {t("provenance", {
