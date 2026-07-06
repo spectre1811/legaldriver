@@ -50,6 +50,40 @@ function isoDay(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+// Status semantics (WO-59). eCourts stores `matter.status` as a free-text string ("Pending" /
+// "Disposed" / NULL / …), never a clean enum — so the old exact `.eq("status","open")` matched
+// almost nothing while the tab still showed a count (the founder's "Open shows cases that don't
+// exist"). The UI now exposes two SEMANTIC groupings + the raw values, mapped to substring rules
+// that are IDENTICAL to the WO-56 portfolio dashboard (so the tab count and the filtered list can
+// never disagree across the app):
+//   "open"     → status IS NULL, or not disposed/closed
+//   "disposed" → disposed/closed  (ilike on NULL is NULL→excluded, so no explicit not-null needed)
+// Any other value is a real distinct status (the Wave-2 multi-select of actual values), matched
+// exactly via `.in` (comma-separated → multiple values).
+export const OPEN_STATUS_OR = "status.is.null,and(status.not.ilike.*dispos*,status.not.ilike.*closed*)";
+export const DISPOSED_STATUS_OR = "status.ilike.*dispos*,status.ilike.*closed*";
+
+export type StatusPlan =
+  | { kind: "or"; filter: string }
+  | { kind: "in"; values: string[] }
+  | null;
+
+// Pure: decide how a `status` param becomes a PostgREST filter (or nothing). Exported for the test.
+export function planStatusFilter(status: string | undefined): StatusPlan {
+  if (!status) return null;
+  if (status === "open") return { kind: "or", filter: OPEN_STATUS_OR };
+  if (status === "disposed") return { kind: "or", filter: DISPOSED_STATUS_OR };
+  const values = status.split(",").map((s) => s.trim()).filter(Boolean);
+  return values.length ? { kind: "in", values } : null;
+}
+
+function applyStatusFilter<T>(query: T, status: string | undefined): T {
+  const plan = planStatusFilter(status);
+  if (!plan) return query;
+  const q = query as { or: (f: string) => T; in: (c: string, v: string[]) => T };
+  return plan.kind === "or" ? q.or(plan.filter) : q.in("status", plan.values);
+}
+
 // Build the filtered + ordered matter query. Returns the query ready for a `.range()`,
 // with an exact count so the page can render numbered pages; RLS scopes it to the tenant.
 export function buildCasesQuery(supabase: SupabaseClient<Database>, f: CasesFilters) {
@@ -73,7 +107,7 @@ export function buildCasesQuery(supabase: SupabaseClient<Database>, f: CasesFilt
   if (f.court) query = query.eq("court", f.court);
   if (f.case_type) query = query.eq("case_type", f.case_type);
   if (f.stage) query = query.eq("stage", f.stage);
-  if (f.status) query = query.eq("status", f.status);
+  if (f.status) query = applyStatusFilter(query, f.status);
   if (f.advocate) query = query.contains("advocate_names", [f.advocate]);
   if (f.act) query = query.contains("act_names", [f.act]);
 
@@ -132,6 +166,7 @@ function applySort<T>(query: T, sort?: string): T {
 export interface ViewCounts {
   all: number;
   open: number;
+  disposed: number;
   overdue: number;
   soon: number; // next hearing within 7 days
   noDate: number;
@@ -142,9 +177,13 @@ export async function fetchViewCounts(supabase: SupabaseClient<Database>): Promi
   const soon = new Date();
   soon.setDate(soon.getDate() + 7);
   const head = () => supabase.from("matter").select("id", { count: "exact", head: true });
-  const [all, open, overdue, soonC, noDate] = await Promise.all([
+  // Status counts go through the SAME `applyStatusFilter` as the list query, so a tab count always
+  // matches the rows the tab shows (WO-59). Urgency counts (overdue/soon/no-date) feed the
+  // Attention bar (WO-59 W3), not the tabs.
+  const [all, open, disposed, overdue, soonC, noDate] = await Promise.all([
     head(),
-    head().eq("status", "open"),
+    applyStatusFilter(head(), "open"),
+    applyStatusFilter(head(), "disposed"),
     head().lt("next_hearing_date", today),
     head().gte("next_hearing_date", today).lte("next_hearing_date", isoDay(soon)),
     head().is("next_hearing_date", null),
@@ -152,6 +191,7 @@ export async function fetchViewCounts(supabase: SupabaseClient<Database>): Promi
   return {
     all: all.count ?? 0,
     open: open.count ?? 0,
+    disposed: disposed.count ?? 0,
     overdue: overdue.count ?? 0,
     soon: soonC.count ?? 0,
     noDate: noDate.count ?? 0,

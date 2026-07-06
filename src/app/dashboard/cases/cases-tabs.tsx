@@ -16,13 +16,15 @@ import type { ViewCounts } from "./cases-query";
 // The URL-param keys a saved view can carry (mirrors the Console).
 const VIEW_KEYS = ["q", "court", "case_type", "stage", "status", "advocate", "act", "next", "sort"] as const;
 
+// The tabs are the STATUS axis only (WO-59): All / Open / Disposed, with semantics fixed in
+// `cases-query.ts` so a count always matches its rows. The urgency axis (overdue / this week /
+// no date) moved to the actionable Attention bar — the two compose (Open + Overdue) via
+// independent URL params.
 type Builtin = { key: keyof ViewCounts; labelKey: string; params: Record<string, string> };
 const BUILTINS: Builtin[] = [
   { key: "all", labelKey: "all", params: {} },
   { key: "open", labelKey: "open", params: { status: "open" } },
-  { key: "soon", labelKey: "soon", params: { next: "7d" } },
-  { key: "overdue", labelKey: "overdue", params: { next: "overdue" } },
-  { key: "noDate", labelKey: "noDate", params: { next: "none" } },
+  { key: "disposed", labelKey: "disposed", params: { status: "disposed" } },
 ];
 
 export function CasesTabs({ counts, views }: { counts: ViewCounts; views: SavedView[] }) {
@@ -34,11 +36,12 @@ export function CasesTabs({ counts, views }: { counts: ViewCounts; views: SavedV
   const push = (next: URLSearchParams) =>
     router.push(next.toString() ? `/dashboard/cases?${next.toString()}` : "/dashboard/cases");
 
-  // Apply a built-in: drop the two view-defining params, set this view's, keep the rest (q/court/…).
+  // Apply a status built-in: reset only the STATUS param (+ page), preserving any active urgency
+  // (`next`) filter from the Attention bar and the free-text/facet filters — so "Open" and
+  // "Overdue" compose instead of clobbering each other.
   const applyBuiltin = (b: Builtin) => {
     const next = new URLSearchParams(sp.toString());
     next.delete("status");
-    next.delete("next");
     next.delete("page");
     for (const [k, v] of Object.entries(b.params)) next.set(k, v);
     push(next);
@@ -50,12 +53,9 @@ export function CasesTabs({ counts, views }: { counts: ViewCounts; views: SavedV
   };
 
   const status = sp.get("status");
-  const next = sp.get("next");
   const isBuiltinActive = (b: Builtin) => {
-    if (b.key === "all") return !status && !next;
-    if (b.params.status) return status === b.params.status;
-    if (b.params.next) return next === b.params.next;
-    return false;
+    if (b.key === "all") return !status;
+    return status === b.params.status;
   };
   const isSavedActive = (v: SavedView) =>
     VIEW_KEYS.every((k) => (v.query[k] ?? "") === (sp.get(k) ?? ""));
