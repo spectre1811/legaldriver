@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
-import { runOnboarding, drainOnboarding, seedFetchedMatters, DRAIN_BUDGET_MS, type OnboardingCounts } from "@/lib/services/onboarding/orchestrator";
+import { drainOnboarding, seedFetchedMatters, DRAIN_BUDGET_MS, type OnboardingCounts } from "@/lib/services/onboarding/orchestrator";
 import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
 import { diagnoseEmptyRoster } from "@/lib/court/bar-number";
 import type { Database } from "@/lib/db/database.types";
@@ -75,8 +75,10 @@ async function finishMessage(supabase: ReturnType<typeof createClient>, advocate
   return `Done — ${counts.cases_fetched} cases auto-fetched, ${counts.matters_seeded} from cause-list, ${counts.enriched} enriched, ${counts.deadlines_proposed} deadlines proposed, ${counts.inbox_filed} emails filed, ${counts.docs_attached} docs auto-filed, ${counts.closed_found} closed cases found, ${counts.summaries_queued} AI briefings queued.${note}`;
 }
 
-// Start (or re-run) onboarding for an advocate. Deterministic stages run inline;
-// AI briefings are left to the background worker. Idempotent + safe to re-run.
+// Start (or re-run) onboarding for an advocate. BP-73: runs only the first bounded chunk (~45s, safely
+// under Vercel Hobby's 60s server-action cap) and returns — `done:true` when a small roster finished in
+// one shot, `done:false` when a large roster still has stages to drain (the client then calls
+// `continueOnboarding(runId)` until done). Idempotent + safe to re-run.
 export async function startOnboarding(advocateId: string): Promise<OnboardingActionResult> {
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
@@ -89,9 +91,12 @@ export async function startOnboarding(advocateId: string): Promise<OnboardingAct
 
   try {
     const admin = createAdminClient();
-    const counts = await runOnboarding(supabase, admin, { tenantId, advocateId, runId: run.id });
+    const res = await drainOnboarding(supabase, admin, run.id, { budgetMs: DRAIN_BUDGET_MS });
     revalidatePath("/dashboard/onboarding");
-    return { ok: true, runId: run.id, done: true, message: await finishMessage(supabase, advocateId, counts) };
+    if (!res.done) {
+      return { ok: true, runId: run.id, done: false, message: "Fetching and enriching your cases — this keeps running; they appear as they’re ready." };
+    }
+    return { ok: true, runId: run.id, done: true, message: await finishMessage(supabase, advocateId, res.counts) };
   } catch (e) {
     await supabase.from("onboarding_run").update({ status: "error", message: e instanceof Error ? e.message : "failed", updated_at: new Date().toISOString() }).eq("id", run.id);
     revalidatePath("/dashboard/onboarding");

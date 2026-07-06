@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
-import { startOnboarding, deleteOnboarding, getOnboardingStatus, harvestOnboarding, type OnboardingStatus } from "./actions";
+import { startOnboarding, continueOnboarding, deleteOnboarding, getOnboardingStatus, harvestOnboarding, type OnboardingStatus } from "./actions";
 import { onboardingProgress, onboardingCountsSummary } from "@/lib/services/onboarding/progress";
 
 // BP-71 W2: a live progress bar over the real onboarding_run record (stage + counts), so the user sees
@@ -70,13 +70,23 @@ export function RunOnboardingButton({ advocateId, label }: { advocateId: string;
         }
       })();
       try {
-        const r = await startOnboarding(advocateId);
-        setMsg(r.message);
+        let r = await startOnboarding(advocateId);
+        if (mounted.current) setMsg(r.message);
+        // BP-73: on Vercel Hobby a server action is capped at 60s, so `startOnboarding` runs only the
+        // first ~45s chunk. A large roster comes back `done:false` — keep calling `continueOnboarding`
+        // (each another bounded chunk) until it finishes, so enrichment/deadlines/AI actually complete
+        // instead of dying at the cap. Guarded against an unbounded loop; stops on unmount/stop.
+        let guard = 0;
+        while (r.ok && r.done === false && r.runId && !stopRef.current && mounted.current && guard < 40) {
+          guard++;
+          r = await continueOnboarding(r.runId);
+          if (mounted.current) setMsg(r.message);
+        }
       } catch {
-        // The onboarding server action can be KILLED by Vercel's 60s function cap (Hobby) on a long run
-        // (large roster → the per-CNR enrich stage). The cases seeded by the EARLY stages are already
-        // persisted — so never let the action's rejection propagate to the error boundary ("Something
-        // went wrong" crashes the whole page). Show a graceful note and refresh to surface what landed.
+        // A bounded drain shouldn't hit the 60s cap, but network/transient errors can still reject.
+        // The cases seeded by completed stages are already persisted — never let the rejection reach the
+        // error boundary ("Something went wrong" crashes the page). Show a graceful note; the daily cron
+        // backstop (or a re-run) finishes any run left mid-flight.
         setMsg("Still assembling your practice — this can take a moment on a large roster. We'll keep going in the background; refresh to see what's ready.");
       } finally {
         stopRef.current = true;
