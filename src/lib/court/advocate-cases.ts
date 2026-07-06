@@ -13,6 +13,32 @@ import { corpusEnabled } from "./corpus-athena";
 import { parseBarNumber, stateBarCouncil, councilByStatePrefix, barSearchScopes } from "./bar-number";
 import type { ParsedBarNumber } from "./bar-number";
 
+// ── Fetch-failure classification (WO-64) ─────────────────────────────────────
+// A provider fetch fails three ways the UI MUST tell apart, because they call for different actions:
+//   • auth        — the source rejected our credentials (401/403): a key rotted/is wrong → an ADMIN
+//                   must fix LD_API_KEY; retrying changes nothing.
+//   • source_down — the source broke or was unreachable (5xx / network / timeout): transient → retry.
+//   • (neither)   — the source answered fine and the advocate genuinely has no cases: NOT a failure.
+// Conflating "auth failed" with "empty" is exactly what rendered a rotted-key 401 as the reassuring
+// "still fetching…" for days (the WO-64 incident). `classifyHttpStatus` is the pure kernel.
+export type FetchErrorKind = "auth" | "source_down" | "unknown";
+
+export function classifyHttpStatus(status: number): FetchErrorKind | null {
+  if (status === 401 || status === 403) return "auth";        // key wrong / rotted / missing scope
+  if (status >= 500) return "source_down";                    // provider broke — transient
+  return null;                                                // 2xx / 404 / other → NOT a failure (empty is a valid answer)
+}
+
+// A provider failure that CARRIES its classification, so it survives the merge into
+// `AdvocateFetchMeta.errors` instead of being flattened to a bare `[]` (the anti-blackhole contract,
+// WO-58 + WO-64). Providers throw this on a hard/transport failure; a plain empty result is not an error.
+export class ProviderError extends Error {
+  constructor(public source: string, public kind: FetchErrorKind, message: string) {
+    super(message);
+    this.name = "ProviderError";
+  }
+}
+
 // WO-49: the bar id to look up in the LD warehouse (`GET /advocate/{bar_id}`). The warehouse keys
 // advocates on the **full canonical bar id** ("G/4732/1999" → 5075 cases), NOT the bare serial
 // (`GET /advocate/4732` → 404) — so onboarding was returning 0 even for advocates whose cases we
@@ -168,8 +194,21 @@ const legaldriverProvider: AdvocateCaseProvider = {
     const base = process.env.LD_API_BASE || "http://13.202.148.71:8080";
     const H = { "X-API-Key": key };
     const sig = () => AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "60000"));
+    // Thread the HTTP status through (WO-64): a 401/403 or 5xx must NOT masquerade as an empty roster —
+    // it throws a classified ProviderError so `fetchAdvocateCasesWithMeta` records WHY the fetch failed
+    // (auth vs source-down) instead of returning a silent, indistinguishable zero. A 404 (advocate simply
+    // absent from the warehouse) stays a valid empty answer → null, not an error.
     const get = async (path: string) => {
-      try { const r = await fetch(`${base}${path}`, { headers: H, signal: sig() }); return r.ok ? await r.json() : null; } catch { return null; }
+      let r: Response;
+      try {
+        r = await fetch(`${base}${path}`, { headers: H, signal: sig() });
+      } catch (e) {
+        throw new ProviderError("legaldriver", "source_down", e instanceof Error ? e.message : "box unreachable");
+      }
+      if (r.ok) return await r.json();
+      const kind = classifyHttpStatus(r.status);
+      if (kind) throw new ProviderError("legaldriver", kind, `HTTP ${r.status}`);
+      return null; // 404 etc. → nothing here, but the source answered: a valid empty result.
     };
     const map = (c: LdProfileCase): FetchedAdvocateCase => ({
       cnr: c.cnr, caseNumber: null, title: `${c.case_type ?? "Case"}${c.registration_year ? ` (${c.registration_year})` : ""}`,
@@ -248,8 +287,8 @@ export function enabledAdvocateProviders(): string[] {
 // this advocate's. (No bar id → name-only search → unchanged: keep everything.)
 export interface AdvocateFetchMeta {
   cases: FetchedAdvocateCase[];
-  providers: string[];                            // sources that were enabled + queried
-  errors: { source: string; error: string }[];    // per-provider failures — RECORDED, never swallowed
+  providers: string[];                                          // sources that were enabled + queried
+  errors: { source: string; error: string; kind: FetchErrorKind }[]; // per-provider failures — RECORDED + CLASSIFIED, never swallowed
 }
 
 // Fetch across enabled providers, returning the merged cases AND diagnostics. WO-58: a provider that
@@ -262,8 +301,14 @@ export async function fetchAdvocateCasesWithMeta(q: AdvocateQuery): Promise<Advo
   if (!q.name || q.name.trim().length < 3) return { cases: [], providers, errors: [] };
   const settled = await Promise.all(enabled.map((p) =>
     p.fetchByAdvocate(q)
-      .then((cases) => ({ source: p.source, cases, error: null as string | null }))
-      .catch((e) => ({ source: p.source, cases: [] as FetchedAdvocateCase[], error: e instanceof Error ? e.message : "fetch failed" }))));
+      .then((cases) => ({ source: p.source, cases, error: null as string | null, kind: null as FetchErrorKind | null }))
+      .catch((e) => ({
+        source: p.source,
+        cases: [] as FetchedAdvocateCase[],
+        error: e instanceof Error ? e.message : "fetch failed",
+        // Keep the provider's own classification (auth vs source_down); an unclassified throw → "unknown".
+        kind: (e instanceof ProviderError ? e.kind : "unknown") as FetchErrorKind,
+      }))));
   const stateGuard = q.barNumber && q.stateCode ? q.stateCode.trim().toUpperCase() : null;
   const merged: FetchedAdvocateCase[] = [];
   const seen = new Set<string>();
@@ -277,7 +322,48 @@ export async function fetchAdvocateCasesWithMeta(q: AdvocateQuery): Promise<Advo
       merged.push(c);
     }
   }
-  return { cases: merged, providers, errors: settled.filter((r) => r.error).map((r) => ({ source: r.source, error: r.error! })) };
+  return {
+    cases: merged,
+    providers,
+    errors: settled.filter((r) => r.error).map((r) => ({ source: r.source, error: r.error!, kind: r.kind ?? "unknown" })),
+  };
+}
+
+// ── Honest onboarding fetch note (WO-64) ─────────────────────────────────────
+// The user-facing copy the onboarding fetch stage shows, chosen from the HONEST outcome. This is the
+// fix for the incident's third failure: a set-but-wrong (401) key must read as "authentication failed —
+// an admin must fix it", never the reassuring "still fetching…". Pure + exported so it's tested offline.
+export const FETCH_NOTE = {
+  // No provider configured at all (distinct from "we searched and you have none").
+  notConfigured:
+    "Court-data source isn’t configured here, so cases can’t be auto-fetched (an administrator must set LD_API_KEY). Your cause list and add-by-CNR still work.",
+  // Set-but-wrong / rotted key → 401/403. Actionable, and NEVER shown as latency.
+  authFailed:
+    "We couldn’t fetch your cases — the court-data source rejected our credentials (authentication failed). An administrator must check LD_API_KEY. Your cause list and add-by-CNR still work.",
+  // 5xx / unreachable — transient; we retry in the background.
+  sourceDown:
+    "The court-data source is temporarily unavailable — we’ll keep trying in the background. Your cause list and add-by-CNR still work.",
+  // Auth is healthy, the async roster refresh is in flight — the ONLY case where "still fetching" is honest.
+  fetching:
+    "Fetching your cases from the court record — this can take a moment; they’ll appear as they arrive.",
+} as const;
+
+export function onboardingFetchNote(o: {
+  providersConfigured: boolean;
+  casesFetched: number;
+  livePending: boolean;
+  errors: { source: string; kind: FetchErrorKind }[];
+}): string | null {
+  if (!o.providersConfigured) return FETCH_NOTE.notConfigured;
+  // Auth failure dominates: it's a hard misconfig, so it can never render as "still fetching".
+  if (o.errors.some((e) => e.kind === "auth")) return FETCH_NOTE.authFailed;
+  if (o.errors.some((e) => e.kind === "source_down")) return FETCH_NOTE.sourceDown;
+  if (o.errors.length) {
+    const names = [...new Set(o.errors.map((e) => e.source))].join(", ");
+    return `Some court-data sources didn’t respond (${names}) — we’ll keep trying in the background.`;
+  }
+  if (o.casesFetched === 0 && o.livePending) return FETCH_NOTE.fetching;
+  return null; // cases arrived (or none pending) → the counts speak; no note needed.
 }
 
 export async function fetchAdvocateCases(q: AdvocateQuery): Promise<FetchedAdvocateCase[]> {
