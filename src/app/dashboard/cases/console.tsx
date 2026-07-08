@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { Combobox, MultiSelect, type ComboOption, RENDER_ALL_MAX } from "@/components/combobox";
 import { saveView } from "./view-actions";
+import { GROUP_SEP, type FacetGroup } from "./facet-normalize";
 
 // Query keys the console owns. Used to (re)build the URL and to snapshot a saved view. The facet
 // filters are MULTI (repeated params); `status` (semantic tab), `q`, `next`, `sort` are single.
@@ -19,16 +20,18 @@ export function Console({
   caseTypes,
   stages,
   statuses,
-  advocates,
-  acts,
+  advocateGroups,
+  actGroups,
   judges,
 }: {
   courts: string[];
   caseTypes: string[];
   stages: string[];
   statuses: string[];
-  advocates: string[];
-  acts: string[];
+  // WO-57: advocate/act facets are variant-collapsed groups (one option per real entity), not raw
+  // strings — one option expands to every raw spelling on match. Court/type/stage/status/judge stay raw.
+  advocateGroups: FacetGroup[];
+  actGroups: FacetGroup[];
   judges: string[];
 }) {
   const t = useTranslations("cases.console");
@@ -89,6 +92,29 @@ export function Console({
     />
   );
 
+  // WO-57 · A variant-collapsed facet (advocate/act). Each option bundles all raw spelling variants
+  // of one entity (joined by GROUP_SEP); selecting it writes every variant as a repeated URL param so
+  // `.overlaps` (any-of) returns the whole entity's cases. Read-back: an option is shown selected when
+  // ANY of its variants is in the URL (so an old saved view holding one variant still lights it up and
+  // heals to the full set on the next change). URLs/saved-views stay raw variants → fully compatible.
+  const multiGrouped = (key: string, label: string, placeholder: string, groups: FacetGroup[], width: string) => {
+    const options: ComboOption[] = groups.map((g) => ({ value: g.values.join(GROUP_SEP), label: g.label }));
+    const selectedRaw = new Set(sp.getAll(key));
+    const value = options.filter((o) => o.value.split(GROUP_SEP).some((v) => selectedRaw.has(v))).map((o) => o.value);
+    return (
+      <MultiSelect
+        label={label}
+        placeholder={placeholder}
+        options={options}
+        value={value}
+        onChange={(vals) => setMulti(key, vals.flatMap((v) => v.split(GROUP_SEP)))}
+        showSelectAll={false}
+        virtualized={options.length > RENDER_ALL_MAX}
+        className={width}
+      />
+    );
+  };
+
   const currentQuery = () => {
     const out: Record<string, string | string[]> = {};
     for (const k of KEYS) {
@@ -144,8 +170,8 @@ export function Console({
         {multi("case_type", t("caseType"), t("allTypes"), asOptions(caseTypes), "")}
         {multi("stage", t("stage"), t("allStages"), asOptions(stages), "")}
         {multi("statuses", t("status"), t("allStatuses"), asOptions(statuses), "")}
-        {multi("advocate", t("advocate"), t("allAdvocates"), asOptions(advocates), "", false)}
-        {multi("act", t("act"), t("allActs"), asOptions(acts), "", false)}
+        {multiGrouped("advocate", t("advocate"), t("allAdvocates"), advocateGroups, "")}
+        {multiGrouped("act", t("act"), t("allActs"), actGroups, "")}
         {multi("judge", t("judge"), t("allJudges"), asOptions(judges), "", false)}
         {single("next", t("nextHearing"), t("anyHearing"), [
           { value: "overdue", label: t("overdue") },
