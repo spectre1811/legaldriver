@@ -1,20 +1,17 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { PageHeader, Card, Badge, Stat, fmtDate } from "@/components/ui";
+import { PageHeader, Card, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
-import { RunOnboardingButton, DeleteOnboardingButton, OnboardingBackground } from "./onboarding-ui";
+import { AdvocateOnboarding } from "./onboarding-ui";
 import { AdvocateForm } from "../settings/advocate-form";
-import { isGathering } from "@/lib/services/onboarding/progress";
 
 export const dynamic = "force-dynamic";
 // BP-71: onboarding runs multi-stage server-side (fetch → enrich per-CNR → …). Give the server action
 // room so it isn't killed mid-run (Vercel's short default would leave a stuck "running" run + 0 counts).
 export const maxDuration = 60;
-
-interface Counts { causelist?: number; cases_fetched?: number; matters_seeded?: number; enriched?: number; deadlines_proposed?: number; inbox_filed?: number; docs_attached?: number; closed_found?: number; summaries_queued?: number; roster_total?: number }
 
 export default async function OnboardingPage() {
   const supabase = createClient();
@@ -91,49 +88,20 @@ export default async function OnboardingPage() {
           <ul className="divide-y divide-line">
             {advocates.map((a) => {
               const run = latestByAdvocate.get(a.id);
-              const c = (run?.counts ?? {}) as Counts;
+              const initialRun = run
+                ? {
+                    stage: run.stage, status: run.status,
+                    counts: (run.counts ?? {}) as Record<string, number>,
+                    message: run.message, updatedAt: run.updated_at,
+                    cursor: (run.cursor ?? null) as Record<string, unknown> | null,
+                  }
+                : null;
               return (
-                <li key={a.id} className="px-5 py-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium">{a.name}</p>
-                      <p className="text-xs text-ink-muted">{a.bar_registration_number ? t("bar", { n: a.bar_registration_number }) : t("noBar")}{a.state_code ? ` · ${a.state_code}` : ""}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {run && <Badge tone={run.status === "done" ? "green" : run.status === "error" ? "red" : "amber"}>{run.status === "running" ? run.stage : (t.has(`runStatus.${run.status}`) ? t(`runStatus.${run.status}`) : run.status)}</Badge>}
-                      <RunOnboardingButton advocateId={a.id} label={run ? t("rerun") : t("run")} />
-                      <DeleteOnboardingButton advocateId={a.id} label={t("remove")} confirmText={t("removeConfirm", { name: a.name })} />
-                    </div>
-                  </div>
-                  {run && (
-                    <>
-                      {run.status === "error" && run.message && (
-                        <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-700">{run.message}</p>
-                      )}
-                      {isGathering({ cursor: run.cursor as Record<string, unknown> | null, updatedAt: run.updated_at }, Date.now()) && (
-                        <OnboardingBackground advocateId={a.id} />
-                      )}
-                      <p className="mt-3 text-xs text-ink-faint">{t("lastRun", { date: fmtDate(run.updated_at) })}{run.status !== "error" && run.message ? ` · ${run.message}` : ""}</p>
-                      <details className="group mt-2 text-xs">
-                        <summary className="flex cursor-pointer list-none items-center gap-1.5 text-ink-muted hover:text-ink">
-                          <Icon name="chevron" className="h-3.5 w-3.5 transition group-open:rotate-90" />
-                          {t("runDetails")}
-                        </summary>
-                        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                          <Stat label={t("stat.rosterTotal")} value={String(c.roster_total ?? c.cases_fetched ?? 0)} />
-                          <Stat label={t("stat.casesFetched")} value={String(c.cases_fetched ?? 0)} />
-                          <Stat label={t("stat.mattersSeeded")} value={String(c.matters_seeded ?? 0)} />
-                          <Stat label={t("stat.causelist")} value={String(c.causelist ?? 0)} />
-                          <Stat label={t("stat.enriched")} value={String(c.enriched ?? 0)} />
-                          <Stat label={t("stat.deadlinesProposed")} value={String(c.deadlines_proposed ?? 0)} />
-                          <Stat label={t("stat.emailsFiled")} value={String(c.inbox_filed ?? 0)} />
-                          <Stat label={t("stat.docsFiled")} value={String(c.docs_attached ?? 0)} />
-                          <Stat label={t("stat.closedFound")} value={String(c.closed_found ?? 0)} />
-                          <Stat label={t("stat.briefingsQueued")} value={String(c.summaries_queued ?? 0)} />
-                        </div>
-                      </details>
-                    </>
-                  )}
+                <li key={a.id}>
+                  <AdvocateOnboarding
+                    advocate={{ id: a.id, name: a.name, bar: a.bar_registration_number, stateCode: a.state_code ? String(a.state_code) : null }}
+                    initialRun={initialRun}
+                  />
                 </li>
               );
             })}
