@@ -59,6 +59,11 @@ export function onboardingProgress(stage?: string | null, status?: string | null
 // founder's core complaint). Pure + offline-tested; no schema change (reads the existing jsonb cursor).
 export const GATHERING_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
 
+// WO-84: after this long with NO new arrival while a fetch is still pending, we stop claiming "still
+// gathering" (a working pipeline lands cases steadily; a long silence means it's stuck or finished-empty)
+// and surface an honest, actionable "we've paused — refresh or re-run" state instead of a forever-spinner.
+export const STALL_WINDOW_MS = 20 * 60 * 1000; // 20 minutes of silence
+
 export function isGathering(
   run: { cursor?: Record<string, unknown> | null; updatedAt?: string | null } | null | undefined,
   nowMs: number,
@@ -69,6 +74,93 @@ export function isGathering(
   const started = Date.parse(startedRaw);
   if (!Number.isFinite(started)) return false;
   return nowMs - started < GATHERING_WINDOW_MS;
+}
+
+// WO-84: the single, truthful phase an onboarding run is in — the state machine the whole UI renders
+// from. This supersedes the split "progress bar while running" + "isGathering guess" logic with ONE
+// coverage-aware classification, fixing the founder's core complaints:
+//   • "don't lose it when tabs change" — the phase is derived purely from the persisted run record, so
+//     any tab / reload reconstructs the exact same state (no client-only memory to lose).
+//   • "without any hiccups / not a forever spinner" — `complete` is decided by real coverage (N of M on
+//     file), not a blind 30-min clock; a genuinely-stuck fetch degrades to `stalled` (actionable), never
+//     an eternal "still gathering".
+//   • "work in the background + notify" — `assembling` (foreground drain) vs `gathering` (background
+//     fleet) are distinct, and a transition INTO `complete` is what fires the completion notification.
+export type OnboardingPhaseKind =
+  | "idle"        // no run yet — show the entry / empty state
+  | "assembling"  // a drain is actively running server-side — foreground progress bar
+  | "gathering"   // drain returned; the off-box fleet is still landing the roster — "you can leave"
+  | "stalled"     // fetch still pending but gone silent past STALL_WINDOW — nudge to refresh / re-run
+  | "complete"    // everything the run set out to fetch is on file
+  | "error";      // the run failed — human message + recovery
+
+export interface OnboardingPhase {
+  kind: OnboardingPhaseKind;
+  progress: OnboardingProgress; // the stage→percent bar (for `assembling`)
+  coverage: OnboardingCoverage; // the N-of-M meter (for `gathering`/`complete`)
+  /** true while cases are still expected to land (assembling or gathering) — drives the client harvest poll. */
+  active: boolean;
+}
+
+export function onboardingPhase(
+  run:
+    | {
+        stage?: string | null;
+        status?: string | null;
+        counts?: Record<string, number> | null;
+        cursor?: Record<string, unknown> | null;
+        updatedAt?: string | null;
+      }
+    | null
+    | undefined,
+  nowMs: number,
+): OnboardingPhase {
+  const progress = onboardingProgress(run?.stage, run?.status);
+  const coverage = onboardingCoverage(run?.counts);
+  const base = { progress, coverage };
+  if (!run) return { ...base, kind: "idle", active: false };
+  if (progress.error) return { ...base, kind: "error", active: false };
+  // A drain is actively running server-side → foreground bar.
+  if (run.status === "running") return { ...base, kind: "assembling", active: true };
+
+  // Drain returned. Is the off-box fleet still expected to be landing the roster?
+  const pending = run.cursor?.fetch_pending === true;
+  if (!pending) return { ...base, kind: "complete", active: false };
+
+  // `pending` is a fire-and-forget flag the orchestrator sets when it kicks the off-box fleet; nothing
+  // clears it, so we can't trust it alone. Decide truthfully from what's ACTUALLY landed + elapsed time.
+  // `landed` is the real count in the warehouse this run (roster size once known, else what was seeded) —
+  // NOT coverage.onFile, which optimistically equals the roster the instant M is known.
+  const c = run.counts || {};
+  const rosterTotal = num(c.roster_total);
+  const landed = Math.max(num(c.cases_fetched), num(c.matters_seeded));
+  const somethingArrived = rosterTotal > 0 || landed > 0;
+  // Everything the run set out to fetch is demonstrably on file → complete, even if the flag is stale.
+  if (rosterTotal > 0 && landed >= rosterTotal) return { ...base, kind: "complete", active: false };
+
+  const startedRaw = run.cursor?.fetch_started_at ? String(run.cursor.fetch_started_at) : run.updatedAt ?? "";
+  const started = Date.parse(startedRaw);
+  const updated = Date.parse(run.updatedAt ?? startedRaw);
+  const inWindow = Number.isFinite(started) && nowMs - started < GATHERING_WINDOW_MS;
+  const quiet = Number.isFinite(updated) && nowMs - updated > STALL_WINDOW_MS;
+  // Actively working: inside the window the fleet normally takes AND cases have arrived recently.
+  if (inWindow && !quiet) return { ...base, kind: "gathering", active: true };
+  // Time's up (past window) or gone silent: if we got a roster / any cases, the fleet had its run —
+  // call it complete (the honest empty-state note covers a true zero). If NOTHING ever came, be honest
+  // that we're stuck rather than spin forever — `stalled` offers refresh / re-run.
+  return { ...base, kind: somethingArrived ? "complete" : "stalled", active: false };
+}
+
+// WO-84: fire the completion notification exactly on the transition INTO `complete` from a phase where
+// work was still outstanding — never on first load of an already-complete run (that would spam a
+// notification every revisit), and never from `idle`/`error`. Pure so the "when to notify" rule is
+// unit-tested, not buried in a component effect.
+export function shouldNotifyCompletion(
+  prev: OnboardingPhaseKind | null | undefined,
+  next: OnboardingPhaseKind,
+): boolean {
+  if (next !== "complete") return false;
+  return prev === "assembling" || prev === "gathering" || prev === "stalled";
 }
 
 // WO-65: honest import coverage from a run's counts. `total` (M) = the advocate's FULL roster size; the

@@ -1618,7 +1618,41 @@
       "body": "We're pulling your complete case history from the court record in the background. You can leave this page — new cases file automatically as they arrive.",
       "check": "Check for new cases",
       "checking": "Checking…",
-      "arrived": "{n, plural, one {# new case just filed} other {# new cases just filed}}"
+      "arrived": "{n, plural, one {# new case just filed} other {# new cases just filed}}",
+      "leaveHint": "You can switch tabs or close this — we'll keep working and let you know when it's done."
+    },
+    "phaseBadge": {
+      "assembling": "Assembling",
+      "gathering": "Gathering",
+      "stalled": "Paused",
+      "complete": "Ready",
+      "error": "Needs attention",
+      "idle": "Not run yet"
+    },
+    "coverage": {
+      "onFile": "{n, plural, one {# case on file} other {# cases on file}}",
+      "detailed": "{done} of {total} with full detail",
+      "allIn": "All case details in",
+      "fetching": "Fetching your cases from the court record…"
+    },
+    "notify": {
+      "enable": "Notify me when it's done",
+      "enabled": "We'll notify you when it's ready",
+      "blocked": "Notifications are blocked — enable them in your browser to be alerted.",
+      "title": "Onboarding complete",
+      "body": "{name}'s cases are ready — {n, plural, one {# case on file} other {# cases on file}}."
+    },
+    "ready": {
+      "title": "{name}'s practice is ready",
+      "body": "{n, plural, one {# case is on file} other {# cases are on file}} with hearings on your calendar.",
+      "view": "View cases",
+      "dismiss": "Dismiss"
+    },
+    "stalled": {
+      "title": "Fetch paused",
+      "body": "We couldn't reach the court record just now. Anything already found is saved — check again in a moment, or re-run.",
+      "refresh": "Check again",
+      "refreshing": "Checking…"
     },
     "stat": {
       "causelist": "Cause-list",
