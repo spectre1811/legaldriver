@@ -72,6 +72,7 @@ const OFFLINE = [
   "wo54_facets",
   "wo54_keyboard",
   "wo59_status_semantics",
+  "wo57_advocate_facet_dedup",
   "wo63_deploy_freshness",
   "wo65_full_roster",
   "wo68_order_pdf",

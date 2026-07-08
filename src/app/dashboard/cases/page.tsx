@@ -12,6 +12,7 @@ import { CasesTierTabs } from "./cases-tier-tabs";
 import { CasesAttention } from "./cases-attention";
 import { Pagination } from "@/components/pagination";
 import { fetchCasesPage, fetchViewCounts, fetchTierCounts, type CasesFilters } from "./cases-query";
+import { groupFacet, advocateKey, actKey } from "./facet-normalize";
 import { parseDensity, DENSITY_COOKIE } from "./density";
 import { parsePage, clampPerPage } from "@/lib/paginate";
 import { maskTitle } from "@/lib/court/mask";
@@ -65,8 +66,12 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
 
   const distinctArray = (key: "advocate_names" | "act_names" | "judge_names") =>
     [...new Set((facetRows ?? []).flatMap((r) => (r[key] ?? []) as string[]).filter(Boolean))].sort();
-  const advocates = distinctArray("advocate_names");
-  const acts = distinctArray("act_names");
+  // WO-57: collapse surface-only spelling variants (honorific/punctuation/whitespace/case) of one
+  // advocate/act into a single facet option that expands back to every raw variant on match, so the
+  // dropdown shows one entry and the filter returns the whole entity's cases (was: raw exact-match →
+  // `P R PATEL` and `P.R.PATEL` were two entries, each returning only its own variant's cases).
+  const advocateGroups = groupFacet(distinctArray("advocate_names"), advocateKey);
+  const actGroups = groupFacet(distinctArray("act_names"), actKey);
   const judges = distinctArray("judge_names"); // WO-54 W2b: Judge facet (tier-scoped like the rest)
 
   const views: SavedView[] = (viewRows ?? []).map((v) => ({
@@ -96,7 +101,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
         <AddCaseForm autoCnr={sanitizeTrack(searchParams.track) ?? undefined} />
       </div>
 
-      <Console courts={courts} caseTypes={caseTypes} stages={stages} statuses={statusValues} advocates={advocates} acts={acts} judges={judges} />
+      <Console courts={courts} caseTypes={caseTypes} stages={stages} statuses={statusValues} advocateGroups={advocateGroups} actGroups={actGroups} judges={judges} />
 
       {/* WO-54 W2: court-tier segmentation (primary axis) sits above the saved-view tabs. */}
       <div className="space-y-2.5">
