@@ -1,7 +1,7 @@
 {
-  "version": 3,
-  "lastRun": "2026-07-06-run4",
-  "comment": "Persistent coverage map \u2014 updated by the ui-qa-tester spider after each run. Do NOT hand-edit fields derived from the spider; update 'notes' and 'openBugs'/'fixedBugs' manually if needed.",
+  "version": 5,
+  "lastRun": "2026-07-08-run5",
+  "comment": "Persistent coverage map — updated by the ui-qa-tester spider after each run. Do NOT hand-edit fields derived from the spider; update 'notes' and 'openBugs'/'fixedBugs' manually if needed.",
   "routes": {
     "/dashboard/cases": {
       "firstVisited": "2026-07-05-run1",
@@ -43,21 +43,21 @@
         "F1",
         "F5"
       ],
-      "notes": "24 cases in demo tenant. Pagination confirmed. Filter panel opens. F4 blast radius escalated to P1 \u2014 now causing 8+ cascade failures in full suite. F5 confirmed FIXED (hero-manual-add passes in isolation; spider selector mismatch was a false positive)."
+      "notes": "24 cases in demo tenant. Pagination confirmed. Filter panel opens. F4 blast radius escalated to P1 — now causing 8+ cascade failures in full suite. F5 confirmed FIXED (hero-manual-add passes in isolation; spider selector mismatch was a false positive)."
     },
     "/dashboard/clients": {
       "firstVisited": "2026-07-05-run1",
-      "lastVisited": "2026-07-06-run4",
+      "lastVisited": "2026-07-08-run5",
       "interactionsCovered": [
         "list_render",
         "create_client_form_open",
         "pagination_spot",
         "pagination_present",
         "client_detail_click",
-        "client_detail_real_id"
+        "client_detail_real_id",
+        "create_client_submit"
       ],
       "interactionsUncovered": [
-        "create_client_submit",
         "client_detail_click",
         "edit_client",
         "delete_client",
@@ -82,7 +82,7 @@
       ],
       "openBugs": [],
       "fixedBugs": [],
-      "notes": "Pagination added by WO-39 (ships in wt/WO-39). Full CRUD round-trip not yet exercised. Run4: detail navigation works (skeleton loading state observed). Real client id resolves correctly."
+      "notes": "Pagination added by WO-39 (ships in wt/WO-39). Full CRUD round-trip not yet exercised. Run4: detail navigation works (skeleton loading state observed). Real client id resolves correctly. Run5: create VERIFIED (conflict-check ran, client saved, cleaned up). Timer false-fail."
     },
     "/dashboard/documents": {
       "firstVisited": "2026-07-05-run2",
@@ -127,7 +127,7 @@
         "N2",
         "N3"
       ],
-      "notes": "V1 (white-on-white bulk bar text + auto-widen blowout) FIXED WO-27 W2. N2 (preview raw JSON error) FIXED WO-42. N3 (quick-look blank modal) FIXED WO-42. V2 (white progress elements in export area) still open \u2014 documents-browser.tsx. Run4: unlabeled file input in upload dropzone found (A1 new P3 a11y). Bulk bar DID appear (5 selected shown visually); spider selector missed it. V2 still open (dark boxes visible in export area)."
+      "notes": "V1 (white-on-white bulk bar text + auto-widen blowout) FIXED WO-27 W2. N2 (preview raw JSON error) FIXED WO-42. N3 (quick-look blank modal) FIXED WO-42. V2 (white progress elements in export area) still open — documents-browser.tsx. Run4: unlabeled file input in upload dropzone found (A1 new P3 a11y). Bulk bar DID appear (5 selected shown visually); spider selector missed it. V2 still open (dark boxes visible in export area)."
     },
     "/dashboard/assistant/ask": {
       "firstVisited": "2026-07-05-run1",
@@ -159,7 +159,7 @@
         "H1"
       ],
       "fixedBugs": [],
-      "notes": "H1: /dashboard/assistant (no sub-path) is a redirect()-only stub \u2014 trips ERR_ABORTED in the harness gate. Navigate to /assistant/ask directly. DEMO_MODE=1 sandboxes real API calls."
+      "notes": "H1: /dashboard/assistant (no sub-path) is a redirect()-only stub — trips ERR_ABORTED in the harness gate. Navigate to /assistant/ask directly. DEMO_MODE=1 sandboxes real API calls."
     },
     "/dashboard/assistant/draft": {
       "firstVisited": "2026-07-05-run1",
@@ -224,14 +224,14 @@
     },
     "/dashboard/search/judgments": {
       "firstVisited": "2026-07-05-run3",
-      "lastVisited": "2026-07-06-run4",
+      "lastVisited": "2026-07-08-run5",
       "interactionsCovered": [
         "page_render",
         "search_input_render",
-        "results_list_render"
+        "results_list_render",
+        "search_submit"
       ],
       "interactionsUncovered": [
-        "search_submit",
         "judgment_detail_click",
         "pagination_next",
         "pagination_prev",
@@ -243,7 +243,8 @@
         "default",
         "populated",
         "default_390",
-        "default_1440"
+        "default_1440",
+        "search_results"
       ],
       "statesUncovered": [
         "loading_search",
@@ -257,14 +258,15 @@
       "fixedBugs": [
         "F3"
       ],
-      "notes": "F3 (duplicate React keys/rows) FIXED WO-42. S1 (100 results, no pagination UI \u2014 hardcoded limit:100) still open \u2014 search/judgments/page.tsx:116. Wire <Pagination> from WO-39."
+      "notes": "F3 (duplicate React keys/rows) FIXED WO-42. S1 (100 results, no pagination UI — hardcoded limit:100) still open — search/judgments/page.tsx:116. Wire <Pagination> from WO-39. Run5: search submit works (98 results). S1 still open."
     },
     "/dashboard/settings": {
       "firstVisited": "2026-07-05-run1",
-      "lastVisited": "2026-07-06-run4",
+      "lastVisited": "2026-07-08-run5",
       "interactionsCovered": [
         "page_render",
-        "settings_tabs_render"
+        "settings_tabs_render",
+        "advocate_onboarding_form_check"
       ],
       "interactionsUncovered": [
         "update_profile",
@@ -386,16 +388,16 @@
     },
     "/dashboard/invoices": {
       "firstVisited": "2026-07-05-run2",
-      "lastVisited": "2026-07-06-run4",
+      "lastVisited": "2026-07-08-run5",
       "interactionsCovered": [
         "page_render",
         "list_render",
-        "invoice_detail_real_id"
+        "invoice_detail_real_id",
+        "invoice_print_pdf"
       ],
       "interactionsUncovered": [
         "create_invoice",
         "invoice_detail_click",
-        "invoice_print_pdf",
         "mark_paid",
         "send_invoice",
         "filter_by_status",
@@ -405,7 +407,8 @@
         "populated",
         "default_390",
         "default_1440",
-        "invoice_detail"
+        "invoice_detail",
+        "invoice_print"
       ],
       "statesUncovered": [
         "empty_tenant",
@@ -417,7 +420,7 @@
       ],
       "openBugs": [],
       "fixedBugs": [],
-      "notes": "Only list render tested. No CRUD exercised. Run4: detail page (PESHI/2026-27/001) renders correctly. Print/PDF button present. Line items table empty in demo data (no item rows, just subtotal+taxes)."
+      "notes": "Only list render tested. No CRUD exercised. Run4: detail page (PESHI/2026-27/001) renders correctly. Print/PDF button present. Line items table empty in demo data (no item rows, just subtotal+taxes). Run5: print/PDF page renders correctly."
     },
     "/dashboard/analytics": {
       "firstVisited": "2026-07-06-run4",
@@ -438,7 +441,7 @@
       ],
       "openBugs": [],
       "fixedBugs": [],
-      "notes": "First visit Run4. Rich stats: 24 cases, 5 clients, 5 documents, 587KB storage. Time & billing all show \u20b90 0m. Looks polished."
+      "notes": "First visit Run4. Rich stats: 24 cases, 5 clients, 5 documents, 587KB storage. Time & billing all show ₹0 0m. Looks polished."
     },
     "/dashboard/portfolio": {
       "firstVisited": "2026-07-06-run4",
@@ -502,11 +505,11 @@
       ],
       "openBugs": [],
       "fixedBugs": [],
-      "notes": "First visit Run4. IP asset form with Title/Type/Registration/Jurisdiction/RenewalDate inputs. Designed empty state (No IP assets yet). Adversarial inputs all pass \u2014 no layout blowout."
+      "notes": "First visit Run4. IP asset form with Title/Type/Registration/Jurisdiction/RenewalDate inputs. Designed empty state (No IP assets yet). Adversarial inputs all pass — no layout blowout."
     },
     "/dashboard/voice": {
       "firstVisited": "2026-07-06-run4",
-      "lastVisited": "2026-07-06-run4",
+      "lastVisited": "2026-07-08-run5",
       "interactionsCovered": [
         "page_render"
       ],
@@ -522,13 +525,17 @@
         "empty",
         "error"
       ],
-      "openBugs": [],
+      "openBugs": [
+        "A2",
+        "A3",
+        "A4"
+      ],
       "fixedBugs": [],
-      "notes": "First visit Run4. Audio upload form with native browser file input (A2 new P3 UI polish \u2014 should use custom dropzone). Empty state: No recordings yet. DPDP consent checkbox present. Caller number input."
+      "notes": "First visit Run4. Audio upload form with native browser file input (A2 new P3 UI polish — should use custom dropzone). Empty state: No recordings yet. DPDP consent checkbox present. Caller number input. Run5: A2 still open. NEW A3: from_number tel input unlabeled. NEW A4: consent_disclosed checkbox unlabeled."
     },
     "/dashboard/messages": {
       "firstVisited": "2026-07-06-run4",
-      "lastVisited": "2026-07-06-run4",
+      "lastVisited": "2026-07-08-run5",
       "interactionsCovered": [
         "page_render"
       ],
@@ -544,9 +551,11 @@
         "empty",
         "error"
       ],
-      "openBugs": [],
+      "openBugs": [
+        "A5"
+      ],
       "fixedBugs": [],
-      "notes": "First visit Run4. WhatsApp/SMS composer with recipient number + message inputs. Tabs: All/WhatsApp/SMS/Email. Empty state: No messages yet. Adversarial inputs pass."
+      "notes": "First visit Run4. WhatsApp/SMS composer with recipient number + message inputs. Tabs: All/WhatsApp/SMS/Email. Empty state: No messages yet. Adversarial inputs pass. Run5: NEW A5: 2 text inputs (recipient/message) unlabeled."
     },
     "/dashboard/calendar": {
       "firstVisited": "2026-07-06-run4",
@@ -569,19 +578,96 @@
       "openBugs": [],
       "fixedBugs": [],
       "notes": "First visit Run4. Full calendar view with July 2026 grid. Upcoming hearings panel on right with case names. Hearing/CauseList/Deadline/Reminder legend. Polished and data-rich."
+    },
+    "/dashboard/onboarding": {
+      "firstVisited": "2026-07-08-run5",
+      "lastVisited": "2026-07-08-run5",
+      "interactionsCovered": [
+        "page_render",
+        "adversarial_inputs",
+        "add_advocate_form_visible"
+      ],
+      "interactionsUncovered": [],
+      "statesCovered": [
+        "default",
+        "default_1440",
+        "default_390"
+      ],
+      "statesUncovered": [],
+      "openBugs": [],
+      "fixedBugs": [],
+      "notes": "Run5: page renders. Shows enrolled advocates with statuses. Bar enrollment form: single BAR ENROLMENT NO. field + State Bar Council combobox. WO-42 VERIFIED. 105 cases on file. Adversarial inputs pass. Polished at 390px."
+    },
+    "/portal/login": {
+      "firstVisited": "2026-07-08-run5",
+      "lastVisited": "2026-07-08-run5",
+      "interactionsCovered": [
+        "redirect_advocate_to_dashboard"
+      ],
+      "interactionsUncovered": [
+        "portal_login_form",
+        "portal_user_session"
+      ],
+      "statesCovered": [
+        "redirect"
+      ],
+      "statesUncovered": [
+        "login_form",
+        "authenticated_portal"
+      ],
+      "openBugs": [],
+      "fixedBugs": [],
+      "notes": "Advocate session correctly redirected to /dashboard. Portal login not testable without portal_user account."
+    },
+    "/dashboard/cases/[id]": {
+      "firstVisited": "2026-07-08-run5",
+      "lastVisited": "2026-07-08-run5",
+      "interactionsCovered": [
+        "court_tab_click",
+        "timeline_tab_click"
+      ],
+      "interactionsUncovered": [],
+      "statesCovered": [
+        "court_record",
+        "timeline",
+        "court_record_tab",
+        "timeline_with_events"
+      ],
+      "statesUncovered": [],
+      "openBugs": [],
+      "fixedBugs": [],
+      "notes": "Run5 D4: WO-41 court tab renders field labels; mock case shows not-on-record (expected). BP-17 timeline tab shows 3 hearings with dates, purpose, judge. Both tabs polished."
+    },
+    "/dashboard/advocate/[barId]": {
+      "firstVisited": "2026-07-08-run5",
+      "lastVisited": "2026-07-08-run5",
+      "interactionsCovered": [
+        "page_render_attempt"
+      ],
+      "interactionsUncovered": [
+        "view_case_list",
+        "pagination_next",
+        "case_detail_click"
+      ],
+      "statesCovered": [],
+      "statesUncovered": [
+        "populated",
+        "empty",
+        "loading"
+      ],
+      "openBugs": [
+        "B1"
+      ],
+      "fixedBugs": [],
+      "notes": "404s when API has no data for demo bar ID GUJ/1187/2004. Page calls notFound() instead of designed empty state. Requires live scraper data."
     }
   },
   "neverVisited": [
-    "/dashboard/advocate/[barId]",
     "/dashboard/judge/[judgeId]",
-    "/dashboard/search/judgments/judgment",
-    "/portal/login",
-    "/portal/dashboard",
-    "/dashboard/onboarding"
+    "/dashboard/search/judgments/judgment"
   ],
   "coverageGaps": {
     "/dashboard/cases": [
-      "filter_by_court",
       "filter_by_advocate",
       "filter_by_status",
       "export_cases",
@@ -590,8 +676,6 @@
       "delete_case_from_list"
     ],
     "/dashboard/clients": [
-      "create_client_submit",
-      "client_detail_click",
       "edit_client",
       "delete_client",
       "search_clients",
@@ -628,7 +712,6 @@
       "result_detail_click"
     ],
     "/dashboard/search/judgments": [
-      "search_submit",
       "judgment_detail_click",
       "pagination_next",
       "pagination_prev",
@@ -660,7 +743,6 @@
       "calendar_view_toggle"
     ],
     "/dashboard/notices": [
-      "create_notice",
       "notice_detail_click",
       "edit_notice",
       "delete_notice",
@@ -670,46 +752,54 @@
     "/dashboard/invoices": [
       "create_invoice",
       "invoice_detail_click",
-      "invoice_print_pdf",
       "mark_paid",
       "send_invoice",
       "filter_by_status",
       "filter_by_client"
+    ],
+    "/portal/login": [
+      "portal_login_form",
+      "portal_user_session"
+    ],
+    "/dashboard/advocate/[barId]": [
+      "view_case_list",
+      "pagination_next",
+      "case_detail_click"
     ]
   },
   "openBugs": [
     {
       "id": "F4",
       "route": "/dashboard/cases/[id]",
-      "summary": "hero-case-detail RSC abort + HMR cascade \u2014 NOW CAUSING 8+ FULL-SUITE FAILURES",
-      "rootCause": "unpdf bare import.meta in src/lib/docs/extract.ts \u2014 triggers webpack warning + HMR abort",
+      "summary": "hero-case-detail RSC abort + HMR cascade — NOW CAUSING 8+ FULL-SUITE FAILURES",
+      "rootCause": "unpdf bare import.meta in src/lib/docs/extract.ts — triggers webpack warning + HMR abort",
       "fix": "lazy-import the unpdf module; only in a production build does this fully go away",
       "severity": "P1",
       "firstSeen": "2026-07-05-run1",
-      "lastConfirmed": "2026-07-06-run4",
-      "backlogRow": "\u00a7D3 F4"
+      "lastConfirmed": "2026-07-08-run5",
+      "backlogRow": "§D3 F4"
     },
     {
       "id": "F6",
       "route": "/dashboard/search/directory",
-      "summary": "hero-lookup flaky under full-suite 4-worker load \u2014 passes in isolation",
+      "summary": "hero-lookup flaky under full-suite 4-worker load — passes in isolation",
       "rootCause": "dev-server resource contention; not a product bug",
       "fix": "run in isolation or use a production build",
       "severity": "P3",
       "firstSeen": "2026-07-05-run1",
-      "lastConfirmed": "2026-07-05-run3",
-      "backlogRow": "\u00a7D3 F6"
+      "lastConfirmed": "2026-07-08-run5",
+      "backlogRow": "§D3 F6"
     },
     {
       "id": "V2",
       "route": "/dashboard/documents",
       "summary": "bulk bar Export area has white-on-white progress elements",
-      "rootCause": "documents-browser.tsx \u2014 progress/spinner elements not inheriting dark bulk-bar colors",
+      "rootCause": "documents-browser.tsx — progress/spinner elements not inheriting dark bulk-bar colors",
       "fix": "set explicit text-* classes on the export progress elements inside the bulk bar",
       "severity": "P3",
       "firstSeen": "2026-07-05-run2",
-      "lastConfirmed": "2026-07-05-run3",
-      "backlogRow": "\u00a7D3 V2"
+      "lastConfirmed": "2026-07-08-run5",
+      "backlogRow": "§D3 V2"
     },
     {
       "id": "H1",
@@ -719,52 +809,96 @@
       "fix": "exclude redirect-only routes from gen-routes, or add {failedRequests: false} option",
       "severity": "P2",
       "firstSeen": "2026-07-05-run3",
-      "lastConfirmed": "2026-07-05-run3",
-      "backlogRow": "\u00a7D3 H1"
+      "lastConfirmed": "2026-07-08-run5",
+      "backlogRow": "§D3 H1"
     },
     {
       "id": "S1",
       "route": "/dashboard/search/judgments",
-      "summary": "100 judgment rows with no pagination UI \u2014 hardcoded limit:100",
+      "summary": "100 judgment rows with no pagination UI — hardcoded limit:100",
       "rootCause": "search/judgments/page.tsx:116 has limit: 100 with no <Pagination> wired up",
       "fix": "wire the <Pagination> component from WO-39 (already used on cases/clients)",
       "severity": "P2",
       "firstSeen": "2026-07-05-run3",
-      "lastConfirmed": "2026-07-05-run3",
-      "backlogRow": "\u00a7D3 S1"
+      "lastConfirmed": "2026-07-08-run5",
+      "backlogRow": "§D3 S1"
     },
     {
       "id": "harness-shared-id",
       "route": "all /dashboard/[entity]/[id]",
-      "summary": "E2E_ROUTE_IDS['id'] is shared across ALL dynamic routes \u2014 only one entity gets a valid UUID per run",
+      "summary": "E2E_ROUTE_IDS['id'] is shared across ALL dynamic routes — only one entity gets a valid UUID per run",
       "rootCause": "scripts/gen-routes.mjs + seededUrl() always use the key 'id' regardless of entity type",
       "fix": "rename params per entity: matterId, clientId, documentId, draftId, invoiceId",
       "severity": "P3",
       "firstSeen": "2026-07-05-run1",
       "lastConfirmed": "2026-07-05-run3",
-      "backlogRow": "\u00a7D3 harness"
+      "backlogRow": "§D3 harness"
     },
     {
       "id": "A1",
       "route": "/dashboard/documents",
       "summary": "Upload dropzone has unlabeled file input (WCAG A violation)",
-      "rootCause": "input[type=file] in upload dropzone component lacks aria-label \u2014 different from F2 (which was assistant/draft, now fixed)",
+      "rootCause": "input[type=file] in upload dropzone component lacks aria-label — different from F2 (which was assistant/draft, now fixed)",
       "fix": "Add aria-label to the file input in src/app/dashboard/documents/ upload component",
       "severity": "P3",
       "firstSeen": "2026-07-06-run4",
-      "lastConfirmed": "2026-07-06-run4",
-      "backlogRow": "\u00a7D3 A1"
+      "lastConfirmed": "2026-07-08-run5",
+      "backlogRow": "§D3 A1"
     },
     {
       "id": "A2",
       "route": "/dashboard/voice",
       "summary": "Voice page uses raw native browser file input instead of styled dropzone",
-      "rootCause": "AUDIO FILE section renders unstyled native <input type=file> Choose File button \u2014 does not match design system",
+      "rootCause": "AUDIO FILE section renders unstyled native <input type=file> Choose File button — does not match design system",
       "fix": "Use the same custom FileDropzone component as /dashboard/documents",
       "severity": "P3",
       "firstSeen": "2026-07-06-run4",
-      "lastConfirmed": "2026-07-06-run4",
-      "backlogRow": "\u00a7D3 A2"
+      "lastConfirmed": "2026-07-08-run5",
+      "backlogRow": "§D3 A2"
+    },
+    {
+      "id": "A3",
+      "route": "/dashboard/voice",
+      "summary": "Voice page: from_number tel input has no aria-label (WCAG A)",
+      "rootCause": "input[type=tel][name=from_number] lacks aria-label and associated label",
+      "fix": "Add aria-label='Caller phone number' or wrap in label",
+      "severity": "P3",
+      "firstSeen": "2026-07-08-run5",
+      "lastConfirmed": "2026-07-08-run5",
+      "backlogRow": "§D3 A3"
+    },
+    {
+      "id": "A4",
+      "route": "/dashboard/voice",
+      "summary": "Voice page: consent_disclosed checkbox has no label (WCAG A)",
+      "rootCause": "input[type=checkbox][name=consent_disclosed] lacks associated label",
+      "fix": "Add label htmlFor or aria-label for DPDP consent checkbox",
+      "severity": "P3",
+      "firstSeen": "2026-07-08-run5",
+      "lastConfirmed": "2026-07-08-run5",
+      "backlogRow": "§D3 A4"
+    },
+    {
+      "id": "A5",
+      "route": "/dashboard/messages",
+      "summary": "Messages page: 2 text inputs (recipient, message) unlabeled (WCAG A)",
+      "rootCause": "WhatsApp/SMS composer inputs lack aria-label or associated label elements",
+      "fix": "Add aria-label or label htmlFor to recipient number and message body inputs",
+      "severity": "P3",
+      "firstSeen": "2026-07-08-run5",
+      "lastConfirmed": "2026-07-08-run5",
+      "backlogRow": "§D3 A5"
+    },
+    {
+      "id": "B1",
+      "route": "/dashboard/advocate/[barId]",
+      "summary": "Advocate dossier shows bare 404 instead of designed empty state when API has no data",
+      "rootCause": "Page calls notFound() on null profile; results in raw Next.js 404 with no recovery path",
+      "fix": "Return designed empty-state with 'Advocate data not yet synced' + Refresh button instead of notFound()",
+      "severity": "P3",
+      "firstSeen": "2026-07-08-run5",
+      "lastConfirmed": "2026-07-08-run5",
+      "backlogRow": "§D3 B1"
     }
   ],
   "fixedBugs": [
@@ -795,14 +929,14 @@
     {
       "id": "F5",
       "route": "/dashboard/cases",
-      "summary": "createManualMatter did not redirect to the new case detail \u2014 stayed on /cases list",
+      "summary": "createManualMatter did not redirect to the new case detail — stayed on /cases list",
       "fixedIn": "WO-42, PR #68, 2026-07-05-run3"
     },
     {
       "id": "N1",
       "route": "/dashboard (all routes)",
-      "summary": "SSR useContext/usePathname escalation \u2014 dev-only HMR noise, reclassified P3",
-      "fixedIn": "WO-42 investigation \u2014 error.tsx confirmed 'use client'; all routes pass in isolation"
+      "summary": "SSR useContext/usePathname escalation — dev-only HMR noise, reclassified P3",
+      "fixedIn": "WO-42 investigation — error.tsx confirmed 'use client'; all routes pass in isolation"
     },
     {
       "id": "N2",
@@ -818,17 +952,13 @@
     }
   ],
   "nextRunPriority": [
-    "openBug P1: F4 \u2014 fix unpdf lazy-import in src/lib/docs/extract.ts (blast radius now 8+ cascade failures)",
-    "openBug P2: S1 \u2014 wire Pagination to /dashboard/search/judgments (99 rows, no pagination)",
-    "openBug P2: H1 \u2014 exclude redirect-only pages from gen-routes.mjs",
-    "openBug P3: V2 \u2014 fix export progress elements in bulk bar (documents-browser.tsx)",
-    "openBug P3: A1 \u2014 add aria-label to documents upload file input",
-    "openBug P3: A2 \u2014 replace voice native file input with styled dropzone",
-    "D4: verify WO-41 court record fields by clicking Court tab on a CNR-sourced case",
-    "D4: verify WO-42 advocate onboarding settings form (single field + dropdown)",
-    "D4: verify BP-17 case timeline tab (Timeline tab \u2192 hearing/order dots)",
-    "gap: /dashboard/clients \u2014 edit_client, delete_client (create_client_submit)",
-    "gap: /dashboard/invoices \u2014 create_invoice, invoice_print_pdf",
-    "neverVisited: /dashboard/advocate/[barId], /dashboard/judge/[judgeId], /dashboard/onboarding"
+    "openBug P1: F4 — lazy-import unpdf in src/lib/docs/extract.ts (kills hero-case-detail + 8 cascade E2E failures)",
+    "openBug P2: S1 — wire Pagination to /dashboard/search/judgments (98 rows, no pagination)",
+    "openBug P2: H1 — exclude redirect-only stubs from gen-routes.mjs",
+    "openBug P3: V2/A1/A2/A3/A4/A5/B1 — a11y sweep + bulk bar fix + advocate empty-state",
+    "gap: cases filter — filter button changed with WO-59 (verify new filter UI)",
+    "gap: invoices create — no create button found (check flow)",
+    "D4: WO-65 — click-test full roster seeding",
+    "neverVisited: /dashboard/judge/[judgeId], /dashboard/search/judgments/judgment"
   ]
 }
