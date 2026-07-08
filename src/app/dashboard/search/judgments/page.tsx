@@ -3,8 +3,10 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
-import { corpusEnabled, searchJudgments, judgmentPdfUrl, courtLabel, type JudgmentRow } from "@/lib/court/corpus-athena";
+import { corpusEnabled, searchJudgments, countJudgments, judgmentPdfUrl, courtLabel, type JudgmentRow } from "@/lib/court/corpus-athena";
 import { expandDisposal } from "@/lib/court/code-labels";
+import { Pagination } from "@/components/pagination";
+import { parsePage, clampPerPage, pageCount } from "@/lib/paginate";
 import { Filters } from "./filters";
 
 export const dynamic = "force-dynamic";
@@ -79,9 +81,11 @@ function relatesToMatter(
 export default async function ResearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string; court?: string; year?: string; disposal?: string; judge?: string };
+  searchParams: { q?: string; court?: string; year?: string; disposal?: string; judge?: string; page?: string; per?: string };
 }) {
   const { q, court, year, disposal, judge } = searchParams;
+  const page = parsePage(searchParams.page);
+  const per = clampPerPage(searchParams.per);
   const t = await getTranslations("research");
 
   if (!corpusEnabled()) {
@@ -104,19 +108,31 @@ export default async function ResearchPage({
   const validDisposal = disposal && DISPOSAL_RE.test(disposal) ? disposal : undefined;
   const validJudge = judge?.trim() || undefined;
 
-  // Fetch judgments + tenant's tracked matters in parallel.
+  const filter = {
+    q,
+    court: validCourt,
+    year: year ? Number(year) : undefined,
+    disposal: validDisposal,
+    judgeFilter: validJudge,
+  };
+
+  // Fetch this page's slice + the honest total + the tenant's tracked matters in parallel.
   const supabase = createClient();
-  const [rows, { data: mattersData }] = await Promise.all([
-    searchJudgments({
-      q,
-      court: validCourt,
-      year: year ? Number(year) : undefined,
-      disposal: validDisposal,
-      judgeFilter: validJudge,
-      limit: 100,
-    }),
+  const [initialRows, total, mattersRes] = await Promise.all([
+    searchJudgments({ ...filter, limit: per, offset: (page - 1) * per }),
+    countJudgments(filter),
     supabase.from("matter").select("cnr, title, party_names").order("title"),
   ]);
+  const { data: mattersData } = mattersRes;
+
+  // Clamp an out-of-range page (manual ?page= tampering) into range so we never show an empty
+  // table with a non-zero total; the numbered pager itself never navigates past the last page.
+  const totalPages = pageCount(total, per);
+  const safePage = totalPages > 0 ? Math.min(page, totalPages) : 1;
+  const rows =
+    safePage !== page && total > 0
+      ? await searchJudgments({ ...filter, limit: per, offset: (safePage - 1) * per })
+      : initialRows;
 
   // Build a lightweight matter index for cross-link detection.
   // party_names is string[] — confirmed in DB schema. Use for substring match.
@@ -143,10 +159,11 @@ export default async function ResearchPage({
       </p>
 
       {rows.length ? (
+       <>
         <Card className="overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-paper/60 px-5 py-3">
             <div className="text-xs text-ink-faint">
-              {rows.length}{rows.length === 100 ? "+" : ""} {t("results", { count: rows.length })}
+              {total} {t("results", { count: total })}
               {activeFilters ? ` · ${t("filtered")}` : ""}
             </div>
             {activeFilters && (
@@ -245,6 +262,8 @@ export default async function ResearchPage({
             </table>
           </div>
         </Card>
+        <Pagination page={safePage} perPage={per} total={total} />
+       </>
       ) : (
         <EmptyState
           icon="scale"

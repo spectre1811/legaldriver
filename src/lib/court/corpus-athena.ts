@@ -81,19 +81,30 @@ export interface JudgmentRow {
 }
 
 const SELECT_COLS = "src, cnr, title, judge, court_code court, year, decision_date, disposal_nature, citation, path pdf_link, petitioner, respondent";
+// The already-aliased columns of a `SELECT ${SELECT_COLS} … ` subquery (court_code→court, path→pdf_link),
+// so an OUTER SELECT over that subquery references the projected names, not the raw table columns.
+const OUTER_COLS = "src, cnr, title, judge, court, year, decision_date, disposal_nature, citation, pdf_link, petitioner, respondent";
+
+// The fields that identify a DISTINCT judgment document. Exact-duplicate rows (overlapping partitions /
+// re-ingested batches) collapse on this key. The page-local JS de-dupe (dedupeJudgments) and the SQL
+// corpus queries (window de-dupe for the slice + DISTINCT for the count) MUST use the SAME key, or a
+// paged slice and its "of N" total would disagree. Kept as one source of truth + asserted in tests.
+// The two lists are parallel; they differ ONLY where a JudgmentRow field is aliased from its raw column.
+export const DEDUP_KEY_FIELDS = ["cnr", "pdf_link", "title", "decision_date", "disposal_nature"] as const; // JudgmentRow field names
+export const DEDUP_KEY_SQL_COLS = ["cnr", "path", "title", "decision_date", "disposal_nature"] as const;   // raw judgments_all columns (pdf_link→path)
 
 // The corpus can return the same judgment more than once (overlapping partitions /
 // re-ingested batches), which showed up as duplicate rows + a duplicate React key
 // (CNR-keyed) in the research table. Collapse EXACT duplicates on the fields that
 // identify a document — preserving genuinely distinct orders that share a CNR.
-// Order-stable; pure (no I/O) so it's unit-testable offline.
+// Order-stable; pure (no I/O) so it's unit-testable offline. searchJudgments already
+// de-dupes IN SQL (so the page slice agrees with countJudgments); this stays as a cheap
+// page-local safety net for any path that doesn't.
 export function dedupeJudgments(rows: JudgmentRow[]): JudgmentRow[] {
   const seen = new Set<string>();
   const out: JudgmentRow[] = [];
   for (const r of rows) {
-    const key = [r.cnr, r.pdf_link, r.title, r.decision_date, r.disposal_nature]
-      .map((v) => v ?? "")
-      .join(" ");
+    const key = DEDUP_KEY_FIELDS.map((f) => r[f] ?? "").join(" ");
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
@@ -101,13 +112,15 @@ export function dedupeJudgments(rows: JudgmentRow[]): JudgmentRow[] {
   return out;
 }
 
-// Full-corpus judgment search across ALL High Courts + the Supreme Court (judgments_all).
-// court/year validated + inlined (partition pruning); free-text binds as parameters.
-// disposal/judgeFilter: optional equality filters (validated + inlined — no user-controlled SQL).
-export async function searchJudgments(opts: {
-  q?: string; court?: string; year?: number; limit?: number;
-  disposal?: string; judgeFilter?: string;
-}): Promise<JudgmentRow[]> {
+export interface JudgmentFilter {
+  q?: string; court?: string; year?: number; disposal?: string; judgeFilter?: string;
+}
+
+// Shared WHERE fragment + bound params for a judgment filter, used by BOTH the page slice
+// (searchJudgments) and the total (countJudgments) so they always agree on what matches.
+// court/year are validated + inlined (partition pruning); free-text / disposal / judge bind
+// as `?` parameters — no user-controlled SQL. Returns "" (not "WHERE") when unfiltered.
+function buildJudgmentFilter(opts: JudgmentFilter): { where: string; params: string[] } {
   const where: string[] = [];
   const params: string[] = [];
   if (opts.court === "SC") where.push("court_code = 'SC'");
@@ -119,9 +132,38 @@ export async function searchJudgments(opts: {
   if (opts.judgeFilter?.trim()) { where.push("lower(judge) LIKE ?"); params.push(`%${opts.judgeFilter.trim().toLowerCase()}%`); }
   const term = opts.q?.trim();
   if (term) { where.push("(lower(title) LIKE ? OR lower(judge) LIKE ? OR lower(cnr) LIKE ? OR lower(citation) LIKE ?)"); const p = `%${term.toLowerCase()}%`; params.push(p, p, p, p); }
-  const sql = `SELECT ${SELECT_COLS} FROM judgments_all ${where.length ? "WHERE " + where.join(" AND ") : ""}
-    ORDER BY decision_date DESC LIMIT ${Math.min(opts.limit ?? 100, 200)}`;
-  return dedupeJudgments((await athenaQuery(sql, params, opts.limit ?? 100)) as unknown as JudgmentRow[]);
+  return { where: where.length ? "WHERE " + where.join(" AND ") : "", params };
+}
+
+// Full-corpus judgment search across ALL High Courts + the Supreme Court (judgments_all).
+// Page-sliced (offset + limit) so callers can paginate past the first page; pair with
+// countJudgments() for the total. Exact duplicates are collapsed IN SQL (row_number()=1 over
+// DEDUP_KEY_SQL_COLS) so a slice and the count agree on de-dupe — the JS dedupeJudgments below
+// is then a cheap no-op safety net that keeps existing callers/tests unchanged.
+export async function searchJudgments(
+  opts: JudgmentFilter & { limit?: number; offset?: number },
+): Promise<JudgmentRow[]> {
+  const { where, params } = buildJudgmentFilter(opts);
+  const limit = Math.min(Math.max(1, opts.limit ?? 100), 200);
+  const offset = Math.max(0, Math.trunc(opts.offset ?? 0));
+  const sql = `SELECT ${OUTER_COLS} FROM (
+      SELECT ${SELECT_COLS}, row_number() OVER (PARTITION BY ${DEDUP_KEY_SQL_COLS.join(", ")} ORDER BY decision_date DESC) rn
+      FROM judgments_all ${where}
+    ) WHERE rn = 1
+    ORDER BY decision_date DESC${offset ? ` OFFSET ${offset}` : ""} LIMIT ${limit}`;
+  return dedupeJudgments((await athenaQuery(sql, params, limit)) as unknown as JudgmentRow[]);
+}
+
+// Honest total for the SAME filter — the number of DISTINCT documents searchJudgments would page over
+// (de-duped on DEDUP_KEY_SQL_COLS, matching the window de-dupe), so the numbered pager's "of N" is real
+// and not the old silent "100+". One extra Athena scan; run it in parallel with the page fetch.
+export async function countJudgments(opts: JudgmentFilter): Promise<number> {
+  const { where, params } = buildJudgmentFilter(opts);
+  const sql = `SELECT count(*) n FROM (
+      SELECT DISTINCT ${DEDUP_KEY_SQL_COLS.join(", ")} FROM judgments_all ${where}
+    )`;
+  const rows = await athenaQuery(sql, params, 1);
+  return Number(rows[0]?.n ?? 0) || 0;
 }
 
 export interface CaseDetail {
