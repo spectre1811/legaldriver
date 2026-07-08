@@ -29,6 +29,10 @@ ok("multiple leading honorifics stripped (ADV. MR X Y == X Y)", advocateKey("ADV
 ok("initial vs fullname stays distinct (Y J PATEL != YASH J PATEL)", advocateKey("Y J PATEL") !== advocateKey("YASH J PATEL"));
 ok("different surnames stay distinct", advocateKey("P R PATEL") !== advocateKey("P R SHAH"));
 ok("an all-honorific token is not keyed to empty", advocateKey("MR") !== "");
+// honorific-stripping never folds down to a single token → no collision with a bare same-name advocate
+ok("honorific + single name stays distinct (SRI RAM != RAM)", advocateKey("SRI RAM") !== advocateKey("RAM"));
+ok("firm designator M/S is NOT stripped (M/S PATEL & CO != PATEL & CO)", advocateKey("M/S PATEL & CO") !== advocateKey("PATEL & CO"));
+ok("a firm's own casing variants still merge (M/S PATEL & CO == m/s patel & co)", advocateKey("M/S PATEL & CO") === advocateKey("m/s patel & co"));
 
 // ── actKey: casing/punctuation/whitespace only, NO honorific stripping ────────────────────────
 ok("act punctuation/case folded (Indian Penal Code, 1860)", actKey("Indian Penal Code, 1860") === actKey("INDIAN PENAL CODE,1860"));

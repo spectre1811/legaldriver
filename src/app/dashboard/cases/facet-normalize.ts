@@ -18,7 +18,7 @@
 
 // Leading tokens that are titles/honorifics on an advocate name, never part of the identity.
 const ADVOCATE_HONORIFICS = new Set([
-  "MR", "MRS", "MS", "MISS", "M/S", "DR", "SHRI", "SRI", "SMT", "ADV", "ADVOCATE",
+  "MR", "MRS", "MS", "MISS", "DR", "SHRI", "SRI", "SMT", "ADV", "ADVOCATE",
   "KUM", "KUMARI", "PROF", "SARVASHRI", "SARVASRI",
 ]);
 
@@ -33,12 +33,15 @@ function collapse(s: string): string {
     .trim();
 }
 
-// Advocate key: collapse + strip a leading run of honorific tokens. Keeps at least one token
-// (a name that is only honorifics is degenerate — leave it as-is rather than key to "").
+// Advocate key: collapse + strip a leading run of honorific tokens — but ONLY when ≥2 tokens
+// remain. A single surviving token (`SRI RAM` → `RAM`) is too collision-prone to merge on
+// honorific-stripping alone (it would fold into an unrelated advocate literally named `RAM`), so
+// we keep the honorific in that case. A name that is only honorifics stays as-is (never keys to "").
 export function advocateKey(s: string): string {
   const tokens = collapse(s).split(" ").filter(Boolean);
   let i = 0;
-  while (i < tokens.length - 1 && ADVOCATE_HONORIFICS.has(tokens[i])) i++;
+  while (i < tokens.length && ADVOCATE_HONORIFICS.has(tokens[i])) i++;
+  if (tokens.length - i < 2) return tokens.join(" "); // don't strip down to a single/zero token
   return tokens.slice(i).join(" ");
 }
 
