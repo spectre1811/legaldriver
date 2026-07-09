@@ -34,7 +34,8 @@ permissions:
 
 jobs:
   merge:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, mukadma]
+    timeout-minutes: 10
     steps:
       - uses: actions/github-script@v7
         with:
