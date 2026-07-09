@@ -7,6 +7,7 @@ import { corpusEnabled, searchCasesByAdvocate } from "@/lib/court/corpus-athena"
 import type { FetchedAdvocateCase } from "@/lib/court/advocate-cases";
 import {
   driveDrain, enrichChunk, normalizeCounts, emptyCounts, DRAIN_BUDGET_MS,
+  boundStep, STEP_TIMEOUT_MS, STEP_TIMED_OUT, type StepRace,
   type OnboardingCounts, type DrainState, type StepFn,
 } from "./drain";
 
@@ -271,6 +272,15 @@ async function stepSummaries(ctx: StageCtx, counts: OnboardingCounts): Promise<O
   return counts;
 }
 
+// Real-timer race for boundStep (WO-91): resolve the step's result, or STEP_TIMED_OUT once `ms` elapses.
+// A rejection propagates (the stage handlers already try/catch their own errors; only a HANG is bounded
+// here). Lives in the IO layer so drain.ts stays free of real timers and remains offline-deterministic.
+const realStepRace: StepRace = (p, ms) =>
+  new Promise((resolve, reject) => {
+    const timer = setTimeout(() => resolve(STEP_TIMED_OUT), ms);
+    p.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+  });
+
 // Dispatch one stage to its IO handler and normalize to a StepResult for the driver.
 function makeStep(ctx: StageCtx): StepFn {
   return async (stage, state) => {
@@ -330,7 +340,9 @@ export async function drainOnboarding(
     message: run.message ?? null,
   };
 
-  const { state, done } = await driveDrain(initial, makeStep(ctx), {
+  // WO-91: bound every stage so a hung best-effort handler (Athena corpus / Gmail) can't pin the run at
+  // a mid-pipeline % — it advances to `done` instead, and the nightly refresh re-runs any skipped work.
+  const { state, done } = await driveDrain(initial, boundStep(makeStep(ctx), STEP_TIMEOUT_MS, realStepRace), {
     budgetMs,
     now,
     persist: async (s, isDone) => {

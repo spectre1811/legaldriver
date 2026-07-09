@@ -71,6 +71,9 @@ export function preserveFetch(cursor: Record<string, unknown>): Record<string, u
   const out: Record<string, unknown> = {};
   if (cursor.fetch_pending !== undefined) out.fetch_pending = cursor.fetch_pending;
   if (cursor.fetch_started_at !== undefined) out.fetch_started_at = cursor.fetch_started_at;
+  // WO-91: the run-level skip record (stages bounded out on timeout) must survive the per-stage cursor
+  // reset, so a completed run is honest about what was skipped rather than silently dropping it.
+  if (cursor.timed_out_stages !== undefined) out.timed_out_stages = cursor.timed_out_stages;
   return out;
 }
 
@@ -92,6 +95,32 @@ export interface StepResult {
 }
 
 export type StepFn = (stage: string, state: DrainState) => Promise<StepResult>;
+
+// ── WO-91: liveness guard — a hung stage handler must not wedge the run at a mid-pipeline %. ──
+// A best-effort tail stage can HANG rather than throw (`closed` → a slow Athena corpus query, `inbox`
+// → Gmail): the handlers try/catch *errors*, but a promise that never resolves slips through. An
+// unbounded `await step()` then lets the platform kill the invocation BEFORE the stage advances or
+// persists, so the run pins at `stage="closed"` (79%) forever and the daily cron re-enters the same
+// hung stage every morning (live-observed 2026-07-09). `boundStep` races each handler against a
+// timeout; on timeout it ADVANCES (`more:false`) with the skip recorded in the cursor, so a run always
+// reaches `done` — the nightly refresh re-runs any skipped best-effort work. The race is INJECTED so
+// this module stays pure/offline-deterministic (no real timers here; orchestrator.ts wires the real one).
+export const STEP_TIMEOUT_MS = Number(process.env.ONBOARDING_STEP_TIMEOUT_MS ?? "12000");
+export const STEP_TIMED_OUT = Symbol("onboarding-step-timeout");
+export type StepRace = (p: Promise<StepResult>, ms: number) => Promise<StepResult | typeof STEP_TIMED_OUT>;
+
+export function boundStep(step: StepFn, timeoutMs: number, race: StepRace): StepFn {
+  return async (stage, state) => {
+    const res = await race(step(stage, state), timeoutMs);
+    if (res === STEP_TIMED_OUT) {
+      const prior = Array.isArray(state.cursor.timed_out_stages) ? (state.cursor.timed_out_stages as string[]) : [];
+      // Advance past the hung stage; keep counts as-is (skip this tick's work) and record the skip so a
+      // completed run is honest about what was skipped. Drops the per-stage cursor via the driver's advance.
+      return { counts: state.counts, cursor: { ...state.cursor, timed_out_stages: [...prior, stage] }, more: false };
+    }
+    return res;
+  };
+}
 
 // ── Pure control loop (no Supabase/court IO — injected via `step`/`now`/`persist`). ──
 // Advances stages from state.stage, looping within a stage while step returns `more`, checking the
