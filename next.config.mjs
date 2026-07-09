@@ -23,7 +23,7 @@ const nextConfig = {
       { source: "/dashboard/copilot", destination: "/dashboard/assistant/ask", permanent: true },
       { source: "/dashboard/draft", destination: "/dashboard/assistant/draft", permanent: true },
       { source: "/dashboard/draft/:id", destination: "/dashboard/assistant/draft/:id", permanent: true },
-      { source: "/dashboard/lookup", destination: "/dashboard/search/directory", permanent: true },
+      { source: "/dashboard/lookup", destination: "/dashboard/directory", permanent: true },
       { source: "/dashboard/research", destination: "/dashboard/search/judgments", permanent: true },
       { source: "/dashboard/research/judgment", destination: "/dashboard/search/judgments/judgment", permanent: true },
     ];
