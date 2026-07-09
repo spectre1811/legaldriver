@@ -5,7 +5,8 @@
 // Run: npx tsx tests/bp73_onboarding_drain.ts
 import {
   driveDrain, enrichChunk, nextStage, normalizeCounts, emptyCounts, preserveFetch,
-  PIPELINE_STAGES, ENRICH_CHUNK, type DrainState, type StepFn, type StepResult,
+  boundStep, STEP_TIMED_OUT, PIPELINE_STAGES, ENRICH_CHUNK,
+  type DrainState, type StepFn, type StepResult, type StepRace,
 } from "../src/lib/services/onboarding/drain";
 
 let failures = 0;
@@ -41,6 +42,9 @@ check("normalizeCounts(null) = zeros", normalizeCounts(null).enriched === 0);
 const pf = preserveFetch({ fetch_pending: true, fetch_started_at: "t", enrich_offset: 10, enrich_cnrs: ["a"] });
 check("preserveFetch keeps fetch flags", pf.fetch_pending === true && pf.fetch_started_at === "t");
 check("preserveFetch drops enrich cursor", pf.enrich_offset === undefined && pf.enrich_cnrs === undefined);
+// WO-91: the skip record survives the per-stage cursor reset (honest completed run).
+const pfSkip = preserveFetch({ enrich_offset: 3, timed_out_stages: ["closed"] });
+check("preserveFetch carries timed_out_stages across an advance", Array.isArray(pfSkip.timed_out_stages) && (pfSkip.timed_out_stages as string[])[0] === "closed" && pfSkip.enrich_offset === undefined);
 
 // ── A fake step: enrich chunks a fixed roster; other stages advance once. Optional clock burn. ──
 function fakeStep(cnrs: string[], clock?: { t: number }, stepMs = 0): { step: StepFn; visited: string[] } {
@@ -125,6 +129,45 @@ function recorder() {
   const rec = recorder();
   const res = await driveDrain(fresh(), step, { budgetMs: 0, now: () => 0, persist: rec.persist });
   check("D: zero budget → no progress, not done, no throw", !res.done && res.state.stage === "causelist" && rec.persisted.length === 0);
+}
+
+// ── E (WO-91): boundStep passes a healthy step through, but ADVANCES + records on a timeout ──
+{
+  const passThrough: StepFn = async (_s, st) => ({ counts: st.counts, cursor: st.cursor, more: false });
+  const neverTimesOut: StepRace = async (p) => p;              // handler always wins the race
+  const alwaysTimesOut: StepRace = async () => STEP_TIMED_OUT; // the hang case (deterministic stub)
+  const at: DrainState = { stage: "closed", cursor: { keepme: 1 }, counts: emptyCounts(), message: null };
+
+  const ok = await boundStep(passThrough, 12_000, neverTimesOut)("closed", at);
+  check("E: healthy step passes through unchanged", ok.more === false && ok.cursor.keepme === 1 && ok.cursor.timed_out_stages === undefined);
+
+  const to = await boundStep(passThrough, 12_000, alwaysTimesOut)("closed", at);
+  check("E: timeout advances the stage (more:false)", to.more === false);
+  check("E: timeout records the skipped stage", Array.isArray(to.cursor.timed_out_stages) && (to.cursor.timed_out_stages as string[]).includes("closed"));
+  check("E: timeout leaves counts untouched", JSON.stringify(to.counts) === JSON.stringify(emptyCounts()));
+}
+
+// ── F (WO-91): the real wedge — `closed`+`inbox` hang, the rest run; the run STILL reaches done ──
+{
+  // Deterministic stand-in for the real setTimeout race: the step records the stage synchronously (before
+  // returning its promise), so the race stub knows which stages "hang" (return STEP_TIMED_OUT) vs pass —
+  // no fragile microtask timing. This is the exact live failure: `closed` (Athena) + `inbox` (Gmail) hang.
+  const hung = new Set(["closed", "inbox"]);
+  const cur = { stage: "" };
+  const visited: string[] = [];
+  const step: StepFn = async (stage, state) => {
+    cur.stage = stage;                      // set synchronously — the race stub reads it before awaiting
+    visited.push(stage);
+    if (hung.has(stage)) return new Promise<StepResult>(() => {}); // never resolves — the genuine hang
+    return { counts: state.counts, cursor: state.cursor, more: false };
+  };
+  const race: StepRace = (p, _ms) => (hung.has(cur.stage) ? Promise.resolve(STEP_TIMED_OUT) : p);
+  const rec = recorder();
+  const res = await driveDrain(fresh(), boundStep(step, 12_000, race), { budgetMs: Number.POSITIVE_INFINITY, now: () => 0, persist: rec.persist });
+  check("F: run reaches done despite two hung stages (no 79% wedge)", res.done && res.state.stage === "done");
+  check("F: both hung stages recorded as skipped", [...hung].every((s) => ((res.state.cursor.timed_out_stages as string[]) ?? []).includes(s)));
+  check("F: healthy stages still executed", visited.includes("causelist") && visited.includes("summaries") && visited.includes("enrich"));
+  check("F: last persist marks done", rec.persisted[rec.persisted.length - 1].done === true);
 }
 
 }
