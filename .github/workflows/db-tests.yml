@@ -28,6 +28,10 @@ on:
 
 jobs:
   db-tests:
+    # Stays on GitHub-hosted: `supabase start` needs Docker, which doesn't fit the
+    # containerized self-hosted runner. Low-frequency (main push only) + advisory
+    # (does not gate automerge), so it's cheap on the free tier. See
+    # docs/gha-runner-migration-plan.md.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

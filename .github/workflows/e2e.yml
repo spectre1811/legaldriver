@@ -23,7 +23,7 @@ concurrency:
 jobs:
   e2e:
     if: ${{ vars.E2E_ENABLED == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, mukadma]
     timeout-minutes: 20
     env:
       DEMO_MODE: "1"
