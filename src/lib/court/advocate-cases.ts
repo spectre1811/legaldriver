@@ -185,6 +185,9 @@ const vakeel360Provider: AdvocateCaseProvider = {
 // fall back to the warehouse (exact serial) then a fuzzy name search. This is what fixes
 // "valid advocate → 0 cases": the year was never sent, so the bar search returned nothing.
 interface LdProfileCase { cnr: string; case_type?: string; status?: string; tier?: string; registration_year?: number }
+// WO-93: how many roster cases to request from the box `/advocate/{bar}` read. The box caps at
+// `min(limit, 500)`; ask for 500 so a ≤500-case advocate imports in full (was defaulting to 200).
+const ROSTER_READ_LIMIT = 500;
 const legaldriverProvider: AdvocateCaseProvider = {
   source: "legaldriver",
   enabled() { return !!process.env.LD_API_KEY; },
@@ -229,12 +232,16 @@ const legaldriverProvider: AdvocateCaseProvider = {
     // synchronous + fast; the LIVE roster refresh is fired SEPARATELY by the caller (onboarding) via
     // `startLiveAdvocateRefresh` and its results are HARVESTED by re-reading the warehouse — so this
     // provider is a pure, side-effect-free read (also reused as the harvest primitive). See WO-58.
+    // WO-93: the box `/advocate/{bar}` defaults to `limit=200` while `case_count` is the true (unlimited)
+    // total — so a 257-case advocate silently imported only 200. Ask for the box's max (`min(limit,500)`)
+    // so a ≤500-case roster lands in full. (Advocates with >500 cases still truncate at 500 → the box needs
+    // offset pagination; filed as the WO-93 W2 follow-up. Guarded honestly, not silently.)
     if (whId) {
-      collect(await get(`/advocate/${encodeURIComponent(whId)}`));
+      collect(await get(`/advocate/${encodeURIComponent(whId)}?limit=${ROSTER_READ_LIMIT}`));
     } else if (q.name) {
       const s = await get(`/search/advocate?name=${encodeURIComponent(q.name)}`);
       const barIds = [...new Set(((s?.results ?? []) as { bar_id?: string }[]).map((r) => r.bar_id).filter((b): b is string => !!b))].slice(0, 3);
-      for (const bar of barIds) collect(await get(`/advocate/${encodeURIComponent(bar)}`));
+      for (const bar of barIds) collect(await get(`/advocate/${encodeURIComponent(bar)}?limit=${ROSTER_READ_LIMIT}`));
     }
     return out;
   },
