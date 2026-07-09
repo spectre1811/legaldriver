@@ -1569,6 +1569,16 @@
   "onboarding": {
     "title": "Advocate onboarding",
     "subtitle": "Enter once, and we assemble your practice: cases on the calendar, inbox filed, closed cases by name, and AI briefings.",
+    "hero": {
+      "title": "Your entire practice, assembled from one entry",
+      "body": "Add your Bar registration number and we gather every case in your name from the court record — onto your calendar, with hearings, deadlines, and AI briefings. No manual upload."
+    },
+    "steps": {
+      "heading": "How onboarding works",
+      "one": { "title": "Enter your Bar number", "body": "Your name and Bar registration — that's all we need to find you in the court record." },
+      "two": { "title": "We gather every case", "body": "We fetch your full roster in the background. Leave the page — we'll notify you when it's ready." },
+      "three": { "title": "Your practice comes alive", "body": "Cases land on your calendar with hearings, deadlines, filed emails, and AI briefings." }
+    },
     "howHeading": "How this works — honestly",
     "intro1": "We <b>auto-fetch your cases by your name</b> from compliant sources — no manual upload. Active sources: <b>{providers}</b>. The free <b>open judgments corpus</b> covers High Courts + the Supreme Court (mostly decided cases); adding a licensed key (Indian Kanoon / Vakeel360) broadens coverage to live orders automatically.",
     "intro2": "What we <i>don't</i> do: scrape eCourts or solve its CAPTCHA. India has no compliant API for an advocate's full live open-case roster by bar number, so for live status we also use your <b>cause list</b>, cases you <b>add by CNR</b>, and <b>HITL refresh</b>. Everything is marked with its source; <b>not legal advice</b>.",
