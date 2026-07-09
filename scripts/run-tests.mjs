@@ -78,6 +78,7 @@ const OFFLINE = [
   "wo65_full_roster",
   "wo68_order_pdf",
   "wo72_judgments_pagination",
+  "wo83_case_links",
   "wo84_onboarding_phase",
 ];
 

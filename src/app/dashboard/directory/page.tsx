@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
 import { Icon } from "@/components/icons";
-import { TrackCaseButton } from "@/components/track-case-button";
+import { caseDetailHref } from "@/lib/court/case-links";
 import { searchAdvocates, searchJudges, searchParties, searchByCaseNumber, getStats, ldEnabled } from "@/lib/court/legaldriver-api";
 import { expandCaseType, advocateRole } from "@/lib/court/code-labels";
 import { CodeLabel } from "@/components/code-label";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 // Promoted out of the buried Insight→Search tab shell to a first-class Practice surface
 // (nav.tsx). Search a name → advocates (bar-wise caseload), judges (dossier + disposal
 // patterns), and parties/litigants; or look a case up by registration number. Every
-// advocate/judge links to its full dossier. Reuses the live LegalDriver API helpers.
+// advocate/judge links to its full dossier, every listed case to its details (WO-83).
 // The old /dashboard/search/directory route redirects here (query preserved).
 
 // Litigant-grade example prompts so the empty state is a starting point, not a dead blank.
@@ -26,6 +26,7 @@ export default async function DirectoryPage({
 }) {
   const t = await getTranslations("lookup");
   const tc = await getTranslations("codeLabels");
+  const tp = await getTranslations("casePreview");
   const q = (searchParams.q ?? "").trim();
   const cnType = (searchParams.ct ?? "").trim();
   const cnNumber = (searchParams.cn ?? "").trim();
@@ -114,14 +115,14 @@ export default async function DirectoryPage({
                 <ul className="divide-y divide-line">
                   {cnResults.slice(0, 25).map((p, i) => (
                     <li key={`${p.cnr}-${i}`} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                      <span className="min-w-0 flex-1 truncate">
-                        <span className="font-medium text-ink">{p.name || p.cnr}</span>
+                      <Link href={caseDetailHref(p.cnr)} className="group min-w-0 flex-1 truncate">
+                        <span className="font-medium text-ink group-hover:text-brand-600 group-hover:underline">{p.name || p.cnr}</span>
                         <span className="ml-2 font-mono text-[0.7rem] text-ink-faint">{p.cnr}</span>
-                      </span>
+                      </Link>
                       <span className="flex shrink-0 items-center gap-2">
                         {p.side && <Badge tone={/pet|appl|compl/i.test(p.side) ? "green" : "neutral"}>{p.side.toLowerCase()}</Badge>}
                         <CodeLabel value={expandCaseType(p.case_type, p.tier)} showCode={false} className="hidden text-xs text-ink-faint sm:inline" fallback="" />
-                        <TrackCaseButton cnr={p.cnr} />
+                        <Link href={caseDetailHref(p.cnr)} className="whitespace-nowrap text-xs font-medium text-brand-600 hover:underline">{tp("viewDetails")}</Link>
                       </span>
                     </li>
                   ))}
@@ -182,14 +183,14 @@ export default async function DirectoryPage({
               <ul className="divide-y divide-line">
                 {parties.slice(0, 30).map((p, i) => (
                   <li key={p.cnr + i} className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm">
-                    <span className="min-w-0 flex-1 truncate">
-                      <span className="font-medium text-ink">{p.name}</span>
+                    <Link href={caseDetailHref(p.cnr)} className="group min-w-0 flex-1 truncate">
+                      <span className="font-medium text-ink group-hover:text-brand-600 group-hover:underline">{p.name}</span>
                       <span className="ml-2 font-mono text-[0.7rem] text-ink-faint">{p.cnr}</span>
-                    </span>
+                    </Link>
                     <span className="flex shrink-0 items-center gap-2">
                       {p.side && <Badge tone={/pet|appl|compl/i.test(p.side) ? "green" : "neutral"}>{p.side.toLowerCase()}</Badge>}
                       <CodeLabel value={expandCaseType(p.case_type, p.tier)} showCode={false} className="hidden text-xs text-ink-faint sm:inline" fallback="" />
-                      <TrackCaseButton cnr={p.cnr} />
+                      <Link href={caseDetailHref(p.cnr)} className="whitespace-nowrap text-xs font-medium text-brand-600 hover:underline">{tp("viewDetails")}</Link>
                     </span>
                   </li>
                 ))}

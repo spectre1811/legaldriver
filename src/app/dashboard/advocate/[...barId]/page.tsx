@@ -7,7 +7,7 @@ import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { getAdvocateProfile, ldEnabled } from "@/lib/court/legaldriver-api";
-import { TrackCaseButton } from "@/components/track-case-button";
+import { caseDetailHref } from "@/lib/court/case-links";
 import { Pagination } from "@/components/pagination";
 import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
 import { expandCaseType, advocateRole } from "@/lib/court/code-labels";
@@ -33,6 +33,7 @@ export default async function AdvocatePage({
   const t = await getTranslations("advocate");
   const tc = await getTranslations("codeLabels");
   const tCommon = await getTranslations("common");
+  const tp = await getTranslations("casePreview");
   const barId = params.barId.map(decodeURIComponent).join("/");
   const profile = await getAdvocateProfile(barId);
   if (!profile) notFound();
@@ -362,16 +363,12 @@ export default async function AdvocatePage({
                       return (
                         <tr key={c.cnr} className="border-t border-line hover:bg-paper">
                           <td className="px-5 py-2 font-mono text-xs">
-                            {mid ? (
-                              <Link
-                                href={`/dashboard/cases/${mid}`}
-                                className="text-brand-600 hover:underline"
-                              >
-                                {c.cnr}
-                              </Link>
-                            ) : (
-                              c.cnr
-                            )}
+                            <Link
+                              href={caseDetailHref(c.cnr, mid)}
+                              className="text-brand-600 hover:underline"
+                            >
+                              {c.cnr}
+                            </Link>
                           </td>
                           <td className="px-3 py-2 text-ink-soft" title={c.case_type ?? undefined}>
                             <CourtField value={expandCaseType(c.case_type, c.tier).full || null} field="case_type" emptyLabel={tCommon("states.notOnRecord")} />
@@ -411,7 +408,9 @@ export default async function AdvocatePage({
                             {mid ? (
                               <span className="text-xs text-ink-faint">{t("tracked")}</span>
                             ) : (
-                              <TrackCaseButton cnr={c.cnr} />
+                              <Link href={caseDetailHref(c.cnr)} className="whitespace-nowrap text-xs font-medium text-brand-600 hover:underline">
+                                {tp("viewDetails")}
+                              </Link>
                             )}
                           </td>
                         </tr>
