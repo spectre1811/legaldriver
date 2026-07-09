@@ -2317,6 +2317,10 @@
     "notFound": {
       "title": "Couldn't load this case",
       "body": "We couldn't fetch the record for {cnr} right now. Check the CNR, or try again shortly."
+    },
+    "invalidCnr": {
+      "title": "That doesn't look like a valid CNR",
+      "body": "\"{cnr}\" isn't a complete CNR. Go back and open the case from a search result."
     }
   }
 }

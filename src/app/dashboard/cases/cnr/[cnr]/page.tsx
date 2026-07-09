@@ -68,8 +68,8 @@ export default async function CasePreviewPage({ params }: { params: { cnr: strin
         {backLink}
         <div className="ec-card px-6 py-12 text-center">
           <Icon name="alert" className="mx-auto mb-3 h-8 w-8 text-ec-ink-3" />
-          <h1 className="font-display text-lg font-medium">{t("notFound.title")}</h1>
-          <p className="mt-1 text-sm text-ec-ink-3">{t("notFound.body", { cnr })}</p>
+          <h1 className="font-display text-lg font-medium">{t("invalidCnr.title")}</h1>
+          <p className="mt-1 text-sm text-ec-ink-3">{t("invalidCnr.body", { cnr })}</p>
         </div>
       </div>
     );
