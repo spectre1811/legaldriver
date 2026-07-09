@@ -2298,5 +2298,25 @@
     "noResults": "No matches",
     "remove": "Remove {label}",
     "more": "+{count} more"
+  },
+  "casePreview": {
+    "back": "Back to search",
+    "viewDetails": "View details",
+    "tracked": "Tracked",
+    "untrackedBadge": "Not tracked yet",
+    "track": "Track this case",
+    "tracking": "Tracking…",
+    "trackCta": {
+      "title": "You're previewing this case",
+      "body": "Track it to add it to your cases, get hearing-date reminders, and unlock the AI briefing."
+    },
+    "aiLocked": {
+      "badge": "Locked",
+      "body": "The AI briefing — summary, posture, next steps and risk flags — is generated once you track this case."
+    },
+    "notFound": {
+      "title": "Couldn't load this case",
+      "body": "We couldn't fetch the record for {cnr} right now. Check the CNR, or try again shortly."
+    }
   }
 }
