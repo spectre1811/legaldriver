@@ -20,6 +20,9 @@ const SECTIONS: { heading: string; items: NavEntry[] }[] = [
       { href: "/dashboard/cases", label: "cases", icon: "cases" },
       { href: "/dashboard/clients", label: "clients", icon: "clients" },
       { href: "/dashboard/calendar", label: "calendar", icon: "calendar" },
+      // WO-82: Judges & Lawyers — the live-corpus people directory, promoted out of the
+      // buried Insight→Search tab shell to a first-class Practice surface (not hidden).
+      { href: "/dashboard/directory", label: "directory", icon: "scale" },
     ],
   },
   {

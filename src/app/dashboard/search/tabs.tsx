@@ -5,12 +5,11 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "@/components/icons";
 
-// Route-based tabs for the merged Court Search surface: Directory (live eCourts
-// roster — judges/advocates/parties) and Judgments (historical judgment corpus).
-// Each tab is a real, deep-linkable URL; the old /dashboard/lookup and
-// /dashboard/research routes redirect here (next.config.mjs).
+// Route-based tabs for the Court Search surface. WO-82: the Directory (Judges & Lawyers)
+// moved to a first-class Practice surface at /dashboard/directory — the tab now links there
+// as a cross-surface bridge, alongside the Judgments (historical judgment corpus) sub-route.
 const TABS: { href: string; key: string; icon: IconName }[] = [
-  { href: "/dashboard/search/directory", key: "directory", icon: "scale" },
+  { href: "/dashboard/directory", key: "directory", icon: "scale" },
   { href: "/dashboard/search/judgments", key: "judgments", icon: "search" },
 ];
 

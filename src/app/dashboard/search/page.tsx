@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
-// The Court Search surface has no landing of its own — default to the Directory tab.
+// WO-82 · The Directory (Judges & Lawyers) moved to /dashboard/directory (Practice). The Court
+// Search surface is now the Judgments corpus — default there.
 export default function SearchIndex() {
-  redirect("/dashboard/search/directory");
+  redirect("/dashboard/search/judgments");
 }
