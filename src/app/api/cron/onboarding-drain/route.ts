@@ -9,7 +9,11 @@ export const maxDuration = 60;
 // seconds. Only pick up runs untouched for a while — those are ABANDONED (tab closed mid-drain) — so the
 // backstop never double-drains a run a client is actively finishing (the coordination is the staleness
 // gate; drain itself has no cross-process lock). Tune via env.
-const STALE_MINUTES = Number(process.env.ONBOARDING_DRAIN_STALE_MINUTES ?? "10");
+// WO-95: 10 → 4. The cron now runs every 5 min (`*/5`), so a run abandoned mid-drain (tab closed) is
+// picked up within ~5–9 min instead of waiting up to a day. Still safe from double-draining: a live
+// client tab refreshes `updated_at` every few seconds via `continueOnboarding`, so an actively-driven
+// run stays <4 min fresh and the backstop skips it.
+const STALE_MINUTES = Number(process.env.ONBOARDING_DRAIN_STALE_MINUTES ?? "4");
 const MAX_RUNS_PER_TICK = Number(process.env.ONBOARDING_DRAIN_MAX_RUNS ?? "6");
 // The whole tick shares one 60s function cap. Budgets gate STARTING work, and a live enrich chunk can
 // still run a while after it starts — so keep both conservative: stop starting new runs at 40s, and

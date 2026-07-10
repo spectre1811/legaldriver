@@ -31,11 +31,13 @@ export function normalizeCounts(raw: unknown): OnboardingCounts {
 // enrich reads each CNR's full detail from our WAREHOUSE (WO-65: cached `GET /v1/cases/{cnr}`, NOT a
 // live eCourts `POST …/refresh` — no source burst, freshness is the nightly cron's job). Processed in
 // cursor-tracked chunks the orchestrator runs CONCURRENTLY, so no single drain invocation blocks on all
-// of them and the budget is re-checked between chunks. Bumped 3→5 now that a chunk is cheap cached reads
-// (~0.3s each) rather than slow live fetches (~3-6s) — 5 concurrent cached reads stay well under the 60s
-// function cap while letting a ~257-case roster finish in a single invocation. (Kept < 6 so a 12-CNR
-// roster still spans ≥3 chunks — the resumable state machine's mid-chunk budget-stop stays exercised.)
-export const ENRICH_CHUNK = 5;
+// of them and the budget is re-checked between chunks.
+// WO-95: bumped 5 → 20. A cached read measured ~0.65s live, so 20 concurrent ≈ 1–2s/chunk → a ~257-case
+// roster (~13 chunks) enriches to `done` in a SINGLE 35s invocation instead of crawling ~25 CNRs/tick and
+// looking frozen at 36% for days. Stays well under WO-91's 12s per-stage `boundStep` bound, and the reads
+// are cached (no eCourts/WAF burst). Env-overridable so it can be tuned without a deploy. The offline
+// resume test passes an EXPLICIT chunk size, so this production value never affects its determinism.
+export const ENRICH_CHUNK = Number(process.env.ONBOARDING_ENRICH_CHUNK ?? "20");
 
 // Default per-invocation wall-clock budget for the interactive path (client action, 60s cap). The
 // budget gates STARTING a new unit, so it must leave room for one more (possibly slow, live) unit to
