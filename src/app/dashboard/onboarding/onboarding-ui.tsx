@@ -224,6 +224,36 @@ export function AdvocateOnboarding({
     })();
   }, [advocate.id, busy, router, t]);
 
+  // WO-100: auto-resume a RUNNING run on load/refocus. A run the user started then left (tab closed)
+  // used to sit at a mid-pipeline % until the once-a-day cron nudged it; now simply opening the page
+  // drives it to `done` via the SAME bounded continue-loop the Re-run button uses. Guarded so it never
+  // double-drives: `activeRunId` is null unless hydrated + not busy (a Re-run click yields) + status is
+  // "running", and the ref makes it at-most-once per run id. The drain is idempotent + resumable, so a
+  // stopped/overlapping drive is always safe — the worst case is a redundant, harmless call.
+  const autoResumeRef = useRef<string | null>(null);
+  const activeRunId = hydrated && !busy && run?.status === "running" ? (run?.id ?? null) : null;
+  useEffect(() => {
+    if (!activeRunId || autoResumeRef.current === activeRunId) return;
+    autoResumeRef.current = activeRunId;
+    let stop = false;
+    (async () => {
+      let guard = 0;
+      let res = await continueOnboarding(activeRunId);
+      if (mounted.current && !stop && res.message) setMsg(res.message);
+      while (res.ok && res.done === false && !stop && mounted.current && guard < 40) {
+        guard++;
+        const st = await getOnboardingStatus(advocate.id); if (st && mounted.current && !stop) setRun(st);
+        res = await continueOnboarding(activeRunId);
+        if (mounted.current && !stop && res.message) setMsg(res.message);
+      }
+      if (mounted.current && !stop) {
+        const st = await getOnboardingStatus(advocate.id); if (st) setRun(st);
+        setNow(Date.now()); router.refresh();
+      }
+    })().catch(() => { /* transient — the cron backstop or a re-run finishes it */ });
+    return () => { stop = true; };
+  }, [activeRunId, advocate.id, router]);
+
   const checkNow = useCallback(() => {
     if (checking) return;
     setChecking(true);
