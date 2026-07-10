@@ -23,15 +23,19 @@ check("done → done (terminal, stable)", nextStage("done") === "done");
 check("PIPELINE_STAGES excludes done", !(PIPELINE_STAGES as readonly string[]).includes("done"));
 
 // ── enrichChunk: slice/offset/more arithmetic (the resume cursor) ──
+// WO-95: use an EXPLICIT chunk size `CH` (not the production ENRICH_CHUNK constant) so throughput
+// tuning of ENRICH_CHUNK can never break this determinism — the chunker logic is what's under test.
+const CH = 5;
 const cnrs12 = Array.from({ length: 12 }, (_, i) => `CNR${i}`);
-const c0 = enrichChunk(cnrs12, 0);
-check("chunk 0 = first ENRICH_CHUNK, more", c0.chunk.length === ENRICH_CHUNK && c0.nextOffset === ENRICH_CHUNK && c0.more);
-const cMid = enrichChunk(cnrs12, 10);
+check("ENRICH_CHUNK is a sane positive default", Number.isFinite(ENRICH_CHUNK) && ENRICH_CHUNK >= 1);
+const c0 = enrichChunk(cnrs12, 0, CH);
+check("chunk 0 = first CH, more", c0.chunk.length === CH && c0.nextOffset === CH && c0.more);
+const cMid = enrichChunk(cnrs12, 10, CH);
 check("chunk at 10 = last 2, no more", cMid.chunk.length === 2 && cMid.nextOffset === 12 && !cMid.more);
-check("chunk at end = empty, no more", enrichChunk(cnrs12, 12).chunk.length === 0 && !enrichChunk(cnrs12, 12).more);
-check("chunk beyond end = empty, no more", enrichChunk(cnrs12, 99).chunk.length === 0 && !enrichChunk(cnrs12, 99).more);
-check("empty roster = empty, no more", enrichChunk([], 0).chunk.length === 0 && !enrichChunk([], 0).more);
-check("negative offset clamps to 0", enrichChunk(cnrs12, -5).nextOffset === ENRICH_CHUNK);
+check("chunk at end = empty, no more", enrichChunk(cnrs12, 12, CH).chunk.length === 0 && !enrichChunk(cnrs12, 12, CH).more);
+check("chunk beyond end = empty, no more", enrichChunk(cnrs12, 99, CH).chunk.length === 0 && !enrichChunk(cnrs12, 99, CH).more);
+check("empty roster = empty, no more", enrichChunk([], 0, CH).chunk.length === 0 && !enrichChunk([], 0, CH).more);
+check("negative offset clamps to 0", enrichChunk(cnrs12, -5, CH).nextOffset === CH);
 
 // ── normalizeCounts: robust to partial/garbage persisted JSON ──
 const n = normalizeCounts({ enriched: 7, junk: "x", cases_fetched: "3" });
@@ -47,7 +51,7 @@ const pfSkip = preserveFetch({ enrich_offset: 3, timed_out_stages: ["closed"] })
 check("preserveFetch carries timed_out_stages across an advance", Array.isArray(pfSkip.timed_out_stages) && (pfSkip.timed_out_stages as string[])[0] === "closed" && pfSkip.enrich_offset === undefined);
 
 // ── A fake step: enrich chunks a fixed roster; other stages advance once. Optional clock burn. ──
-function fakeStep(cnrs: string[], clock?: { t: number }, stepMs = 0): { step: StepFn; visited: string[] } {
+function fakeStep(cnrs: string[], clock?: { t: number }, stepMs = 0, chunkSize = CH): { step: StepFn; visited: string[] } {
   const visited: string[] = [];
   const step: StepFn = async (stage, state) => {
     visited.push(stage);
@@ -55,7 +59,7 @@ function fakeStep(cnrs: string[], clock?: { t: number }, stepMs = 0): { step: St
     const counts = state.counts;
     if (stage === "enrich") {
       const offset = typeof state.cursor.enrich_offset === "number" ? state.cursor.enrich_offset : 0;
-      const { chunk, nextOffset, more } = enrichChunk(cnrs, offset);
+      const { chunk, nextOffset, more } = enrichChunk(cnrs, offset, chunkSize);
       counts.enriched += chunk.length;
       return { counts, cursor: { ...state.cursor, enrich_offset: nextOffset }, more };
     }
@@ -84,7 +88,7 @@ function recorder() {
   const { state, done } = await driveDrain(fresh(), step, { budgetMs: Number.POSITIVE_INFINITY, now: () => 0, persist });
   check("A: reaches done", done && state.stage === "done");
   check("A: every CNR enriched exactly once", state.counts.enriched === 12);
-  check("A: enrich ran ⌈12/chunk⌉ chunks", visited.filter((s) => s === "enrich").length === Math.ceil(cnrs12.length / ENRICH_CHUNK));
+  check("A: enrich ran ⌈12/chunk⌉ chunks", visited.filter((s) => s === "enrich").length === Math.ceil(cnrs12.length / CH));
   check("A: each pipeline stage visited", PIPELINE_STAGES.every((s) => visited.includes(s)));
   check("A: last persist marks done", persisted[persisted.length - 1].done === true && persisted[persisted.length - 1].stage === "done");
   check("A: fetch message persisted", persisted.some((p) => p.message === "still fetching…"));
@@ -97,7 +101,7 @@ function recorder() {
   const { persisted, persist } = recorder();
   const first = await driveDrain(fresh(), step, { budgetMs: 100, now: () => clock.t, persist });
   // budget 100, 30ms/step → checks pass at 0,30,60,90 then stop → 4 steps: causelist, fetch, enrich, enrich
-  const twoChunks = 2 * ENRICH_CHUNK;
+  const twoChunks = 2 * CH;
   check("B: stopped, not done", !first.done && first.state.stage === "enrich");
   check("B: partial enrich = two chunks", first.state.counts.enriched === twoChunks && first.state.cursor.enrich_offset === twoChunks);
   check("B: exactly 4 steps ran before budget", visited.length === 4);
