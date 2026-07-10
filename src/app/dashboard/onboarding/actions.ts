@@ -18,6 +18,7 @@ export type OnboardingActionResult = { ok: boolean; message: string; runId?: str
 // record `runOnboarding` writes stage-by-stage (RLS scopes to the tenant automatically via the server
 // client). The UI polls this while `startOnboarding` runs so the user sees real progress, not a spinner.
 export type OnboardingStatus = {
+  id: string; // WO-100: the run id, so the client can auto-resume a running run via continueOnboarding
   stage: string; status: string; counts: Record<string, number>; message: string | null; updatedAt: string;
   cursor: Record<string, unknown> | null; // WO-61: carries `fetch_pending` for the "still gathering" state
 } | null;
@@ -26,13 +27,14 @@ export async function getOnboardingStatus(advocateId: string): Promise<Onboardin
   const supabase = createClient();
   const { data } = await supabase
     .from("onboarding_run")
-    .select("stage, status, counts, message, updated_at, cursor")
+    .select("id, stage, status, counts, message, updated_at, cursor")
     .eq("advocate_id", advocateId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (!data) return null;
   return {
+    id: data.id,
     stage: data.stage, status: data.status,
     counts: (data.counts ?? {}) as Record<string, number>,
     message: data.message, updatedAt: data.updated_at,

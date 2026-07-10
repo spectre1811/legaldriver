@@ -109,6 +109,7 @@ export default async function OnboardingPage() {
                 const run = latestByAdvocate.get(a.id);
                 const initialRun = run
                   ? {
+                      id: run.id,
                       stage: run.stage, status: run.status,
                       counts: (run.counts ?? {}) as Record<string, number>,
                       message: run.message, updatedAt: run.updated_at,
