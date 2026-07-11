@@ -22,6 +22,7 @@ const OFFLINE = [
   "advocate_state_guard",
   "bp71_onboarding_progress",
   "bp73_onboarding_drain",
+  "bp74_statewide_flip",
   "wo49_warehouse_barid",
   "wo58_onboarding_honesty",
   "wo64_auth_honesty",

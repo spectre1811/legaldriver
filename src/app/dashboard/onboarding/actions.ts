@@ -6,8 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
 import { drainOnboarding, seedFetchedMatters, DRAIN_BUDGET_MS, type OnboardingCounts } from "@/lib/services/onboarding/orchestrator";
 import { onboardingCoverage } from "@/lib/services/onboarding/progress";
-import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
-import { diagnoseEmptyRoster } from "@/lib/court/bar-number";
+import { enabledAdvocateProviders, statewideFanoutEnabled, fetchAdvocateFanoutStatus, advocateFanoutCoverageNote, advocateFanoutJobId } from "@/lib/court/advocate-cases";
+import { diagnoseEmptyRoster, parseBarNumber, stateBarCouncil, councilByStatePrefix } from "@/lib/court/bar-number";
 import type { Database } from "@/lib/db/database.types";
 
 // `done` (BP-73): false while a large roster is still draining in bounded chunks — the client keeps
@@ -64,10 +64,24 @@ async function emptyRosterNote(supabase: ReturnType<typeof createClient>, advoca
       return " No cases were auto-fetched — add the advocate's full enrolment number with year (e.g. G/702/2020) in Settings for an exact eCourts roster pull.";
     case "unverified":
       return ` No cases were auto-fetched — live eCourts roster search isn't available for the ${reason.council} State Bar Council yet, so we resolved by name only. Add cases by CNR, or check back as more councils go live.`;
-    case "no-results":
-      // We searched the High Court + the main district complex — deliberately NOT claiming
-      // "no cases exist", because we haven't yet searched every Gujarat district.
+    case "no-results": {
+      // BP-74 W3: once the statewide fan-out is live we DID search every district in the registry — so the
+      // old "HC + main district complex only" caveat is stale. Speak from the server's HONEST coverage
+      // record ("searched N courts across Gujarat — none found"), degrading to the prior copy if the
+      // fan-out status isn't readable (flag off, endpoint down, or a name-only fallback with no job).
+      if (statewideFanoutEnabled()) {
+        const parsed = parseBarNumber(adv?.bar_registration_number);
+        const council = stateBarCouncil(adv?.state_code) ?? (parsed ? councilByStatePrefix(parsed.stateBar) : null);
+        if (parsed && council) {
+          const status = await fetchAdvocateFanoutStatus(advocateFanoutJobId(parsed, council));
+          const note = advocateFanoutCoverageNote(status, council.label);
+          if (note) return ` ${note} Double-check the serial and year, or add cases directly by CNR.`;
+        }
+      }
+      // Pre-flip fallback: we searched the High Court + the main district complex — deliberately NOT
+      // claiming "no cases exist", because we haven't yet searched every Gujarat district.
       return " No cases found in the High Court or the main district complex for this enrolment number. Wider district coverage is rolling out — meanwhile double-check the serial and year, or add cases directly by CNR.";
+    }
   }
 }
 
