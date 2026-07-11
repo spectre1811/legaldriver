@@ -11,7 +11,7 @@
 
 import { corpusEnabled } from "./corpus-athena";
 import { parseBarNumber, stateBarCouncil, councilByStatePrefix, barSearchScopes } from "./bar-number";
-import type { ParsedBarNumber } from "./bar-number";
+import type { ParsedBarNumber, StateBarCouncil } from "./bar-number";
 
 // ── Fetch-failure classification (WO-64) ─────────────────────────────────────
 // A provider fetch fails three ways the UI MUST tell apart, because they call for different actions:
@@ -266,6 +266,24 @@ export function startLiveAdvocateRefresh(q: AdvocateQuery): boolean {
   const H = { "X-API-Key": key };
   const serial = String(parsed.serial);
   const refreshTimeout = Number(process.env.LD_REFRESH_TIMEOUT_MS ?? "20000");
+
+  // BP-74 W3: the ONE-CALL server-side statewide fan-out — the point of the WO. Instead of the client
+  // firing one `/advocate/{serial}/refresh` per registry scope (332 for Gujarat → ~600+ upstream calls
+  // from the box EIP → a WAF self-DOS, BP-66), we POST a SINGLE `refresh-statewide` job that a rotating-IP
+  // worker fans over EVERY court_scope for the state off its own disposable IP, then drains the CNRs. So a
+  // district advocate is seeded across ALL districts, not just HC + one complex — with zero box-EIP burst.
+  // Gated OFF by default (LD_ADVOCATE_STATEWIDE_FANOUT=1): the flip only activates once the on-demand
+  // fan-out drainer is deployed (BP-74 W3a) — until then the per-scope loop (drained by the live fleet)
+  // stays the path, so merging this can never strand onboarding on an undrained job.
+  if (statewideFanoutEnabled() && council.stateCode != null) {
+    const barState = (council.statePrefix ?? parsed.stateBar).toUpperCase();
+    const p = new URLSearchParams({ year: String(parsed.year), bar_state: barState, state_code: String(council.stateCode) });
+    void fetch(`${base}/advocate/${encodeURIComponent(serial)}/refresh-statewide?${p.toString()}`,
+      { method: "POST", headers: H, signal: AbortSignal.timeout(refreshTimeout) }).catch(() => null);
+    return true;
+  }
+
+  // Fallback (pre-W3a / a state with no registry): the per-scope client loop, drained by the live fleet.
   void Promise.allSettled(barSearchScopes(council).map((scope) => {
     const p = new URLSearchParams({ year: String(parsed.year), bar_state: scope.barState, state_code: String(scope.stateCode), tier: scope.tier });
     if (scope.courtCodeArr) p.set("court_code_arr", scope.courtCodeArr);
@@ -274,6 +292,73 @@ export function startLiveAdvocateRefresh(q: AdvocateQuery): boolean {
       { method: "POST", headers: H, signal: AbortSignal.timeout(refreshTimeout) }).catch(() => null);
   }));
   return true;
+}
+
+// BP-74 W3 · statewide fan-out feature flag. Default OFF so merging the client flip is a no-op until the
+// founder deploys the on-demand fan-out drainer (W3a) AND flips this on in the Vercel env — that ordering
+// is what prevents onboarding jobs enqueueing against an empty drain.
+export function statewideFanoutEnabled(): boolean {
+  return process.env.LD_ADVOCATE_STATEWIDE_FANOUT === "1";
+}
+
+// The canonical fan-out job id the server keys on (STATE/SERIAL/YEAR) — what `refresh-statewide` returns
+// and `GET /advocate/refresh/{job_id}` is polled by. Pure so it's tested offline.
+export function advocateFanoutJobId(parsed: ParsedBarNumber, council: StateBarCouncil): string {
+  const barState = (council.statePrefix ?? parsed.stateBar).toUpperCase();
+  return `${barState}/${parsed.serial}/${parsed.year}`;
+}
+
+// The server's fan-out progress record (BP-74) — the `fanout` block of `GET /advocate/refresh/{job_id}`.
+// Every field optional: the endpoint omits the block for a non-fan-out refresh, and we degrade gracefully.
+export interface AdvocateFanoutStatus {
+  done?: boolean;
+  fanout?: {
+    state?: string;                 // queued | running | done | failed
+    scopes_planned?: number | null; // e.g. 332 for Gujarat
+    scopes_searched?: number | null;
+    cases_found?: number | null;
+    scope_complete?: boolean;       // false = a WAF-stopped / partial sweep (honest)
+    stopped?: boolean;
+    coverage?: { searched?: number; returned?: number; empty?: number; failed?: number } | null;
+  } | null;
+}
+
+// Read the statewide fan-out progress for a job (KEYED /v1 surface). WAREHOUSE/ledger read — never a live
+// eCourts burst. Null on any error (missing key / unreachable / non-2xx) so callers degrade to prior copy.
+export async function fetchAdvocateFanoutStatus(jobId: string): Promise<AdvocateFanoutStatus | null> {
+  const key = process.env.LD_API_KEY;
+  if (!key) return null;
+  const base = process.env.LD_API_BASE || "http://13.202.148.71:8080";
+  try {
+    // job id carries slashes (STATE/SERIAL/YEAR) and the route is `{job_id:path}` — pass it RAW (its parts
+    // are letters/digits), NOT percent-encoded, so the path converter captures the segments.
+    const r = await fetch(`${base}/advocate/refresh/${jobId}`,
+      { headers: { "X-API-Key": key }, signal: AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "60000")) });
+    if (!r.ok) return null;
+    return (await r.json()) as AdvocateFanoutStatus;
+  } catch { return null; }
+}
+
+// Honest "we searched N courts across <state>" coverage copy from the server fan-out record. NEVER a bare
+// "0 cases" (info-integrity ⭐): a zero is framed as "none in the N courts we searched", and a WAF-stopped
+// / partial run says so — so re-onboarding to finish reads as expected, not as "you have none". Returns
+// null when there's no fan-out record to speak to (caller keeps its prior copy). Pure → tested offline.
+export function advocateFanoutCoverageNote(status: AdvocateFanoutStatus | null, stateLabel: string): string | null {
+  const f = status?.fanout;
+  if (!f) return null;
+  const searched = f.scopes_searched ?? f.coverage?.searched ?? f.scopes_planned ?? 0;
+  if (!searched) return null;
+  const courts = `${searched} court${searched === 1 ? "" : "s"}`;
+  const where = stateLabel ? ` across ${stateLabel}` : "";
+  const found = f.cases_found ?? 0;
+  const cases = `${found} case${found === 1 ? "" : "s"}`;
+  if (f.stopped || f.scope_complete === false) {
+    return `Searched ${courts}${where} so far — a few timed out and finish on your next refresh; ${cases} found.`;
+  }
+  if (found === 0) {
+    return `Searched ${courts}${where} — no cases on file for this bar number in the courts we searched.`;
+  }
+  return `Searched ${courts}${where} — ${cases} found.`;
 }
 
 const PROVIDERS = [legaldriverProvider, corpusProvider, indianKanoonProvider, vakeel360Provider];
