@@ -23,6 +23,42 @@ function client(): AthenaClient {
   return _client;
 }
 
+// A cold, broad corpus scan can outrun the poll budget. Distinguish "still running when we gave up"
+// from a hard Athena failure so the caller (and logs) can treat it as an honest, retryable timeout —
+// not a crash. The dashboard error boundary renders a handled retry state for either.
+export class AthenaTimeoutError extends Error {
+  constructor(public readonly queryId: string, public readonly waitedMs: number) {
+    super(`athena: query ${queryId} did not finish within ${waitedMs}ms`);
+    this.name = "AthenaTimeoutError";
+  }
+}
+
+// Poll an Athena execution to a terminal state within a BOUNDED budget, then return (SUCCEEDED) or
+// throw. Previously athenaQuery's inline loop ran a fixed 40×500ms and, if the query was still
+// RUNNING, FELL THROUGH to GetQueryResults on an unfinished query → AWS InvalidRequestException
+// (INVALID_QUERY_EXECUTION_STATE), a confusing 500 on a user's first uncached broad search. This never
+// reads results off a non-SUCCEEDED query: past the budget it throws a clean AthenaTimeoutError.
+// Budget is bounded by a max poll count (deadline/interval) so it's deterministic + offline-testable;
+// `fetchState`/`sleep` are injected for the same reason. Default 30s (up from 20s) via ATHENA_MAX_WAIT_MS
+// so a marginally-cold legitimate scan finishes, still well under the Vercel function ceiling.
+export async function awaitAthenaDone(
+  id: string,
+  fetchState: () => Promise<{ state?: string; reason?: string }>,
+  opts: { deadlineMs?: number; intervalMs?: number; sleep?: (ms: number) => Promise<void> } = {},
+): Promise<void> {
+  const deadlineMs = opts.deadlineMs ?? Number(process.env.ATHENA_MAX_WAIT_MS ?? 30_000);
+  const intervalMs = opts.intervalMs ?? 500;
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const maxPolls = Math.max(1, Math.ceil(deadlineMs / intervalMs));
+  for (let i = 0; i < maxPolls; i++) {
+    const { state, reason } = await fetchState();
+    if (state === "SUCCEEDED") return;
+    if (state === "FAILED" || state === "CANCELLED") throw new Error(`athena: ${reason ?? state}`);
+    if (i < maxPolls - 1) await sleep(intervalMs);
+  }
+  throw new AthenaTimeoutError(id, maxPolls * intervalMs);
+}
+
 // Run a query; `params` bind to `?` placeholders (injection-safe). Returns row objects.
 export async function athenaQuery(sql: string, params: string[] = [], maxRows = 100): Promise<Record<string, string | null>[]> {
   if (!corpusEnabled()) return [];
@@ -35,13 +71,11 @@ export async function athenaQuery(sql: string, params: string[] = [], maxRows = 
     ResultReuseConfiguration: { ResultReuseByAgeConfiguration: { Enabled: true, MaxAgeInMinutes: 60 } },
   }));
   const id = started.QueryExecutionId!;
-  for (let i = 0; i < 40; i++) {
+  // Bounded poll → SUCCEEDED or throw (never read results off a RUNNING query — see awaitAthenaDone).
+  await awaitAthenaDone(id, async () => {
     const ex = await c.send(new GetQueryExecutionCommand({ QueryExecutionId: id }));
-    const st = ex.QueryExecution?.Status?.State;
-    if (st === "SUCCEEDED") break;
-    if (st === "FAILED" || st === "CANCELLED") throw new Error(`athena: ${ex.QueryExecution?.Status?.StateChangeReason ?? st}`);
-    await new Promise((r) => setTimeout(r, 500));
-  }
+    return { state: ex.QueryExecution?.Status?.State, reason: ex.QueryExecution?.Status?.StateChangeReason };
+  });
   const res = await c.send(new GetQueryResultsCommand({ QueryExecutionId: id, MaxResults: maxRows + 1 }));
   const rows = res.ResultSet?.Rows ?? [];
   if (rows.length < 1) return [];
