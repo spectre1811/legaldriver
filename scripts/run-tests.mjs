@@ -82,6 +82,7 @@ const OFFLINE = [
   "wo83_case_links",
   "wo84_onboarding_phase",
   "wo40_invoice",
+  "wo124_athena_timeout",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the
