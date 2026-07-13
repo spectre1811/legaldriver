@@ -36,6 +36,15 @@ export async function MarketingShell({ title, subtitle, children }: { title: str
             <BrandMark size={22} tone="dark" />
             <span className="ec-underline font-display text-lg font-semibold lowercase tracking-tight">{brand.name}</span>
           </Link>
+          {/* WO-127 · trust nav — the legal/company secondary pages now cross-link the full set
+              (the landing footer already does; this closes the gap on the pages themselves). */}
+          <nav aria-label={tl("footer.col.legal.h")} className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[13px]">
+            <Link href="/privacy" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.legal.a")}</Link>
+            <Link href="/terms" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.legal.b")}</Link>
+            <Link href="/data-corrections" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.legal.c")}</Link>
+            <Link href="/contact" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.company.c")}</Link>
+            <Link href="/about" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.company.a")}</Link>
+          </nav>
           <p className="mt-3 text-[11.5px] leading-relaxed text-ec-ink-3">{tl("footer.compliance")}</p>
         </div>
       </footer>
