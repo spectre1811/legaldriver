@@ -1,29 +1,76 @@
 name: docker-image
 
-# WO-142 W0 — standalone Docker image build (AWS/Fargate migration prep). BUILD-ONLY.
-#
-# ⚠️ DORMANT SCAFFOLD (workflow_dispatch only) — cannot run green on today's infra:
-#   • GitHub-hosted `ubuntu-latest` is billing-disabled ($0 Actions budget, free tier spent
-#     till Aug 1 — NOW.md). Hosted jobs get no runner assigned and fail at 0 steps.
-#   • The self-hosted `[self-hosted, mukadma]` runners are themselves ephemeral Docker
-#     CONTAINERS with no Docker daemon (same reason this repo's db-tests stays hosted —
-#     mukadma-infra docs/gha-runner-migration-plan.md).
-# So "build the image IN CI" is a **W1 infra dependency**, not a W0 gate: W1 must give the
-# runner host a Docker daemon/buildx (host socket or DinD) or a dedicated build instance →
-# ECR. This file is the ready-to-arm scaffold; flip `on:` to `pull_request` (path-filtered)
-# once that capability lands. The Dockerfile's build stage is meanwhile validated by proxy —
-# the normal CI runs the identical `npm ci && next build` on Node 22.
+# WO-178 W1 — auto-build the standalone Docker image on Dockerfile changes, via AWS
+# CodeBuild (WO-169 pipeline). The self-hosted runner NEVER runs docker: it packages the
+# build context, ships it to S3, and drives the CodeBuild project (x86/LARGE for this app —
+# canvas has no arm64 prebuilt). Build-only validation (PUSH_TO_ECR=false) so PRs don't
+# litter ECR. Path-filtered → near-zero cost. Runner uses its instance-role creds
+# (WO-178: codebuild:StartBuild + s3:PutObject; IMDS hop limit raised to 2 for containers).
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "next.config.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/docker-image.yml"
+
+concurrency:
+  group: docker-image-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   image:
-    # Target = the in-VPC self-hosted runner (per WO-142 §7). Precondition: a Docker daemon
-    # on the runner host (W1). Do not dispatch until then — it will fail without Docker.
     runs-on: [self-hosted, mukadma]
-    timeout-minutes: 30
+    timeout-minutes: 35
+    permissions:
+      id-token: write # assume the CI role via GitHub OIDC (no instance-role/IMDS dependency)
+      contents: read
+    env:
+      AWS_DEFAULT_REGION: ap-south-1
+      PROJECT: mukadma-image-build-legaldriver
+      SRC_BUCKET: mukadma-codebuild-src-872253065260
+      APP: legaldriver
     steps:
       - uses: actions/checkout@v4
-      - name: Build standalone image (no push)
-        run: docker build -t legaldriver:ci-${{ github.sha }} .
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::872253065260:role/mukadma-image-build-ci
+          aws-region: ap-south-1
+
+      - name: Ensure AWS CLI
+        shell: bash
+        run: |
+          if command -v aws >/dev/null; then aws --version; exit 0; fi
+          cd /tmp
+          curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o awscliv2.zip
+          unzip -q awscliv2.zip
+          ./aws/install -i "$HOME/.local/aws-cli" -b "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Package build context + drive CodeBuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEY="$APP/${GITHUB_SHA}.zip"
+          git archive --format=zip -o "/tmp/${GITHUB_SHA}.zip" HEAD
+          aws s3 cp "/tmp/${GITHUB_SHA}.zip" "s3://${SRC_BUCKET}/${KEY}"
+          BID=$(aws codebuild start-build --project-name "$PROJECT" \
+            --source-type-override S3 \
+            --source-location-override "${SRC_BUCKET}/${KEY}" \
+            --environment-variables-override "name=PUSH_TO_ECR,value=false,type=PLAINTEXT" \
+            --query 'build.id' --output text)
+          echo "CodeBuild build: $BID"
+          while true; do
+            S=$(aws codebuild batch-get-builds --ids "$BID" --query 'builds[0].buildStatus' --output text)
+            [ "$S" = "IN_PROGRESS" ] || break
+            sleep 15
+          done
+          echo "Build status: $S"
+          echo "Logs: $(aws codebuild batch-get-builds --ids "$BID" --query 'builds[0].logs.deepLink' --output text)"
+          test "$S" = "SUCCEEDED"
