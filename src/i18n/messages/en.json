@@ -2339,5 +2339,41 @@
       "title": "That doesn't look like a valid CNR",
       "body": "\"{cnr}\" isn't a complete CNR. Go back and open the case from a search result."
     }
+  },
+  "comms": {
+    "notification": {
+      "orderUploaded": "Order uploaded · {matter} · {when}",
+      "listedTomorrow": "Listed tomorrow · Item {item} · {court}",
+      "replyDue": "Reply due in {days} days · {matter}",
+      "paymentReceived": "₹{amount} received · {payer} · {invoice}",
+      "emailsToFile": "{count} emails need filing · Inbox",
+      "syncComplete": "Sync complete · {count} matters current · {time}",
+      "zero": "Nothing needs you. The record is quiet."
+    },
+    "toast": {
+      "filed": "Filed to {matter}.",
+      "onWatch": "On watch. First sync tonight.",
+      "briefReady": "Brief ready.",
+      "diaryUpdated": "Diary updated.",
+      "invoiceSent": "Invoice sent to {payer}.",
+      "viewSaved": "View saved.",
+      "copied": "Copied.",
+      "filedUndo": "Filed. Undo"
+    },
+    "error": {
+      "ecourtsDown": "The court record isn't reachable right now. Your data is unchanged; we retry every hour.",
+      "badCnr": "This CNR isn't on the court record. Check the 16 characters, or enter the matter manually.",
+      "paymentFailed": "The bank declined this payment. Nothing was charged. Try another method.",
+      "offline": "You're offline. Everything you see is current as of {time}.",
+      "ourFault": "Something broke on our side. It's logged; your data is safe. Try again in a minute."
+    },
+    "emptyState": {
+      "matters": "No matters on watch yet. Add one CNR — the rest assembles itself.",
+      "inbox": "Nothing else needs your attention. Nice work.",
+      "diary": "A clear day. No listings on the record.",
+      "fees": "No invoices yet. Hours you log become GST-ready invoices here.",
+      "search": "Nothing on the public record for this. Check the spelling, or try the party's full name as filed.",
+      "notifications": "Nothing needs you. The record is quiet."
+    }
   }
 }
