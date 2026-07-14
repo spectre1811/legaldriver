@@ -1,0 +1,43 @@
+name: docker-image
+
+# WO-142 W0 — prove the standalone Docker image builds (AWS/Fargate migration prep).
+# BUILD-ONLY: no registry push, no deploy, no AWS spend. Path-filtered so it only runs
+# when a build input changes (keeps GitHub-hosted minutes near zero).
+#
+# Runs on GitHub-hosted ubuntu-latest, NOT the self-hosted [self-hosted, mukadma] runner:
+# those runners are themselves ephemeral Docker containers with no Docker daemon (same
+# reason this repo's db-tests stays GitHub-hosted — see mukadma-infra
+# docs/gha-runner-migration-plan.md). W1 infra note: to move image builds in-VPC per the
+# target architecture, the runner host needs a Docker daemon/buildx (DinD or host socket)
+# or a dedicated build instance → ECR.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "next.config.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/docker-image.yml"
+
+concurrency:
+  group: docker-image-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build standalone image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: legaldriver:ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

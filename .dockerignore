@@ -1,0 +1,13 @@
+# WO-142 W0 — keep the Docker build context lean + reproducible.
+.git
+node_modules
+.next
+npm-debug.log*
+.env
+.env.*
+.DS_Store
+coverage
+playwright-report
+test-results
+supabase/.branches
+supabase/.temp

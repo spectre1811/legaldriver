@@ -6,6 +6,10 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // WO-142 W0: emit a self-contained server bundle for the standalone Docker image
+  // (AWS/Fargate migration prep). Ignored by Vercel's build adapter, so it's a no-op
+  // for the current Vercel deploy. Works with outputFileTracingIncludes below.
+  output: "standalone",
   experimental: {
     // Ensure unpdf's bundled pdfjs build is traced into the serverless functions
     // that parse PDFs (Gmail ingest cron + the inbox demo-ingest action).
