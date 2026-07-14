@@ -24,6 +24,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      # WO-132 W2 · fail fast if a data-source-mechanics term (eCourts/NIC/NJDG/scrape/crawl)
+      # reappears on a user surface (i18n catalogs or copy-bearing components).
+      - run: npm run guard:copy
       - run: npm run build
         env:
           # Public env needed for the build; non-secret placeholders are fine for compilation.

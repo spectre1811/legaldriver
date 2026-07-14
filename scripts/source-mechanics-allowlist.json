@@ -1,0 +1,9 @@
+{
+  "_doc": "WO-132 W2 · Founder-approved exceptions to the data-source-mechanics denylist (scripts/no-source-mechanics.mjs). Each entry in 'allow' is an EXACT user-visible substring permitted to contain an otherwise-denylisted term (eCourts, NIC, NJDG, scrape, crawl, स्क्रैप, क्रॉल). A catalog value or copy line is skipped if any allow entry is a substring of it.",
+  "allow": [
+    "services.ecourts.gov.in"
+  ],
+  "_notes": {
+    "services.ecourts.gov.in": "The official eCourts portal URL in the HITL capture step (settings.capture.step2, EN+HI). The advocate must open this exact URL to fetch a case themselves — the app never scrapes it. Founder decision 2026-07-14 (WO-132 W2): keep the functional URL, allowlisted; reword every other eCourts/portal reference to product voice."
+  }
+}
