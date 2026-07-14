@@ -24,7 +24,7 @@ export const links = {
   /** Free public case search — mukadma-search (WO-51 cross-link back to us).
    *  Env-driven (WO-162): the mukadma.in cutover is a Vercel env flip, not a code
    *  change; default is the brand host (vercel.app 308-redirects there after W2). */
-  publicSearch: process.env.NEXT_PUBLIC_SEARCH_URL ?? "https://mukadma.in",
+  publicSearch: process.env.NEXT_PUBLIC_SEARCH_URL ?? "https://search.mukadma.in",
 } as const;
 
 /** A single pricing tier. `price`/`per`/`features` are UNCONFIRMED placeholders
