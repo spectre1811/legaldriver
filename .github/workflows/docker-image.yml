@@ -4,6 +4,9 @@ name: docker-image
 # BUILD-ONLY: no registry push, no deploy, no AWS spend. Path-filtered so it only runs
 # when a build input changes (keeps GitHub-hosted minutes near zero).
 #
+# Uses plain `docker build` (Docker is preinstalled on ubuntu-latest) and only the
+# first-party actions/checkout — matches the proven org CI pattern, no third-party actions.
+#
 # Runs on GitHub-hosted ubuntu-latest, NOT the self-hosted [self-hosted, mukadma] runner:
 # those runners are themselves ephemeral Docker containers with no Docker daemon (same
 # reason this repo's db-tests stays GitHub-hosted — see mukadma-infra
@@ -32,12 +35,5 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
       - name: Build standalone image (no push)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          tags: legaldriver:ci-${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        run: docker build -t legaldriver:ci-${{ github.sha }} .
