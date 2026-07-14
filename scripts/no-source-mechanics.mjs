@@ -24,6 +24,10 @@
 // services.ecourts.gov.in so the advocate knows where to go — founder decision 2026-07-14) go in
 // scripts/source-mechanics-allowlist.json so that outcome never has to fight this guard.
 //
+// WO-181 (2026-07-15) extends this same denylist machinery to a second banned-copy category: the
+// retired "operating system for Indian law/lawyers" tagline (a competitor/TM collision) — kept here
+// rather than in a parallel guard so there is ONE user-copy gate, already wired into the CI build.
+//
 // Run: node scripts/no-source-mechanics.mjs   (wired into CI as `npm run guard:copy`)
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -44,6 +48,12 @@ const DENYLIST = [
   { re: /\bcrawl\w*/i, term: "crawl" },
   { re: /स्क्रैप/, term: "scrape (स्क्रैप)" },
   { re: /क्रॉल/, term: "crawl (क्रॉल)" },
+  // WO-181 · retired brand tagline — "the operating system for India('s)/Indian law(yers)".
+  // A competitor/TM collision (ecourtsindia.com hero = "The Operating System for Indian Law");
+  // purged 2026-07-15, replaced by "India's courts, made intelligent." Curly-or-straight ’/'.
+  // Devanagari carries the transliteration the Latin rule can't see (as with स्क्रैप/क्रॉल).
+  { re: /operating\s+system\s+for\s+india(?:n|['’]s)?\s+(?:law|lawyers)\b/i, term: "retired tagline (operating system for Indian law/lawyers)" },
+  { re: /ऑपरेटिंग\s*सिस्टम/, term: "retired tagline (ऑपरेटिंग सिस्टम)" },
 ];
 
 // Copy-bearing components/pages that emit literal user-visible default text (the catalogs cover the
@@ -54,6 +64,7 @@ const COPY_FILES = [
   "src/components/court/empty-cell.tsx",         // English fallback "no value" copy
   "src/app/dashboard/cases/cnr/[cnr]/page.tsx",  // interpolated source-line fallback
   "src/app/dashboard/cases/[id]/page.tsx",       // interpolated source-line fallback
+  "src/lib/brand.ts",                            // WO-181 · the tagline's canonical home
 ];
 
 // WO-131 W2 email templates: guard their directory too, for when they land.

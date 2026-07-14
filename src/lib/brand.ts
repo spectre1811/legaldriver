@@ -12,7 +12,7 @@ export const brand = {
   /** Gujarati lockup. */
   nameGujarati: "મુકદમા",
   /** One-liner; canonical copy in BRAND.md. */
-  tagline: "The operating system for Indian lawyers.",
+  tagline: "India's courts, made intelligent.",
   /** Design/wordmark applied. External launch still gated on TM/domain clearance (B5). */
   isFinal: true,
 } as const;
