@@ -1,37 +1,27 @@
 name: docker-image
 
-# WO-142 W0 — prove the standalone Docker image builds (AWS/Fargate migration prep).
-# BUILD-ONLY: no registry push, no deploy, no AWS spend. Path-filtered so it only runs
-# when a build input changes (keeps GitHub-hosted minutes near zero).
+# WO-142 W0 — standalone Docker image build (AWS/Fargate migration prep). BUILD-ONLY.
 #
-# Uses plain `docker build` (Docker is preinstalled on ubuntu-latest) and only the
-# first-party actions/checkout — matches the proven org CI pattern, no third-party actions.
-#
-# Runs on GitHub-hosted ubuntu-latest, NOT the self-hosted [self-hosted, mukadma] runner:
-# those runners are themselves ephemeral Docker containers with no Docker daemon (same
-# reason this repo's db-tests stays GitHub-hosted — see mukadma-infra
-# docs/gha-runner-migration-plan.md). W1 infra note: to move image builds in-VPC per the
-# target architecture, the runner host needs a Docker daemon/buildx (DinD or host socket)
-# or a dedicated build instance → ECR.
+# ⚠️ DORMANT SCAFFOLD (workflow_dispatch only) — cannot run green on today's infra:
+#   • GitHub-hosted `ubuntu-latest` is billing-disabled ($0 Actions budget, free tier spent
+#     till Aug 1 — NOW.md). Hosted jobs get no runner assigned and fail at 0 steps.
+#   • The self-hosted `[self-hosted, mukadma]` runners are themselves ephemeral Docker
+#     CONTAINERS with no Docker daemon (same reason this repo's db-tests stays hosted —
+#     mukadma-infra docs/gha-runner-migration-plan.md).
+# So "build the image IN CI" is a **W1 infra dependency**, not a W0 gate: W1 must give the
+# runner host a Docker daemon/buildx (host socket or DinD) or a dedicated build instance →
+# ECR. This file is the ready-to-arm scaffold; flip `on:` to `pull_request` (path-filtered)
+# once that capability lands. The Dockerfile's build stage is meanwhile validated by proxy —
+# the normal CI runs the identical `npm ci && next build` on Node 22.
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "Dockerfile"
-      - ".dockerignore"
-      - "next.config.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/docker-image.yml"
-
-concurrency:
-  group: docker-image-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   image:
-    runs-on: ubuntu-latest
+    # Target = the in-VPC self-hosted runner (per WO-142 §7). Precondition: a Docker daemon
+    # on the runner host (W1). Do not dispatch until then — it will fail without Docker.
+    runs-on: [self-hosted, mukadma]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
