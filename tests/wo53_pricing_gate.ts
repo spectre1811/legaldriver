@@ -24,8 +24,9 @@ check("exactly one tier is emphasised (hot)", pricing.tiers.filter((t) => t.hot)
 check("every tier declares a CTA verb", pricing.tiers.every((t) => ["start", "choose", "talk"].includes(t.cta)));
 check("every tier carries feature keys (rendered only when public)", pricing.tiers.every((t) => t.features.length > 0));
 
-// --- the cross-product link points at the free public search (peshi), over https ---
-check("public-search link is the peshi search origin", links.publicSearch === "https://peshi-search.vercel.app");
+// --- the cross-product link points at the free public search (mukadma-search), over https ---
+// Env-driven since WO-162 (NEXT_PUBLIC_SEARCH_URL); CI sets no env, so the shipped default applies.
+check("public-search link defaults to the brand search origin (mukadma.in)", links.publicSearch === "https://mukadma.in");
 check("public-search link is absolute https (external)", /^https:\/\//.test(links.publicSearch));
 
 // --- grievance officer: honest empty state until the founder appoints one ---
