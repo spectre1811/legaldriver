@@ -57,7 +57,7 @@ export default async function SettingsPage() {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  const captureBaseUrl = process.env.APP_BASE_URL?.startsWith("http") ? process.env.APP_BASE_URL : "https://legaldriver.vercel.app";
+  const captureBaseUrl = process.env.APP_BASE_URL?.startsWith("http") ? process.env.APP_BASE_URL : "https://app.mukadma.in";
 
   // Cache + provider health come from the shared gateway (admin/service-role).
   // Refresh-request rows are tenant-scoped via RLS through createClient().

@@ -19,10 +19,12 @@
 // M3-MRR note) — but the *list* prices and per-tier limits are design-concept
 // placeholders and stay gated until #11 is ruled.
 
-/** External product links (the free public case search lives in peshi-search). */
+/** External product links (the free public case search lives in mukadma-search). */
 export const links = {
-  /** Free public case search — peshi-search (WO-51 cross-link back to us). */
-  publicSearch: "https://peshi-search.vercel.app",
+  /** Free public case search — mukadma-search (WO-51 cross-link back to us).
+   *  Env-driven (WO-162): the mukadma.in cutover is a Vercel env flip, not a code
+   *  change; default is the brand host (vercel.app 308-redirects there after W2). */
+  publicSearch: process.env.NEXT_PUBLIC_SEARCH_URL ?? "https://mukadma.in",
 } as const;
 
 /** A single pricing tier. `price`/`per`/`features` are UNCONFIRMED placeholders
