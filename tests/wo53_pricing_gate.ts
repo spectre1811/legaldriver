@@ -26,7 +26,7 @@ check("every tier carries feature keys (rendered only when public)", pricing.tie
 
 // --- the cross-product link points at the free public search (mukadma-search), over https ---
 // Env-driven since WO-162 (NEXT_PUBLIC_SEARCH_URL); CI sets no env, so the shipped default applies.
-check("public-search link defaults to the brand search origin (mukadma.in)", links.publicSearch === "https://mukadma.in");
+check("public-search link defaults to the brand search origin (search.mukadma.in)", links.publicSearch === "https://search.mukadma.in");
 check("public-search link is absolute https (external)", /^https:\/\//.test(links.publicSearch));
 
 // --- grievance officer: honest empty state until the founder appoints one ---
