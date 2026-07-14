@@ -9,28 +9,54 @@ name: automerge
 # Why label-gated: pushing a wt/* branch is frequent + often WIP, so we do NOT
 # merge every green PR blindly. The label is the human/reviewer go-ahead; CI green
 # is still required. To make a PR auto-land, the reviewer adds the `automerge` label.
+#
+# LEVEL-TRIGGERED (ported from peshi-search PR #60, 2026-07-14 — a green+labelled PR
+# was stranded and merged by hand): every trigger RECONCILES ALL open PRs — it merges
+# every PR that is (labelled `automerge`) AND (all checks green) AND (mergeable),
+# regardless of what fired the run. The old design was edge-triggered and narrow, so a
+# PR fell through the cracks whenever its one chance was missed:
+#   • the CI-completion (`workflow_run`) path only looked at the PR whose head SHA
+#     exactly matched the just-finished run — never a full sweep, so a PR labelled
+#     after its CI went green was never re-evaluated; and
+#   • the one-shot `labeled` run can be CANCELLED when automerge runs pile up in the
+#     `integrate-main` concurrency group (only one pending run survives).
+# Reconcile-all is idempotent and self-healing: a dropped / cancelled / raced event
+# no longer strands a PR, because the next trigger re-scans everything. The `schedule`
+# safety-net closes the last gap (no event fires at all). NOTE: this GitHub-Actions
+# `schedule` is unrelated to the Vercel Hobby "≤1 cron/day" limit (vercel.json crons).
+# Also flips this job off `ubuntu-latest` → the self-hosted `mukadma` runner (the
+# documented standard; hosted minutes are spent till Aug 1 so a hosted job silently
+# won't start). CI green gates only the `build` check, matching prior behaviour —
+# DB Tests / E2E / QA Sweep do NOT block automerge here.
 
 on:
-  # Fires when the CI workflow finishes. workflow_run always runs the copy of this
-  # file on the DEFAULT branch (main), so it must live on main to take effect.
+  # Any CI completion → reconcile every labelled PR (not just this run's PR).
   workflow_run:
     workflows: ["CI"]
     types: [completed]
-  # Re-evaluate the moment the label is applied to an already-green PR.
+  # The moment the label is applied.
   pull_request_target:
     types: [labeled]
+  # Safety net — self-heal a PR whose every event was missed/cancelled.
+  schedule:
+    - cron: "*/15 * * * *"
+  # Manual reconcile kick (ops).
+  workflow_dispatch: {}
 
 concurrency:
   # STATIC group → one merge to main at a time. This IS the serialization point
-  # (the "one integrator" property) — never cancel an in-flight merge.
+  # (the "one integrator" property) — never cancel an in-flight merge. Pending runs
+  # may be cancelled under pile-up, but reconcile-all makes that harmless: whichever
+  # run survives merges every eligible PR.
   group: integrate-main
   cancel-in-progress: false
 
 permissions:
   contents: write        # merge a PR = a contents write
   pull-requests: write   # read PR state / labels
-  checks: read           # read combined check status on the label path
+  checks: read           # read combined check status
   statuses: read
+  issues: write          # createComment (PR = issue) on soft-fail
 
 jobs:
   merge:
@@ -41,46 +67,63 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo;
-            const fromCI = context.eventName === 'workflow_run';
 
-            // Resolve candidate PR(s) + whether CI is already known-green from the trigger.
-            let prNumbers = [];
-            if (fromCI) {
-              const run = context.payload.workflow_run;
-              if (run.conclusion !== 'success' || run.event !== 'pull_request') {
-                core.info(`CI run not a successful PR run (conclusion=${run.conclusion}, event=${run.event}) — skip`);
-                return;
-              }
-              // Open PR(s) whose head is exactly this run's head SHA → CI for them is green.
-              const list = await github.rest.pulls.list({ owner, repo, state: 'open', per_page: 100 });
-              prNumbers = list.data.filter(p => p.head.sha === run.head_sha).map(p => p.number);
-              if (!prNumbers.length) { core.info(`No open PR at ${run.head_sha.slice(0,9)} — skip`); return; }
-            } else {
-              if (context.payload.label?.name !== 'automerge') { core.info('label != automerge — skip'); return; }
-              prNumbers = [context.payload.pull_request.number];
+            // Level-triggered: consider EVERY open PR, regardless of what fired us.
+            const all = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', per_page: 100,
+            });
+            const candidates = all.filter(p =>
+              !p.draft && p.labels.some(l => l.name === 'automerge'));
+            if (!candidates.length) {
+              core.info('no open automerge-labelled PRs — nothing to reconcile');
+              return;
             }
+            core.info(`reconciling ${candidates.length} automerge-labelled PR(s): ${candidates.map(p => '#' + p.number).join(', ')}`);
 
-            for (const number of prNumbers) {
-              const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
-              if (pr.state !== 'open' || pr.draft) { core.info(`PR #${number} not an open non-draft — skip`); continue; }
-              if (!pr.labels.map(l => l.name).includes('automerge')) { core.info(`PR #${number}: no 'automerge' label — skip (reviewer applies it)`); continue; }
+            let merged = 0;
+            for (const cand of candidates) {
+              // Re-fetch for fresh mergeable + head SHA (list data can be stale).
+              const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: cand.number });
+              const number = pr.number;
+              if (pr.state !== 'open' || pr.draft) { core.info(`PR #${number}: not an open non-draft — skip`); continue; }
+              if (!pr.labels.map(l => l.name).includes('automerge')) { core.info(`PR #${number}: label removed — skip`); continue; }
 
-              // CI is known-green on the workflow_run trigger; on the label trigger, verify it.
-              let green = fromCI;
-              if (!green) {
-                const { data: cs } = await github.rest.checks.listForRef({ owner, repo, ref: pr.head.sha });
-                const build = cs.check_runs.filter(c => (c.name || '').toLowerCase().includes('build'));
-                const relevant = build.length ? build : cs.check_runs;
-                green = relevant.length > 0 && relevant.every(c => c.conclusion === 'success');
-              }
-              if (!green) { core.info(`PR #${number}: checks not all green yet — will retry on CI completion`); continue; }
+              // Green = all checks on the head SHA concluded success. Prefer the
+              // `build` check (our CI job) so unrelated neutral/skipped checks from
+              // other workflows (DB Tests / E2E / QA Sweep) don't hold a PR hostage.
+              const { data: cs } = await github.rest.checks.listForRef({ owner, repo, ref: pr.head.sha });
+              const runs = cs.check_runs.filter(c => c.name !== 'merge'); // ignore our own job if ever listed
+              const build = runs.filter(c => (c.name || '').toLowerCase().includes('build'));
+              const relevant = build.length ? build : runs;
+              const green = relevant.length > 0 && relevant.every(c => c.conclusion === 'success');
+              if (!green) { core.info(`PR #${number}: checks not all green yet — skip this pass (will reconcile next trigger)`); continue; }
+
               if (pr.mergeable === false) { core.warning(`PR #${number}: not mergeable (conflicts) — bounce to author`); continue; }
+              // pr.mergeable may be null while GitHub recomputes (e.g. right after a
+              // prior merge advanced main) — let the merge call decide and retry on failure.
 
-              await github.rest.pulls.merge({
-                owner, repo, pull_number: number,
-                merge_method: 'merge',
-                commit_title: `integrate: ${pr.head.ref} → main (automerge)`,
-                commit_message: pr.title,
-              });
-              core.notice(`✓ merged PR #${number} (${pr.head.ref})`);
+              try {
+                await github.rest.pulls.merge({
+                  owner, repo, pull_number: number,
+                  merge_method: 'merge',
+                  commit_title: `integrate: ${pr.head.ref} → main (automerge)`,
+                  commit_message: pr.title,
+                });
+                core.notice(`✓ merged PR #${number} (${pr.head.ref})`);
+                merged++;
+              } catch (e) {
+                // Fail SOFT — an unhandled throw marks the run "failure" but leaves NO
+                // signal on the PR (how a green PR gets silently stranded). Surface it
+                // on the PR and move on to the next candidate.
+                const msg = String((e && e.message) || e);
+                const isWorkflow = /workflow/i.test(msg);
+                core.warning(`PR #${number}: automerge could not merge — ${msg}`);
+                const body = isWorkflow
+                  ? `⚠️ **Automerge can't merge this PR** — it changes \`.github/workflows/**\`, which the automerge \`GITHUB_TOKEN\` is forbidden from merging (GitHub blocks workflow-file changes without the \`workflow\` scope). **Merge it manually** (\`gh pr merge <n> --merge\`). The \`automerge\` label is retained. _(${msg})_`
+                  : `⚠️ **Automerge could not merge this PR:** ${msg}. The \`automerge\` label is retained; resolve and re-label, or merge manually. _(will retry on the next reconcile)_`;
+                try { await github.rest.issues.createComment({ owner, repo, issue_number: number, body }); }
+                catch (_) { /* comment is best-effort */ }
+                continue;
+              }
             }
+            core.info(`reconcile complete — merged ${merged}/${candidates.length}`);
