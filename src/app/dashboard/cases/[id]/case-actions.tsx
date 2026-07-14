@@ -61,7 +61,19 @@ export function RefreshButton({ matterId }: { matterId: string }) {
   return (
     <div className="flex items-center gap-2">
       <button
-        onClick={() => start(async () => { setMsg(null); const r = await refreshCase(matterId); setMsg({ ok: r.ok, text: r.message }); router.refresh(); })}
+        onClick={() => start(async () => {
+          // WO-156: catch a rejected server action (transport/runtime error) so the button
+          // shows an error instead of silently doing nothing — an unhandled rejection inside a
+          // useTransition callback is swallowed, which is exactly what read as "refresh is broken".
+          setMsg(null);
+          try {
+            const r = await refreshCase(matterId);
+            setMsg({ ok: r.ok, text: r.message });
+            router.refresh();
+          } catch {
+            setMsg({ ok: false, text: t("actions.refreshFailed") });
+          }
+        })}
         disabled={pending}
         className="btn-secondary"
       >

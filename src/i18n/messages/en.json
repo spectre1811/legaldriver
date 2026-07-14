@@ -544,6 +544,7 @@
       "dismiss": "Dismiss",
       "refresh": "Refresh",
       "refreshing": "Refreshing",
+      "refreshFailed": "Couldn't refresh — please try again.",
       "analysing": "Analysing…",
       "regenerate": "Regenerate",
       "generateSummary": "Generate AI summary",
