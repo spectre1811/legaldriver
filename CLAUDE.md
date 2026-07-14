@@ -61,7 +61,13 @@ Resend for email. Deploy on Vercel (P4).
    (`tests/wo01_sync_contract.ts` asserts this). Contract: ecourts-scraper
    `docs/decisions/2026-07-05-keyed-vs-public-v1-surface.md`.
 3. **Provenance + disclaimer on all court data**: store `source` + `last_synced_at`, show
-   "source: eCourts, last refreshed X" and "not legal advice — verify against the official record".
+   freshness ("Source: the court record · last refreshed X") and "not legal advice — verify against
+   the official record". **Product voice only (WO-132, founder directive 2026-07-13):** user-visible
+   copy speaks of "the court record" / freshness stamps, **never** the pipeline — no "eCourts", "NIC",
+   "NJDG", "scrape", or "crawl" on any user surface (i18n catalogs or copy components). The lone
+   founder-approved exception is the HITL capture step's portal URL `services.ecourts.gov.in`
+   (allowlisted). Enforced by `npm run guard:copy` (`scripts/no-source-mechanics.mjs`) in CI; add
+   approved exceptions to `scripts/source-mechanics-allowlist.json`.
 4. **No PII in logs.** Never log email bodies, tokens, or client data. OAuth refresh tokens are
    stored encrypted (Supabase Vault), referenced by `refresh_token_ref` — never in plaintext/logs.
 5. **LLM infers, deterministic code verifies/files.** Claude classifies documents; it never

@@ -12,6 +12,6 @@ export function EmptyCell({
   label?: string;
   className?: string;
 }) {
-  const text = label ?? (reason === "not-applicable" ? "not applicable" : "not on record at eCourts");
+  const text = label ?? (reason === "not-applicable" ? "not applicable" : "not on the court record");
   return <span className={`italic text-ec-ink-3 ${className}`.trim()}>{text}</span>;
 }

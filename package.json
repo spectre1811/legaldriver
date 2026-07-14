@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "guard:copy": "node scripts/no-source-mechanics.mjs",
     "db:types": "supabase gen types typescript --linked > src/lib/db/database.types.ts",
     "gen:routes": "node scripts/gen-routes.mjs",
     "gen:bar-councils": "node scripts/gen-bar-councils.mjs",

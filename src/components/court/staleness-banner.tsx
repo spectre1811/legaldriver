@@ -24,7 +24,7 @@ export function StalenessBanner({
   const text =
     label ??
     (s.ageHours == null
-      ? "This record has not been refreshed from eCourts yet — verify against the official record."
+      ? "This record has not been refreshed yet — verify against the official record."
       : `This record was last refreshed ${relativeAge(lastSyncedAt, now)} — it may be out of date; verify against the official record.`);
   return (
     <NoticeBanner tone="warn" className={`text-xs ${className}`.trim()}>

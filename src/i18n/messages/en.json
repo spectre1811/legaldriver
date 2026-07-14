@@ -11,7 +11,7 @@
       "loading": "Loading…",
       "empty": "Nothing here yet",
       "error": "Something went wrong",
-      "notOnRecord": "not on record at eCourts"
+      "notOnRecord": "not on the court record"
     },
     "disclaimer": "Not legal advice — verify against the official court record.",
     "provenance": "Source: {source} · updated {time}",
@@ -154,7 +154,7 @@
       "step3": "Get tomorrow's cause list on WhatsApp",
       "primaryCta": "Set up my practice",
       "secondaryCta": "Add a case by CNR",
-      "foot": "Takes about 2 minutes · Sourced from public eCourts records."
+      "foot": "Takes about 2 minutes · From public court records."
     },
     "activation": {
       "title": "Finish setting up",
@@ -351,7 +351,7 @@
     },
     "manual": {
       "toggle": "Add a case manually",
-      "help": "For a case the court portal can’t find yet (pre-filing or not on eCourts). Add the CNR later to sync live data.",
+      "help": "For a case the court portal can’t find yet (pre-filing or not yet on the court record). Add the CNR later to sync live data.",
       "titleLabel": "Case title",
       "titlePlaceholder": "e.g. Sharma vs State of Gujarat",
       "courtLabel": "Court (optional)",
@@ -409,7 +409,7 @@
     "source": {
       "line": "Source {source} · last refreshed {time}",
       "never": "never",
-      "note": "Court data is fetched from the official eCourts record via our licensed pipeline — it can lag or contain errors.",
+      "note": "Court data comes from the official court record — it can lag or contain errors.",
       "verify": "Always verify against the official record; not legal advice.",
       "diaryHint": "Set your own diary date above if the court record is wrong or stale."
     },
@@ -497,11 +497,11 @@
     },
     "courtFilings": {
       "title": "Filings on the court record",
-      "help": "Documents filed with the court (source: eCourts) — distinct from documents you upload here."
+      "help": "Documents filed with the court (from the court record) — distinct from documents you upload here."
     },
     "objections": {
       "title": "Registry objections",
-      "help": "Scrutiny objections raised by the court registry (source: eCourts).",
+      "help": "Scrutiny objections raised by the court registry (from the court record).",
       "raised": "Objection raised",
       "complyBy": "comply by"
     },
@@ -592,7 +592,7 @@
     "masked": "name withheld (protected matter)",
     "maskedTitle": "name withheld",
     "empty": {
-      "onRecord": "not on record at eCourts",
+      "onRecord": "not on the court record",
       "notApplicable": "not applicable",
       "notSet": "not set",
       "client": "no client linked",
@@ -1471,7 +1471,7 @@
     "noJudges": "No judges found",
     "noParties": "No parties found",
     "noPartiesBody": "Try a surname (fuzzy match across litigants).",
-    "footer": "Source: Mukadma / eCourts (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record.",
+    "footer": "Source: Mukadma / public court records (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record.",
     "caseNumber": {
       "title": "Find a case by number",
       "subtitle": "Registration number, not CNR — e.g. type C.S., number 1234, year 2022.",
@@ -1588,7 +1588,7 @@
     },
     "howHeading": "How this works — honestly",
     "intro1": "We <b>auto-fetch your cases by your name</b> from compliant sources — no manual upload. Active sources: <b>{providers}</b>. The free <b>open judgments corpus</b> covers High Courts + the Supreme Court (mostly decided cases); adding a licensed key (Indian Kanoon / Vakeel360) broadens coverage to live orders automatically.",
-    "intro2": "What we <i>don't</i> do: scrape eCourts or solve its CAPTCHA. India has no compliant API for an advocate's full live open-case roster by bar number, so for live status we also use your <b>cause list</b>, cases you <b>add by CNR</b>, and <b>HITL refresh</b>. Everything is marked with its source; <b>not legal advice</b>.",
+    "intro2": "What we <i>don't</i> do: automate the court portal or bypass its CAPTCHA. India has no compliant API for an advocate's full live open-case roster by bar number, so for live status we also use your <b>cause list</b>, cases you <b>add by CNR</b>, and <b>HITL refresh</b>. Everything is marked with its source; <b>not legal advice</b>.",
     "providersNone": "none configured",
     "provider": {
       "corpus": "open corpus (free)",
@@ -1771,11 +1771,11 @@
       "nameOnlyAction": "Add by name instead",
       "nameOnlyBack": "Fetch my full case roster instead",
       "nameOnlyNote": "Cause-list alerts only — no automatic case fetch. Add the Bar enrolment number any time to pull your full roster.",
-      "checkNeedsYear": "Add the enrolment year — e.g. G/702/2020. The year is what pulls your exact eCourts roster.",
-      "checkReady": "Ready — {council} · serial {serial} · enrolled {year}. We'll pull your exact eCourts roster.",
+      "checkNeedsYear": "Add the enrolment year — e.g. G/702/2020. The year is what pulls your exact court roster.",
+      "checkReady": "Ready — {council} · serial {serial} · enrolled {year}. We'll pull your exact court roster.",
       "checkParsed": "{council} · serial {serial} · enrolled {year}. Live roster search isn't live for this State Bar Council yet — we'll add by name + cause list.",
       "checkParsedNoCouncil": "{canonical} looks valid — pick your State Bar Council below, or we'll add by name + cause list.",
-      "hint": "Enter your full State Bar Council enrolment number — <b>state, serial and year</b> (e.g. G/702/2020). The year is what lets us pull your exact eCourts case roster; a ✓ marks councils with live roster search today."
+      "hint": "Enter your full State Bar Council enrolment number — <b>state, serial and year</b> (e.g. G/702/2020). The year is what lets us pull your exact court case roster; a ✓ marks councils with live roster search today."
     },
     "billing": {
       "heading": "Billing & GST",
@@ -1791,7 +1791,7 @@
     },
     "court": {
       "heading": "Court data",
-      "desc": "Reads come from our shared cache first. If a provider errors, we fall back to the last good (stale) data rather than failing the request — resilience without scraping.",
+      "desc": "Reads come from our shared cache first. If a provider errors, we fall back to the last good (stale) data rather than failing the request — resilience without automation.",
       "providerCol": "Provider",
       "statusCol": "Status",
       "noActivity": "No provider activity yet.",
@@ -1801,14 +1801,14 @@
       "cachedCases": "{count, plural, one {cached case} other {cached cases}}",
       "lastRefresh": "Last refresh",
       "recentHeading": "Recent refresh requests",
-      "provenance": "Source: eCourts. Court data is informational — verify against the official record.",
+      "provenance": "Source: the court record. Court data is informational — verify against the official record.",
       "cnrPlaceholder": "CNR, e.g. MHAU010012342024",
       "refreshing": "Refreshing…",
       "refreshViaProvider": "Refresh via provider",
       "hitlSummary": "Provider unavailable? Refresh from the official portal yourself",
-      "hitlNote": "No scraping / no CAPTCHA solving — you solve any CAPTCHA on the official eCourts portal; we parse what you bring back.",
-      "payloadPlaceholder": "Paste the JSON or text the official eCourts portal returned for this CNR…",
-      "payloadLabel": "Pasted eCourts payload",
+      "hitlNote": "No automation / no CAPTCHA solving — you solve any CAPTCHA on the official court portal; we parse what you bring back.",
+      "payloadPlaceholder": "Paste the JSON or text the official court portal returned for this CNR…",
+      "payloadLabel": "Pasted court-portal payload",
       "notePlaceholder": "Note (optional)",
       "noteLabel": "Note",
       "submitting": "Submitting…",
@@ -1830,8 +1830,8 @@
       }
     },
     "capture": {
-      "heading": "Capture from eCourts (human-in-the-loop)",
-      "intro": "Get fresh case data without any scraping: <b>you</b> log into the official eCourts portal and solve the CAPTCHA, open a case, then click this button — we parse the page into the case. We never automate or bypass the CAPTCHA.",
+      "heading": "Capture from the court portal (human-in-the-loop)",
+      "intro": "Get fresh case data yourself: <b>you</b> log into the official court portal and solve the CAPTCHA, open a case, then click this button — we parse the page into the case. We never automate or bypass the CAPTCHA.",
       "dragTitle": "Drag me to your bookmarks bar",
       "buttonLabel": "Capture to Mukadma",
       "dragHint": "← drag to your bookmarks bar",
@@ -1856,7 +1856,7 @@
       "nameRequired": "Advocate name is required.",
       "noTenant": "No tenant.",
       "added": "Added advocate {name}.",
-      "addedNoYear": "Added {name}. Add your enrolment year (e.g. G/702/2020) — the year lets us pull your exact eCourts case roster.",
+      "addedNoYear": "Added {name}. Add your enrolment year (e.g. G/702/2020) — the year lets us pull your exact court case roster.",
       "needsEnrolment": "Enter your full Bar enrolment number with year (e.g. G/702/2020) to fetch your cases — or use \"Add by name only\" for cause-list alerts.",
       "deleted": "Deleted."
     }
@@ -2129,7 +2129,7 @@
     "emptyDecisions": "No dated decisions in the sample",
     "dataGapLabel": "DATA GAP:",
     "dataGapDisposalNature": "Disposal-nature is not present for cases in this sample — the API may not have captured it.",
-    "provenance": "Analytics over the latest {returned} of {count} cases. Source: Mukadma / eCourts. Indicative only — not legal advice."
+    "provenance": "Analytics over the latest {returned} of {count} cases. Source: Mukadma / court records. Indicative only — not legal advice."
   },
   "advocate": {
     "backToLookup": "Judges & advocates",
@@ -2164,7 +2164,7 @@
     "tracked": "tracked",
     "emptyTitle": "No cases on record",
     "emptyBody": "The API returned no caseload for this bar code.",
-    "sourceNote": "Source: Mukadma / eCourts. Coverage is Gujarat (HC + district), expanding. Not legal advice — verify against the official record."
+    "sourceNote": "Source: Mukadma / court records. Coverage is Gujarat (HC + district), expanding. Not legal advice — verify against the official record."
   },
   "privacy": {
     "title": "Privacy",
@@ -2191,7 +2191,7 @@
     "directoryHeading": "A neutral directory",
     "directoryBody": "Mukadma does not rank, recommend or endorse advocates, and carries no ratings or “best lawyer” claims. Directory information is drawn from the public record and from details an advocate chooses to claim.",
     "acceptableHeading": "Acceptable use",
-    "acceptableBody": "Use Mukadma lawfully and only for your own practice and clients. Do not attempt to access other tenants’ data, scrape the service, or misuse court data. Tenant data is isolated; you are responsible for the accuracy of what you enter.",
+    "acceptableBody": "Use Mukadma lawfully and only for your own practice and clients. Do not attempt to access other tenants’ data, bulk-extract or automatically harvest the service, or misuse court data. Tenant data is isolated; you are responsible for the accuracy of what you enter.",
     "subscriptionsHeading": "Subscriptions & payment",
     "subscriptionsBody": "Paid plans are billed per lawyer as described on our <pricing>pricing</pricing>. Taxes apply as required. You can cancel; access continues to the end of the paid period.",
     "liabilityHeading": "Liability & governing law",

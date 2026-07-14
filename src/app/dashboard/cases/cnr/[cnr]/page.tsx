@@ -301,7 +301,7 @@ export default async function CasePreviewPage({ params }: { params: { cnr: strin
 
       {/* Provenance + disclaimer */}
       <div className="ec-card px-5 py-4">
-        <p className="num text-sm text-ec-ink-3">{tcd("source.line", { source: c.source ?? "eCourts", time: refreshed })}</p>
+        <p className="num text-sm text-ec-ink-3">{tcd("source.line", { source: c.source ?? "the court record", time: refreshed })}</p>
         <p className="mt-2 text-xs text-ec-ink-3">{tcd("source.note")} <span className="font-medium text-ec-ink-2">{tcd("source.verify")}</span></p>
       </div>
 
