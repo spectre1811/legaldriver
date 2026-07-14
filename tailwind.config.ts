@@ -39,9 +39,17 @@ const config: Config = {
           paper: "var(--paper)",
           "paper-2": "var(--paper-2)",
           "paper-3": "var(--paper-3)",
+          band: "var(--band)",
           ink: "var(--ink)",
           "ink-2": "var(--ink-2)",
           "ink-3": "var(--ink-3)",
+          // v2 canonical names (Graphite & Bronze). Prefer these in new work.
+          bronze: "var(--bronze)",
+          "bronze-deep": "var(--bronze-deep)",
+          "bronze-tint": "var(--bronze-tint)",
+          honey: "var(--honey)",
+          "on-honey": "var(--on-honey)",
+          // legacy aliases (still resolve; repointed to bronze in tokens.css).
           brass: "var(--brass)",
           "brass-deep": "var(--brass-deep)",
           "brass-tint": "var(--brass-tint)",
@@ -64,9 +72,11 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         serif: ["var(--font-serif)", "Georgia", "serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
         // token type roles (chain incl. Noto Devanagari/Gujarati) — see tokens.css
         display: ["var(--f-display)"],
         ui: ["var(--f-ui)"],
+        code: ["var(--f-mono)"],
       },
       borderRadius: { xl: "0.875rem", "2xl": "1.125rem", "ec-s": "var(--r-s)", "ec-m": "var(--r-m)" },
       boxShadow: {
