@@ -491,7 +491,14 @@ export async function refreshCase(matterId: string): Promise<ActionResult> {
   const normalized = (await getCaseCached(matter.cnr, { force: true })).case;
   if (!normalized) return { ok: false, message: "Refresh returned nothing." };
 
-  await upsertCase(supabase, tenantId, normalized);
+  try {
+    await upsertCase(supabase, tenantId, normalized);
+  } catch (e) {
+    // WO-156: a failed write must NOT masquerade as a dead/no-op button — surface it as an
+    // honest error (and log the detail server-side) instead of throwing an unhandled rejection.
+    console.error("[refreshCase] upsertCase failed", { matterId, cnr: matter.cnr, error: e });
+    return { ok: false, message: "Couldn't save the refreshed case — please try again." };
+  }
   await supabase.from("audit_event").insert({
     tenant_id: tenantId,
     action: "case.refresh",

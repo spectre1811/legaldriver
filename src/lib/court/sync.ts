@@ -98,23 +98,39 @@ export async function upsertCase(
         judge: h.judge ?? null,
         raw: (h.raw ?? {}) as Database["public"]["Tables"]["hearing"]["Insert"]["raw"],
       }));
-    if (rows.length) await supabase.from("hearing").insert(rows);
+    if (rows.length) {
+      // WO-156: never swallow the write — a rejected hearing insert must surface, not vanish.
+      const { error: hearingErr } = await supabase.from("hearing").insert(rows);
+      if (hearingErr) throw new Error(`upsertCase: hearing insert failed: ${hearingErr.message}`);
+    }
   }
 
   // Replace court orders for the matter (idempotent re-sync).
   await supabase.from("court_order").delete().eq("matter_id", matterId);
   if (c.orders?.length) {
-    const orderRows = c.orders.map((o) => ({
-      tenant_id: tenantId,
-      matter_id: matterId,
-      order_date: o.date && /^\d{4}-\d{2}-\d{2}/.test(o.date) ? o.date.slice(0, 10) : null,
-      title: o.title ?? null,
-      // Do NOT persist the provider's presigned pdf_url — it expires (~1h) → AccessDenied.
-      // Store only the stable provider order id; the PDF is streamed on demand via
-      // /api/court/order-pdf → the provider's stable /order/{id}/pdf endpoint.
-      raw: { order_id: o.id, has_pdf: !!o.pdfUrl } as Database["public"]["Tables"]["court_order"]["Insert"]["raw"],
-    }));
-    await supabase.from("court_order").insert(orderRows);
+    // WO-156: dedupe by the STABLE provider order id — the identity of an order. Multiple
+    // orders can legitimately be dateless with a generic "Order" title, so keying on
+    // (date, title) collapses distinct orders and (under the old court_order_dedup_idx unique
+    // index) made the whole multi-row insert fail atomically → 0 orders persisted silently.
+    const seenOrderId = new Set<string>();
+    const orderRows = c.orders
+      .filter((o) => o.id && !seenOrderId.has(o.id) && seenOrderId.add(o.id))
+      .map((o) => ({
+        tenant_id: tenantId,
+        matter_id: matterId,
+        order_date: o.date && /^\d{4}-\d{2}-\d{2}/.test(o.date) ? o.date.slice(0, 10) : null,
+        title: o.title ?? null,
+        // Do NOT persist the provider's presigned pdf_url — it expires (~1h) → AccessDenied.
+        // Store only the stable provider order id; the PDF is streamed on demand via
+        // /api/court/order-pdf → the provider's stable /order/{id}/pdf endpoint.
+        raw: { order_id: o.id, has_pdf: !!o.pdfUrl } as Database["public"]["Tables"]["court_order"]["Insert"]["raw"],
+      }));
+    if (orderRows.length) {
+      // WO-156: surface a failed order write instead of swallowing it (the exact bug that
+      // wiped orders on every refresh while the action still reported success).
+      const { error: orderErr } = await supabase.from("court_order").insert(orderRows);
+      if (orderErr) throw new Error(`upsertCase: court_order insert failed: ${orderErr.message}`);
+    }
   }
 
   // Schedule reminders for the next hearing. Replace-on-change: clear pending
