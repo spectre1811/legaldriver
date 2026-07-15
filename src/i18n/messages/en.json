@@ -1757,6 +1757,7 @@
       "deliveryNote": "Preferences are saved now; WhatsApp/SMS delivery activates when the messaging provider is live.",
       "save": "Save preferences",
       "saving": "Saving…",
+      "invalidPhone": "Enter a valid WhatsApp number, e.g. +91XXXXXXXXXX.",
       "saved": "Notification preferences saved."
     },
     "advocates": {
