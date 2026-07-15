@@ -1,21 +1,17 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
 import { AddCaseForm } from "./add-case-form";
-import { CourtProviderBanner } from "@/components/court-provider-banner";
-import { Console, type SavedView } from "./console";
+import { CasesToolbar } from "./cases-toolbar";
 import { CasesTable } from "./cases-table";
-import { CasesTabs } from "./cases-tabs";
-import { CasesTierTabs } from "./cases-tier-tabs";
 import { CasesAttention } from "./cases-attention";
 import { Pagination } from "@/components/pagination";
 import { fetchCasesPage, fetchViewCounts, fetchTierCounts, type CasesFilters } from "./cases-query";
 import { groupFacet, advocateKey, actKey } from "./facet-normalize";
+import type { SavedView } from "./cases-nav";
 import { parseDensity, DENSITY_COOKIE } from "./density";
 import { parsePage, clampPerPage } from "@/lib/paginate";
-import { maskTitle } from "@/lib/court/mask";
 import { sanitizeTrack } from "@/lib/auth/redirects";
 
 function isoDay(d: Date) {
@@ -36,9 +32,6 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   // WO-54 W4: per-user list density from the cookie → correct first paint (no hydration flash).
   const density = parseDensity(cookies().get(DENSITY_COOKIE)?.value);
 
-  // Numbered-page pagination (WO-39): fetch just this page's slice + an exact total count.
-  // Was `.limit(500)` silent truncation. Facets/views still read the wider set — a facet RPC
-  // to replace the 1000-row scan is the founder-gated follow-up.
   // WO-54 W2b: the facet option lists are scoped to the ACTIVE TIER (uses matter_tier_idx) so the
   // dropdowns adapt per tier — on the High Court tab you only see HC courts/case-types/judges, etc.
   let facetQuery = supabase.from("matter").select("court, case_type, stage, status, advocate_names, act_names, judge_names").limit(1000);
@@ -61,15 +54,13 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const caseTypes = distinct("case_type");
   const stages = distinct("stage");
   // Real distinct status strings as stored ("Pending"/"Disposed"/…) — the "according to cases"
-  // status filter (WO-59), separate from the Open/Disposed semantic tabs.
+  // status filter (WO-59), separate from the Open/Disposed semantic segment.
   const statusValues = distinct("status");
 
   const distinctArray = (key: "advocate_names" | "act_names" | "judge_names") =>
     [...new Set((facetRows ?? []).flatMap((r) => (r[key] ?? []) as string[]).filter(Boolean))].sort();
-  // WO-57: collapse surface-only spelling variants (honorific/punctuation/whitespace/case) of one
-  // advocate/act into a single facet option that expands back to every raw variant on match, so the
-  // dropdown shows one entry and the filter returns the whole entity's cases (was: raw exact-match →
-  // `P R PATEL` and `P.R.PATEL` were two entries, each returning only its own variant's cases).
+  // WO-57: collapse surface-only spelling variants of one advocate/act into a single facet option
+  // that expands back to every raw variant on match (query builder unchanged — still overlaps).
   const advocateGroups = groupFacet(distinctArray("advocate_names"), advocateKey);
   const actGroups = groupFacet(distinctArray("act_names"), actKey);
   const judges = distinctArray("judge_names"); // WO-54 W2b: Judge facet (tier-scoped like the rest)
@@ -87,46 +78,42 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
+        <div className="flex items-center gap-2.5">
+          <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
+          {total > 0 && <span className="num rounded-ec-s bg-ec-paper-3 px-2 py-0.5 text-sm text-ec-ink-3">{total}</span>}
+        </div>
         <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("subtitle")}</p>
       </header>
-
-      <CourtProviderBanner />
 
       <CasesAttention counts={viewCounts} />
 
       <div className="ec-card p-5">
-        {/* ?track=<CNR> — the login deep link (WO-50/WO-51): prefill + auto-submit
-            the add-by-CNR form so "track this case" survives the auth round-trip. */}
+        {/* ?track=<CNR> — the login deep link (WO-50/WO-51): prefill + auto-submit the add-by-CNR
+            form so "track this case" survives the auth round-trip. */}
         <AddCaseForm autoCnr={sanitizeTrack(searchParams.track) ?? undefined} />
       </div>
 
-      <Console courts={courts} caseTypes={caseTypes} stages={stages} statuses={statusValues} advocateGroups={advocateGroups} actGroups={actGroups} judges={judges} />
-
-      {/* WO-54 W2: court-tier segmentation (primary axis) sits above the saved-view tabs. */}
-      <div className="space-y-2.5">
-        <CasesTierTabs counts={tierCounts} />
-        <CasesTabs counts={viewCounts} views={views} />
-      </div>
+      <CasesToolbar
+        courts={courts}
+        caseTypes={caseTypes}
+        stages={stages}
+        statuses={statusValues}
+        advocateGroups={advocateGroups}
+        actGroups={actGroups}
+        judges={judges}
+        tierCounts={tierCounts}
+        viewCounts={viewCounts}
+        views={views}
+      />
 
       {total > 0 ? (
         <>
-          <div className="num flex items-center justify-between px-1 text-xs text-ec-ink-3">
-            <span>{t("count", { count: total })}{activeFilters ? ` · ${t("filtered")}` : ""}</span>
-            {activeFilters && (
-              <Link href="/dashboard/cases" className="inline-flex items-center gap-1 hover:text-ec-brass-deep">
-                <Icon name="refresh" className="h-3.5 w-3.5" /> {t("clearFilters")}
-              </Link>
-            )}
-          </div>
-
           <CasesTable rows={matters} today={today} stages={stages} initialDensity={density} />
-
           <Pagination page={page} perPage={per} total={total} />
         </>
       ) : (
         <div className="ec-card flex flex-col items-center justify-center px-6 py-14 text-center">
-          <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-ec-m bg-ec-brass-tint text-ec-brass-deep">
+          <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-ec-m bg-ec-bronze-tint text-ec-bronze-deep">
             <Icon name="cases" className="h-5 w-5" />
           </span>
           <h3 className="font-display text-lg font-medium text-ec-ink">{activeFilters ? t("empty.filteredTitle") : t("empty.title")}</h3>

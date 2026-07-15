@@ -25,12 +25,13 @@ const query = src("src/app/dashboard/cases/cases-query.ts");
 ok("CasesFilters has a judge field", /judge\?: string \| string\[\]/.test(query));
 ok("judge filters via array overlap (any-of, like advocate/act)", /query\.overlaps\("judge_names", judges\)/.test(query));
 
-// ── Judge facet (console) ────────────────────────────────────────────────────
-const console_ = src("src/app/dashboard/cases/console.tsx");
-ok("console accepts a judges prop", /judges: string\[\]/.test(console_));
-ok("judge is a multi-select facet key", /const MULTI = new Set<string>\(\[[^\]]*"judge"/.test(console_));
-ok("judge is in the saved-view KEYS", /const KEYS = \[[^\]]*"judge"/.test(console_));
-ok("console renders the Judge dropdown", /multi\("judge", t\("judge"\), t\("allJudges"\)/.test(console_));
+// ── Judge facet (WO-147 W2: the facets live in the toolbar's Filters sheet now) ─
+const toolbar = src("src/app/dashboard/cases/cases-toolbar.tsx");
+const nav = src("src/app/dashboard/cases/cases-nav.ts");
+ok("toolbar accepts a judges prop", /judges: string\[\]/.test(toolbar));
+ok("judge is a multi-select facet key", /CASE_MULTI = new Set<string>\(\[[^\]]*"judge"/.test(nav));
+ok("judge is in the saved-view keys", /VIEW_KEYS = \[[^\]]*"judge"/.test(nav));
+ok("the Filters sheet renders the Judge facet", /multi\("judge", tc\("judge"\), tc\("allJudges"\)/.test(toolbar));
 
 console.log(failed === 0 ? "\nPASS" : `\nFAIL (${failed})`);
 process.exit(failed === 0 ? 0 : 1);

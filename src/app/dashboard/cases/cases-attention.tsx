@@ -7,9 +7,9 @@
 // already fetched (no new query). Only non-empty buckets render; when nothing is urgent (but cases
 // exist) it shows a calm "all caught up" line, so the bar is signal, never noise.
 
-import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "@/components/icons";
+import { useCasesNav } from "./cases-nav";
 import type { ViewCounts } from "./cases-query";
 
 type Tone = "danger" | "warn" | "neutral";
@@ -30,8 +30,7 @@ const TONE: Record<Tone, { chip: string; ring: string }> = {
 
 export function CasesAttention({ counts }: { counts: ViewCounts }) {
   const t = useTranslations("cases.attention");
-  const router = useRouter();
-  const sp = useSearchParams();
+  const { sp, setParam } = useCasesNav();
 
   // Nothing to triage on an empty account — the page's empty state speaks instead.
   if (counts.all === 0) return null;
@@ -39,13 +38,8 @@ export function CasesAttention({ counts }: { counts: ViewCounts }) {
   const active = sp.get("next");
   const shown = BUCKETS.filter((b) => counts[b.key] > 0);
 
-  const toggle = (b: Bucket) => {
-    const next = new URLSearchParams(sp.toString());
-    next.delete("page");
-    if (active === b.next) next.delete("next"); // click the active card again → clear the filter
-    else next.set("next", b.next);
-    router.push(next.toString() ? `/dashboard/cases?${next.toString()}` : "/dashboard/cases");
-  };
+  // Click the active card again → clear the filter. Routes through the shared soft-nav (no churn).
+  const toggle = (b: Bucket) => setParam("next", active === b.next ? "" : b.next);
 
   return (
     <section aria-label={t("title")} data-testid="cases-attention" className="space-y-2">
