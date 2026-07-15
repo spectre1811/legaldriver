@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { getMessagingClient } from "@/lib/services/messaging/client";
+import { normalizeE164 } from "@/lib/phone";
 import { logActivity } from "@/lib/activity";
 import type { Database } from "@/lib/db/database.types";
 
@@ -18,9 +19,9 @@ export async function sendMessage(
   channel: "whatsapp",
   body: string,
 ): Promise<SendResult> {
-  const trimmedTo = to.trim();
+  const normalizedTo = normalizeE164(to);
   const trimmedBody = body.trim();
-  if (!trimmedTo) return { ok: false, message: "Recipient number is required." };
+  if (!normalizedTo) return { ok: false, message: "Enter a valid phone number, e.g. +91XXXXXXXXXX." };
   if (!trimmedBody) return { ok: false, message: "Message body is empty." };
 
   const supabase = createClient();
@@ -28,7 +29,7 @@ export async function sendMessage(
   if (!tenantId) return { ok: false, message: "No tenant." };
 
   const client = getMessagingClient();
-  const result = await client.send({ to: trimmedTo, channel, body: trimmedBody, tenantId });
+  const result = await client.send({ to: normalizedTo, channel, body: trimmedBody, tenantId });
 
   const { error } = await supabase.from("msg_message").insert({
     tenant_id: tenantId,
@@ -36,9 +37,9 @@ export async function sendMessage(
     direction: "out",
     provider: client.provider,
     external_id: result.externalId ?? null,
-    thread_key: `${channel}:${trimmedTo}`,
+    thread_key: `${channel}:${normalizedTo}`,
     from_addr: null,
-    to_addr: trimmedTo,
+    to_addr: normalizedTo,
     body: trimmedBody,
     media: [] as Database["public"]["Tables"]["msg_message"]["Insert"]["media"],
     status: result.status,
