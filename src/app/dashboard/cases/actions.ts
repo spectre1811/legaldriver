@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getCaseCached } from "@/lib/court/gateway";
+import { getCaseCached, liveRefreshCase } from "@/lib/court/gateway";
 import { getTenantId, upsertCase } from "@/lib/court/sync";
 import { extractText } from "@/lib/docs/extract";
 import { sha256Hex } from "@/lib/docs/hash";
@@ -488,8 +488,18 @@ export async function refreshCase(matterId: string): Promise<ActionResult> {
   const { data: matter } = await supabase.from("matter").select("cnr").eq("id", matterId).single();
   if (!matter?.cnr) return { ok: false, message: "Matter has no CNR to refresh." };
 
-  const normalized = (await getCaseCached(matter.cnr, { force: true })).case;
-  if (!normalized) return { ok: false, message: "Refresh returned nothing." };
+  // WO-191: the user-clicked Refresh does a LIVE re-fetch of the court record (not just a cached
+  // read), so the outcome is honest. A live hit updates + reports "Refreshed"; when the record
+  // can't be freshly fetched (the source returned no update — e.g. an empty history), we keep the
+  // last-synced copy and say so, instead of a false "Refreshed" over unchanged data.
+  const fetched = await liveRefreshCase(matter.cnr);
+  const normalized = fetched.case;
+  if (!normalized) return { ok: false, message: "Couldn't refresh the court record right now, and there's no synced copy to show yet." };
+
+  if (fetched.stale) {
+    // Source reached but returned no fresh record → don't upsert / bump last_synced_at; tell the truth.
+    return { ok: false, message: "Couldn't fetch a fresh court record just now — showing the last synced copy." };
+  }
 
   try {
     await upsertCase(supabase, tenantId, normalized);
@@ -504,9 +514,9 @@ export async function refreshCase(matterId: string): Promise<ActionResult> {
     action: "case.refresh",
     entity: "matter",
     entity_id: matterId,
-    after: { cnr: matter.cnr, source: normalized.source },
+    after: { cnr: matter.cnr, source: normalized.source, stale: fetched.stale },
   });
   revalidatePath("/dashboard/cases");
   revalidatePath("/dashboard/calendar");
-  return { ok: true, message: `Refreshed (source: ${normalized.source}).` };
+  return { ok: true, message: "Refreshed from the court record." };
 }

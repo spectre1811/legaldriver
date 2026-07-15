@@ -82,6 +82,34 @@ export async function getCaseCached(cnr: string, opts?: { maxAgeMs?: number; for
   }
 }
 
+// Force a LIVE re-scrape of ONE case (the user-clicked "Refresh" button) via the provider's
+// POST /refresh — NOT the cached GET. This is what makes "Refresh" actually go to eCourts, and
+// lets us tell the user the truth: on a live hit we write through + report "Refreshed"; when the
+// provider is reached but returns no live record (e.g. eCourts serves a null history — WO-191) or
+// errors, we fall back to the last-synced copy and flag `stale` so the caller can say "couldn't
+// get an update" instead of a false "Refreshed". The nightly cron stays on the cached bulk path.
+export async function liveRefreshCase(cnr: string): Promise<CaseFetch> {
+  const key = cnr.toUpperCase();
+  const admin = createAdminClient();
+  const client = getCourtDataClient();
+  try {
+    const fresh = (await client.refreshCases([key]))[0] ?? null;
+    await markHealth(admin, client.source, true);
+    if (fresh) {
+      await writeCache(admin, "case", key, fresh.source, fresh);
+      return { case: fresh, cacheHit: false, stale: false, source: client.source };
+    }
+    const cached = await readCache(admin, "case", key); // reached eCourts but no fresh record
+    if (cached) return { case: cached.normalized, cacheHit: true, stale: true, source: cached.normalized.source };
+    return { case: null, cacheHit: false, stale: false, source: client.source };
+  } catch (e) {
+    await markHealth(admin, client.source, false, e);
+    const cached = await readCache(admin, "case", key); // provider error → serve last-synced
+    if (cached) return { case: cached.normalized, cacheHit: true, stale: true, source: cached.normalized.source };
+    return { case: null, cacheHit: false, stale: false, source: client.source };
+  }
+}
+
 // Refresh many CNRs through the cache (used by the scheduled refresh + worker).
 export async function refreshCasesCached(cnrs: string[]): Promise<NormalizedCase[]> {
   const out: NormalizedCase[] = [];
