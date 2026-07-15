@@ -14,6 +14,7 @@ import { GROUP_SEP, type FacetGroup } from "./facet-normalize";
 import { useCasesNav, PANEL_FACETS, VIEW_KEYS, type SavedView } from "./cases-nav";
 import { saveView, deleteView } from "./view-actions";
 import { Segmented } from "./segmented";
+import { AddCaseButton } from "./add-case-modal";
 import type { TierCounts, ViewCounts } from "./cases-query";
 
 type Props = {
@@ -27,10 +28,11 @@ type Props = {
   tierCounts: TierCounts;
   viewCounts: ViewCounts;
   views: SavedView[];
+  autoCnr?: string;
 };
 
 export function CasesToolbar(props: Props) {
-  const { tierCounts, viewCounts, views } = props;
+  const { tierCounts, viewCounts, views, autoCnr } = props;
   const t = useTranslations("cases.toolbar");
   const tc = useTranslations("cases.console");
   const tt = useTranslations("cases.tierTabs");
@@ -105,6 +107,9 @@ export function CasesToolbar(props: Props) {
         <SortMenu value={sort} options={sortOpts} label={tc("sort")} onChange={(v) => setParam("sort", v)} />
 
         <SaveViewButton label={t("saveView")} placeholder={tc("viewName")} save={tc("save")} cancel={tc("cancel")} />
+
+        {/* Primary action — the Add-case card is gone; add-by-CNR lives in this modal now (blueprint §7). */}
+        <AddCaseButton autoCnr={autoCnr} />
       </div>
 
       <ViewSwitcher views={views} allLabel={tv("all")} />

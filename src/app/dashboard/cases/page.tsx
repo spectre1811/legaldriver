@@ -2,10 +2,10 @@ import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
-import { AddCaseForm } from "./add-case-form";
 import { CasesToolbar } from "./cases-toolbar";
 import { CasesTable } from "./cases-table";
 import { CasesAttention } from "./cases-attention";
+import { CasesNavProvider, PendingDim } from "./cases-nav-provider";
 import { Pagination } from "@/components/pagination";
 import { fetchCasesPage, fetchViewCounts, fetchTierCounts, type CasesFilters } from "./cases-query";
 import { groupFacet, advocateKey, actKey } from "./facet-normalize";
@@ -85,41 +85,44 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
         <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("subtitle")}</p>
       </header>
 
-      <CasesAttention counts={viewCounts} />
+      {/* One shared filter-nav transition for every control below → PendingDim can dim the whole
+          results region while a filter change refetches (slice-2 "shared pending"). */}
+      <CasesNavProvider>
+        <CasesAttention counts={viewCounts} />
 
-      <div className="ec-card p-5">
-        {/* ?track=<CNR> — the login deep link (WO-50/WO-51): prefill + auto-submit the add-by-CNR
-            form so "track this case" survives the auth round-trip. */}
-        <AddCaseForm autoCnr={sanitizeTrack(searchParams.track) ?? undefined} />
-      </div>
+        {/* ?track=<CNR> — the login deep link (WO-50/WO-51): the toolbar's Add-case modal auto-opens
+            and auto-submits so "track this case" survives the auth round-trip. */}
+        <CasesToolbar
+          courts={courts}
+          caseTypes={caseTypes}
+          stages={stages}
+          statuses={statusValues}
+          advocateGroups={advocateGroups}
+          actGroups={actGroups}
+          judges={judges}
+          tierCounts={tierCounts}
+          viewCounts={viewCounts}
+          views={views}
+          autoCnr={sanitizeTrack(searchParams.track) ?? undefined}
+        />
 
-      <CasesToolbar
-        courts={courts}
-        caseTypes={caseTypes}
-        stages={stages}
-        statuses={statusValues}
-        advocateGroups={advocateGroups}
-        actGroups={actGroups}
-        judges={judges}
-        tierCounts={tierCounts}
-        viewCounts={viewCounts}
-        views={views}
-      />
-
-      {total > 0 ? (
-        <>
-          <CasesTable rows={matters} today={today} stages={stages} initialDensity={density} />
-          <Pagination page={page} perPage={per} total={total} />
-        </>
-      ) : (
-        <div className="ec-card flex flex-col items-center justify-center px-6 py-14 text-center">
-          <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-ec-m bg-ec-bronze-tint text-ec-bronze-deep">
-            <Icon name="cases" className="h-5 w-5" />
-          </span>
-          <h3 className="font-display text-lg font-medium text-ec-ink">{activeFilters ? t("empty.filteredTitle") : t("empty.title")}</h3>
-          <p className="mx-auto mt-1 max-w-md text-sm text-ec-ink-3">{activeFilters ? t("empty.filteredBody") : t("empty.body")}</p>
-        </div>
-      )}
+        <PendingDim>
+          {total > 0 ? (
+            <div className="space-y-6">
+              <CasesTable rows={matters} today={today} stages={stages} initialDensity={density} />
+              <Pagination page={page} perPage={per} total={total} />
+            </div>
+          ) : (
+            <div className="ec-card flex flex-col items-center justify-center px-6 py-14 text-center">
+              <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-ec-m bg-ec-bronze-tint text-ec-bronze-deep">
+                <Icon name="cases" className="h-5 w-5" />
+              </span>
+              <h3 className="font-display text-lg font-medium text-ec-ink">{activeFilters ? t("empty.filteredTitle") : t("empty.title")}</h3>
+              <p className="mx-auto mt-1 max-w-md text-sm text-ec-ink-3">{activeFilters ? t("empty.filteredBody") : t("empty.body")}</p>
+            </div>
+          )}
+        </PendingDim>
+      </CasesNavProvider>
 
       <p className="flex items-center gap-1.5 text-xs text-ec-ink-3">
         <Icon name="alert" className="h-3.5 w-3.5" /> {tc("disclaimer")}

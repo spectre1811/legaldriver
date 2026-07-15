@@ -19,7 +19,7 @@ function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: st
   );
 }
 
-export function AddCaseForm({ autoCnr }: { autoCnr?: string }) {
+export function AddCaseForm({ autoCnr, autoFocus }: { autoCnr?: string; autoFocus?: boolean }) {
   const t = useTranslations("cases");
   const router = useRouter();
   const [state, formAction] = useFormState(addCaseByCnr, initial);
@@ -61,6 +61,7 @@ export function AddCaseForm({ autoCnr }: { autoCnr?: string }) {
             <input
               name="cnr"
               required
+              autoFocus={autoFocus}
               defaultValue={autoCnr}
               placeholder={t("add.placeholder")}
               aria-label={t("add.aria")}

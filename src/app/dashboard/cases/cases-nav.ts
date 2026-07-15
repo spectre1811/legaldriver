@@ -7,8 +7,12 @@
 // never stacks history, and runs inside a transition so `isPending` can drive the loading state
 // with no layout shift. Every filter control (toolbar, segmented, sheet, attention cards) routes
 // through this hook, so the mechanism lives in exactly one file.
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useTransition } from "react";
+//
+// W2 slice 2: the transition is now owned ONCE by <CasesNavProvider> (cases-nav-provider.tsx) and
+// shared via context, so a single `isPending` covers every control and can dim the whole results
+// region (PendingDim) — not per-hook state that only knew about its own navigation.
+import { useRouter, useSearchParams, type ReadonlyURLSearchParams } from "next/navigation";
+import { createContext, useCallback, useContext, useTransition } from "react";
 
 // A saved view: a named snapshot of the filter query (was defined in the deleted console.tsx).
 export type SavedView = { id: string; name: string; query: Record<string, string | string[]> };
@@ -22,12 +26,25 @@ export const PANEL_FACETS = ["court", "case_type", "stage", "statuses", "advocat
 // The keys a saved view snapshots/restores (the query axes, minus the `tier` court-segment).
 export const VIEW_KEYS = ["q", "court", "case_type", "stage", "status", "statuses", "advocate", "act", "judge", "next", "sort"] as const;
 
-export function useCasesNav() {
+export type CasesNav = {
+  sp: ReadonlyURLSearchParams;
+  isPending: boolean;
+  setParam: (key: string, value: string) => void;
+  setMulti: (key: string, values: string[]) => void;
+  removeValue: (key: string, value: string) => void;
+  clearAll: () => void;
+  clearPanel: () => void;
+  applyQuery: (query: Record<string, string | string[]>) => void;
+};
+
+// Built ONCE by <CasesNavProvider>. The single shared transition means `isPending` reflects any
+// filter change, so PendingDim can dim the results while the soft-nav refetches.
+export function useBuildCasesNav(): CasesNav {
   const router = useRouter();
   const sp = useSearchParams();
   // Transition keeps the current list on screen (no loading flash / layout shift) while the soft-nav
-  // refetches. A shared isPending→skeleton signal is slice-2 work (needs a context, not per-hook state).
-  const [, startTransition] = useTransition();
+  // refetches; isPending → the shared dim state, exposed through context.
+  const [isPending, startTransition] = useTransition();
 
   // Any filter change returns to page 1 (an old page number is meaningless against a new set).
   const commit = useCallback(
@@ -101,5 +118,14 @@ export function useCasesNav() {
     [router],
   );
 
-  return { sp, setParam, setMulti, removeValue, clearAll, clearPanel, applyQuery };
+  return { sp, isPending, setParam, setMulti, removeValue, clearAll, clearPanel, applyQuery };
+}
+
+export const CasesNavContext = createContext<CasesNav | null>(null);
+
+// Every filter control reads the shared nav from context (provider owns the one transition).
+export function useCasesNav(): CasesNav {
+  const ctx = useContext(CasesNavContext);
+  if (!ctx) throw new Error("useCasesNav must be used within <CasesNavProvider>");
+  return ctx;
 }
