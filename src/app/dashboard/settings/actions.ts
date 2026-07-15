@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { parseBarNumber, stateBarCouncil } from "@/lib/court/bar-number";
+import { normalizeE164 } from "@/lib/phone";
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -93,11 +94,17 @@ export async function updateNotificationPrefs(_prev: ActionResult, formData: For
   const tenantId = await getTenantId(supabase);
   if (!user || !tenantId) return { ok: false, message: t("form.noTenant") };
 
+  // Canonicalise the WhatsApp number to E.164 so the cron never sends to garbage.
+  // Empty is fine (channel just stays dark); a present-but-invalid number is rejected.
+  const rawWa = String(formData.get("whatsapp_number") ?? "").trim();
+  const whatsappNumber = rawWa ? normalizeE164(rawWa) : null;
+  if (rawWa && !whatsappNumber) return { ok: false, message: t("notify.invalidPhone") };
+
   const time = (k: string) => (String(formData.get(k) ?? "").trim() || null);
   const { error } = await supabase.from("notification_prefs").upsert({
     id: user.id,
     tenant_id: tenantId,
-    whatsapp_number: String(formData.get("whatsapp_number") ?? "").trim() || null,
+    whatsapp_number: whatsappNumber,
     channel_whatsapp: formData.get("channel_whatsapp") === "on",
     channel_email: formData.get("channel_email") === "on",
     channel_sms: formData.get("channel_sms") === "on",

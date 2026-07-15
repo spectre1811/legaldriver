@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMailer } from "@/lib/notify/mailer";
-import { getWhatsAppSender, whatsappConfigured } from "@/lib/notify/whatsapp";
+import { getMessagingClient, messagingConfigured } from "@/lib/services/messaging/client";
+import { normalizeE164 } from "@/lib/phone";
 import { logOutboundEmail } from "@/lib/notify/log";
 import { brand } from "@/lib/brand";
 
@@ -36,14 +37,15 @@ export async function GET(request: NextRequest) {
     const payload = (n.payload ?? {}) as { ref?: string; title?: string; eventDate?: string; body?: string; count?: number; cases?: DigestCase[]; phone?: string };
     let ok = true;
 
-    // WhatsApp (WO-35 #3, dark until WO-04 BSP). Skip — NOT fail — while unconfigured so the row
-    // stays pending and delivers the moment a BSP is live; no churn to a permanent 'failed'.
+    // WhatsApp (WO-144 W1): delivered through the real messaging gateway. Skip — NOT fail — while
+    // unconfigured (no BSP) or on an unparseable number, so the row stays pending and delivers the
+    // moment a provider is live; no churn to a permanent 'failed'.
     if (n.channel === "whatsapp") {
-      if (!whatsappConfigured() || !payload.phone) { skipped++; continue; }
-      const wa = getWhatsAppSender();
-      const res = await wa.send(payload.phone, payload.body ?? subjectFor(n.kind, payload));
-      if (!res.configured) { skipped++; continue; }
-      ok = res.ok;
+      const to = normalizeE164(payload.phone);
+      if (!messagingConfigured() || !to) { skipped++; continue; }
+      const client = getMessagingClient();
+      const res = await client.send({ to, channel: "whatsapp", body: payload.body ?? subjectFor(n.kind, payload), tenantId: n.tenant_id });
+      ok = res.status !== "failed";
       const { error: waErr } = await supabase
         .from("notification")
         .update({ status: ok ? "sent" : "failed", sent_at: ok ? new Date().toISOString() : null })
@@ -94,7 +96,7 @@ export async function GET(request: NextRequest) {
     else sent++;
   }
 
-  return NextResponse.json({ ok: true, channel: mailer.channel, whatsapp: whatsappConfigured() ? "live" : "dark", considered: due?.length ?? 0, sent, failed, skipped });
+  return NextResponse.json({ ok: true, channel: mailer.channel, whatsapp: messagingConfigured() ? "live" : "dark", considered: due?.length ?? 0, sent, failed, skipped });
 }
 
 type DigestCase = { title?: string; cnr?: string; itemNo?: string; type?: string; judge?: string };
