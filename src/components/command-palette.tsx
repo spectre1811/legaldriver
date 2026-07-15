@@ -19,7 +19,7 @@ const QUICK: { key: string; href: string; icon: IconName; keywords: string }[] =
 
 // Global ⌘K / Ctrl-K palette: run-actions (quick actions + jump-to-section) AND entity
 // search across cases, clients, documents, invoices, notices. Rendered once in the layout.
-export function CommandPalette() {
+export function CommandPalette({ compact = false }: { compact?: boolean } = {}) {
   const t = useTranslations("shell");
   const tn = useTranslations("nav");
   const [open, setOpen] = useState(false);
@@ -84,7 +84,7 @@ export function CommandPalette() {
 
   const go = useCallback((h: Item) => { setOpen(false); router.push(h.href); }, [router]);
 
-  if (!open) return <CommandTrigger onClick={() => setOpen(true)} />;
+  if (!open) return <CommandTrigger onClick={() => setOpen(true)} compact={compact} />;
 
   const cmdCount = filteredCmds.length;
   const heading = (key: string, label: string) => (
@@ -106,7 +106,7 @@ export function CommandPalette() {
 
   return (
     <>
-      <CommandTrigger onClick={() => setOpen(true)} />
+      <CommandTrigger onClick={() => setOpen(true)} compact={compact} />
       <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/30 px-4 pt-[12vh] backdrop-blur-sm" onClick={() => setOpen(false)}>
         <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-surface shadow-lift" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-2 border-b border-line px-4">
@@ -146,8 +146,22 @@ export function CommandPalette() {
   );
 }
 
-function CommandTrigger({ onClick }: { onClick: () => void }) {
+function CommandTrigger({ onClick, compact = false }: { onClick: () => void; compact?: boolean }) {
   const t = useTranslations("shell");
+  // Compact = top-bar shell (icon only <lg, icon+label+kbd ≥lg); default = sidebar full-width.
+  if (compact) {
+    return (
+      <button
+        onClick={onClick}
+        aria-label={t("commandPalette.trigger")}
+        className="flex h-9 items-center gap-2 rounded-ec-s border border-ec-hair bg-ec-paper px-2.5 text-sm text-ec-ink-3 transition hover:border-ec-hair-strong hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+      >
+        <Icon name="search" className="h-4 w-4" />
+        <span className="hidden text-left lg:inline">{t("commandPalette.trigger")}</span>
+        <kbd className="ml-1 hidden rounded border border-ec-hair px-1.5 py-0.5 text-[0.65rem] lg:inline">⌘K</kbd>
+      </button>
+    );
+  }
   return (
     <button onClick={onClick} className="mb-3 flex w-full items-center gap-2 rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink-faint transition hover:border-brand-300 hover:text-ink">
       <Icon name="search" className="h-4 w-4" />
