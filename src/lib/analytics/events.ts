@@ -5,8 +5,12 @@
 // values as defense-in-depth. `distinctId` is a pseudonymous internal uuid (tenant/user), not PII.
 
 export const ALLOWED_PROPS = {
+  // Acquisition / auth (WO-184 user-lifecycle)
+  signup: ["source"], // source = acquisition channel bucket (see sanitizeSource) — NEVER a URL/referrer
+  registration_completed: ["method"], // email | oauth — account fully created / email verified
+  login: ["method"], // password | oauth | otp
+  logout: [],
   // Activation funnel
-  signup: [],
   onboarding_completed: [],
   case_added: ["source", "isNew"], // source = provider (legaldriver|mock|…); isNew = "true"|"false"
   first_case_added: ["source"], // fired once per tenant — the north-star activation moment
@@ -25,6 +29,16 @@ export type AnalyticsEvent = keyof typeof ALLOWED_PROPS;
 // Coarse size bucket so we can measure "cause lists deliver value" without leaking case counts/ids.
 export function sizeBucket(n: number): string {
   return n <= 0 ? "0" : n <= 5 ? "1-5" : n <= 20 ? "6-20" : "20+";
+}
+
+// Acquisition source, clamped to a fixed low-cardinality set. `source` can arrive from a URL param
+// (e.g. peshi's public→signup edge passes ?src=search), so bound it here — never let a raw referrer
+// or query string become a high-cardinality analytics value. Unknown → "other"; empty → "direct".
+const SOURCES = new Set(["organic", "search", "referral", "direct"]);
+export function sanitizeSource(raw: unknown): string {
+  const v = String(raw ?? "").trim().toLowerCase();
+  if (!v) return "direct";
+  return SOURCES.has(v) ? v : "other";
 }
 
 const CNR_RE = /\b[A-Z]{2}[A-Z0-9]{2}\d{6,}\b/; // CNR-shaped → never let it into analytics

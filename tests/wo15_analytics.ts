@@ -1,7 +1,7 @@
 // WO-15 — product-analytics PII-guard + taxonomy. Run: npx tsx tests/wo15_analytics.ts
 // The whole privacy case for shipping analytics on a legal app rests on `safeProps`: it must keep
 // only whitelisted, non-PII props. These assert that chokepoint holds.
-import { safeProps, ALLOWED_PROPS, sizeBucket, type AnalyticsEvent } from "../src/lib/analytics/events";
+import { safeProps, ALLOWED_PROPS, sizeBucket, sanitizeSource, type AnalyticsEvent } from "../src/lib/analytics/events";
 
 let failed = 0;
 function ok(name: string, cond: boolean) {
@@ -34,6 +34,18 @@ ok("sizeBucket buckets", sizeBucket(0) === "0" && sizeBucket(3) === "1-5" && siz
 // 6) Oversized values are truncated (no essay smuggled through a safe key).
 const long = "a".repeat(200);
 ok("truncates oversized values to <= 64", safeProps("draft_generated", { kind: long }).kind.length === 64);
+
+// 7) WO-184 user-lifecycle events keep only their declared prop.
+const p5 = safeProps("login", { method: "password", email: "a@b.com" } as Record<string, unknown>);
+ok("login keeps method, drops email", p5.method === "password" && !("email" in p5));
+ok("registration_completed keeps method", safeProps("registration_completed", { method: "oauth" }).method === "oauth");
+const p6 = safeProps("signup", { source: "search", ref: "https://evil?q=x" } as Record<string, unknown>);
+ok("signup keeps source, drops unknown ref", p6.source === "search" && !("ref" in p6));
+
+// 8) sanitizeSource clamps to a fixed low-cardinality set.
+ok("sanitizeSource passes an allowlisted value", sanitizeSource("Search") === "search");
+ok("sanitizeSource maps unknown → other", sanitizeSource("utm_campaign_xyz") === "other");
+ok("sanitizeSource maps empty/null → direct", sanitizeSource("") === "direct" && sanitizeSource(null) === "direct");
 
 console.log(failed === 0 ? "\nPASS" : `\nFAIL (${failed})`);
 process.exit(failed === 0 ? 0 : 1);

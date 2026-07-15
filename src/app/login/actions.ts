@@ -6,6 +6,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { mapAuthError, type AuthErrorCode } from "@/lib/auth/errors";
 import { callbackUrl, loginUrl, postAuthPath, requestOrigin } from "@/lib/auth/redirects";
+// `track` (the analytics seam) is imported as `trackEvent` — a local `track` form field (a CNR
+// deep-link, WO-50) shadows the name in these actions. WO-184 user-lifecycle instrumentation.
+import { track as trackEvent } from "@/lib/analytics/track";
+import { sanitizeSource } from "@/lib/analytics/events";
 
 // WO-50 login/signup redesign — every action returns a stable error CODE (the
 // client renders translated copy, EN+HI) and redirects on success. Emails stay
@@ -53,7 +57,7 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
   const track = field(formData, "track") || null;
 
   const supabase = createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     const code = mapAuthError(error, "signin");
     if (code === "unconfirmed") return { error: "unconfirmed", email };
@@ -64,6 +68,7 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
     }
     return { error: code };
   }
+  if (data.user) trackEvent("login", data.user.id, { method: "password" });
   revalidatePath("/", "layout");
   redirect(postAuthPath(next, track));
 }
@@ -73,6 +78,7 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
   const password = String(formData.get("password") ?? "");
   const next = field(formData, "next") || null;
   const track = field(formData, "track") || null;
+  const source = sanitizeSource(formData.get("source")); // acquisition channel (peshi edge later)
 
   const supabase = createClient();
   // Full name is NOT collected here — it belongs to onboarding (WO-50 ruling).
@@ -86,6 +92,9 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
   // With confirmations ON, GoTrue obfuscates "already registered" as a success
   // whose user has no identities — surface it honestly as "account exists".
   if (data.user && (data.user.identities?.length ?? 0) === 0) return { error: "accountExists" };
+  // A real new account was created (email path). `registration_completed` fires later at the
+  // email-verify callback; here we only mark the signup itself.
+  if (data.user) trackEvent("signup", data.user.id, { source });
   if (data.session) {
     // Email confirmations disabled (e.g. local dev) — user is signed in already.
     revalidatePath("/", "layout");

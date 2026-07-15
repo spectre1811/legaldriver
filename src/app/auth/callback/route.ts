@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isLocale, LOCALE_COOKIE } from "@/i18n/config";
 import { sanitizeNext } from "@/lib/auth/redirects";
+import { track } from "@/lib/analytics/track"; // WO-184 user-lifecycle
 
 // Handles the redirect after email confirmation, password recovery or OAuth
 // (Google) sign-in. WO-50: failures land on a VISIBLE error page with retry —
@@ -35,6 +36,24 @@ export async function GET(request: NextRequest) {
     const { data: prof } = await supabase.from("profile").select("locale").eq("id", user.id).maybeSingle();
     if (prof?.locale && isLocale(prof.locale)) {
       res.cookies.set(LOCALE_COOKIE, prof.locale, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+    }
+    // WO-184 lifecycle. This callback fronts three flows; split by intent:
+    //  • password recovery (next=/reset-password) → not a login/registration → fire nothing.
+    //  • email-confirmation link → provider "email", fires exactly once → registration_completed.
+    //  • OAuth (Google) return → always a login; a brand-new account is also a registration.
+    if (next !== "/reset-password") {
+      const provider = user.app_metadata?.provider;
+      if (provider === "email") {
+        track("registration_completed", user.id, { method: "email" });
+      } else {
+        // First OAuth sign-in ≈ account just created (created_at within a minute of now).
+        // ponytail: 60s created_at heuristic for first-vs-returning OAuth; upgrade to a real
+        // "first session" flag if the split ever needs to be exact.
+        if (Date.now() - new Date(user.created_at).getTime() < 60_000) {
+          track("registration_completed", user.id, { method: "oauth" });
+        }
+        track("login", user.id, { method: "oauth" });
+      }
     }
   }
   return res;
