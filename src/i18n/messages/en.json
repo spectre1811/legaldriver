@@ -249,7 +249,7 @@
       "noDate": { "label": "No hearing date", "hint": "Set a diary date" }
     },
     "title": "Cases",
-    "subtitle": "Add a case by CNR; we fetch its details and keep it fresh on a nightly sync.",
+    "subtitle": "Your running file — synced by CNR from the court record, refreshed nightly.",
     "count": "{count, plural, one {# case} other {# cases}}",
     "filtered": "filtered",
     "clearFilters": "Clear filters",
@@ -314,6 +314,15 @@
       "fetching": "Fetching…",
       "placeholder": "Add a case by CNR — e.g. MHPU010012342022",
       "aria": "CNR number"
+    },
+    "toolbar": {
+      "toolbarAria": "Filter and sort cases",
+      "filters": "Filters",
+      "clearAll": "Clear all",
+      "saveView": "Save this view",
+      "sheetTitle": "Filters",
+      "sheetSubtitle": "Narrow the case list. Results update instantly.",
+      "done": "Done"
     },
     "console": {
       "searchPlaceholder": "Search cases — title, CNR, court, parties…",

@@ -53,14 +53,15 @@ const page = src("src/app/dashboard/cases/page.tsx");
 ok("page imports the normalizer", /from "\.\/facet-normalize"/.test(page));
 ok("page groups advocate_names with advocateKey", /groupFacet\(distinctArray\("advocate_names"\), advocateKey\)/.test(page));
 ok("page groups act_names with actKey", /groupFacet\(distinctArray\("act_names"\), actKey\)/.test(page));
-ok("page passes advocateGroups/actGroups to Console", /advocateGroups=\{advocateGroups\}/.test(page) && /actGroups=\{actGroups\}/.test(page));
+ok("page passes advocateGroups/actGroups to the toolbar", /advocateGroups=\{advocateGroups\}/.test(page) && /actGroups=\{actGroups\}/.test(page));
 
-// ── wiring: console renders grouped options + expands selection back to raw variants ─────────
-const console_ = src("src/app/dashboard/cases/console.tsx");
-ok("console takes FacetGroup props", /advocateGroups: FacetGroup\[\]/.test(console_) && /actGroups: FacetGroup\[\]/.test(console_));
-ok("advocate/act use the grouped multi-select", /multiGrouped\("advocate"/.test(console_) && /multiGrouped\("act"/.test(console_));
-ok("selecting a group expands to every raw variant (flatMap split on GROUP_SEP)", /setMulti\(key, vals\.flatMap\(\(v\) => v\.split\(GROUP_SEP\)\)\)/.test(console_));
-ok("advocate/act stay MULTI keys (repeated URL params, unchanged)", /const MULTI = new Set<string>\(\[[^\]]*"advocate"[^\]]*"act"/.test(console_));
+// ── wiring: the Filters sheet renders grouped options + expands selection back to raw variants ─
+const toolbar = src("src/app/dashboard/cases/cases-toolbar.tsx");
+const nav = src("src/app/dashboard/cases/cases-nav.ts");
+ok("toolbar takes FacetGroup props", /advocateGroups: FacetGroup\[\]/.test(toolbar) && /actGroups: FacetGroup\[\]/.test(toolbar));
+ok("advocate/act use the grouped multi-select", /multiGrouped\("advocate"/.test(toolbar) && /multiGrouped\("act"/.test(toolbar));
+ok("selecting a group expands to every raw variant (flatMap split on GROUP_SEP)", /setMulti\(key, vals\.flatMap\(\(v\) => v\.split\(GROUP_SEP\)\)\)/.test(toolbar));
+ok("advocate/act stay MULTI keys (repeated URL params, unchanged)", /CASE_MULTI = new Set<string>\(\[[^\]]*"advocate"[^\]]*"act"/.test(nav));
 
 // ── wiring: the query builder still filters via array overlap (any-of) — unchanged ───────────
 const query = src("src/app/dashboard/cases/cases-query.ts");
