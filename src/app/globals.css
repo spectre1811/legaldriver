@@ -102,13 +102,14 @@
   .cases-table[data-density="compact"] tbody td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
   .cases-table[data-density="compact"] .cases-subline { display: none; }
 
-  /* the "date underline" motif — a brass hairline that overshoots its text */
+  /* the "date underline" motif — the one honey accent line that overshoots its text (spec §4) */
   .ec-underline { position: relative; }
-  .ec-underline::after { content: ""; position: absolute; left: 1px; right: -8px; bottom: -4px; height: 2px; background: var(--brass); }
+  .ec-underline::after { content: ""; position: absolute; left: 1px; right: -8px; bottom: -4px; height: 2px; background: var(--honey); }
 }
 
-/* tabular numerals for dates / ₹ / CNRs — always available (not layer-scoped) */
-.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+/* CNRs / case numbers / dates / ₹ amounts / serials — mono (IBM Plex) + tabular-nums (spec §3).
+   Applied precisely to numeric/identifier spans; not layer-scoped so it's always available. */
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
 
 /* Accessibility floor: respect reduced-motion. */
 @media (prefers-reduced-motion: reduce) {

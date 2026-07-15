@@ -1,15 +1,23 @@
 import type { Metadata } from "next";
-import { Inter, Fraunces, Noto_Sans_Devanagari, Noto_Sans_Gujarati } from "next/font/google";
+import { Work_Sans, Fraunces, IBM_Plex_Mono, Noto_Sans_Devanagari, Noto_Sans_Gujarati } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { brand } from "@/lib/brand";
 import { stripGatedPricing } from "@/lib/i18n-gate";
 import "./globals.css";
 
-const sans = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+// v2 UI sans (design-system-v2 §3). Work Sans + Noto Devanagari/Gujarati pairing.
+const sans = Work_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 const serif = Fraunces({
   subsets: ["latin"],
   variable: "--font-serif",
+  display: "swap",
+  weight: ["400", "500", "600"],
+});
+// v2 mono (design-system-v2 §3) — CNRs, case numbers, dates, ₹ amounts, serials; tabular-nums.
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
   display: "swap",
   weight: ["400", "500", "600"],
 });
@@ -44,7 +52,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const messages = stripGatedPricing(await getMessages());
-  const fontVars = `${sans.variable} ${serif.variable} ${notoDeva.variable} ${notoGuj.variable}`;
+  const fontVars = `${sans.variable} ${serif.variable} ${mono.variable} ${notoDeva.variable} ${notoGuj.variable}`;
   return (
     <html lang={locale} className={fontVars}>
       <body>
