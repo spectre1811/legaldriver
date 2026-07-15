@@ -64,7 +64,7 @@ check(
 
 // Positive adoption proof: the flagship + a representative picker consume the Combobox.
 const ADOPTED = [
-  "src/app/dashboard/cases/console.tsx",
+  "src/app/dashboard/cases/cases-toolbar.tsx",
   "src/app/dashboard/documents/filter-bar.tsx",
   "src/app/dashboard/inbox/review-inbox.tsx",
   "src/app/dashboard/calendar/add-entry.tsx",
