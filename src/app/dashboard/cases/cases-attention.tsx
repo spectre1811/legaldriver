@@ -77,7 +77,8 @@ export function CasesAttention({ counts }: { counts: ViewCounts }) {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-1.5">
-                    <span className="num text-lg font-medium leading-none text-ec-ink">{counts[b.key]}</span>
+                    {/* Serif display numeral (Fraunces), zero-padded to 2 to match the reference ("06/11/60"). */}
+                    <span className="font-display text-2xl font-medium leading-none tabular-nums text-ec-ink">{String(counts[b.key]).padStart(2, "0")}</span>
                     <span className="text-sm font-medium text-ec-ink">{t(`${b.key}.label`)}</span>
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-ec-ink-3">

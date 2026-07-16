@@ -304,16 +304,19 @@
     },
     "delete": "Delete case",
     "empty": {
-      "title": "No cases yet",
-      "body": "Add your first case by CNR above — its hearings, parties and orders will sync automatically.",
-      "filteredTitle": "No matching cases",
-      "filteredBody": "Try a different search or clear the filters."
+      "title": "No cases on watch yet",
+      "body": "Add one CNR — the rest assembles itself.",
+      "filteredTitle": "No cases match these filters",
+      "filteredBody": "Try a different search, or clear the filters to see everything."
     },
     "add": {
       "cta": "Add case",
       "fetching": "Fetching…",
-      "placeholder": "Add a case by CNR — e.g. MHPU010012342022",
-      "aria": "CNR number"
+      "placeholder": "Paste a 16-character CNR — e.g. GJAH010000012024",
+      "aria": "CNR number",
+      "modalTitle": "Add a case",
+      "modalHelper": "We fetch the full record and keep it fresh nightly.",
+      "close": "Close"
     },
     "toolbar": {
       "toolbarAria": "Filter and sort cases",
