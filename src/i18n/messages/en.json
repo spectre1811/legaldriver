@@ -172,8 +172,32 @@
   },
   "causeList": {
     "page": {
-      "title": "Cause list",
-      "subtitle": "Upload the cause list you received from the court — we match it to your cases and update next-hearing dates. You supply the file."
+      "title": "Cause lists",
+      "subtitle": "The cause list for the day, court by court — matched to your cases."
+    },
+    "well": {
+      "dateLabel": "Date",
+      "prevDay": "Previous day",
+      "nextDay": "Next day",
+      "today": "Today",
+      "jumpToday": "Jump to today",
+      "print": "Print board"
+    },
+    "summary": {
+      "yours": "Your matters listed",
+      "earliest": "earliest item {item}"
+    },
+    "group": {
+      "itemsListed": "{count} listed",
+      "unassigned": "Court not on record"
+    },
+    "row": {
+      "yours": "Yours",
+      "itemAria": "Item {item}"
+    },
+    "boardEmpty": {
+      "title": "A clear day.",
+      "body": "No listings on the record for this day."
     },
     "choose": "Choose cause-list PDF",
     "parse": "Parse & match",
