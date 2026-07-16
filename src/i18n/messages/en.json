@@ -718,8 +718,8 @@
     "due": "due {date}",
     "overdue": "overdue",
     "empty": {
-      "title": "No invoices yet",
-      "body": "Open a case, log billable time/expenses, then click “Create invoice”."
+      "title": "No invoices yet.",
+      "body": "Hours you log become GST-ready invoices here."
     },
     "detail": {
       "draftInvoice": "Draft invoice",
@@ -971,8 +971,8 @@
     "deleteConfirm": "Delete?",
     "yes": "Yes",
     "no": "No",
-    "emptyTitle": "Nothing upcoming",
-    "emptyBody": "No hearings, deadlines or entries in the next 30 days for the selected types.",
+    "emptyTitle": "A clear day.",
+    "emptyBody": "No listings on the record.",
     "stats": {
       "hearingsLabel": "Hearings",
       "deadlinesLabel": "Deadlines",
@@ -1398,8 +1398,8 @@
       "failed": "Failed"
     },
     "empty": {
-      "title": "No notifications yet",
-      "body": "Add a case with an upcoming hearing — reminders get scheduled automatically."
+      "title": "Nothing needs you.",
+      "body": "The record is quiet."
     }
   },
   "portfolio": {
@@ -1626,7 +1626,7 @@
     "runDetails": "Run details",
     "practice": {
       "title": "Your practice",
-      "count": "{n, plural, one {# case on file} other {# cases on file}}",
+      "count": "{n, plural, one {# case synced from the record} other {# cases synced from the record}}",
       "viewAll": "View all in Cases",
       "nextHearing": "Next hearing {date}",
       "noHearing": "No hearing scheduled"
@@ -1751,7 +1751,8 @@
       "chamberPh": "e.g. Sharma & Associates",
       "save": "Save profile",
       "saving": "Saving…",
-      "saved": "Profile saved."
+      "saved": "Profile saved.",
+      "residency": "Data residency: India · Encrypted at rest & in transit."
     },
     "notify": {
       "whatsappNumber": "WhatsApp number",
@@ -2168,7 +2169,7 @@
     "topJudgesTitle": "Most frequent judges",
     "topJudgesHelp": "Ranked by appearances (sample).",
     "dataGapLabel": "DATA GAP:",
-    "dataGapJudges": "Per-case judge data is not available from this endpoint — use the judge dossier page to see advocates before a specific judge.",
+    "dataGapJudges": "Per-case judge data isn't available from the court record here — use the judge dossier page to see advocates before a specific judge.",
     "caseload": "Caseload",
     "colCnr": "CNR",
     "colType": "Type",
@@ -2178,7 +2179,7 @@
     "colCourt": "Court",
     "tracked": "tracked",
     "emptyTitle": "No cases on record",
-    "emptyBody": "The API returned no caseload for this bar code.",
+    "emptyBody": "No cases on the public record for this bar code yet.",
     "sourceNote": "Source: Mukadma / court records. Coverage is Gujarat (HC + district), expanding. Not legal advice — verify against the official record."
   },
   "privacy": {

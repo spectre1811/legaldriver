@@ -93,8 +93,18 @@ export default async function SettingsPage() {
         {/* ── Profile: account identity (read-only; editable fields need the profile migration) ── */}
         <SettingsPanel id="profile">
           <Card className="p-5">
-            <h2 className="mb-4 text-base font-medium">{t("profile.heading")}</h2>
-            <dl className="grid gap-4 sm:grid-cols-2">
+            {/* Identity lead — initials avatar only (no photo field on `profile`; honesty rule = never a
+                fabricated/silhouette image). Photo upload is a follow-up once the schema carries an avatar. */}
+            <div className="flex items-center gap-4">
+              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-ec-bronze-tint font-display text-2xl font-semibold text-ec-ink ring-1 ring-ec-hair">
+                {(profile?.full_name?.trim()?.[0] ?? user?.email?.[0] ?? "?").toUpperCase()}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-base font-medium text-ink">{profile?.full_name?.trim() || user?.email || "—"}</p>
+                {profile?.designation && <p className="truncate text-sm text-ink-muted">{profile.designation}</p>}
+              </div>
+            </div>
+            <dl className="mt-5 grid gap-4 border-t border-line pt-5 sm:grid-cols-2">
               <div>
                 <dt className="ec-label">{t("profile.email")}</dt>
                 <dd className="mt-1 text-sm text-ink">{user?.email ?? "—"}</dd>
@@ -105,6 +115,7 @@ export default async function SettingsPage() {
               </div>
             </dl>
             <ProfileForm profile={profile ?? { full_name: null, phone: null, designation: null, chamber: null }} />
+            <p className="mt-5 border-t border-line pt-4 text-xs text-ink-faint">{t("profile.residency")}</p>
           </Card>
         </SettingsPanel>
 

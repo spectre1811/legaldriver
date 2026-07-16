@@ -6,15 +6,17 @@ export function PageHeader({
   title,
   subtitle,
   children,
+  serif,
 }: {
   title: string;
   subtitle?: string;
   children?: React.ReactNode;
+  serif?: boolean;
 }) {
   return (
     <header className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-[1.6rem] font-semibold leading-tight">{title}</h1>
+        <h1 className={`text-[1.6rem] leading-tight ${serif ? "font-display font-medium" : "font-semibold"}`}>{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>}
       </div>
       {children && <div className="flex items-center gap-2">{children}</div>}

@@ -63,7 +63,7 @@ export default async function OnboardingPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} serif />
 
       {hasAdvocates ? (
         <>
