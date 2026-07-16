@@ -14,19 +14,14 @@ export const KIND_LABEL: Record<Kind, string> = {
   iprenewal: "IP renewal",
 };
 
+// V-A tokens only (design-system-v2). Red is rationed to the limitation/deadline
+// kind; court appearances (hearing/cause list) read bronze; the advocate's own
+// entries read graphite ink; IP renewals read amber. `chip` = tinted (tint bg +
+// deep text), never a saturated fill.
 export const KIND_STYLE: Record<Kind, { dot: string; chip: string }> = {
-  hearing: { dot: "bg-brand-500", chip: "bg-brand-50 text-brand-700 hover:bg-brand-100" },
-  causelist: { dot: "bg-brass-400", chip: "bg-amber-50 text-amber-800 hover:bg-amber-100" },
-  deadline: { dot: "bg-rose-500", chip: "bg-rose-50 text-rose-700 hover:bg-rose-100" },
-  event: { dot: "bg-emerald-500", chip: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" },
-  iprenewal: { dot: "bg-orange-500", chip: "bg-orange-50 text-orange-700 hover:bg-orange-100" },
-};
-
-// Maps each kind onto the shared Badge tone palette in components/ui.tsx.
-export const KIND_TONE: Record<Kind, "brand" | "amber" | "red" | "green" | "orange"> = {
-  hearing: "brand",
-  causelist: "amber",
-  deadline: "red",
-  event: "green",
-  iprenewal: "orange",
+  hearing: { dot: "bg-ec-bronze", chip: "bg-ec-bronze-tint text-ec-bronze-deep" },
+  causelist: { dot: "bg-ec-bronze/55", chip: "bg-ec-paper-3 text-ec-ink-2" },
+  deadline: { dot: "bg-ec-danger", chip: "bg-ec-danger-t text-ec-danger" },
+  event: { dot: "bg-ec-ink", chip: "bg-ec-paper-3 text-ec-ink-2" },
+  iprenewal: { dot: "bg-ec-warn", chip: "bg-ec-warn-t text-ec-warn" },
 };

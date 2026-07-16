@@ -980,8 +980,19 @@
     "draftNotice": "This is a working draft; the final version is under legal review. A translated version will follow."
   },
   "calendar": {
-    "title": "Calendar",
-    "subtitle": "Hearings, cause list, deadlines and your own entries — on one planning surface.",
+    "title": "Diary",
+    "subtitle": "Hearings, filings and limitation dates — the diary that keeps itself.",
+    "viewLabel": "View",
+    "view": { "month": "Month", "week": "Week", "list": "List" },
+    "todayBtn": "Today",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "railLabel": "Diary side rail",
+    "thisWeek": "This week",
+    "limitationWatch": "Limitation watch",
+    "daysLeft": "{n}D left",
+    "noThisWeek": "Nothing this week.",
+    "noLimitations": "No limitation dates upcoming.",
     "statsCoverage": "Stats cover the next 7 days.",
     "more": "+{count} more",
     "upcoming": "Upcoming",
@@ -1017,7 +1028,7 @@
       "sat": "Sat"
     },
     "addEntry": {
-      "open": "Add entry",
+      "open": "Add diary entry",
       "heading": "New calendar entry",
       "close": "Close",
       "submit": "Add to calendar",
