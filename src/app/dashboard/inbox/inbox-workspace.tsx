@@ -29,13 +29,16 @@ type Tab = "needs_review" | "filed" | "ignored";
 const BAND_CHIP = { high: "ec-chip-success", medium: "ec-chip-warn", low: "ec-chip-danger" } as const;
 
 // mono clock for today's mail, "24 Jul" once it's older — matches the reference's mono time column.
+// tz is pinned to IST (the audience) so the server (UTC) and browser render the same string — an
+// unpinned toLocale* would produce a React hydration mismatch across timezones.
+const TZ = "Asia/Kolkata";
 function inboxTime(iso: string | null): string {
   if (!iso) return "";
   const d = new Date(iso);
-  const now = new Date();
-  return d.toDateString() === now.toDateString()
-    ? d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false })
-    : d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+  const day = (x: Date) => x.toLocaleDateString("en-CA", { timeZone: TZ }); // YYYY-MM-DD in IST
+  return day(d) === day(new Date())
+    ? d.toLocaleTimeString("en-IN", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false })
+    : d.toLocaleDateString("en-IN", { timeZone: TZ, day: "2-digit", month: "short" });
 }
 
 function ConfidencePill({ confidence, threshold }: { confidence: number | null; threshold: number }) {
@@ -100,7 +103,7 @@ export function InboxWorkspace({
   const advance = () => setActiveId(order[activeIndex + 1] ?? order[activeIndex - 1] ?? "");
 
   function fileActive() {
-    if (!active || (!dockClient && !dockMatter)) return;
+    if (pending || !active || (!dockClient && !dockMatter)) return;
     const target = matters.find((m) => m.id === dockMatter)?.label ?? clients.find((c) => c.id === dockClient)?.label ?? "";
     start(async () => {
       await confirmEmail(active.id, dockClient || null, dockMatter || null);
@@ -149,6 +152,7 @@ export function InboxWorkspace({
   // Ignore while typing in the dock's comboboxes / any field.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return; // a held key must not fire a burst of files/moves
       const el = document.activeElement as HTMLElement | null;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
       if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); setActiveId(order[Math.min(activeIndex + 1, order.length - 1)] ?? activeId); }
@@ -188,9 +192,11 @@ export function InboxWorkspace({
             );
           })}
         </nav>
-        <button onClick={confirmAll} disabled={pending || confirmAllCount === 0} className="btn-primary text-sm">
-          <Icon name="check" className="h-4 w-4" /> {t("confirmAll", { count: confirmAllCount })}
-        </button>
+        {tab === "needs_review" && (
+          <button onClick={confirmAll} disabled={pending || confirmAllCount === 0} className="btn-primary text-sm">
+            <Icon name="check" className="h-4 w-4" /> {t("confirmAll", { count: confirmAllCount })}
+          </button>
+        )}
       </div>
 
       {/* Below-threshold review banner (needs-review tab only) */}
@@ -297,38 +303,41 @@ export function InboxWorkspace({
                   )}
                 </div>
 
-                {/* File-this-email dock (recessed band) */}
-                <div className="space-y-3 border-t border-line bg-paper-3 p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="ec-label">{t("dock.title")}</p>
-                    <div className="flex items-center gap-1 text-ink-faint">
-                      <a href={`mailto:${active.from}`} aria-label={t("preview.reply")} className="rounded-md p-1.5 hover:bg-band hover:text-ink">
-                        <Icon name="external" className="h-4 w-4" />
-                      </a>
-                      <button onClick={archiveActive} disabled={pending} aria-label={t("preview.archive")} className="rounded-md p-1.5 hover:bg-band hover:text-ink disabled:opacity-50">
-                        <Icon name="inbox" className="h-4 w-4" />
+                {/* File-this-email dock (recessed band) — only on the review tab; filing an
+                    already-filed/ignored email would resurrect it or overwrite its classification. */}
+                {tab === "needs_review" && (
+                  <div className="space-y-3 border-t border-line bg-paper-3 p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="ec-label">{t("dock.title")}</p>
+                      <div className="flex items-center gap-1 text-ink-faint">
+                        <a href={`mailto:${active.from}`} aria-label={t("preview.reply")} className="rounded-md p-1.5 hover:bg-ec-band hover:text-ink">
+                          <Icon name="external" className="h-4 w-4" />
+                        </a>
+                        <button onClick={archiveActive} disabled={pending} aria-label={t("preview.archive")} className="rounded-md p-1.5 hover:bg-ec-band hover:text-ink disabled:opacity-50">
+                          <Icon name="inbox" className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Combobox
+                        label={t("dock.client")} placeholder={t("dock.clientPlaceholder")}
+                        options={clients.map((c) => ({ value: c.id, label: c.label }))}
+                        value={dockClient || null} onChange={(v) => setDockClient(v ?? "")}
+                      />
+                      <Combobox
+                        label={t("dock.case")} placeholder={t("dock.casePlaceholder")}
+                        options={matters.map((m) => ({ value: m.id, label: m.label }))}
+                        value={dockMatter || null} onChange={(v) => setDockMatter(v ?? "")}
+                      />
+                    </div>
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={advance} className="btn-ghost text-sm">{t("dock.skip")}</button>
+                      <button onClick={fileActive} disabled={pending || (!dockClient && !dockMatter)} className="btn-primary text-sm">
+                        {pending ? t("dock.filing") : t("dock.file")}
                       </button>
                     </div>
                   </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <Combobox
-                      label={t("dock.client")} placeholder={t("dock.clientPlaceholder")}
-                      options={clients.map((c) => ({ value: c.id, label: c.label }))}
-                      value={dockClient || null} onChange={(v) => setDockClient(v ?? "")}
-                    />
-                    <Combobox
-                      label={t("dock.case")} placeholder={t("dock.casePlaceholder")}
-                      options={matters.map((m) => ({ value: m.id, label: m.label }))}
-                      value={dockMatter || null} onChange={(v) => setDockMatter(v ?? "")}
-                    />
-                  </div>
-                  <div className="flex items-center justify-end gap-2">
-                    <button onClick={advance} className="btn-ghost text-sm">{t("dock.skip")}</button>
-                    <button onClick={fileActive} disabled={pending || (!dockClient && !dockMatter)} className="btn-primary text-sm">
-                      {pending ? t("dock.filing") : t("dock.file")}
-                    </button>
-                  </div>
-                </div>
+                )}
               </>
             )}
           </div>

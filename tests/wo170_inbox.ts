@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { strict as assert } from "node:assert";
-import { confidenceBand, pickHighConfidenceIds } from "../src/lib/mail/inbox-status";
+import { confidenceBand, pickHighConfidenceIds, resolveThreshold, istDayStartIso } from "../src/lib/mail/inbox-status";
 
 let failures = 0;
 const check = (name: string, fn: () => void) => {
@@ -24,15 +24,40 @@ check("confidenceBand: ≥ threshold → high", () => {
   assert.equal(confidenceBand(0.8, T), "high");
   assert.equal(confidenceBand(0.95, T), "high");
 });
-check("confidenceBand: mid → medium", () => {
+check("confidenceBand: [threshold/2, threshold) → medium", () => {
   assert.equal(confidenceBand(0.5, T), "medium");
   assert.equal(confidenceBand(0.79, T), "medium");
+  assert.equal(confidenceBand(0.4, T), "medium"); // exactly threshold/2
 });
-check("confidenceBand: low / unknown → low (never fabricate a band)", () => {
-  assert.equal(confidenceBand(0.49, T), "low");
+check("confidenceBand: below threshold/2 or unknown → low (never fabricate a band)", () => {
+  assert.equal(confidenceBand(0.3, T), "low");
   assert.equal(confidenceBand(0, T), "low");
   assert.equal(confidenceBand(null, T), "low");
   assert.equal(confidenceBand(undefined, T), "low");
+});
+check("confidenceBand: bands are RELATIVE to threshold (never contradict auto-file)", () => {
+  // With a 0.4 threshold, a 0.45 email auto-files → it must NOT read 'low'.
+  assert.equal(confidenceBand(0.45, 0.4), "high");
+  assert.equal(confidenceBand(0.25, 0.4), "medium"); // ≥ 0.2
+  assert.equal(confidenceBand(0.15, 0.4), "low");
+});
+
+check("resolveThreshold: only a real number in (0,1] wins; else 0.8", () => {
+  assert.equal(resolveThreshold(undefined), 0.8);
+  assert.equal(resolveThreshold(null), 0.8);
+  assert.equal(resolveThreshold(""), 0.8);      // blank env must not coerce to 0 (mass-file)
+  assert.equal(resolveThreshold("abc"), 0.8);   // NaN must not disable filing
+  assert.equal(resolveThreshold("0"), 0.8);     // 0 is not > 0
+  assert.equal(resolveThreshold("1.5"), 0.8);   // out of range
+  assert.equal(resolveThreshold("0.4"), 0.4);
+  assert.equal(resolveThreshold("0.9"), 0.9);
+});
+
+check("istDayStartIso: start-of-today in IST as a UTC instant", () => {
+  // noon UTC Jul 16 = 17:30 IST Jul 16 → IST midnight Jul 16 = 18:30 UTC Jul 15
+  assert.equal(istDayStartIso(Date.UTC(2026, 6, 16, 12, 0, 0)), "2026-07-15T18:30:00.000Z");
+  // 20:00 UTC Jul 16 = 01:30 IST Jul 17 → IST midnight Jul 17 = 18:30 UTC Jul 16 (UTC/IST days differ)
+  assert.equal(istDayStartIso(Date.UTC(2026, 6, 16, 20, 0, 0)), "2026-07-16T18:30:00.000Z");
 });
 
 check("pickHighConfidenceIds: files only score≥threshold WITH a destination", () => {

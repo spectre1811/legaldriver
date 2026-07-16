@@ -9,7 +9,7 @@ import { ingestMail } from "@/lib/mail/ingest";
 import { readSecret } from "@/lib/mail/vault";
 import { refreshAccessToken, googleConfigured } from "@/lib/mail/oauth";
 import { isDemoMode } from "@/lib/demo";
-import { groupIdsByStatus, pickHighConfidenceIds } from "@/lib/mail/inbox-status";
+import { groupIdsByStatus, pickHighConfidenceIds, resolveThreshold } from "@/lib/mail/inbox-status";
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -124,17 +124,31 @@ export async function confirmAllHighConfidence(): Promise<BulkResult> {
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
   if (!tenantId) return { ok: false, message: "No tenant." };
-  const threshold = Number(process.env.CONFIDENCE_THRESHOLD ?? "0.8");
+  const threshold = resolveThreshold(process.env.CONFIDENCE_THRESHOLD);
 
+  // ponytail: files up to PostgREST's default row cap per click; a >1000-deep high-confidence
+  // review backlog drains over repeated clicks (the toast reports the real number filed). A
+  // single advocate's review queue is never that deep — pagination here would be dead weight.
   const { data: candidates } = await supabase
     .from("email_message")
     .select("id, confidence, classified_matter_id, classified_client_id")
     .eq("status", "needs_review");
-  const ids = pickHighConfidenceIds(candidates ?? [], threshold);
+  const fileable = (candidates ?? []).filter((c) => pickHighConfidenceIds([c], threshold).length === 1);
+  const ids = fileable.map((c) => c.id);
   if (!ids.length) return { ok: false, message: "No high-confidence emails to file." };
 
   const { error } = await supabase.from("email_message").update({ status: "filed" }).in("id", ids);
   if (error) return { ok: false, message: error.message };
+  // Propagate each email's stored suggestion to its still-unassigned documents — same as the
+  // single-file confirmEmail path — grouped by destination so it's one UPDATE per (client,matter).
+  const byDest = new Map<string, { clientId: string | null; matterId: string | null; ids: string[] }>();
+  for (const c of fileable) {
+    const key = `${c.classified_client_id ?? ""}|${c.classified_matter_id ?? ""}`;
+    (byDest.get(key) ?? byDest.set(key, { clientId: c.classified_client_id, matterId: c.classified_matter_id, ids: [] }).get(key)!).ids.push(c.id);
+  }
+  for (const { clientId, matterId, ids: emailIds } of byDest.values()) {
+    await supabase.from("document").update({ client_id: clientId, matter_id: matterId }).in("email_message_id", emailIds).is("matter_id", null);
+  }
   await supabase.from("audit_event").insert({
     tenant_id: tenantId, action: "email.confirm_all_high_confidence", entity: "email_message",
     entity_id: ids[0], after: { ids, threshold },

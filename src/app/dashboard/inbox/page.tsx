@@ -10,6 +10,7 @@ import { GmailQueryForm } from "./gmail-query-form";
 import { DisconnectButton, SyncNowButton } from "./connect-controls";
 import { Pagination } from "@/components/pagination";
 import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
+import { resolveThreshold, istDayStartIso } from "@/lib/mail/inbox-status";
 
 type Tab = "needs_review" | "filed" | "ignored";
 const TABS: Tab[] = ["needs_review", "filed", "ignored"];
@@ -25,13 +26,9 @@ export default async function InboxPage({
   const page = parsePage(searchParams.page);
   const per = clampPerPage(searchParams.per);
   const { from, to } = rangeFor(page, per);
-  const threshold = Number(process.env.CONFIDENCE_THRESHOLD ?? "0.8");
+  const threshold = resolveThreshold(process.env.CONFIDENCE_THRESHOLD);
   const thresholdPct = Math.round(threshold * 100);
-  const todayIso = (() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.toISOString();
-  })();
+  const todayIso = istDayStartIso(Date.now());
 
   const head = () => supabase.from("email_message").select("id", { count: "exact", head: true });
 
@@ -148,6 +145,7 @@ export default async function InboxPage({
       </Card>
 
       <InboxWorkspace
+        key={tab}
         emails={emails}
         clients={clientOpts}
         matters={matterOpts}
