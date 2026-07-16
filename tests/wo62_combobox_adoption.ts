@@ -66,7 +66,7 @@ check(
 const ADOPTED = [
   "src/app/dashboard/cases/cases-toolbar.tsx",
   "src/app/dashboard/documents/filter-bar.tsx",
-  "src/app/dashboard/inbox/review-inbox.tsx",
+  "src/app/dashboard/inbox/inbox-workspace.tsx",
   "src/app/dashboard/calendar/add-entry.tsx",
   "src/app/dashboard/notices/notice-form.tsx",
   "src/app/dashboard/search/judgments/filters.tsx",

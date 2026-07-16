@@ -9,7 +9,7 @@ import { ingestMail } from "@/lib/mail/ingest";
 import { readSecret } from "@/lib/mail/vault";
 import { refreshAccessToken, googleConfigured } from "@/lib/mail/oauth";
 import { isDemoMode } from "@/lib/demo";
-import { groupIdsByStatus } from "@/lib/mail/inbox-status";
+import { groupIdsByStatus, pickHighConfidenceIds } from "@/lib/mail/inbox-status";
 
 export type ActionResult = { ok: boolean; message: string };
 
@@ -114,6 +114,33 @@ export async function confirmEmail(
   });
   revalidatePath("/dashboard/inbox");
   return { ok: true, message: "Filed." };
+}
+
+// WO-170 · "Confirm all high-confidence" — file every needs-review email the classifier scored
+// at/above the confidence threshold AND already has a case/client for. Reuses the emails' own
+// stored suggestion (no re-classification, no filing to nowhere). Returns the filed ids so the
+// UI can offer a single Undo that restores them to needs_review (via restoreEmails).
+export async function confirmAllHighConfidence(): Promise<BulkResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const threshold = Number(process.env.CONFIDENCE_THRESHOLD ?? "0.8");
+
+  const { data: candidates } = await supabase
+    .from("email_message")
+    .select("id, confidence, classified_matter_id, classified_client_id")
+    .eq("status", "needs_review");
+  const ids = pickHighConfidenceIds(candidates ?? [], threshold);
+  if (!ids.length) return { ok: false, message: "No high-confidence emails to file." };
+
+  const { error } = await supabase.from("email_message").update({ status: "filed" }).in("id", ids);
+  if (error) return { ok: false, message: error.message };
+  await supabase.from("audit_event").insert({
+    tenant_id: tenantId, action: "email.confirm_all_high_confidence", entity: "email_message",
+    entity_id: ids[0], after: { ids, threshold },
+  });
+  revalidatePath("/dashboard/inbox");
+  return { ok: true, message: `Filed ${ids.length} email${ids.length === 1 ? "" : "s"}.`, undo: ids.map((id) => ({ id, status: "needs_review" })) };
 }
 
 // ── Inbox bulk actions (WO-29 W2) — soft, reversible. status 'deleted'/'archived' hide the row

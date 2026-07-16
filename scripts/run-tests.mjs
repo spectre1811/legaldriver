@@ -68,6 +68,7 @@ const OFFLINE = [
   "wo55_combobox",
   "wo62_combobox_adoption",
   "wo56_pagination_adoption",
+  "wo170_inbox",
   "wo54_cases_row_depth",
   "wo54_tier",
   "wo54_tier_tabs",
