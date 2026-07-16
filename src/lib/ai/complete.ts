@@ -23,7 +23,15 @@ export type CompleteOpts = {
   maxTokens?: number;
   backend?: Backend;
   onUsage?: (u: { input: number; output: number }) => void;
+  /** Called when the HTTP call aborts on the timeout budget (WO-186 W1) so the
+   *  gateway can surface an honest "timed out" state instead of a generic failure. */
+  onTimeout?: () => void;
 };
+
+// OpenAI-compatible provider HTTP budget. A hung provider must NOT block the request
+// (or the fallback chain / the whole batch): abort at the budget so the gateway can
+// advance to the next backend / return an honest timeout. Env-tunable (WO-186 W1).
+const OAI_TIMEOUT_MS = Number(process.env.AI_HTTP_TIMEOUT_MS) || 30_000;
 
 // ── OpenAI-compatible (DeepSeek / OpenAI / Together / Groq / Ollama / vLLM / …) ──
 interface OaiCfg { baseUrl: string; apiKey: string; model: string }
@@ -62,7 +70,7 @@ function defaultBackend(): Backend | undefined {
   return undefined;
 }
 
-async function oaiChat(cfg: OaiCfg, prompt: string, opts?: { json?: boolean; maxTokens?: number; system?: string; onUsage?: (u: { input: number; output: number }) => void }): Promise<string | null> {
+async function oaiChat(cfg: OaiCfg, prompt: string, opts?: { json?: boolean; maxTokens?: number; system?: string; onUsage?: (u: { input: number; output: number }) => void; onTimeout?: () => void }): Promise<string | null> {
   try {
     const messages: { role: string; content: string }[] = [];
     if (opts?.system) messages.push({ role: "system", content: opts.system });
@@ -73,6 +81,7 @@ async function oaiChat(cfg: OaiCfg, prompt: string, opts?: { json?: boolean; max
       method: "POST",
       headers: { Authorization: `Bearer ${cfg.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(OAI_TIMEOUT_MS),
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -80,13 +89,16 @@ async function oaiChat(cfg: OaiCfg, prompt: string, opts?: { json?: boolean; max
     if (u && opts?.onUsage) opts.onUsage({ input: Number(u.prompt_tokens ?? u.input_tokens ?? 0), output: Number(u.completion_tokens ?? u.output_tokens ?? 0) });
     const content = data?.choices?.[0]?.message?.content;
     return typeof content === "string" ? content : null;
-  } catch {
+  } catch (e) {
+    // AbortSignal.timeout fires a TimeoutError; a manual abort fires AbortError.
+    // Either means the budget was hit — signal it so the gateway can report timeout.
+    if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")) opts?.onTimeout?.();
     return null;
   }
 }
 async function oaiCompleteJson(cfg: OaiCfg, prompt: string, schema: Schema, opts?: CompleteOpts): Promise<unknown | null> {
   const augmented = `${prompt}\n\nReturn ONLY a JSON object conforming to this JSON Schema (no markdown, no prose):\n${JSON.stringify(schema)}`;
-  const txt = await oaiChat(cfg, augmented, { json: true, maxTokens: opts?.maxTokens ?? 1500, onUsage: opts?.onUsage });
+  const txt = await oaiChat(cfg, augmented, { json: true, maxTokens: opts?.maxTokens ?? 1500, onUsage: opts?.onUsage, onTimeout: opts?.onTimeout });
   if (!txt) return null;
   try { return JSON.parse(txt); } catch { return null; }
 }
@@ -161,7 +173,7 @@ export async function completeJson(prompt: string, schema: Schema, opts?: Comple
 // Prose / long-form completion (drafting, summaries). Returns text or null.
 export async function completeText(prompt: string, opts?: CompleteOpts): Promise<string | null> {
   const backend = opts?.backend ?? defaultBackend();
-  if (backend) { const cfg = cfgFor(backend, opts?.model); if (cfg) return oaiChat(cfg, prompt, { maxTokens: opts?.maxTokens ?? 2000, onUsage: opts?.onUsage }); }
+  if (backend) { const cfg = cfgFor(backend, opts?.model); if (cfg) return oaiChat(cfg, prompt, { maxTokens: opts?.maxTokens ?? 2000, onUsage: opts?.onUsage, onTimeout: opts?.onTimeout }); }
   if (explicitBackendUnconfigured(opts)) return null;
   const router = classifierBackend();
   if (router === "off") return null;
