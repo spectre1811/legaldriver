@@ -29,10 +29,11 @@ type Props = {
   viewCounts: ViewCounts;
   views: SavedView[];
   autoCnr?: string;
+  autoOpen?: boolean;
 };
 
 export function CasesToolbar(props: Props) {
-  const { tierCounts, viewCounts, views, autoCnr } = props;
+  const { tierCounts, viewCounts, views, autoCnr, autoOpen } = props;
   const t = useTranslations("cases.toolbar");
   const tc = useTranslations("cases.console");
   const tt = useTranslations("cases.tierTabs");
@@ -109,7 +110,7 @@ export function CasesToolbar(props: Props) {
         <SaveViewButton label={t("saveView")} placeholder={tc("viewName")} save={tc("save")} cancel={tc("cancel")} />
 
         {/* Primary action — the Add-case card is gone; add-by-CNR lives in this modal now (blueprint §7). */}
-        <AddCaseButton autoCnr={autoCnr} />
+        <AddCaseButton autoCnr={autoCnr} autoOpen={autoOpen} />
       </div>
 
       <ViewSwitcher views={views} allLabel={tv("all")} />

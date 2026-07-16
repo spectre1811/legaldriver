@@ -40,7 +40,7 @@ export function TopBar({ email, initial, fullName, designation }: Props) {
       <nav aria-label={t("breadcrumb")} className="flex min-w-0 items-center gap-1.5 text-sm">
         <Link
           href="/dashboard"
-          className="shrink-0 rounded-ec-s text-ec-ink-3 transition hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+          className="shrink-0 rounded-ec-s text-ec-ink-3 transition hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
         >
           {t("home")}
         </Link>
@@ -55,8 +55,8 @@ export function TopBar({ email, initial, fullName, designation }: Props) {
       <div className="ml-auto flex items-center gap-2">
         <CommandPalette compact />
         <Link
-          href="/dashboard/cases"
-          className="inline-flex h-9 items-center gap-1.5 rounded-ec-s bg-ec-ink px-3 text-sm font-medium text-ec-paper transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+          href="/dashboard/cases?add=1"
+          className="inline-flex h-9 items-center gap-1.5 rounded-ec-s bg-ec-ink px-3 text-sm font-medium text-ec-paper transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
         >
           <Icon name="plus" className="h-4 w-4" />
           <span className="hidden sm:inline">{t("newCase")}</span>
@@ -64,7 +64,7 @@ export function TopBar({ email, initial, fullName, designation }: Props) {
         <Link
           href="/dashboard/notifications"
           aria-label={tn("item.notifications")}
-          className="flex h-9 w-9 items-center justify-center rounded-ec-s text-ec-ink-3 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+          className="flex h-9 w-9 items-center justify-center rounded-ec-s text-ec-ink-3 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
         >
           <Icon name="bell" className="h-[1.15rem] w-[1.15rem]" />
         </Link>
@@ -99,7 +99,7 @@ function ProfileMenu({ email, initial, fullName, designation }: Props) {
   }, [open]);
 
   const item =
-    "flex w-full items-center gap-2.5 rounded-ec-s px-2.5 py-2 text-left text-sm text-ec-ink-2 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo";
+    "flex w-full items-center gap-2.5 rounded-ec-s px-2.5 py-2 text-left text-sm text-ec-ink-2 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey";
   const ico = "h-4 w-4 shrink-0 text-ec-ink-3";
 
   return (
@@ -110,7 +110,7 @@ function ProfileMenu({ email, initial, fullName, designation }: Props) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t("profileMenu")}
-        className="flex items-center gap-2 rounded-ec-s py-1 pl-1 pr-1.5 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+        className="flex items-center gap-2 rounded-ec-s py-1 pl-1 pr-1.5 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
       >
         <Avatar initial={initial} />
         <span className="hidden min-w-0 text-left leading-tight lg:block">
