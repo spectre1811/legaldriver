@@ -5,6 +5,7 @@ import type { AiGatewayRequest, AiGatewayResult, ExecFn, TraceSink } from "./cor
 import { ROUTES, PRICES } from "./routes";
 import { defaultTraceSink } from "./trace";
 import { supabaseMeterSink } from "./meter";
+import { createResponseCache, responseCacheEnabled } from "./response-cache";
 
 // The single AI gateway seam (04-AI §0, ADR-AI1). Product code calls
 // `aiGateway.run({ task, ... })` and never touches a provider SDK. This file is the
@@ -17,11 +18,21 @@ import { supabaseMeterSink } from "./meter";
 const completeExec: ExecFn = async ({ backend, model, maxTokens, prompt, schema }) => {
   // Capture the provider's real token usage (WO-32) so the gateway meters actual, not estimated.
   let usage: { input: number; output: number } | null = null;
-  const opts: { backend?: Backend; model?: string; maxTokens: number; onUsage: (u: { input: number; output: number }) => void } =
-    { backend, model, maxTokens, onUsage: (u) => { usage = u; } };
-  if (schema) return { json: await completeJson(prompt, schema, opts), text: null, usage };
-  return { text: await completeText(prompt, opts), json: null, usage };
+  let timedOut = false;
+  const opts: {
+    backend?: Backend;
+    model?: string;
+    maxTokens: number;
+    onUsage: (u: { input: number; output: number }) => void;
+    onTimeout: () => void;
+  } = { backend, model, maxTokens, onUsage: (u) => { usage = u; }, onTimeout: () => { timedOut = true; } };
+  if (schema) return { json: await completeJson(prompt, schema, opts), text: null, usage, timedOut };
+  return { text: await completeText(prompt, opts), json: null, usage, timedOut };
 };
+
+// One process-wide response cache (WO-186 W1). Absent when flag-disabled → the
+// gateway core runs exactly as before (no caching).
+const responseCache = responseCacheEnabled() ? createResponseCache() : undefined;
 
 // Trace (jsonLog + optional Langfuse) AND the per-tenant metering ledger.
 const base = defaultTraceSink();
@@ -39,6 +50,7 @@ export const aiGateway = {
       prices: PRICES,
       now: () => Date.now(),
       newId: () => randomUUID(),
+      cache: responseCache,
     });
   },
 };

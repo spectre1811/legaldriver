@@ -29,6 +29,7 @@ const OFFLINE = [
   "bp24_cases_pii_honest",
   "bp26_case_summary_confidence",
   "ai_gateway",
+  "wo186_response_cache",
   "bp17_court_kit",
   "wo45_court_kit_adoption",
   "design_tokens_smoke",

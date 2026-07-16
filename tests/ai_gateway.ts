@@ -1,14 +1,20 @@
-// AI gateway unit tests (WO-02 Wave 1): route resolution, fallback-on-failure,
-// cross-tenant scope guard, cache-hit stub. Fully mocked — no network, no CLI.
-// Run: npx tsx tests/ai_gateway.ts
+// AI gateway unit tests (WO-02 Wave 1 + WO-186 W1): route resolution,
+// fallback-on-failure, cross-tenant scope guard, response cache, timeout signal.
+// Fully mocked — no network, no CLI. Run: npx tsx tests/ai_gateway.ts
 import {
   AI_TASKS,
   resolveRoute,
   backendChain,
   runCore,
 } from "../src/lib/ai/gateway/core";
-import type { ExecFn, TraceEvent, RunDeps } from "../src/lib/ai/gateway/core";
+import type { ExecFn, TraceEvent, RunDeps, ResponseCache, CachedEntry } from "../src/lib/ai/gateway/core";
 import { ROUTES, PRICES } from "../src/lib/ai/gateway/routes";
+
+// A trivial exact-key cache for the tests (prod uses response-cache.ts's LRU).
+function fakeCache(): ResponseCache & { size: () => number } {
+  const m = new Map<string, CachedEntry>();
+  return { get: (k) => m.get(k), set: (k, v) => void m.set(k, v), size: () => m.size };
+}
 
 let failures = 0;
 function check(name: string, cond: boolean) {
@@ -16,7 +22,7 @@ function check(name: string, cond: boolean) {
   if (!cond) failures += 1;
 }
 
-function deps(exec: ExecFn, traces: TraceEvent[]): RunDeps {
+function deps(exec: ExecFn, traces: TraceEvent[], cache?: ResponseCache): RunDeps {
   return {
     exec,
     trace: (e) => traces.push(e),
@@ -24,6 +30,7 @@ function deps(exec: ExecFn, traces: TraceEvent[]): RunDeps {
     prices: PRICES,
     now: () => 0,
     newId: () => "trace-fixed",
+    cache,
   };
 }
 
@@ -82,8 +89,8 @@ async function main() {
   const traceKeys = Object.keys(tA[0]);
   check("trace carries no raw input/output content", !traceKeys.includes("input") && !traceKeys.includes("output") && typeof tA[0].inputChars === "number");
 
-  // 6. cacheHit is false in Wave 1 (response cache is Wave 3).
-  check("cacheHit=false in Wave 1", r1.cacheHit === false && tA[0].cacheHit === false);
+  // 6. With no cache injected, cacheHit stays false (caching is opt-in via deps).
+  check("cacheHit=false when no cache is wired", r1.cacheHit === false && tA[0].cacheHit === false);
 
   // 7. Regression guard (reviewer BLOCKER): reproduce the transport contract — an
   // unconfigured OAI backend returns null; only the keyless choice (backend
@@ -133,6 +140,47 @@ async function main() {
   );
   check("real usage → actual tokens metered, not estimated",
     r9.tokens.input === 123 && r9.tokens.output === 45 && r9.tokens.total === 168 && r9.tokens.estimated === false && t9[0].estimated === false);
+
+  // 10. Response cache (WO-186 W1): first call misses + populates; the second
+  // identical call replays from cache at ZERO cost, still traced as a hit. A
+  // DIFFERENT tenant with identical input must MISS (per-tenant keyspace).
+  const cache = fakeCache();
+  let providerCalls = 0;
+  const countingExec: ExecFn = async ({ schema }) => {
+    providerCalls += 1;
+    return schema
+      ? { json: { summary: "ok" }, text: null, usage: { input: 100, output: 20 } }
+      : { text: "ok", json: null, usage: { input: 100, output: 20 } };
+  };
+  const reqC = { task: "summary.case" as const, input: "same-doc", schema: { type: "object" }, tenantId: "T1", scope: { kind: "tenant" as const, tenantId: "T1" } };
+  const tc1: TraceEvent[] = [];
+  const c1 = await runCore(reqC, deps(countingExec, tc1, cache));
+  check("cache: first call misses (provider hit once)", providerCalls === 1 && c1.cacheHit === false && cache.size() === 1);
+  const tc2: TraceEvent[] = [];
+  const c2 = await runCore(reqC, deps(countingExec, tc2, cache));
+  check("cache: second identical call is a HIT (no extra provider call)", providerCalls === 1 && c2.cacheHit === true);
+  check("cache: hit replays output + real tokens, at zero cost", JSON.stringify(c2.output) === JSON.stringify(c1.output) && c2.tokens.input === 100 && c2.cost.usd === 0);
+  check("cache: hit is traced (cacheHit=true, cost 0)", tc2.length === 1 && tc2[0].cacheHit === true && tc2[0].costUsd === 0);
+  const tc3: TraceEvent[] = [];
+  await runCore({ ...reqC, tenantId: "T2", scope: { kind: "tenant" as const, tenantId: "T2" } }, deps(countingExec, tc3, cache));
+  check("cache: different tenant, same input → MISS (per-tenant keyspace)", providerCalls === 2);
+
+  // 11. Timeout signal (WO-186 W1): when every attempt times out, the result is an
+  // honest ok:false with error:"timeout" (no throw, no unhandled failure).
+  const timingOutExec: ExecFn = async () => ({ text: null, json: null, timedOut: true });
+  const tt: TraceEvent[] = [];
+  const rt = await runCore(
+    { task: "summary.case", input: "x", tenantId: "T", scope: { kind: "tenant", tenantId: "T" } },
+    deps(timingOutExec, tt),
+  );
+  check("timeout: total failure surfaces error='timeout'", rt.ok === false && rt.error === "timeout");
+  // A successful call never reports a stale timeout error.
+  const tok: TraceEvent[] = [];
+  const rok = await runCore(
+    { task: "summary.case", input: "x", tenantId: "T", scope: { kind: "tenant", tenantId: "T" } },
+    deps(okJson, tok),
+  );
+  check("timeout: success → error is null", rok.ok === true && (rok.error ?? null) === null);
 
   console.log(failures === 0 ? "\nALL PASS" : `\n${failures} FAILED`);
   process.exit(failures === 0 ? 0 : 1);

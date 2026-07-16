@@ -92,6 +92,9 @@ export interface AiGatewayResult<T = unknown> {
   cacheHit: boolean;
   traceId: string;
   ok: boolean;
+  /** Why the call failed, when it did. `"timeout"` when a provider hung past the
+   *  HTTP budget so the UI can say so honestly instead of a generic failure. */
+  error?: "timeout" | null;
 }
 
 // ── Transport injection ───────────────────────────────────────────────────────
@@ -107,6 +110,8 @@ export interface ExecResult {
   json: unknown | null;
   /** Real provider token counts when the backend reports them (WO-32); else absent → estimate. */
   usage?: { input: number; output: number } | null;
+  /** The transport aborted this attempt on the HTTP timeout budget (WO-186 W1). */
+  timedOut?: boolean;
 }
 export type ExecFn = (call: ExecCall) => Promise<ExecResult>;
 
@@ -133,6 +138,39 @@ export interface TraceEvent {
 }
 export type TraceSink = (e: TraceEvent) => void;
 
+// ── Response cache (WO-186 W1) ────────────────────────────────────────────────
+// Exact-hash cache of a whole gateway answer, so a repeated identical request
+// (batch re-run, retry, same doc + same shortlist) replays the stored result at
+// ZERO provider cost instead of re-billing the model. Store is INJECTED (a plain
+// Map/LRU in prod — no new infra) so the core stays pure & unit-testable. Keyspace
+// is per-tenant; the key folds in a prompt-version so a prompt/route change busts
+// every stale entry (bump PROMPT_VERSION when the prompt or route models change).
+export const PROMPT_VERSION = "1";
+
+export interface CachedEntry {
+  output: unknown;
+  citations: Citation[];
+  model: string;
+  backend: string;
+  tokens: { input: number; output: number; total: number; estimated: boolean };
+  outputChars: number;
+}
+export interface ResponseCache {
+  get(rawKey: string): CachedEntry | undefined;
+  set(rawKey: string, entry: CachedEntry): void;
+}
+
+// The cache identity: everything that changes the answer. When the caller declares
+// `cacheKeyParts` we key on THOSE (its stable identity — e.g. a doc content-hash +
+// shortlist version) instead of the full input; otherwise we exact-hash the input.
+// Route-model signature is included so re-pointing a task at a different model can
+// never serve an answer the old model produced.
+export function buildCacheKey(req: AiGatewayRequest, route: Route): string {
+  const routeSig = route.chain.map((c) => `${c.backend ?? "keyless"}:${c.model ?? ""}`).join(",");
+  const identity = req.cacheKeyParts ? JSON.stringify(req.cacheKeyParts) : req.input;
+  return `${PROMPT_VERSION}|${req.task}|${routeSig}|${req.tenantId}|${req.schema ? "json" : "text"}|${identity}`;
+}
+
 export interface RunDeps {
   exec: ExecFn;
   trace: TraceSink;
@@ -140,6 +178,8 @@ export interface RunDeps {
   prices?: Record<string, { inPerM: number; outPerM: number }>;
   now: () => number;
   newId: () => string;
+  /** Optional exact-hash response cache (WO-186 W1). Absent → caching off. */
+  cache?: ResponseCache;
 }
 
 // ── Pure helpers ────────────────────────────────────────────────────────────
@@ -189,6 +229,43 @@ export function validatesSchema(json: unknown, schema: Record<string, unknown>):
   return true;
 }
 
+// One trace-event shape, emitted on both the cache-hit and the served paths.
+function traceEvent(
+  req: AiGatewayRequest,
+  route: Route,
+  scopeKind: RetrievalScope["kind"],
+  traceId: string,
+  latencyMs: number,
+  served: {
+    backend: string;
+    model: string;
+    outputChars: number;
+    tokens: { input: number; output: number; total: number; estimated: boolean };
+    costUsd: number;
+    cacheHit: boolean;
+    ok: boolean;
+  },
+): TraceEvent {
+  return {
+    traceId,
+    task: req.task,
+    tenantId: req.tenantId,
+    locale: req.locale ?? null,
+    scopeKind,
+    backend: served.backend,
+    model: served.model,
+    tier: route.tier,
+    inputChars: req.input.length,
+    outputChars: served.outputChars,
+    tokens: { input: served.tokens.input, output: served.tokens.output, total: served.tokens.total },
+    costUsd: served.costUsd,
+    cacheHit: served.cacheHit,
+    ok: served.ok,
+    latencyMs,
+    estimated: served.tokens.estimated,
+  };
+}
+
 // ── The gateway core ─────────────────────────────────────────────────────────
 export async function runCore<T = unknown>(
   req: AiGatewayRequest,
@@ -204,11 +281,44 @@ export async function runCore<T = unknown>(
   // `input` or model output.
   const scope = Object.freeze({ ...req.scope });
 
+  // ── Response cache (WO-186 W1): a HIT replays the stored answer at zero provider
+  // cost. Still traced (cacheHit=true, cost 0) so hit-rate + savings are visible.
+  const cacheKey = deps.cache ? buildCacheKey(req, route) : null;
+  if (deps.cache && cacheKey) {
+    const hit = deps.cache.get(cacheKey);
+    if (hit) {
+      deps.trace(
+        traceEvent(req, route, scope.kind, traceId, deps.now() - startedAt, {
+          backend: hit.backend,
+          model: hit.model,
+          outputChars: hit.outputChars,
+          tokens: hit.tokens,
+          costUsd: 0,
+          cacheHit: true,
+          ok: true,
+        }),
+      );
+      return {
+        output: hit.output as T | null,
+        citations: hit.citations,
+        model: hit.model,
+        backend: hit.backend,
+        tokens: hit.tokens,
+        cost: { usd: 0, estimated: hit.tokens.estimated },
+        cacheHit: true,
+        traceId,
+        ok: true,
+        error: null,
+      };
+    }
+  }
+
   let text: string | null = null;
   let json: unknown | null = null;
   let usedBackend: OaiBackend | undefined;
   let usedModel: string | undefined;
   let usage: { input: number; output: number } | null = null;
+  let anyTimeout = false;
   let ok = false;
 
   for (const choice of backendChain(route)) {
@@ -219,6 +329,7 @@ export async function runCore<T = unknown>(
       prompt: req.input,
       schema: req.schema,
     });
+    if (r.timedOut) anyTimeout = true;
     const success = req.schema
       ? r.json != null && validatesSchema(r.json, req.schema)
       : typeof r.text === "string" && r.text.trim().length > 0;
@@ -246,38 +357,39 @@ export async function runCore<T = unknown>(
     : estimateTokens(req.input.length, outputChars);
   const model = usedModel ?? "(router-default)";
   const cost = estimateCostUsd(tokens, deps.prices?.[model]);
+  const backend = usedBackend ?? "keyless-router";
 
   const result: AiGatewayResult<T> = {
     output,
     citations: [],
     model,
-    backend: usedBackend ?? "keyless-router",
+    backend,
     tokens,
-    // cacheHit is always false in Wave 1 — the response cache is Wave 3.
     cost,
     cacheHit: false,
     traceId,
     ok,
+    // Honest failure reason: a total failure whose last cause was a provider hang
+    // surfaces as "timeout" so the UI boundary can say so rather than a generic error.
+    error: ok ? null : anyTimeout ? "timeout" : null,
   };
 
-  deps.trace({
-    traceId,
-    task: req.task,
-    tenantId: req.tenantId,
-    locale: req.locale ?? null,
-    scopeKind: scope.kind,
-    backend: result.backend,
-    model,
-    tier: route.tier,
-    inputChars: req.input.length,
-    outputChars,
-    tokens: { input: tokens.input, output: tokens.output, total: tokens.total },
-    costUsd: cost.usd,
-    cacheHit: false,
-    ok,
-    latencyMs: deps.now() - startedAt,
-    estimated: tokens.estimated,
-  });
+  // Store only successful answers, keyed per-tenant. Misses/failures are never cached.
+  if (deps.cache && cacheKey && ok) {
+    deps.cache.set(cacheKey, { output, citations: [], model, backend, tokens, outputChars });
+  }
+
+  deps.trace(
+    traceEvent(req, route, scope.kind, traceId, deps.now() - startedAt, {
+      backend,
+      model,
+      outputChars,
+      tokens,
+      costUsd: cost.usd,
+      cacheHit: false,
+      ok,
+    }),
+  );
 
   return result;
 }
