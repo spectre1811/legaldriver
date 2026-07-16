@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Badge, Disclaimer, fmtDate, fmtSize } from "@/components/ui";
+import { Card, Badge, Disclaimer, fmtSize } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
 import { DraftReplyButton } from "@/components/draft-reply-button";
@@ -62,7 +63,7 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
     { label: t("field.type"), value: doc.doc_type ? <Badge>{doc.doc_type}</Badge> : <span className="text-ink-faint">—</span> },
     { label: t("field.source"), value: SOURCE[doc.source] ?? doc.source },
     { label: t("field.size"), value: fmtSize(doc.size_bytes) },
-    { label: t("field.added"), value: fmtDate(doc.created_at) },
+    { label: t("field.added"), value: (formatCourtDate(doc.created_at) ?? "—") },
   ];
 
   return (

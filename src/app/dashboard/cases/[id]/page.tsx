@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { fmtDate, fmtAgo, fmtSize, fmtMoney, fmtHours } from "@/components/ui";
+import { fmtAgo, fmtSize, fmtMoney, fmtHours } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
 import { LogTimeExpense } from "./time-expense";
@@ -20,7 +20,7 @@ import { OrdersPanel } from "./orders-panel";
 import { CaseTimeline } from "./case-timeline";
 import { getTimeline, type TimelineEvent } from "@/lib/court/legaldriver-api";
 import { expandCaseType, cleanPurpose } from "@/lib/court/code-labels";
-import { CourtField, MaskedName } from "@/components/court";
+import { CourtField, MaskedName, formatCourtDate } from "@/components/court";
 import { isMaskedName, maskTitle } from "@/lib/court/mask";
 import { selectCaseDetailRows, extractCaseDetailValues, type CaseDetailFieldId } from "@/lib/court/case-detail-fields";
 
@@ -109,8 +109,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   // one is truthfully "not on record"; not-sourced empties are dropped (never a false "not on
   // record"); a pending case's decision date reads "not applicable".
   // WO-54: the raw detail→field mapping is now the shared `extractCaseDetailValues` (so the Cases-list
-  // detail drawer renders identical fields). The page keeps its legacy `fmtDate` presentation.
-  const detailValues = extractCaseDetailValues(detail, (r) => fmtDate(r));
+  // detail drawer renders identical fields). WO-190: this page + the drawer both format via the
+  // court-kit `formatCourtDate` (TZ-correct, day-first) — the two date formatters are unified.
+  const detailValues = extractCaseDetailValues(detail, (r) => formatCourtDate(r) ?? "—");
   const detailLabels: Record<CaseDetailFieldId, string> = {
     registrationNo: t("detail.registrationNo"), filingNo: t("detail.filingNo"),
     registrationDate: t("detail.registrationDate"), filingDate: t("detail.filingDate"),
@@ -172,7 +173,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     [t("info.caseType"), caseTypeLabel, emptyOnRecord],
     [t("info.stage"), cleanPurpose(matter.stage) || null, emptyOnRecord],
     [t("info.client"), client?.name ?? null, t("empty.client")],
-    [t("info.next"), matter.next_hearing_override ? `${fmtDate(matter.next_hearing_override)} ${t("info.yourDiary")}` : fmtDate(matter.next_hearing_date), t("empty.scheduled")],
+    [t("info.next"), matter.next_hearing_override ? `${(formatCourtDate(matter.next_hearing_override) ?? "—")} ${t("info.yourDiary")}` : (formatCourtDate(matter.next_hearing_date) ?? "—"), t("empty.scheduled")],
     [t("info.judge"), hearings?.find((h) => h.judge)?.judge ?? null, emptyOnRecord],
   ];
   const refreshed = matter.last_synced_at ? new Date(matter.last_synced_at).toLocaleString("en-IN") : t("source.never");
@@ -425,7 +426,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                       {proposed.map((d) => (
                         <li key={d.id} className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-sm text-ec-ink">
-                            {d.kind.replace(/_/g, " ")} · <span className="num font-medium">{fmtDate(d.due_date)}</span>
+                            {d.kind.replace(/_/g, " ")} · <span className="num font-medium">{(formatCourtDate(d.due_date) ?? "—")}</span>
                             {d.basis ? <span className="block text-xs text-ec-warn">{d.basis}</span> : null}
                           </span>
                           <ProposedDeadlineActions deadlineId={d.id} />
@@ -442,7 +443,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                       return (
                         <li key={d.id} className="flex items-center justify-between gap-2">
                           <span className="text-ec-ink">{d.kind.replace(/_/g, " ")}{d.jurisdiction_rule ? <span className="text-ec-ink-3"> — {d.jurisdiction_rule}</span> : null}</span>
-                          <span className={`num shrink-0 text-xs ${overdue ? "font-medium text-ec-warn" : "text-ec-ink-3"}`}>{fmtDate(d.due_date)}{d.status !== "open" ? ` · ${d.status}` : overdue ? ` · ${t("deadlines.overdue")}` : ""}</span>
+                          <span className={`num shrink-0 text-xs ${overdue ? "font-medium text-ec-warn" : "text-ec-ink-3"}`}>{(formatCourtDate(d.due_date) ?? "—")}{d.status !== "open" ? ` · ${d.status}` : overdue ? ` · ${t("deadlines.overdue")}` : ""}</span>
                         </li>
                       );
                     })}
@@ -493,7 +494,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             <ul className="divide-y divide-ec-hair">
               {hearings.map((h) => (
                 <li key={h.id} className="flex items-center gap-3 px-5 py-3 text-sm">
-                  <span className="num w-20 shrink-0 text-ec-ink-3">{fmtDate(h.date)}</span>
+                  <span className="num w-20 shrink-0 text-ec-ink-3">{(formatCourtDate(h.date) ?? "—")}</span>
                   <span className="flex-1 text-ec-ink">{h.purpose ? cleanPurpose(h.purpose) : t("hearings.fallback")}</span>
                   <span className="text-xs text-ec-ink-3">{h.judge ? (isMaskedName(h.judge) ? <MaskedName value={h.judge} label={t("masked")} /> : <Link href={`/dashboard/search/directory?q=${encodeURIComponent(h.judge)}`} className="text-ec-brass-deep hover:text-ec-brass">{h.judge}</Link>) : ""}</span>
                 </li>
@@ -532,7 +533,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                       {s.next_hearing_date && (
-                        <span className="num mr-1 text-xs text-ec-ink-3">{t("similar.next", { date: fmtDate(s.next_hearing_date) })}</span>
+                        <span className="num mr-1 text-xs text-ec-ink-3">{t("similar.next", { date: (formatCourtDate(s.next_hearing_date) ?? "—") })}</span>
                       )}
                       {reasons.map((r, i) => (
                         <span key={i} className={chip(r.tone)}>{r.label}</span>
@@ -566,7 +567,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             {processes.map((p, i) => (
               <li key={p.process_id ?? i} className="flex items-center gap-3 px-5 py-3 text-sm">
                 <Icon name="alert" className="h-4 w-4 shrink-0 text-ec-warn" />
-                <span className="num w-24 shrink-0 text-ec-ink-3">{fmtDate(p.process_date)}</span>
+                <span className="num w-24 shrink-0 text-ec-ink-3">{(formatCourtDate(p.process_date) ?? "—")}</span>
                 <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{p.title ?? t("processes.fallback")}</span>
               </li>
             ))}
@@ -584,7 +585,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             {courtFilings.map((f, i) => (
               <li key={f.docNo ?? i} className="flex items-center gap-3 px-5 py-3 text-sm">
                 <Icon name="documents" className="h-4 w-4 shrink-0 text-ec-ink-3" />
-                <span className="num w-24 shrink-0 text-ec-ink-3">{fmtDate(f.filedDate)}</span>
+                <span className="num w-24 shrink-0 text-ec-ink-3">{(formatCourtDate(f.filedDate) ?? "—")}</span>
                 <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{f.document ?? "—"}</span>
                 {f.advocate && <span className="shrink-0 truncate text-ec-ink-3">{f.advocate}</span>}
               </li>
@@ -603,8 +604,8 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             {objections.map((o, i) => (
               <li key={o.srNo ?? i} className="flex items-start gap-3 px-5 py-3 text-sm">
                 <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0 text-ec-ink-3" />
-                <span className="num w-24 shrink-0 text-ec-ink-3">{fmtDate(o.scrutinyDate)}</span>
-                <span className="min-w-0 flex-1 text-ec-ink">{o.objection ?? t("objections.raised")}{o.complianceDate ? ` · ${t("objections.complyBy")} ${fmtDate(o.complianceDate)}` : ""}</span>
+                <span className="num w-24 shrink-0 text-ec-ink-3">{(formatCourtDate(o.scrutinyDate) ?? "—")}</span>
+                <span className="min-w-0 flex-1 text-ec-ink">{o.objection ?? t("objections.raised")}{o.complianceDate ? ` · ${t("objections.complyBy")} ${(formatCourtDate(o.complianceDate) ?? "—")}` : ""}</span>
               </li>
             ))}
           </ul>
@@ -659,7 +660,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             {(timeEntries ?? []).map((t2) => (
               <li key={t2.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
                 <Icon name="clock" className="h-4 w-4 shrink-0 text-ec-ink-3" />
-                <span className="num w-20 shrink-0 text-ec-ink-3">{fmtDate(t2.entry_date)}</span>
+                <span className="num w-20 shrink-0 text-ec-ink-3">{(formatCourtDate(t2.entry_date) ?? "—")}</span>
                 <span className="flex-1 truncate text-ec-ink-2">{t2.narrative ?? t("billing.entryFallback")}</span>
                 {!t2.billable && <span className={chip("neutral")}>{t("billing.nonBillable")}</span>}
                 <span className="num text-ec-ink-3">{fmtHours(t2.minutes)}</span>
@@ -669,7 +670,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             {(expenses ?? []).map((e) => (
               <li key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
                 <Icon name="notices" className="h-4 w-4 shrink-0 text-ec-ink-3" />
-                <span className="num w-20 shrink-0 text-ec-ink-3">{fmtDate(e.entry_date)}</span>
+                <span className="num w-20 shrink-0 text-ec-ink-3">{(formatCourtDate(e.entry_date) ?? "—")}</span>
                 <span className="flex-1 truncate text-ec-ink-2">{e.notes ?? e.category} <span className="text-ec-ink-3">· {e.category}</span></span>
                 {!e.billable && <span className={chip("neutral")}>{t("billing.nonBillable")}</span>}
                 <span className="num w-20 text-right font-medium text-ec-ink">{fmtMoney(e.amount_minor)}</span>
@@ -686,7 +687,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             {caseInvoices.map((inv) => (
               <li key={inv.id}>
                 <Link href={`/dashboard/invoices/${inv.id}`} className="ec-row flex items-center justify-between px-5 py-3 text-sm">
-                  <span className="num font-medium text-ec-brass-deep">{inv.number ?? t("invoices.draft")} · {fmtDate(inv.issue_date)}</span>
+                  <span className="num font-medium text-ec-brass-deep">{inv.number ?? t("invoices.draft")} · {(formatCourtDate(inv.issue_date) ?? "—")}</span>
                   <span className="flex items-center gap-3"><span className="num font-medium text-ec-ink">{fmtMoney(inv.total_minor)}</span><span className={chip(inv.status === "paid" ? "green" : inv.status === "sent" ? "amber" : "neutral")}>{inv.status}</span></span>
                 </Link>
               </li>
@@ -705,7 +706,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             {caseNotices.map((n) => (
               <li key={n.id} className="flex items-center justify-between px-5 py-3 text-sm">
                 <Link href="/dashboard/notices" className="font-medium capitalize text-ec-brass-deep">{n.type.replace(/_/g, " ")}</Link>
-                <span className="flex items-center gap-3">{n.response_due && <span className="num text-xs text-ec-ink-3">{t("notices.due", { date: fmtDate(n.response_due) })}</span>}<span className={chip(/escalat/.test(n.escalation_state) ? "red" : ["responded", "closed"].includes(n.escalation_state) ? "green" : "amber")}>{n.escalation_state.replace(/_/g, " ")}</span></span>
+                <span className="flex items-center gap-3">{n.response_due && <span className="num text-xs text-ec-ink-3">{t("notices.due", { date: (formatCourtDate(n.response_due) ?? "—") })}</span>}<span className={chip(/escalat/.test(n.escalation_state) ? "red" : ["responded", "closed"].includes(n.escalation_state) ? "green" : "amber")}>{n.escalation_state.replace(/_/g, " ")}</span></span>
               </li>
             ))}
           </ul>

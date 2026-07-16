@@ -100,10 +100,6 @@ export function Disclaimer() {
   return <KitDisclaimer text={t("disclaimer")} />;
 }
 
-export function fmtDate(d: string | null | undefined) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
 export function fmtMoney(minor: number | null | undefined) {
   const v = (minor ?? 0) / 100;
   return `₹${v.toLocaleString("en-IN", { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;

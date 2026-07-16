@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
+import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { IpForm } from "./ip-form";
 import { DeleteButton } from "@/components/delete-button";
 import { deleteIpAsset } from "./actions";
@@ -54,7 +55,7 @@ export default async function IpPage() {
                     <td className="hidden px-5 py-3.5 sm:table-cell"><Badge tone={TYPE_TONE[a.type] ?? "neutral"}>{tr(a.type)}</Badge></td>
                     <td className="hidden px-5 py-3.5 font-mono text-xs text-ink-faint md:table-cell">{a.registration_no ?? "—"}</td>
                     <td className="px-5 py-3.5">
-                      <span className={overdue ? "text-red-600" : due ? "text-amber-700" : "text-ink-soft"}>{fmtDate(a.renewal_date)}</span>
+                      <span className={overdue ? "text-red-600" : due ? "text-amber-700" : "text-ink-soft"}>{(formatCourtDate(a.renewal_date) ?? "—")}</span>
                       {due && <span className="ml-2 text-xs">{overdue ? t("overdue") : t("soon")}</span>}
                     </td>
                     <td className="px-5 py-3.5 text-right">

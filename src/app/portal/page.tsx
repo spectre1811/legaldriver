@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { fmtDate } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { cleanPurpose } from "@/lib/court/code-labels";
 import { Composer } from "./composer";
@@ -40,7 +40,7 @@ export default async function PortalHome() {
             </div>
             <div className="text-right text-sm">
               <span className={`ec-chip ${m.status === "active" ? "ec-chip-success" : ""}`}>{st(m.status)}</span>
-              <p className="num mt-1 text-xs text-ec-ink-3">{t("nextHearing", { date: fmtDate(m.next_hearing_date) })}</p>
+              <p className="num mt-1 text-xs text-ec-ink-3">{t("nextHearing", { date: formatCourtDate(m.next_hearing_date) ?? "—" })}</p>
             </div>
           </div>
         )) : (
@@ -56,7 +56,7 @@ export default async function PortalHome() {
               {hearings.map((h) => (
                 <li key={h.id} className="flex items-center justify-between px-5 py-3 text-sm">
                   <span className="text-ec-ink-2">{h.purpose ? cleanPurpose(h.purpose) : t("hearingFallback")}</span>
-                  <span className="num text-ec-ink-3">{fmtDate(h.date)}</span>
+                  <span className="num text-ec-ink-3">{formatCourtDate(h.date) ?? "—"}</span>
                 </li>
               ))}
             </ul>

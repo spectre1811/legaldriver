@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { PageHeader, Card, Stat, EmptyState, fmtDate } from "@/components/ui";
+import { PageHeader, Card, Stat, EmptyState } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { fetchPortfolio, OPEN_SCAN_CAP, type PortfolioMatter } from "./portfolio-query";
@@ -68,20 +69,20 @@ export default async function PortfolioPage() {
       </section>
 
       {card(t("cards.atRisk.title"), t("cards.atRisk.hint"),
-        atRisk.length ? <ul className="divide-y divide-line">{atRisk.map((m) => row(m.id, m.title, t("hearingOn", { date: fmtDate(eff(m)) }), "red"))}</ul>
+        atRisk.length ? <ul className="divide-y divide-line">{atRisk.map((m) => row(m.id, m.title, t("hearingOn", { date: formatCourtDate(eff(m)) ?? "—" }), "red"))}</ul>
           : <EmptyState icon="check" title={t("empty.atRisk.title")} body={t("empty.atRisk.body")} />)}
 
       {card(t("cards.upcoming.title"), t("cards.upcoming.hint"),
-        upcoming.length ? <ul className="divide-y divide-line">{upcoming.slice(0, 40).map((m) => { const dd = daysBetween(eff(m)!, today); return row(m.id, <>{m.title}{m.cnr ? <span className="ml-2 font-mono text-xs text-ink-faint">{m.cnr}</span> : null}</>, `${fmtDate(eff(m))} · ${dd === 0 ? t("today") : t("inDays", { d: dd })}`, dd <= 3 ? "amber" : undefined); })}</ul>
+        upcoming.length ? <ul className="divide-y divide-line">{upcoming.slice(0, 40).map((m) => { const dd = daysBetween(eff(m)!, today); return row(m.id, <>{m.title}{m.cnr ? <span className="ml-2 font-mono text-xs text-ink-faint">{m.cnr}</span> : null}</>, `${formatCourtDate(eff(m)) ?? "—"} · ${dd === 0 ? t("today") : t("inDays", { d: dd })}`, dd <= 3 ? "amber" : undefined); })}</ul>
           : <EmptyState icon="calendar" title={t("empty.upcoming.title")} body={t("empty.upcoming.body")} />)}
 
       {card(t("cards.deadlines.title"), t("cards.deadlines.hint"),
-        (deadlines ?? []).length ? <ul className="divide-y divide-line">{(deadlines ?? []).map((d) => row(d.matter_id ?? "", <>{d.kind.replace(/_/g, " ")} — {titleOf.get(d.matter_id ?? "") ?? t("caseFallback")}{d.jurisdiction_rule ? <span className="text-ink-faint"> · {d.jurisdiction_rule}</span> : null}</>, `${fmtDate(d.due_date)} · ${t("inDays", { d: daysBetween(d.due_date, today) })}`, daysBetween(d.due_date, today) <= 3 ? "red" : "amber"))}</ul>
+        (deadlines ?? []).length ? <ul className="divide-y divide-line">{(deadlines ?? []).map((d) => row(d.matter_id ?? "", <>{d.kind.replace(/_/g, " ")} — {titleOf.get(d.matter_id ?? "") ?? t("caseFallback")}{d.jurisdiction_rule ? <span className="text-ink-faint"> · {d.jurisdiction_rule}</span> : null}</>, `${(formatCourtDate(d.due_date) ?? "—")} · ${t("inDays", { d: daysBetween(d.due_date, today) })}`, daysBetween(d.due_date, today) <= 3 ? "red" : "amber"))}</ul>
           : <EmptyState icon="check" title={t("empty.deadlines.title")} />)}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {card(t("cards.pastDue.title"), t("cards.pastDue.hint"),
-          pastDue.length ? <ul className="divide-y divide-line">{pastDue.slice(0, 25).map((m) => row(m.id, m.title, t("wasOn", { date: fmtDate(eff(m)) }), "amber"))}</ul>
+          pastDue.length ? <ul className="divide-y divide-line">{pastDue.slice(0, 25).map((m) => row(m.id, m.title, t("wasOn", { date: formatCourtDate(eff(m)) ?? "—" }), "amber"))}</ul>
             : <EmptyState icon="check" title={t("empty.pastDue.title")} />)}
 
         {card(t("cards.needsRefresh.title"), t("cards.needsRefresh.hint"),

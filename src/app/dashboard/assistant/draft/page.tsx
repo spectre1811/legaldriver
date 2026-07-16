@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
+import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
@@ -54,7 +55,7 @@ export default async function DraftConsolePage() {
                       <p className="truncate text-sm font-medium">{d.title ?? t("draftFallback")}</p>
                       <p className="truncate text-xs text-ink-muted">
                         {d.produces_doc_type?.replace(/_/g, " ") ?? t("draftTypeFallback")}
-                        {doc?.filename ? ` · ${t("inReplyTo", { filename: doc.filename })}` : ""} · {fmtDate(d.updated_at)}
+                        {doc?.filename ? ` · ${t("inReplyTo", { filename: doc.filename })}` : ""} · {(formatCourtDate(d.updated_at) ?? "—")}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">

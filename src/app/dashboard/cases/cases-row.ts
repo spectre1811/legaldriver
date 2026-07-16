@@ -6,7 +6,7 @@
 // ── Next-hearing urgency ─────────────────────────────────────────────────────────────────────────
 // `eff` is the effective next-hearing day (diary override beats the court date), `today` an ISO day
 // (both `YYYY-MM-DD`). We diff whole days off the ISO strings (UTC midnights) so there's no TZ drift
-// or day-roll — the exact bug the court kit's `fmtDate` replacement exists to kill.
+// or day-roll — the exact bug the court kit's `formatCourtDate` was built to kill.
 export type UrgencyKey = "overdue" | "today" | "tomorrow" | "soon" | "future" | "none";
 export interface HearingUrgency {
   key: UrgencyKey;

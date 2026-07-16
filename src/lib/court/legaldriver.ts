@@ -18,7 +18,20 @@ import { isMaskedName, maskName } from "./mask";
 // cache-only, `has_pdf`-only surface is for peshi-search/SEO/MCP (a different consumer).
 // Contract: ecourts-scraper `docs/decisions/2026-07-05-keyed-vs-public-v1-surface.md`.
 
-const DEFAULT_BASE = "http://13.202.148.71:8080";
+// FAIL CLOSED (WO-190, WO-52 pattern — see peshi's upstream.ts): there is NO hardcoded prod-IP
+// fallback. A missing LD_API_BASE is a configuration error surfaced loudly at construction time —
+// never a silent default to a raw origin IP, which (a) rots the day the box IP changes and (b)
+// bakes an origin IP into the app. CI/Vercel set the env; a deploy without it fails fast with a
+// clear message instead of talking to a ghost.
+function resolveBase(): string {
+  const base = process.env.LD_API_BASE;
+  if (!base) {
+    throw new Error(
+      "LD_API_BASE is not set — refusing to consume court data with no configured API base (fail-closed, WO-190/WO-52).",
+    );
+  }
+  return base;
+}
 
 // Sync contract (02-DATA §3): we consume the versioned /v1 surface and the provider stamps
 // every /v1 response with `schema_version`. We pin the MAJOR we were built against; a major
@@ -106,7 +119,7 @@ function barPath(b: string): string { return b.split("/").map(encodeURIComponent
 
 export class LegalDriverClient implements CourtDataClient {
   readonly source = "legaldriver";
-  constructor(private readonly apiKey: string, private readonly base: string = process.env.LD_API_BASE || DEFAULT_BASE) {}
+  constructor(private readonly apiKey: string, private readonly base: string = resolveBase()) {}
 
   // Soft schema-version guard for /v1 sync responses. Warns once per process on a MAJOR
   // mismatch; never throws (a stale-but-usable payload still beats blocking the user).

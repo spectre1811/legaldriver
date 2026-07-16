@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { fmtDate } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
@@ -49,8 +49,8 @@ export default async function InvoicesPage() {
                     <div className="min-w-0">
                       <p className="num truncate text-sm font-medium text-ec-ink">{i.number ?? t("draft")} · {client?.name ?? "—"}</p>
                       <p className="num text-xs text-ec-ink-3">
-                        {fmtDate(i.issue_date)}
-                        {i.due_date ? <> · {t("due", { date: fmtDate(i.due_date) })}{overdue ? <span className="font-medium text-ec-danger"> · {t("overdue")}</span> : null}</> : null}
+                        {(formatCourtDate(i.issue_date) ?? "—")}
+                        {i.due_date ? <> · {t("due", { date: (formatCourtDate(i.due_date) ?? "—") })}{overdue ? <span className="font-medium text-ec-danger"> · {t("overdue")}</span> : null}</> : null}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">

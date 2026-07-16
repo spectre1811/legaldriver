@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Badge, Disclaimer, fmtDate, fmtSize } from "@/components/ui";
+import { Card, Badge, Disclaimer, fmtSize } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
 import { PortalInvite, FirmComposer } from "./portal-controls";
@@ -111,7 +112,7 @@ export default async function ClientDetailPage({
               {matters.map((m) => (
                 <li key={m.id} className="flex items-center justify-between px-5 py-3 text-sm">
                   <Link href={`/dashboard/cases/${m.id}`} className="font-medium text-ink hover:text-brand-600">{m.title}</Link>
-                  <span className="text-xs text-ink-muted">{m.cnr ?? "—"} · {t("nextPrefix")} {fmtDate(m.next_hearing_date)}</span>
+                  <span className="text-xs text-ink-muted">{m.cnr ?? "—"} · {t("nextPrefix")} {(formatCourtDate(m.next_hearing_date) ?? "—")}</span>
                 </li>
               ))}
             </ul>
@@ -161,7 +162,7 @@ export default async function ClientDetailPage({
                           <td className="hidden px-5 py-3.5 sm:table-cell">{d.doc_type ? <Badge>{d.doc_type}</Badge> : <span className="text-ink-faint">—</span>}</td>
                           <td className="px-5 py-3.5 text-ink-muted">{filedName}</td>
                           <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtSize(d.size_bytes)}</td>
-                          <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{fmtDate(d.created_at)}</td>
+                          <td className="hidden px-5 py-3.5 text-xs text-ink-faint lg:table-cell">{(formatCourtDate(d.created_at) ?? "—")}</td>
                           <td className="px-5 py-3.5 text-right">
                             <DocActions documentId={d.id} matterId={d.matter_id} clientId={d.client_id} matters={matterOpts} clients={clientOpts} shared={d.portal_shared} docType={d.doc_type} />
                           </td>

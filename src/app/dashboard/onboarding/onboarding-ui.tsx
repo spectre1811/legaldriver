@@ -18,7 +18,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { ConfirmDelete } from "@/components/confirm-delete";
-import { Badge, fmtDate } from "@/components/ui";
+import { Badge } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import {
   startOnboarding,
   continueOnboarding,
@@ -404,7 +405,7 @@ export function AdvocateOnboarding({
           <details className="group text-xs">
             <summary className="flex cursor-pointer list-none items-center gap-1.5 text-ink-faint hover:text-ink">
               <Icon name="chevron" className="h-3.5 w-3.5 transition group-open:rotate-90 motion-reduce:transition-none" />
-              {t("lastRun", { date: fmtDate(run.updatedAt) })} · {t("runDetails")}
+              {t("lastRun", { date: (formatCourtDate(run.updatedAt) ?? "—") })} · {t("runDetails")}
             </summary>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <Stat label={t("stat.rosterTotal")} value={counts.roster_total ?? counts.cases_fetched ?? 0} />

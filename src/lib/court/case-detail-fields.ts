@@ -62,8 +62,8 @@ export type CaseDetailRow = {
  * WO-54 · Map the raw eCourts `matter.detail` jsonb to the `CaseDetailFieldId → value` shape that
  * `selectCaseDetailRows` consumes. Pure + i18n-free so the case-detail page and the Cases-list
  * detail drawer render the SAME fields from the SAME keys (no drift). Date fields are formatted by
- * the caller-supplied `fmt` so each surface controls its own date presentation (the page's legacy
- * `fmtDate`, the drawer's TZ-correct court-kit `formatCourtDate`).
+ * the caller-supplied `fmt`; both surfaces now pass the court-kit `formatCourtDate` (TZ-correct,
+ * day-first) — see WO-190, which retired the divergent `fmtDate`.
  */
 export function extractCaseDetailValues(
   detail: Record<string, unknown>,

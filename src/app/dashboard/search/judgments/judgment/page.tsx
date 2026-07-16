@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { PageHeader, Card, Badge, EmptyState, Disclaimer, fmtDate } from "@/components/ui";
+import { PageHeader, Card, Badge, EmptyState, Disclaimer } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { judgmentPdfUrl, courtLabel, caseDetailByCnr } from "@/lib/court/corpus-athena";
 
@@ -24,14 +25,11 @@ function parseTitle(title: string | null): { caseNumber: string | null; parties:
   return { caseNumber, parties: rest || null };
 }
 
-// Dates arrive either as dd-mm-yyyy (corpus) or ISO; otherwise show the raw string.
+// Dates arrive either as dd-mm-yyyy (corpus) or ISO — formatCourtDate parses both,
+// day-first (the kit's canonical parser). Unparseable → show the raw string.
 function readableDate(d?: string): string | null {
   if (!d) return null;
-  const dmy = d.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-  if (dmy) return fmtDate(`${dmy[3]}-${dmy[2]}-${dmy[1]}`);
-  const iso = new Date(d);
-  if (!Number.isNaN(iso.getTime())) return fmtDate(d);
-  return d;
+  return formatCourtDate(d) ?? d;
 }
 
 export default async function JudgmentReaderPage({

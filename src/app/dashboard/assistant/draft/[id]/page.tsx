@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { Card, Badge, fmtDate } from "@/components/ui";
+import { Card, Badge } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
@@ -39,7 +40,7 @@ export default async function DraftDetailPage({ params }: { params: { id: string
         <div>
           <Link href="/dashboard/assistant/draft" className="mb-1 inline-flex items-center gap-1.5 text-xs text-ink-muted hover:text-ink"><Icon name="back" className="h-3.5 w-3.5" /> {t("header")}</Link>
           <h1 className="text-[1.5rem] font-semibold leading-tight">{draft.title ?? t("draftFallback")}</h1>
-          <p className="mt-1 text-sm text-ink-muted">{draft.produces_doc_type?.replace(/_/g, " ") ?? t("draftTypeFallback")} · {t("updated", { date: fmtDate(draft.updated_at) })}</p>
+          <p className="mt-1 text-sm text-ink-muted">{draft.produces_doc_type?.replace(/_/g, " ") ?? t("draftTypeFallback")} · {t("updated", { date: (formatCourtDate(draft.updated_at) ?? "—") })}</p>
         </div>
         <div className="flex items-center gap-3">
           <Badge tone={draft.status === "finalized" ? "green" : draft.status === "pending" ? "amber" : "brand"}>{draft.status}</Badge>
@@ -128,7 +129,7 @@ export default async function DraftDetailPage({ params }: { params: { id: string
             {versions.map((v) => (
               <li key={v.id} className="flex items-center justify-between px-5 py-2.5">
                 <span>v{v.version} · {v.generated_by === "human-edit" ? t("yourEdit") : t("ai")}</span>
-                <span className="text-xs text-ink-faint">{fmtDate(v.created_at)}</span>
+                <span className="text-xs text-ink-faint">{(formatCourtDate(v.created_at) ?? "—")}</span>
               </li>
             ))}
           </ul>

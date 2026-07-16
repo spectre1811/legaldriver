@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { PageHeader, Card, Badge, EmptyState, fmtDate } from "@/components/ui";
+import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { corpusEnabled, searchJudgments, countJudgments, judgmentPdfUrl, courtLabel, type JudgmentRow } from "@/lib/court/corpus-athena";
@@ -230,7 +231,7 @@ export default async function ResearchPage({
                       </td>
                       <td className="hidden px-5 py-3.5 align-top text-xs text-ink-faint md:table-cell">{courtLabel(r.court)}</td>
                       <td className="hidden px-5 py-3.5 align-top text-xs text-ink-faint sm:table-cell">
-                        {fmtDate(r.decision_date)}
+                        {(formatCourtDate(r.decision_date) ?? "—")}
                         {r.year && !r.decision_date ? <span>{r.year}</span> : null}
                       </td>
                       <td className="px-5 py-3.5 align-top">
