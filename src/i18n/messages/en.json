@@ -1193,6 +1193,52 @@
       "save": "Save scope",
       "saving": "Saving…",
       "hygieneNote": "Spam, promotions and social are always excluded regardless of this scope."
+    },
+    "account": "Gmail · {account}",
+    "sync": {
+      "line": "Synced {rel} · {processed} processed today · {filed} auto-filed · {pending} pending",
+      "never": "Not synced yet · {pending} pending review",
+      "now": "Sync now",
+      "syncing": "Syncing…"
+    },
+    "disconnect": "Disconnect",
+    "tabs": {
+      "needsReview": "Needs review",
+      "autoFiled": "Filed",
+      "ignored": "Ignored"
+    },
+    "banner": {
+      "belowThreshold": "{count, plural, one {# email} other {# emails}} below the {threshold}% confidence threshold — confirm the client or case to auto-file the rest.",
+      "selectAllFile": "Select all · file"
+    },
+    "confidence": {
+      "value": "{percent}%",
+      "unrated": "New",
+      "aria": "{band} confidence"
+    },
+    "confirmAll": "Confirm all high-confidence ({count})",
+    "preview": {
+      "none": "Select an email to preview it here.",
+      "suggests": "Suggests",
+      "noCaseMatch": "No case match",
+      "reply": "Reply",
+      "archive": "Archive",
+      "attachments": "Attachments"
+    },
+    "dock": {
+      "title": "File this email",
+      "client": "Client",
+      "case": "Case",
+      "clientPlaceholder": "Search clients",
+      "casePlaceholder": "Search cases",
+      "skip": "Skip",
+      "file": "File",
+      "filing": "Filing…",
+      "filed": "Filed to {target}."
+    },
+    "emptyTab": {
+      "filed": "Nothing auto-filed yet.",
+      "ignored": "Nothing here. Archived and deleted emails land in this tab."
     }
   },
   "messages": {

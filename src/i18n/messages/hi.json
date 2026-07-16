@@ -1193,6 +1193,52 @@
       "save": "दायरा सहेजें",
       "saving": "सहेज रहे हैं…",
       "hygieneNote": "स्पैम, प्रचार और सोशल इस दायरे के बावजूद हमेशा बाहर रखे जाते हैं।"
+    },
+    "account": "Gmail · {account}",
+    "sync": {
+      "line": "{rel} सिंक हुआ · आज {processed} प्रोसेस · {filed} स्वतः दर्ज · {pending} शेष",
+      "never": "अभी सिंक नहीं हुआ · {pending} समीक्षा शेष",
+      "now": "अभी सिंक करें",
+      "syncing": "सिंक हो रहा है…"
+    },
+    "disconnect": "डिस्कनेक्ट",
+    "tabs": {
+      "needsReview": "समीक्षा ज़रूरी",
+      "autoFiled": "दर्ज",
+      "ignored": "अनदेखा"
+    },
+    "banner": {
+      "belowThreshold": "{count, plural, one {# ईमेल} other {# ईमेल}} {threshold}% विश्वास सीमा से नीचे — बाकी को स्वतः दर्ज करने के लिए मुवक्किल या मुकदमा पुष्ट करें।",
+      "selectAllFile": "सभी चुनें · दर्ज करें"
+    },
+    "confidence": {
+      "value": "{percent}%",
+      "unrated": "नया",
+      "aria": "{band} विश्वास"
+    },
+    "confirmAll": "सभी उच्च-विश्वास दर्ज करें ({count})",
+    "preview": {
+      "none": "पूर्वावलोकन के लिए कोई ईमेल चुनें।",
+      "suggests": "सुझाव",
+      "noCaseMatch": "कोई मुकदमा मेल नहीं",
+      "reply": "उत्तर दें",
+      "archive": "संग्रह",
+      "attachments": "अनुलग्नक"
+    },
+    "dock": {
+      "title": "यह ईमेल दर्ज करें",
+      "client": "मुवक्किल",
+      "case": "मुकदमा",
+      "clientPlaceholder": "मुवक्किल खोजें",
+      "casePlaceholder": "मुकदमा खोजें",
+      "skip": "छोड़ें",
+      "file": "दर्ज करें",
+      "filing": "दर्ज हो रहा है…",
+      "filed": "{target} में दर्ज।"
+    },
+    "emptyTab": {
+      "filed": "अभी तक कुछ स्वतः दर्ज नहीं हुआ।",
+      "ignored": "यहाँ कुछ नहीं। संग्रहित और हटाए गए ईमेल इस टैब में आते हैं।"
     }
   },
   "messages": {

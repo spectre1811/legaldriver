@@ -1,36 +1,71 @@
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { googleConfigured } from "@/lib/mail/oauth";
-import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
+import { PageHeader, Card, fmtAgo } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { IngestButton } from "./ingest-button";
 import { isDemoMode } from "@/lib/demo";
-import { FiledInbox, type InboxGroup } from "./filed-inbox";
-import { ReviewInbox } from "./review-inbox";
+import { InboxWorkspace, type WorkspaceEmail } from "./inbox-workspace";
 import { GmailQueryForm } from "./gmail-query-form";
-import { DisconnectButton, LoadEarlierButton } from "./connect-controls";
+import { DisconnectButton, SyncNowButton } from "./connect-controls";
 import { Pagination } from "@/components/pagination";
 import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
+import { resolveThreshold, istDayStartIso } from "@/lib/mail/inbox-status";
 
-// The needs-review triage queue is meant to be worked down, so a bounded window is
-// enough; the filed archive grows without limit and gets true numbered pagination.
-const REVIEW_WINDOW = 50;
+type Tab = "needs_review" | "filed" | "ignored";
+const TABS: Tab[] = ["needs_review", "filed", "ignored"];
 
-export default async function InboxPage({ searchParams }: { searchParams: { connected?: string; error?: string; page?: string; per?: string } }) {
+export default async function InboxPage({
+  searchParams,
+}: {
+  searchParams: { connected?: string; error?: string; page?: string; per?: string; tab?: string };
+}) {
   const t = await getTranslations("inbox");
   const supabase = createClient();
+  const tab: Tab = TABS.includes(searchParams.tab as Tab) ? (searchParams.tab as Tab) : "needs_review";
   const page = parsePage(searchParams.page);
   const per = clampPerPage(searchParams.per);
   const { from, to } = rangeFor(page, per);
-  // WO-56: split the old single .limit(200) fetch into two purpose-built queries — the
-  // review queue (bounded window) and the filed archive (paginated, exact count). The
-  // former "pending" rows were fetched but never rendered, so they're dropped here.
-  const [{ data: conn }, { data: clients }, { data: matters }, { data: reviewEmails }, { data: filedEmails, count: filedTotal }] = await Promise.all([
+  const threshold = resolveThreshold(process.env.CONFIDENCE_THRESHOLD);
+  const thresholdPct = Math.round(threshold * 100);
+  const todayIso = istDayStartIso(Date.now());
+
+  const head = () => supabase.from("email_message").select("id", { count: "exact", head: true });
+
+  const listQuery = supabase
+    .from("email_message")
+    .select("id, subject, from_addr, snippet, confidence, received_at, classified_client_id, classified_matter_id", { count: "exact" })
+    .order("received_at", { ascending: false, nullsFirst: false })
+    .range(from, to);
+
+  const [
+    { data: userData },
+    { data: conn },
+    { data: clients },
+    { data: matters },
+    { data: rows, count: tabTotal },
+    needsReviewC,
+    filedC,
+    ignoredC,
+    atOrAboveC,
+    confirmAllC,
+    processedTodayC,
+    filedTodayC,
+    { data: lastRow },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
     supabase.from("oauth_connection").select("id, status, gmail_query").eq("provider", "google").eq("status", "active").maybeSingle(),
     supabase.from("client").select("id, name").order("name"),
     supabase.from("matter").select("id, title").order("title"),
-    supabase.from("email_message").select("id, subject, from_addr, confidence, classified_client_id, classified_matter_id").eq("status", "needs_review").order("received_at", { ascending: false }).range(0, REVIEW_WINDOW - 1),
-    supabase.from("email_message").select("id, subject, from_addr, received_at, classified_client_id, classified_matter_id", { count: "exact" }).eq("status", "filed").order("received_at", { ascending: false }).range(from, to),
+    tab === "ignored" ? listQuery.in("status", ["archived", "deleted"]) : listQuery.eq("status", tab),
+    head().eq("status", "needs_review"),
+    head().eq("status", "filed"),
+    head().in("status", ["archived", "deleted"]),
+    head().eq("status", "needs_review").gte("confidence", threshold),
+    head().eq("status", "needs_review").gte("confidence", threshold).or("classified_matter_id.not.is.null,classified_client_id.not.is.null"),
+    head().gte("created_at", todayIso),
+    head().eq("status", "filed").gte("created_at", todayIso),
+    supabase.from("email_message").select("created_at").order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const clientOpts = (clients ?? []).map((c) => ({ id: c.id, label: c.name }));
@@ -38,52 +73,67 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
   const clientName = new Map((clients ?? []).map((c) => [c.id, c.name]));
   const matterName = new Map((matters ?? []).map((m) => [m.id, m.title]));
 
-  const review = reviewEmails ?? [];
-  const filed = filedEmails ?? [];
-
-  // Surface the attachments each email pulled (WO-29): filename → the filed document.
-  const filedIds = filed.map((e) => e.id);
-  const { data: attachRows } = filedIds.length
-    ? await supabase.from("document").select("id, filename, email_message_id").in("email_message_id", filedIds)
+  const list = rows ?? [];
+  const listIds = list.map((e) => e.id);
+  const { data: attachRows } = listIds.length
+    ? await supabase.from("document").select("id, filename, email_message_id").in("email_message_id", listIds)
     : { data: [] as { id: string; filename: string | null; email_message_id: string | null }[] };
   const attachByEmail = new Map<string, { id: string; filename: string }[]>();
   for (const d of attachRows ?? []) {
     if (!d.email_message_id) continue;
-    (attachByEmail.get(d.email_message_id) ?? attachByEmail.set(d.email_message_id, []).get(d.email_message_id)!)
-      .push({ id: d.id, filename: d.filename ?? "attachment" });
+    (attachByEmail.get(d.email_message_id) ?? attachByEmail.set(d.email_message_id, []).get(d.email_message_id)!).push({ id: d.id, filename: d.filename ?? "attachment" });
   }
 
-  const groupMap = new Map<string, InboxGroup["items"]>();
-  for (const e of filed) {
-    const key = e.classified_matter_id ? `${t("group.case")}: ${matterName.get(e.classified_matter_id) ?? "—"}`
-      : e.classified_client_id ? `${t("group.client")}: ${clientName.get(e.classified_client_id) ?? "—"}` : t("group.unassigned");
-    (groupMap.get(key) ?? groupMap.set(key, []).get(key)!).push({
-      id: e.id, subject: e.subject ?? "", from: e.from_addr ?? "", receivedAt: e.received_at,
-      attachments: attachByEmail.get(e.id) ?? [],
-    });
-  }
-  const filedGroups: InboxGroup[] = [...groupMap.entries()].map(([key, items]) => ({ key, items }));
+  const emails: WorkspaceEmail[] = list.map((e) => ({
+    id: e.id,
+    subject: e.subject ?? "",
+    from: e.from_addr ?? "",
+    snippet: e.snippet,
+    confidence: e.confidence,
+    receivedAt: e.received_at,
+    clientId: e.classified_client_id,
+    matterId: e.classified_matter_id,
+    suggestion: e.classified_matter_id ? matterName.get(e.classified_matter_id) ?? null : e.classified_client_id ? clientName.get(e.classified_client_id) ?? null : null,
+    attachments: attachByEmail.get(e.id) ?? [],
+  }));
+
+  const counts = { needs_review: needsReviewC.count ?? 0, filed: filedC.count ?? 0, ignored: ignoredC.count ?? 0 };
+  const belowThreshold = Math.max(0, counts.needs_review - (atOrAboveC.count ?? 0));
+  const account = userData.user?.email ?? "";
 
   return (
-    <div className="space-y-7">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} />
+    <div className="space-y-6">
+      <PageHeader title={t("title")} subtitle={t("subtitle")} serif />
 
-      {searchParams.connected && <p className="rounded-xl bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-700">{t("connected")}</p>}
-      {searchParams.error && <p className="rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800">{searchParams.error}</p>}
+      {searchParams.connected && <p className="rounded-xl bg-ec-success-t px-3.5 py-2.5 text-sm text-ec-success">{t("connected")}</p>}
+      {searchParams.error && <p className="rounded-xl bg-ec-warn-t px-3.5 py-2.5 text-sm text-ec-warn">{searchParams.error}</p>}
 
+      {/* Sync status card */}
       <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
         <div className="flex items-center gap-3">
-          <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${conn ? "bg-emerald-50 text-emerald-600" : "bg-paper text-ink-faint"}`}>
+          <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${conn ? "bg-ec-bronze-tint text-ec-bronze" : "bg-paper text-ink-faint"}`}>
             <Icon name="gmail" className="h-5 w-5" />
           </span>
-          <div className="text-sm">
-            <p className="font-medium text-ink">Gmail</p>
-            <p className="text-ink-muted">{conn ? t("state.connected") : googleConfigured() ? t("state.notConnected") : t("state.oauthNotConfigured")}</p>
+          <div className="min-w-0 text-sm">
+            <p className="font-display text-base text-ink">{conn ? t("account", { account }) : "Gmail"}</p>
+            <p className="text-xs text-ink-muted">
+              {conn
+                ? lastRow?.created_at
+                  ? t("sync.line", { rel: fmtAgo(lastRow.created_at), processed: processedTodayC.count ?? 0, filed: filedTodayC.count ?? 0, pending: counts.needs_review })
+                  : t("sync.never", { pending: counts.needs_review })
+                : googleConfigured()
+                ? t("state.notConnected")
+                : t("state.oauthNotConfigured")}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {conn ? (
-            <><LoadEarlierButton /><DisconnectButton /></>
+            <>
+              <GmailQueryForm initial={conn.gmail_query ?? ""} />
+              <SyncNowButton />
+              <DisconnectButton />
+            </>
           ) : (
             <a href="/api/google/connect" aria-disabled={!googleConfigured()} className={googleConfigured() ? "btn-primary" : "btn-primary pointer-events-none opacity-50"}>
               <Icon name="gmail" className="h-4 w-4" /> {t("connectGmail")}
@@ -94,27 +144,20 @@ export default async function InboxPage({ searchParams }: { searchParams: { conn
         </div>
       </Card>
 
-      {conn && <GmailQueryForm initial={conn.gmail_query ?? ""} />}
+      <InboxWorkspace
+        key={tab}
+        emails={emails}
+        clients={clientOpts}
+        matters={matterOpts}
+        tab={tab}
+        counts={counts}
+        threshold={threshold}
+        thresholdPct={thresholdPct}
+        belowThreshold={belowThreshold}
+        confirmAllCount={confirmAllC.count ?? 0}
+      />
 
-      {review.length > 0 && (
-        <ReviewInbox
-          emails={review.map((e) => ({ id: e.id, subject: e.subject ?? "", from: e.from_addr ?? "", confidence: e.confidence, client_id: e.classified_client_id, matter_id: e.classified_matter_id }))}
-          clients={clientOpts}
-          matters={matterOpts}
-        />
-      )}
-
-      {filedGroups.length === 0 ? (
-        <section className="space-y-4">
-          <h2 className="text-base font-medium">{t("filedHeading")}</h2>
-          <EmptyState icon="inbox" title={t("empty.title")} body={t("empty.body")} />
-        </section>
-      ) : (
-        <>
-          <FiledInbox groups={filedGroups} />
-          <Pagination page={page} perPage={per} total={filedTotal ?? 0} />
-        </>
-      )}
+      {(tabTotal ?? 0) > per && <Pagination page={page} perPage={per} total={tabTotal ?? 0} />}
 
       <p className="text-xs text-ink-faint">{t("footer")}</p>
     </div>

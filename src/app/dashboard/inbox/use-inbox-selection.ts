@@ -1,19 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { rangeIds, toggle } from "@/lib/select-range";
-import { restoreEmails, type BulkResult } from "./actions";
 
-// WO-29 · shared inbox multi-select + bulk + undo, used by BOTH the filed and the review lists
-// (product-depth "build once"). Selection over the flat visual `order`; shift-range; Esc clears;
-// bulk action → Undo toast that restores each row's exact prior status.
+// WO-29 · inbox multi-select (shift-range, Esc-to-clear) for the bulk archive/delete bar.
+// WO-170: trimmed to what the single workspace consumer uses — the old runBulk/undo/toggleAll
+// machinery moved into inbox-workspace's shared undo flow, so it lived here as dead code.
 export function useInboxSelection(order: string[]) {
-  const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [anchor, setAnchor] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [undo, setUndo] = useState<{ entries: { id: string; status: string }[]; label: string } | null>(null);
 
   const clear = () => { setSelected(new Set()); setAnchor(null); };
 
@@ -22,6 +17,16 @@ export function useInboxSelection(order: string[]) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Prune ids that left the list after a refresh/tab change, so a later bulk action can't hit a
+  // row the user can no longer see (e.g. one that got filed by "Confirm all" and moved tabs).
+  const orderKey = order.join(",");
+  useEffect(() => {
+    setSelected((prev) => {
+      const next = new Set([...prev].filter((id) => order.includes(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [orderKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function onRowToggle(id: string, shift: boolean) {
     if (shift && anchor) {
@@ -36,30 +41,5 @@ export function useInboxSelection(order: string[]) {
     }
   }
 
-  const allSelected = order.length > 0 && order.every((id) => selected.has(id));
-  const toggleAll = () => { allSelected ? clear() : (setSelected(new Set(order)), setAnchor(null)); };
-
-  async function runBulk(fn: (ids: string[]) => Promise<BulkResult>) {
-    const ids = [...selected];
-    if (!ids.length) return;
-    setBusy(true);
-    const r = await fn(ids);
-    setBusy(false);
-    if (r.ok) {
-      clear();
-      if (r.undo?.length) setUndo({ entries: r.undo, label: r.message });
-      router.refresh();
-    }
-  }
-
-  async function doUndo() {
-    if (!undo) return;
-    setBusy(true);
-    await restoreEmails(undo.entries);
-    setBusy(false);
-    setUndo(null);
-    router.refresh();
-  }
-
-  return { selected, onRowToggle, allSelected, toggleAll, clear, busy, undo, dismissUndo: () => setUndo(null), runBulk, doUndo };
+  return { selected, onRowToggle, clear };
 }

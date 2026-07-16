@@ -40,7 +40,7 @@ export function GmailQueryForm({ initial }: { initial: string }) {
             {pending ? t("saving") : t("save")}
           </button>
         </div>
-        {msg && <p className={`text-xs ${msg.ok ? "text-emerald-700" : "text-amber-700"}`}>{msg.text}</p>}
+        {msg && <p className={`text-xs ${msg.ok ? "text-ec-success" : "text-ec-warn"}`}>{msg.text}</p>}
         <p className="text-[11px] text-ink-faint">{t("hygieneNote")}</p>
       </div>
     </details>
