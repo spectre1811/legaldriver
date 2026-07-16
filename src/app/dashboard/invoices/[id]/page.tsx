@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { fmtDate } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
@@ -33,7 +33,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
         <div>
           <Link href="/dashboard/invoices" className="mb-1 inline-flex items-center gap-1.5 text-xs text-ec-ink-3 hover:text-ec-ink"><Icon name="back" className="h-3.5 w-3.5" /> {t("title")}</Link>
           <h1 className="num font-display text-[1.5rem] font-medium leading-tight tracking-tight">{inv.number ?? t("detail.draftInvoice")}</h1>
-          <p className="num mt-1 text-sm text-ec-ink-3">{client?.name ?? "—"}{matter?.id ? <> · <Link href={`/dashboard/cases/${matter.id}`} className="text-ec-brass-deep hover:text-ec-brass">{matter.title}</Link></> : null} · {fmtDate(inv.issue_date)}</p>
+          <p className="num mt-1 text-sm text-ec-ink-3">{client?.name ?? "—"}{matter?.id ? <> · <Link href={`/dashboard/cases/${matter.id}`} className="text-ec-brass-deep hover:text-ec-brass">{matter.title}</Link></> : null} · {(formatCourtDate(inv.issue_date) ?? "—")}</p>
         </div>
         <span className={`ec-chip ${TONE[inv.status] ?? ""}`}>{st(inv.status)}</span>
       </div>

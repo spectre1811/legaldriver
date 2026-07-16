@@ -32,6 +32,7 @@ const OFFLINE = [
   "wo186_response_cache",
   "bp17_court_kit",
   "wo45_court_kit_adoption",
+  "wo190_fmtdate_migration",
   "design_tokens_smoke",
   "i18n_coverage",
   "wo82_directory_nav",

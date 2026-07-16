@@ -5,9 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { getCaseCached } from "@/lib/court/gateway";
 import { getTimeline, type TimelineEvent } from "@/lib/court/legaldriver-api";
-import { fmtDate } from "@/components/ui";
 import { Icon } from "@/components/icons";
-import { CourtField, MaskedName } from "@/components/court";
+import { CourtField, MaskedName, formatCourtDate } from "@/components/court";
 import { isMaskedName, maskTitle } from "@/lib/court/mask";
 import { expandCaseType, cleanPurpose } from "@/lib/court/code-labels";
 import { selectCaseDetailRows, extractCaseDetailValues, type CaseDetailFieldId } from "@/lib/court/case-detail-fields";
@@ -98,7 +97,7 @@ export default async function CasePreviewPage({ params }: { params: { cnr: strin
   // empty MOBILE-sourced field is truthfully "not on record at eCourts" (BP-24 honest-empty).
   const isCourtSourced = !!c.source && c.source !== "manual";
   const isDisposed = (c.status ?? "").toUpperCase().includes("DISPOSED");
-  const detailValues = extractCaseDetailValues(detail, (r) => fmtDate(r));
+  const detailValues = extractCaseDetailValues(detail, (r) => (formatCourtDate(r) ?? "—"));
   const detailLabels: Record<CaseDetailFieldId, string> = {
     registrationNo: tcd("detail.registrationNo"), filingNo: tcd("detail.filingNo"),
     registrationDate: tcd("detail.registrationDate"), filingDate: tcd("detail.filingDate"),
@@ -132,7 +131,7 @@ export default async function CasePreviewPage({ params }: { params: { cnr: strin
     [tcd("info.court"), c.court ?? null, emptyOnRecord],
     [tcd("info.caseType"), caseTypeLabel, emptyOnRecord],
     [tcd("info.stage"), cleanPurpose(c.stage ?? null) || null, emptyOnRecord],
-    [tcd("info.next"), fmtDate(c.nextHearingDate ?? null), tcd("empty.scheduled")],
+    [tcd("info.next"), (formatCourtDate(c.nextHearingDate ?? null) ?? "—"), tcd("empty.scheduled")],
     [tcd("info.judge"), hearingJudge, emptyOnRecord],
   ];
 
@@ -281,7 +280,7 @@ export default async function CasePreviewPage({ params }: { params: { cnr: strin
             <ul className="divide-y divide-ec-hair">
               {c.hearings.map((h, i) => (
                 <li key={i} className="flex items-center gap-3 px-5 py-3 text-sm">
-                  <span className="num w-20 shrink-0 text-ec-ink-3">{fmtDate(h.date)}</span>
+                  <span className="num w-20 shrink-0 text-ec-ink-3">{(formatCourtDate(h.date) ?? "—")}</span>
                   <span className="flex-1 text-ec-ink">{h.purpose ? cleanPurpose(h.purpose) : tcd("hearings.fallback")}</span>
                   <span className="text-xs text-ec-ink-3">{h.judge ? (isMaskedName(h.judge) ? <MaskedName value={h.judge} label={tcd("masked")} /> : <Link href={`/dashboard/search/directory?q=${encodeURIComponent(h.judge)}`} className="text-ec-brass-deep hover:text-ec-brass">{h.judge}</Link>) : ""}</span>
                 </li>

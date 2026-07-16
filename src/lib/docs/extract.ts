@@ -1,4 +1,4 @@
-// Deterministic text extraction. PDFs via pdf-parse; text/* decoded directly.
+// Deterministic text extraction. PDFs via unpdf; text/* decoded directly.
 // OCR fallback (tesseract.js) for image-only PDFs is a documented future step —
 // flagged here rather than silently returning empty text.
 

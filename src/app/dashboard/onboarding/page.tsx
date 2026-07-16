@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { PageHeader, Card, fmtDate } from "@/components/ui";
+import { PageHeader, Card } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon, type IconName } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
@@ -93,7 +94,7 @@ export default async function OnboardingPage() {
                         <p className="truncate text-xs text-ink-muted">{m.court || m.cnr || ""}</p>
                       </div>
                       <span className="shrink-0 text-xs text-ink-faint">
-                        {m.next_hearing_date ? t("practice.nextHearing", { date: fmtDate(m.next_hearing_date) }) : t("practice.noHearing")}
+                        {m.next_hearing_date ? t("practice.nextHearing", { date: (formatCourtDate(m.next_hearing_date) ?? "—") }) : t("practice.noHearing")}
                       </span>
                     </Link>
                   </li>

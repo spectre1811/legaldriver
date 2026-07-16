@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card, Badge, fmtAgo, fmtDate } from "@/components/ui";
+import { PageHeader, Card, Badge, fmtAgo } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon, type IconName } from "@/components/icons";
 import { AdvocateForm } from "./advocate-form";
 import { FirmBillingForm } from "../invoices/invoices-ui";
@@ -356,7 +357,7 @@ export default async function SettingsPage() {
                         {r.note && <span className="text-xs text-ink-faint">{r.note}</span>}
                       </span>
                       <span className="flex items-center gap-2.5">
-                        <span className="text-xs text-ink-faint">{fmtDate(r.created_at)}</span>
+                        <span className="text-xs text-ink-faint">{(formatCourtDate(r.created_at) ?? "—")}</span>
                         <Badge tone={r.status === "fulfilled" ? "green" : r.status === "cancelled" ? "neutral" : "amber"}>
                           {st(r.status)}
                         </Badge>

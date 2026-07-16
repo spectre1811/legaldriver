@@ -10,10 +10,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
-import { fmtDate, fmtAgo } from "@/components/ui";
+import { fmtAgo } from "@/components/ui";
 import { cleanPurpose } from "@/lib/court/code-labels";
 import { maskTitle } from "@/lib/court/mask";
-import { CourtChip } from "@/components/court";
+import { CourtChip, formatCourtDate } from "@/components/court";
 import {
   useSelection, useUndo, BulkBar, bulkBtn, RowCheckbox, SelectAllCheckbox, UndoToast,
 } from "@/components/selection";
@@ -217,7 +217,7 @@ export function CasesTable({
                   <td className="num px-5 py-3.5">
                     {eff ? (
                       <span className="inline-flex flex-wrap items-center gap-1.5">
-                        <span className={overdue ? "font-medium text-ec-danger" : "text-ec-ink-2"}>{fmtDate(eff)}</span>
+                        <span className={overdue ? "font-medium text-ec-danger" : "text-ec-ink-2"}>{(formatCourtDate(eff) ?? "—")}</span>
                         {m.next_hearing_override && <span className="text-[0.7rem] text-ec-ink-3">{t("diary")}</span>}
                         <UrgencyChip urg={urg} t={t} />
                       </span>

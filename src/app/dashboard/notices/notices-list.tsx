@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import { Card, Badge, fmtDate } from "@/components/ui";
+import { Card, Badge } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { RespondButton } from "./respond-button";
 import { DeleteButton } from "@/components/delete-button";
@@ -105,13 +106,13 @@ export async function NoticesList({ rows }: { rows: NoticeRow[] }) {
                           {t(`state.${step}`)}
                         </p>
                         {step === "sent" && n.sent_at && (
-                          <p className="text-[10px] text-ink-faint">{fmtDate(n.sent_at)}</p>
+                          <p className="text-[10px] text-ink-faint">{(formatCourtDate(n.sent_at) ?? "—")}</p>
                         )}
                         {step === "awaiting_response" && n.response_due && (
-                          <p className="text-[10px] text-ink-faint">{t("dueDate", { date: fmtDate(n.response_due) })}</p>
+                          <p className="text-[10px] text-ink-faint">{t("dueDate", { date: (formatCourtDate(n.response_due) ?? "—") })}</p>
                         )}
                         {(step === "escalated_1" || step === "escalated_2") && isCurrent && n.next_escalation_at && (
-                          <p className="text-[10px] text-amber-600 font-medium">{t("escalatesAt", { date: fmtDate(n.next_escalation_at) })}</p>
+                          <p className="text-[10px] text-amber-600 font-medium">{t("escalatesAt", { date: (formatCourtDate(n.next_escalation_at) ?? "—") })}</p>
                         )}
                       </div>
                     </li>

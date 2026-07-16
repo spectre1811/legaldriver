@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, EmptyState, fmtDate, fmtSize } from "@/components/ui";
+import { PageHeader, EmptyState, fmtSize } from "@/components/ui";
+import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { CATEGORIES, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/docs/categories";
 import { FilterBar } from "./filter-bar";
@@ -95,7 +96,7 @@ export default async function DocumentsPage({
     return {
       id: d.id, filename: d.filename ?? "—", docType: d.doc_type, mime: d.mime,
       primary: clientLabel ?? caseLabel, secondary: clientLabel ? caseLabel : null,
-      sourceLabel: SOURCE[d.source] ?? d.source, sizeLabel: fmtSize(d.size_bytes), dateLabel: fmtDate(d.created_at),
+      sourceLabel: SOURCE[d.source] ?? d.source, sizeLabel: fmtSize(d.size_bytes), dateLabel: (formatCourtDate(d.created_at) ?? "—"),
       matterId: d.matter_id, clientId: d.client_id, shared: d.portal_shared,
       hasFile: Boolean(d.storage_path),
     };
