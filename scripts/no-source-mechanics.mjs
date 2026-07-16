@@ -54,6 +54,13 @@ const DENYLIST = [
   // Devanagari carries the transliteration the Latin rule can't see (as with स्क्रैप/क्रॉल).
   { re: /operating\s+system\s+for\s+india(?:n|['’]s)?\s+(?:law|lawyers)\b/i, term: "retired tagline (operating system for Indian law/lawyers)" },
   { re: /ऑपरेटिंग\s*सिस्टम/, term: "retired tagline (ऑपरेटिंग सिस्टम)" },
+  // WO-202 W2 (2026-07-16) · retired marketing lines from copy-deck v1 ("Your entire practice.
+  // One daily driver."). Purged in favour of hero-A / verb-system voice; locked so they can't
+  // reappear. "पूरी प्रैक्टिस" is NOT listed — it is innocent Hindi for "whole practice" in live
+  // copy; only the coined "डेली ड्राइवर" mark is banned in Devanagari.
+  { re: /\bdaily\s+driver\b/i, term: "retired line (daily driver)" },
+  { re: /\byour\s+entire\s+practice\b/i, term: "retired line (your entire practice)" },
+  { re: /डेली\s*ड्राइवर/, term: "retired line (डेली ड्राइवर)" },
 ];
 
 // Copy-bearing components/pages that emit literal user-visible default text (the catalogs cover the

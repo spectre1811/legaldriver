@@ -642,7 +642,7 @@
   },
   "auth": {
     "brand": {
-      "headline": "Your practice, on a single daily driver.",
+      "headline": "Every order read. Every date kept. Every evening.",
       "sub": "Track cases by CNR, surface your cause list and deadlines, escalate notices, and let your inbox file itself — built for advocates and firms.",
       "footnote": "Court data from the public court record · not legal advice · verify against the official record."
     },
@@ -1681,7 +1681,7 @@
     "title": "Advocate onboarding",
     "subtitle": "Enter once, and we assemble your practice: cases on the calendar, inbox filed, closed cases by name, and AI briefings.",
     "hero": {
-      "title": "Your entire practice, assembled from one entry",
+      "title": "Your practice, assembled from the court record",
       "body": "Add your Bar registration number and we gather every case in your name from the court record — onto your calendar, with hearings, deadlines, and AI briefings. No manual upload."
     },
     "steps": {
@@ -2346,7 +2346,7 @@
     "subtitle": "Built for how Indian litigation actually runs — the daily cause list, the CNR, WhatsApp, two languages.",
     "item1": "<b>Tomorrow’s hearings, before 8 pm.</b> Your full cause list for the next day reaches your WhatsApp every evening — no portal logins, no calls to the clerk.",
     "item2": "<b>CNR-native.</b> Add a case once; hearings, orders and next dates keep themselves current from the court record.",
-    "item3": "<b>One daily driver.</b> Cases, clients, deadlines, documents and GST invoicing in one place, instead of five.",
+    "item3": "<b>Everything in its matter.</b> Cases, clients, deadlines, documents and GST invoicing filed to the right case — the whole practice in one place, instead of five.",
     "item4": "<b>Bilingual by default.</b> The whole product works in English and Hindi, with Gujarati following — first-class, not bolted on.",
     "item5": "<b>Trust, designed in.</b> Every court record shows its source and a “verify against the official record” note; AI is always attributed. We are a neutral directory — no rankings, no “best lawyer” claims."
   },
@@ -2355,7 +2355,7 @@
     "subtitle": "We read everything. The fastest way to reach us is email.",
     "support": "<b>General & support</b> — <mail>hello@mukadma.in</mail>",
     "grievances": "<b>Data corrections & grievances</b> — <mail>grievance@mukadma.in</mail> (see <corrections>corrections & takedowns</corrections>)",
-    "member": "<b>Already a member?</b> Use in-app support from your dashboard.",
+    "member": "<b>Already a member?</b> Use in-app support from your board.",
     "advocate": "If you’re an advocate, the quickest way to see Mukadma is to <login>start free</login> and add a case by CNR."
   },
   "forClients": {
