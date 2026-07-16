@@ -23,8 +23,11 @@ export function AddEntry({ matters }: { matters: { id: string; title: string }[]
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="btn-secondary">
-        <Icon name="plus" className="h-4 w-4" /> {t("addEntry.open")}
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex h-9 items-center gap-1.5 rounded-ec-s bg-ec-honey px-3 text-[12.5px] font-medium text-ec-on-honey transition-colors hover:bg-ec-honey/90"
+      >
+        <Icon name="plus" className="h-3.5 w-3.5" /> {t("addEntry.open")}
       </button>
     );
   }
