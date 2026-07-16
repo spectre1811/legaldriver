@@ -57,7 +57,8 @@ export async function Landing() {
             <Link href="/login?mode=signup" className="ec-btn ec-btn-ink">{t("hero.ctaStart")}</Link>
             <a href={links.publicSearch} className="ec-btn ec-btn-ghost">{t("hero.ctaSearch")}</a>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ec-ink-3">
+          <p className="mt-3 font-display text-[15px] italic text-ec-brass-deep">{t("hero.oneCnr")}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ec-ink-3">
             <span>{t("hero.note")}</span>
             <a href="#pricing" className="font-medium text-ec-ink-2 underline-offset-2 hover:text-ec-brass-deep hover:underline">{t("hero.ctaPricing")}</a>
           </div>
@@ -92,17 +93,17 @@ export async function Landing() {
       {/* proof strip */}
       <div className="border-y border-ec-hair bg-ec-paper">
         <div className="mx-auto flex max-w-6xl flex-wrap justify-center gap-x-8 gap-y-2 px-6 py-4">
-          {["hc", "district", "judgments", "cnr"].map((k) => (
+          {["judgments", "cnr", "board", "gujarat"].map((k) => (
             <span key={k} className="text-xs font-semibold uppercase tracking-widest text-ec-ink-3">{t(`proof.${k}`)}</span>
           ))}
         </div>
       </div>
 
-      {/* features */}
-      <section id="features" className="mx-auto grid max-w-6xl gap-6 px-6 py-16 md:grid-cols-3">
-        {["evening", "running", "fee"].map((f) => (
+      {/* features — the SYNC · READ · FILE · BILL verb system */}
+      <section id="features" className="mx-auto grid max-w-6xl gap-6 px-6 py-16 sm:grid-cols-2 lg:grid-cols-4">
+        {["sync", "read", "file", "bill"].map((f) => (
           <div key={f} className="rounded-ec-m border border-ec-hair bg-ec-paper p-6 transition hover:shadow-ec-1">
-            <p className="mb-4 font-display text-[15px] italic text-ec-brass-deep">{t(`features.${f}.eyebrow`)}</p>
+            <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-ec-brass-deep">{t(`features.${f}.eyebrow`)}</p>
             <h3 className="mb-2 font-display text-[21px] font-medium leading-snug">{t(`features.${f}.title`)}</h3>
             <p className="text-sm leading-relaxed text-ec-ink-2">{t(`features.${f}.body`)}</p>
           </div>

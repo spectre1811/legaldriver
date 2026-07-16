@@ -836,37 +836,43 @@
     },
     "hero": {
       "overline": "आज की पेशी, कल की तैयारी।",
-      "title1": "Your entire practice.",
-      "title2": "One daily driver.",
-      "sub": "Cause lists, cases, clients and invoices — synced from the court record by CNR and delivered to your WhatsApp every evening. Built for Indian courts, free to begin.",
-      "ctaStart": "Start free — track 25 cases",
+      "title1": "Every order read. Every date kept.",
+      "title2": "Every evening.",
+      "sub": "Mukadma is the AI that keeps your practice from the court record itself — cases synced by CNR, new orders read and briefed, emails filed to the right matter, and tomorrow's board on your WhatsApp by 8 pm.",
+      "ctaStart": "Put 25 cases on watch — free",
+      "ctaSearch": "Look up a case first — no login",
+      "note": "No card. No clerk calls. Cancel anytime.",
+      "oneCnr": "One CNR is enough.",
       "ctaPricing": "See pricing",
-      "note": "No card. No clerk calls.",
       "overline2": "आज की पेशी",
-      "miniFoot": "Tomorrow's list reaches WhatsApp before 8 pm",
-      "ctaSearch": "Search a case — free"
+      "miniFoot": "Tomorrow's list reaches WhatsApp before 8 pm"
     },
     "proof": {
-      "hc": "Gujarat High Court",
-      "district": "District courts across Gujarat",
       "judgments": "18.6M judgments indexed",
-      "cnr": "CNR-native"
+      "cnr": "synced from the court record by CNR",
+      "board": "tomorrow's board by 8 pm",
+      "gujarat": "Gujarat first, expanding"
     },
     "features": {
-      "evening": {
-        "eyebrow": "the evening list",
-        "title": "Tomorrow's hearings, on WhatsApp before 8 pm.",
-        "body": "Every evening your full cause list for tomorrow — court, item number, stage — arrives where you already are. No portal logins, no calls to the clerk."
+      "sync": {
+        "eyebrow": "Sync",
+        "title": "The record comes to you.",
+        "body": "Cases by CNR, cause lists nightly, orders the moment they upload."
       },
-      "running": {
-        "eyebrow": "the running file",
-        "title": "Every case, auto-updated by CNR.",
-        "body": "Add a CNR once. Hearings, orders and next dates keep themselves current from the court record — your diary maintains itself."
+      "read": {
+        "eyebrow": "Read",
+        "title": "Every order, understood.",
+        "body": "Plain-language briefs, what changed, what's next — before you ask."
       },
-      "fee": {
-        "eyebrow": "the fee book",
-        "title": "Invoices that file themselves.",
-        "body": "Hours become GST-ready invoices; clients pay by UPI, card or netbanking. The cash-and-diary fee book, respectfully retired."
+      "file": {
+        "eyebrow": "File",
+        "title": "Everything in its matter.",
+        "body": "Emails, orders, drafts — filed to the right case, confirmed by you."
+      },
+      "bill": {
+        "eyebrow": "Bill",
+        "title": "Hours become invoices.",
+        "body": "GST-ready, UPI-paid, the fee book that keeps itself."
       }
     },
     "pricing": {
@@ -884,7 +890,7 @@
             "clients": "10 clients & matters",
             "search": "Search 18.6M judgments"
           },
-          "summary": "Get started and track your practice at no cost."
+          "summary": "Track 25 cases, evening list included."
         },
         "basic": {
           "name": "Basic",
@@ -914,7 +920,7 @@
             "pooled": "Pooled AI credits",
             "support": "Dedicated support, SLA"
           },
-          "summary": "For firms and chambers, with SSO and dedicated support."
+          "summary": "For firms and chambers — SSO, seats, dedicated support."
         }
       },
       "cta": {
@@ -926,7 +932,7 @@
       "tbd": "Coming soon"
     },
     "footer": {
-      "tagline": "Making Indian litigation legible — for the advocates who run it and the citizens who live through it.",
+      "tagline": "Built on the court record.",
       "col": {
         "product": {
           "h": "Product",
@@ -960,7 +966,7 @@
       "sub": "Run a whole practice, look up a single case, or just get tomorrow's board on WhatsApp. Same court data, three ways to use it.",
       "app": {
         "title": "Mukadma for advocates",
-        "body": "Track every case by CNR, keep your cause list and diary current, and bill clients — your entire practice in one place.",
+        "body": "Track every case by CNR, keep your cause list and diary current, and bill clients — a whole litigation practice, kept from the record.",
         "cta": "Start free"
       },
       "search": {
