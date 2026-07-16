@@ -13,10 +13,11 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { AddCaseForm } from "./add-case-form";
 
-export function AddCaseButton({ autoCnr }: { autoCnr?: string }) {
+export function AddCaseButton({ autoCnr, autoOpen }: { autoCnr?: string; autoOpen?: boolean }) {
   const t = useTranslations("cases");
-  // Deep-linked CNR → open immediately on first render so AddCaseForm mounts + auto-submits.
-  const [open, setOpen] = useState(() => Boolean(autoCnr));
+  // Open immediately on first render for a deep-linked CNR (?track=, auto-submits) OR the
+  // top-bar "+ New" (?add=1, opens the empty form focused). Same pattern, one state.
+  const [open, setOpen] = useState(() => Boolean(autoCnr) || Boolean(autoOpen));
 
   useEffect(() => {
     if (!open) return;

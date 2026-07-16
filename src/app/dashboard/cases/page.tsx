@@ -18,7 +18,7 @@ function isoDay(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-type Search = CasesFilters & { page?: string; per?: string; track?: string };
+type Search = CasesFilters & { page?: string; per?: string; track?: string; add?: string };
 
 export default async function CasesPage({ searchParams }: { searchParams: Search }) {
   const supabase = createClient();
@@ -104,6 +104,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
           viewCounts={viewCounts}
           views={views}
           autoCnr={sanitizeTrack(searchParams.track) ?? undefined}
+          autoOpen={searchParams.add === "1"}
         />
 
         <PendingDim>
