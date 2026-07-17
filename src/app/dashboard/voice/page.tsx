@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { isDisabled } from "../modules";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,6 +13,7 @@ import { parsePage, clampPerPage } from "@/lib/paginate";
 export const dynamic = "force-dynamic";
 
 export default async function VoicePage({ searchParams }: { searchParams: { page?: string; per?: string } }) {
+  if (isDisabled("/dashboard/voice")) redirect("/dashboard"); // WO-206: hidden module (see modules.ts DISABLED_MODULES).
   const t = await getTranslations("voice");
   const supabase = createClient();
   const admin = createAdminClient();

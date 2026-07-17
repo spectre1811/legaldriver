@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { isDisabled } from "../modules";
 import { getTranslations } from "next-intl/server";
 import { PageHeader, Card, Stat, EmptyState } from "@/components/ui";
 import { formatCourtDate } from "@/components/court";
@@ -14,6 +16,7 @@ const daysBetween = (a: string, b: string) => Math.round((new Date(a).getTime() 
 
 // Firm-wide "managing partner" view — turns per-case court data into portfolio risk.
 export default async function PortfolioPage() {
+  if (isDisabled("/dashboard/portfolio")) redirect("/dashboard"); // WO-206: hidden module (see modules.ts DISABLED_MODULES).
   const supabase = createClient();
   const t = await getTranslations("portfolio");
   const tenantId = await getTenantId(supabase);

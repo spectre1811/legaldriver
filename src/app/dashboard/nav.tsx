@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "@/components/icons";
+import { isDisabled } from "./modules"; // WO-206: hide voice/messages/portfolio/notices behind one flag.
 
 type NavEntry = { href: string; label: string; icon: IconName };
 
@@ -64,8 +65,13 @@ const SECTIONS: { heading: string; items: NavEntry[] }[] = [
 // Pinned in the sidebar footer (out of the scroll region) so it never clips off short viewports.
 const ACCOUNT_ITEMS: NavEntry[] = [{ href: "/dashboard/settings", label: "settings", icon: "settings" }];
 
+// Sections with disabled modules filtered out; sections that empty out are dropped entirely.
+const VISIBLE_SECTIONS = SECTIONS.map((s) => ({ ...s, items: s.items.filter((i) => !isDisabled(i.href)) })).filter(
+  (s) => s.items.length > 0,
+);
+
 // Flattened jump-to targets (single source of truth) — reused by the ⌘K command palette.
-export const NAV_TARGETS: NavEntry[] = [...SECTIONS.flatMap((s) => s.items), ...ACCOUNT_ITEMS];
+export const NAV_TARGETS: NavEntry[] = [...VISIBLE_SECTIONS.flatMap((s) => s.items), ...ACCOUNT_ITEMS];
 
 function useIsActive() {
   const pathname = usePathname();
@@ -99,7 +105,7 @@ export function NavLinks() {
 
   return (
     <nav className="flex flex-col gap-6" aria-label={t("ariaMain")}>
-      {SECTIONS.map((section) => (
+      {VISIBLE_SECTIONS.map((section) => (
         <div key={section.heading}>
           <p className="ec-label mb-2 px-3">{t(`heading.${section.heading}`)}</p>
           <div className="flex flex-col gap-0.5">

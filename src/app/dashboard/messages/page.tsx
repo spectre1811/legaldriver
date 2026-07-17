@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { isDisabled } from "../modules";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, EmptyState, fmtAgo } from "@/components/ui";
@@ -21,6 +23,7 @@ const CHANNEL_TONE: Record<string, "green" | "brand" | "neutral"> = {
 };
 
 export default async function MessagesPage({ searchParams }: { searchParams: { channel?: string; page?: string; per?: string } }) {
+  if (isDisabled("/dashboard/messages")) redirect("/dashboard"); // WO-206: hidden module (see nav.tsx DISABLED_MODULES).
   const t = await getTranslations("messages");
   const supabase = createClient();
   const channel = searchParams.channel;
