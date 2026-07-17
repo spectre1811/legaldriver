@@ -12,6 +12,8 @@ export const dynamic = "force-dynamic";
 const rupees = (m: number) => `₹${(m / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const TONE: Record<string, string> = { draft: "", sent: "ec-chip-warn", paid: "ec-chip-success", cancelled: "ec-chip-danger" };
 
+type TimelineStep = { key: string; label: string; date: string | null; done: boolean; tone: "done" | "pending" };
+
 export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
   const t = await getTranslations("invoices");
@@ -27,18 +29,69 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
   const matter = inv.matter as { id?: string; title?: string } | null;
   const editable = inv.status === "draft";
 
+  // Honest status-event timeline. We track invoice STATUS transitions, not a payment ledger
+  // (no `payment` table exists — see queue/INBOX API ask). So: Created (always, at created_at)
+  // → Issued (when it left draft) → Paid/Cancelled (terminal). Dates we actually hold:
+  // created_at (create), updated_at (last transition). A finalised `number` proves it was
+  // issued; the exact issue date is `issue_date`. We never invent an intermediate date.
+  const issued = inv.status !== "draft"; // left draft ⇒ was issued (paid/cancelled pass through sent)
+  const steps: TimelineStep[] = [
+    { key: "created", label: t("timeline.created"), date: inv.created_at, done: true, tone: "done" },
+    { key: "issued", label: t("timeline.issued"), date: issued ? inv.issue_date : null, done: issued, tone: issued ? "done" : "pending" },
+  ];
+  if (inv.status === "cancelled") {
+    steps.push({ key: "cancelled", label: t("timeline.cancelled"), date: inv.updated_at, done: true, tone: "done" });
+  } else {
+    const paid = inv.status === "paid";
+    steps.push({ key: "paid", label: t("timeline.paid"), date: paid ? inv.updated_at : null, done: paid, tone: paid ? "done" : "pending" });
+  }
+
   return (
     <div className="space-y-6 text-ec-ink">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <Link href="/dashboard/invoices" className="mb-1 inline-flex items-center gap-1.5 text-xs text-ec-ink-3 hover:text-ec-ink"><Icon name="back" className="h-3.5 w-3.5" /> {t("title")}</Link>
-          <h1 className="num font-display text-[1.5rem] font-medium leading-tight tracking-tight">{inv.number ?? t("detail.draftInvoice")}</h1>
-          <p className="num mt-1 text-sm text-ec-ink-3">{client?.name ?? "—"}{matter?.id ? <> · <Link href={`/dashboard/cases/${matter.id}`} className="text-ec-brass-deep hover:text-ec-brass">{matter.title}</Link></> : null} · {(formatCourtDate(inv.issue_date) ?? "—")}</p>
+      {/* Sand header band — number · client/matter · issued date · status, on a recessed well. */}
+      <div className="rounded-ec-m border border-ec-hair bg-ec-paper-3 px-5 py-5 sm:px-6">
+        <Link href="/dashboard/invoices" className="mb-2 inline-flex items-center gap-1.5 text-xs text-ec-ink-3 hover:text-ec-ink"><Icon name="back" className="h-3.5 w-3.5" /> {t("title")}</Link>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="num font-display text-[1.6rem] font-medium leading-tight tracking-tight">{inv.number ?? t("detail.draftInvoice")}</h1>
+            <p className="num mt-1 text-sm text-ec-ink-2">
+              {client?.name ?? "—"}
+              {matter?.id ? <> · <Link href={`/dashboard/cases/${matter.id}`} className="text-ec-brass-deep hover:text-ec-brass">{matter.title}</Link></> : null}
+              {" · "}{formatCourtDate(inv.issue_date) ?? "—"}
+            </p>
+          </div>
+          <div className="text-right">
+            <span className={`ec-chip ${TONE[inv.status] ?? ""}`}>{st(inv.status)}</span>
+            <p className="num mt-2 font-display text-xl font-medium leading-none">{rupees(inv.total_minor)}</p>
+          </div>
         </div>
-        <span className={`ec-chip ${TONE[inv.status] ?? ""}`}>{st(inv.status)}</span>
       </div>
 
       <div className="ec-card"><div className="px-5 py-4"><InvoiceActions invoiceId={inv.id} status={inv.status} finalised={!!inv.number} /></div></div>
+
+      {/* Status timeline — honest transition ledger, not a payment history. */}
+      <div className="ec-card">
+        <div className="border-b border-ec-hair px-5 py-3"><p className="ec-label">{t("timeline.heading")}</p></div>
+        <ol className="relative px-5 py-5">
+          {steps.map((s, i) => {
+            const isLast = i === steps.length - 1;
+            const dotClass = s.tone === "done" ? "bg-ec-success-t text-ec-success" : "border border-dashed border-ec-hair-strong text-ec-ink-3";
+            return (
+              <li key={s.key} className="relative mb-6 flex gap-4 last:mb-0">
+                {!isLast && <span className="absolute left-[11px] top-6 h-[calc(100%+0.5rem)] w-px bg-ec-hair" aria-hidden="true" />}
+                <span className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${dotClass}`}>
+                  {s.done ? <Icon name="check" className="h-3.5 w-3.5" /> : null}
+                </span>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <p className={`text-sm font-medium ${s.done ? "text-ec-ink" : "text-ec-ink-3"}`}>{s.label}</p>
+                  <p className="num mt-0.5 text-xs text-ec-ink-3">{s.date ? formatCourtDate(s.date) : (s.key === "issued" ? t("timeline.pending") : t("timeline.awaiting"))}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+        <p className="border-t border-ec-hair px-5 py-3 text-xs text-ec-ink-3">{t("timeline.note")}</p>
+      </div>
 
       {editable && (
         <div className="ec-card">

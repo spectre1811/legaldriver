@@ -805,6 +805,38 @@
       "bankDetails": "Bank / payment details",
       "terms": "Terms",
       "saveBillingDetails": "Save billing details"
+    },
+    "feeBook": "Fee book",
+    "stat": {
+      "outstanding": "Outstanding",
+      "outstandingHint": "Issued, awaiting payment",
+      "draft": "Drafts",
+      "draftHint": "Assembling — not yet issued",
+      "paidFy": "Received this year",
+      "paidFyHint": "Settled in FY {fy}"
+    },
+    "col": {
+      "invoice": "Invoice",
+      "client": "Client",
+      "issued": "Issued",
+      "gst": "GST",
+      "status": "Status",
+      "amount": "Amount"
+    },
+    "gst": {
+      "intra": "CGST + SGST",
+      "inter": "IGST",
+      "none": "No GST"
+    },
+    "timeline": {
+      "heading": "Status",
+      "created": "Created",
+      "issued": "Issued to client",
+      "paid": "Marked paid",
+      "cancelled": "Cancelled",
+      "pending": "Not yet issued",
+      "awaiting": "Awaiting payment",
+      "note": "Payment dates are recorded when you mark an invoice paid. A detailed payment ledger is not tracked yet."
     }
   },
   "portal": {
