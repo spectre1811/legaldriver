@@ -40,7 +40,7 @@ const rel = (p: string) => p.slice(root.length + 1).replaceAll("\\", "/");
 // (tracked in BACKLOG §D "WO-62 combobox adoption — remaining sweep").
 const ALLOWLIST = new Set<string>([
   "src/components/pagination.tsx",                    // page-size 25/50/100 — fixed enum
-  "src/app/dashboard/clients/client-intake.tsx",     // client type — fixed enum
+  // clients/client-intake.tsx dropped (WO-201 W2): type → Segmented, practice_area_id → Combobox; no raw <select> remains.
   "src/app/dashboard/ip/ip-form.tsx",                // IP asset type — fixed enum
   "src/app/dashboard/cases/[id]/time-expense.tsx",   // expense category — fixed enum
   "src/app/dashboard/calendar/add-entry.tsx",        // entry kind — fixed enum (matter picker IS a Combobox)
@@ -70,6 +70,7 @@ const ADOPTED = [
   "src/app/dashboard/calendar/add-entry.tsx",
   "src/app/dashboard/notices/notice-form.tsx",
   "src/app/dashboard/search/judgments/filters.tsx",
+  "src/app/dashboard/clients/client-intake.tsx",
 ];
 for (const f of ADOPTED) {
   const s = readFileSync(join(root, f), "utf8");
@@ -82,6 +83,7 @@ const HIDDEN_INPUT_FORMS: { file: string; name: string }[] = [
   { file: "src/app/dashboard/calendar/add-entry.tsx", name: "matter_id" },
   { file: "src/app/dashboard/notices/notice-form.tsx", name: "matter_id" },
   { file: "src/app/dashboard/voice/uploader.tsx", name: "client_id" },
+  { file: "src/app/dashboard/clients/client-intake.tsx", name: "practice_area_id" },
 ];
 for (const { file, name } of HIDDEN_INPUT_FORMS) {
   const s = readFileSync(join(root, file), "utf8");

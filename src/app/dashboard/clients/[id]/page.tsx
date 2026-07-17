@@ -14,6 +14,9 @@ import { CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/docs/categories";
 import { Pagination } from "@/components/pagination";
 import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
 import { deleteClient } from "./actions";
+import { ClientEdit } from "./client-edit";
+
+const rupees = (m: number) => `₹${(m / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
 export default async function ClientDetailPage({
   params,
@@ -37,14 +40,32 @@ export default async function ClientDetailPage({
   const dPage = parsePage(searchParams.dpage);
   const dPer = clampPerPage(searchParams.dper);
 
-  const [{ data: matters, count: matterTotal }, { data: clientMatters }, { data: portal }, { data: messages }, { data: allClients }, { data: allMatters }] = await Promise.all([
+  const [{ data: matters, count: matterTotal }, { data: clientMatters }, { data: portal }, { data: messages }, { data: allClients }, { data: allMatters }, { data: openInvoices }, { data: allAreas }] = await Promise.all([
     supabase.from("matter").select("id, title, cnr, status, next_hearing_date", { count: "exact" }).eq("client_id", client.id).order("next_hearing_date", { ascending: true, nullsFirst: false }).range(mRange.from, mRange.to),
     supabase.from("matter").select("id, title").eq("client_id", client.id),
     supabase.from("portal_user").select("id").eq("client_id", client.id).maybeSingle(),
     supabase.from("portal_message").select("id, sender, body, created_at").eq("client_id", client.id).order("created_at", { ascending: true }).limit(100),
     supabase.from("client").select("id, name"),
     supabase.from("matter").select("id, title"),
+    // Outstanding = unpaid-issued invoices for this client (status='sent' only).
+    supabase.from("invoice").select("total_minor").eq("client_id", client.id).eq("status", "sent"),
+    supabase.from("practice_area").select("id, name").order("name"),
   ]);
+
+  // custom jsonb fields (no schema change) + resolved practice-area name.
+  const custom = (client.custom as { practice_area_id?: string; address?: string; contact_person?: string; notes?: string }) ?? {};
+  const practiceAreaName = custom.practice_area_id ? (allAreas ?? []).find((a) => a.id === custom.practice_area_id)?.name ?? null : null;
+  const outstandingMinor = (openInvoices ?? []).reduce((a, i) => a + Number(i.total_minor ?? 0), 0);
+  const editDefaults = {
+    name: client.name,
+    type: client.type,
+    emails: client.emails ?? [],
+    phones: client.phones ?? [],
+    practiceAreaId: custom.practice_area_id ?? null,
+    address: custom.address,
+    contactPerson: custom.contact_person,
+    notes: custom.notes,
+  };
 
   // Every document filed under this client directly, or under one of its cases — paginated.
   const matterIds = (clientMatters ?? []).map((m) => m.id);
@@ -82,17 +103,37 @@ export default async function ClientDetailPage({
         <Icon name="back" className="h-4 w-4" /> {t("backToClients")}
       </Link>
 
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-[1.7rem] font-semibold leading-tight">{client.name}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-            <Badge>{client.type}</Badge>
-            {client.emails?.[0] && <span>{client.emails[0]}</span>}
-            {client.phones?.[0] && <span>· {client.phones[0]}</span>}
+      <header className="space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="label">{t("clientSince", { date: formatCourtDate(client.created_at) ?? "—" })}</p>
+            <h1 className="mt-1 text-[1.7rem] font-semibold leading-tight">{client.name}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+              <Badge>{client.type}</Badge>
+              {practiceAreaName && <span>· {practiceAreaName}</span>}
+              {client.emails?.[0] && <span>· {client.emails[0]}</span>}
+              {client.phones?.[0] && <span>· {client.phones[0]}</span>}
+            </div>
+            {outstandingMinor > 0 && (
+              <p className="mt-2 text-sm text-ink-muted">{t("outstanding")}: <span className="num font-medium text-ink">{rupees(outstandingMinor)}</span></p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <ConfirmDelete action={deleteClient} id={client.id} label={t("deleteClient")} confirmLabel={t("deleteClient")} note={t("deleteNote")} redirectTo="/dashboard/clients" size="md" />
           </div>
         </div>
-        <ConfirmDelete action={deleteClient} id={client.id} label={t("deleteClient")} confirmLabel={t("deleteClient")} note={t("deleteNote")} redirectTo="/dashboard/clients" size="md" />
+        <ClientEdit id={client.id} practiceAreas={allAreas ?? []} defaults={editDefaults} />
       </header>
+
+      {(custom.address || custom.contact_person || custom.notes) && (
+        <Card className="p-5">
+          <dl className="grid gap-4 text-sm sm:grid-cols-2">
+            {custom.contact_person && <div><dt className="label">{t("intake.contactPerson")}</dt><dd className="mt-1 text-ink">{custom.contact_person}</dd></div>}
+            {custom.address && <div><dt className="label">{t("intake.address")}</dt><dd className="mt-1 text-ink">{custom.address}</dd></div>}
+            {custom.notes && <div className="sm:col-span-2"><dt className="label">{t("intake.notes")}</dt><dd className="mt-1 whitespace-pre-wrap text-ink">{custom.notes}</dd></div>}
+          </dl>
+        </Card>
+      )}
 
       {/* Portal access */}
       <Card className="p-5">
