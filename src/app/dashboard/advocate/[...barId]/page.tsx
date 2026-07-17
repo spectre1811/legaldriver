@@ -128,8 +128,8 @@ export default async function AdvocatePage({
     <div className="space-y-6">
       {/* ── Back link ──────────────────────────────────────────────────────── */}
       <Link
-        href="/dashboard/search/directory"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-ec-brass-deep hover:text-ec-brass"
+        href="/dashboard/directory"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-ec-bronze-deep hover:text-ec-bronze"
       >
         <Icon name="back" className="h-4 w-4" />
         {t("backToLookup")}
@@ -200,13 +200,12 @@ export default async function AdvocatePage({
             <Card>
               <div className="border-b border-line px-5 py-4">
                 <p className="font-medium">{t("sideSplitTitle")}</p>
-                <p className="mt-0.5 text-xs text-ink-faint">{t("sample")}</p>
               </div>
               <div className="px-5 py-4">
                 {/* Visual side bar */}
-                <div className="mb-3 h-3 w-full overflow-hidden rounded-full bg-paper-3">
+                <div className="mb-3 h-3 w-full overflow-hidden rounded-full bg-ec-paper-3">
                   <div
-                    className="h-3 rounded-full bg-brand-500"
+                    className="h-3 rounded-full bg-ec-bronze"
                     style={{
                       width: `${Math.round((petitioner / totalSided) * 100)}%`,
                     }}
@@ -214,7 +213,7 @@ export default async function AdvocatePage({
                 </div>
                 <div className="flex justify-between text-xs">
                   <div>
-                    <span className="font-semibold text-brand-600">{petitioner}</span>{" "}
+                    <span className="font-semibold text-ec-bronze-deep">{petitioner}</span>{" "}
                     <span className="text-ink-faint">{t("asPetitioner")}</span>
                   </div>
                   <div className="text-right">
@@ -310,7 +309,7 @@ export default async function AdvocatePage({
                           </Link>
                         ) : (
                           <Link
-                            href={`/dashboard/search/directory?q=${encodeURIComponent(name)}`}
+                            href={`/dashboard/directory?q=${encodeURIComponent(name)}`}
                             className="min-w-0 truncate font-medium text-brand-600 hover:underline"
                           >
                             {name}
@@ -323,7 +322,7 @@ export default async function AdvocatePage({
               </ul>
             </Card>
           ) : (
-            <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+            <div className="rounded-xl border border-dashed border-ec-warn/30 bg-ec-warn-t px-4 py-3 text-xs text-ec-warn">
               <span className="font-semibold">{t("dataGapLabel")}</span>{" "}
               {t("dataGapJudges")}
             </div>

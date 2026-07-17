@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { isDisabled } from "../modules";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
@@ -11,6 +13,7 @@ const TYPE_TONE: Record<string, "brand" | "amber" | "green" | "neutral"> = {
 };
 
 export default async function IpPage() {
+  if (isDisabled("/dashboard/ip")) redirect("/dashboard"); // WO-206/WO-201-W4: hidden module (see modules.ts DISABLED_MODULES).
   const supabase = createClient();
   const t = await getTranslations("ip");
   const tr = (v: string) => (t.has(`type.${v}`) ? t(`type.${v}`) : v);

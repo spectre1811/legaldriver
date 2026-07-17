@@ -60,7 +60,7 @@ export default async function DirectoryPage({
           </div>
           <button type="submit" className="btn-primary">{t("search")}</button>
         </form>
-        {!enabled ? <p className="mt-3 text-xs text-amber-700">{t("notConfigured")}</p>
+        {!enabled ? <p className="mt-3 text-xs text-ec-warn">{t("notConfigured")}</p>
           : coverage && <p className="mt-3 text-xs text-ink-faint">{coverage}</p>}
       </Card>
 

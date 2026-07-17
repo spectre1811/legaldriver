@@ -109,9 +109,9 @@ export default async function JudgePage({
 
   // ── Resolve advocate names → bar IDs for cross-links ───────────────────────
   // We look at the case-level advocate names stored on decisions in our DB.
-  // For now, cross-link via the lookup search route (no extra API call needed).
+  // Cross-link via the first-class directory route (no extra API call needed).
   const advocateSearchHref = (name: string) =>
-    `/dashboard/search/directory?q=${encodeURIComponent(name)}`;
+    `/dashboard/directory?q=${encodeURIComponent(name)}`;
 
   // ── Tier chip colours ───────────────────────────────────────────────────────
   const tierTone = (tier: string): "brand" | "neutral" | "amber" =>
@@ -125,8 +125,8 @@ export default async function JudgePage({
     <div className="space-y-6">
       {/* ── Back link ──────────────────────────────────────────────────────── */}
       <Link
-        href="/dashboard/search/directory"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-ec-brass-deep hover:text-ec-brass"
+        href="/dashboard/directory"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-ec-bronze-deep hover:text-ec-bronze"
       >
         <Icon name="back" className="h-4 w-4" />
         {t("backToLookup")}
@@ -178,7 +178,6 @@ export default async function JudgePage({
             <Card>
               <div className="border-b border-line px-5 py-4">
                 <p className="font-medium">{t("disposalNatureTitle")}</p>
-                <p className="mt-0.5 text-xs text-ink-faint">{t("sample")}</p>
               </div>
               <ul className="space-y-2 px-5 py-4">
                 {disposalNatures.map(([nature, count]) => {
@@ -191,9 +190,9 @@ export default async function JudgePage({
                         </span>
                         <span className="num shrink-0 text-xs text-ink-faint">{count}</span>
                       </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-paper-3">
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-ec-paper-3">
                         <div
-                          className="h-2 rounded-full bg-brand-500 transition-all"
+                          className="h-2 rounded-full bg-ec-bronze transition-all"
                           style={{ width: `${pct}%` }}
                           aria-label={`${pct}%`}
                         />
@@ -210,7 +209,6 @@ export default async function JudgePage({
             <Card>
               <div className="border-b border-line px-5 py-4">
                 <p className="font-medium">{t("decisionsByYearTitle")}</p>
-                <p className="mt-0.5 text-xs text-ink-faint">{t("sample")}</p>
               </div>
               <div className="px-5 py-4">
                 <div className="flex items-end gap-1" style={{ height: "80px" }}>
@@ -223,7 +221,7 @@ export default async function JudgePage({
                         title={`${year}: ${count} decisions`}
                       >
                         <div
-                          className="w-full rounded-sm bg-brand-400 transition-all group-hover:bg-brand-600"
+                          className="w-full rounded-sm bg-ec-bronze/55 transition-all group-hover:bg-ec-bronze"
                           style={{ height: `${heightPct}%` }}
                         />
                         <span className="mt-1 hidden text-[10px] text-ink-faint sm:block">
@@ -327,7 +325,6 @@ export default async function JudgePage({
           <Card>
             <div className="border-b border-line px-5 py-4">
               <p className="font-medium">{t("caseTypeMix")}</p>
-              <p className="mt-0.5 text-xs text-ink-faint">{t("sample")}</p>
             </div>
             <ul className="flex flex-wrap gap-2 px-5 py-4">
               {topTypes.map(([ct, n]) => (
@@ -389,7 +386,7 @@ export default async function JudgePage({
 
           {/* Data-gap notice if no disposal_nature data */}
           {disposalNatures.length === 0 && (
-            <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+            <div className="rounded-xl border border-dashed border-ec-warn/30 bg-ec-warn-t px-4 py-3 text-xs text-ec-warn">
               <span className="font-semibold">{t("dataGapLabel")}</span>{" "}
               {t("dataGapDisposalNature")}
             </div>
