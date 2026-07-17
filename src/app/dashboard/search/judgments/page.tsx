@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
 import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
@@ -79,6 +78,19 @@ function relatesToMatter(
   return null;
 }
 
+// DS-v2 empty/not-configured state — sand icon well, serif title.
+function EmptyPanel({ icon, title, body }: { icon: "scale" | "alert"; title: string; body?: string }) {
+  return (
+    <div className="ec-card flex flex-col items-center justify-center px-6 py-14 text-center">
+      <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-ec-s bg-ec-paper-3 text-ec-bronze">
+        <Icon name={icon} className="h-5 w-5" />
+      </span>
+      <h3 className="font-display text-lg font-medium text-ec-ink">{title}</h3>
+      {body && <p className="mx-auto mt-1.5 max-w-md text-sm text-ec-ink-2">{body}</p>}
+    </div>
+  );
+}
+
 export default async function ResearchPage({
   searchParams,
 }: {
@@ -89,18 +101,18 @@ export default async function ResearchPage({
   const per = clampPerPage(searchParams.per);
   const t = await getTranslations("research");
 
+  const header = (subtitle: string) => (
+    <header>
+      <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
+      <p className="mt-1 text-sm text-ec-ink-2">{subtitle}</p>
+    </header>
+  );
+
   if (!corpusEnabled()) {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title={t("title")}
-          subtitle={t("subtitleNotConfigured")}
-        />
-        <EmptyState
-          icon="scale"
-          title={t("notConfiguredTitle")}
-          body={t("notConfiguredBody")}
-        />
+        {header(t("subtitleNotConfigured"))}
+        <EmptyPanel icon="scale" title={t("notConfiguredTitle")} body={t("notConfiguredBody")} />
       </div>
     );
   }
@@ -147,42 +159,39 @@ export default async function ResearchPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t("title")}
-        subtitle={t("subtitle")}
-      />
+      {header(t("subtitle"))}
 
       <Filters />
 
-      <p className="flex items-center gap-1.5 text-xs text-ink-faint">
+      <p className="flex items-center gap-1.5 text-xs text-ec-ink-3">
         <Icon name="search" className="h-3.5 w-3.5" />
         {t("searchHint")}
       </p>
 
       {rows.length ? (
        <>
-        <Card className="overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-paper/60 px-5 py-3">
-            <div className="text-xs text-ink-faint">
-              {total} {t("results", { count: total })}
+        <div className="ec-card overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ec-hair bg-ec-paper-3 px-5 py-3">
+            <div className="text-xs text-ec-ink-2">
+              <span className="num font-medium text-ec-ink">{total}</span> {t("results", { count: total })}
               {activeFilters ? ` · ${t("filtered")}` : ""}
             </div>
             {activeFilters && (
-              <a href="/dashboard/search/judgments" className="text-xs font-medium text-brand-700 hover:underline">{t("clearFilters")}</a>
+              <a href="/dashboard/search/judgments" className="text-xs font-medium text-ec-bronze-deep hover:underline">{t("clearFilters")}</a>
             )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-line text-left">
-                  <th className="px-5 py-3 label">{t("caseCol")}</th>
-                  <th className="px-5 py-3 label">{t("partiesCol")}</th>
-                  <th className="hidden px-5 py-3 label xl:table-cell">{t("petAdvCol")}</th>
-                  <th className="hidden px-5 py-3 label xl:table-cell">{t("resAdvCol")}</th>
-                  <th className="hidden px-5 py-3 label lg:table-cell">{t("judgeCol")}</th>
-                  <th className="hidden px-5 py-3 label md:table-cell">{t("courtCol")}</th>
-                  <th className="hidden px-5 py-3 label sm:table-cell">{t("decidedCol")}</th>
-                  <th className="px-5 py-3 label">{t("dispositionCol")}</th>
+                <tr className="border-b border-ec-hair text-left">
+                  <th className="px-5 py-3 ec-label">{t("caseCol")}</th>
+                  <th className="px-5 py-3 ec-label">{t("partiesCol")}</th>
+                  <th className="hidden px-5 py-3 ec-label xl:table-cell">{t("petAdvCol")}</th>
+                  <th className="hidden px-5 py-3 ec-label xl:table-cell">{t("resAdvCol")}</th>
+                  <th className="hidden px-5 py-3 ec-label lg:table-cell">{t("judgeCol")}</th>
+                  <th className="hidden px-5 py-3 ec-label md:table-cell">{t("courtCol")}</th>
+                  <th className="hidden px-5 py-3 ec-label sm:table-cell">{t("decidedCol")}</th>
+                  <th className="px-5 py-3 ec-label">{t("dispositionCol")}</th>
                   <th className="px-5 py-3"></th>
                 </tr>
               </thead>
@@ -192,54 +201,47 @@ export default async function ResearchPage({
                   const pdfUrl = judgmentPdfUrl(r.pdf_link, r.court, r.year, r.src);
                   const relatedMatter = relatesToMatter(r, matters);
                   return (
-                    <tr key={`${r.cnr ?? r.title ?? "row"}-${i}`} className={`border-b border-line last:border-0 hover:bg-paper ${relatedMatter ? "bg-brand-50/30" : ""}`}>
+                    <tr key={`${r.cnr ?? r.title ?? "row"}-${i}`} className={`ec-row border-b border-ec-hair last:border-0 ${relatedMatter ? "bg-ec-bronze-tint/25" : ""}`}>
                       <td className="px-5 py-3.5 align-top">
                         <Link href={judgmentHref(r)} className="group flex flex-col leading-tight">
-                          <span className="flex items-center gap-2 font-medium text-ink group-hover:text-brand-700 group-hover:underline">
-                            <Icon name="cases" className="h-4 w-4 shrink-0 text-ink-faint" />
+                          <span className="flex items-center gap-2 font-medium text-ec-ink group-hover:text-ec-bronze-deep group-hover:underline">
+                            <Icon name="cases" className="h-4 w-4 shrink-0 text-ec-ink-3" />
                             {caseNumber ?? r.title ?? "—"}
                           </span>
-                          {r.cnr && <span className="mt-0.5 pl-6 text-xs text-ink-faint">CNR {r.cnr}</span>}
+                          {r.cnr && <span className="num mt-0.5 pl-6 text-xs text-ec-ink-3">CNR {r.cnr}</span>}
                           {relatedMatter && (
-                            <span className="mt-1 pl-6 inline-flex items-center gap-1 text-xs font-medium text-brand-700">
+                            <span className="mt-1 pl-6 inline-flex items-center gap-1 text-xs font-medium text-ec-bronze-deep">
                               <Icon name="cases" className="h-3 w-3 shrink-0" />
                               {t("relatedToMatter", { matter: relatedMatter })}
                             </span>
                           )}
                         </Link>
                       </td>
-                      <td className="px-5 py-3.5 align-top text-ink-muted">
-                        {parties ? <span className="font-medium text-ink">{parties}</span> : <span className="text-ink-faint">—</span>}
+                      <td className="px-5 py-3.5 align-top text-ec-ink-2">
+                        {parties ? <span className="font-medium text-ec-ink">{parties}</span> : <span className="text-ec-ink-3">—</span>}
                       </td>
-                      <td className="hidden px-5 py-3.5 align-top text-xs text-ink-muted xl:table-cell">
+                      <td className="hidden px-5 py-3.5 align-top text-xs text-ec-ink-2 xl:table-cell">
                         {truncate(r.petitioner)}
                       </td>
-                      <td className="hidden px-5 py-3.5 align-top text-xs text-ink-muted xl:table-cell">
+                      <td className="hidden px-5 py-3.5 align-top text-xs text-ec-ink-2 xl:table-cell">
                         {truncate(r.respondent)}
                       </td>
-                      <td className="hidden px-5 py-3.5 align-top text-ink-muted lg:table-cell">
+                      <td className="hidden px-5 py-3.5 align-top text-ec-ink-2 lg:table-cell">
                         {r.judge
-                          ? <button
-                              type="button"
-                              onClick={undefined}
-                              className="hover:text-brand-600 hover:underline text-left"
-                              aria-label={`Filter by judge ${r.judge}`}
-                            >
-                              <a href={`/dashboard/search/judgments?judge=${encodeURIComponent(r.judge)}`} className="hover:text-brand-600 hover:underline">{r.judge}</a>
-                            </button>
-                          : <span className="text-ink-faint">—</span>}
+                          ? <a href={`/dashboard/search/judgments?judge=${encodeURIComponent(r.judge)}`} className="hover:text-ec-bronze-deep hover:underline" aria-label={`Filter by judge ${r.judge}`}>{r.judge}</a>
+                          : <span className="text-ec-ink-3">—</span>}
                       </td>
-                      <td className="hidden px-5 py-3.5 align-top text-xs text-ink-faint md:table-cell">{courtLabel(r.court)}</td>
-                      <td className="hidden px-5 py-3.5 align-top text-xs text-ink-faint sm:table-cell">
+                      <td className="hidden px-5 py-3.5 align-top text-xs text-ec-ink-3 md:table-cell">{courtLabel(r.court)}</td>
+                      <td className="hidden px-5 py-3.5 align-top text-xs text-ec-ink-3 sm:table-cell num">
                         {(formatCourtDate(r.decision_date) ?? "—")}
                         {r.year && !r.decision_date ? <span>{r.year}</span> : null}
                       </td>
                       <td className="px-5 py-3.5 align-top">
                         {r.disposal_nature
                           ? <a href={`/dashboard/search/judgments?disposal=${encodeURIComponent(r.disposal_nature)}`} title={t("filterByDisposal")} className="hover:opacity-70 transition-opacity">
-                              <Badge>{expandDisposal(r.disposal_nature).full}</Badge>
+                              <span className="ec-chip">{expandDisposal(r.disposal_nature).full}</span>
                             </a>
-                          : <span className="text-ink-faint">—</span>}
+                          : <span className="text-ec-ink-3">—</span>}
                       </td>
                       <td className="px-5 py-3.5 align-top text-right">
                         {pdfUrl ? (
@@ -247,13 +249,13 @@ export default async function ResearchPage({
                             href={pdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-700 hover:underline"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-ec-bronze-deep hover:underline"
                           >
                             PDF
                             <Icon name="external" className="h-3.5 w-3.5" />
                           </a>
                         ) : (
-                          <span className="text-xs text-ink-faint">—</span>
+                          <span className="text-xs text-ec-ink-3">—</span>
                         )}
                       </td>
                     </tr>
@@ -262,18 +264,18 @@ export default async function ResearchPage({
               </tbody>
             </table>
           </div>
-        </Card>
+        </div>
         <Pagination page={safePage} perPage={per} total={total} />
        </>
       ) : (
-        <EmptyState
+        <EmptyPanel
           icon="scale"
           title={activeFilters ? t("noMatchTitle") : t("emptyTitle")}
           body={activeFilters ? t("noMatchBody") : t("emptyBody")}
         />
       )}
 
-      <p className="flex items-start gap-1.5 text-xs text-ink-faint">
+      <p className="flex items-start gap-1.5 text-xs text-ec-ink-3">
         <Icon name="alert" className="mt-px h-3.5 w-3.5 shrink-0" />
         {t("sourceListing")}
       </p>

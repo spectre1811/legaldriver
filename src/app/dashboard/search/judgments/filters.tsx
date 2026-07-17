@@ -79,14 +79,14 @@ export function Filters() {
           onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
           className="relative min-w-[16rem] flex-1"
         >
-          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
+          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ec-ink-3" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchPlaceholder")} className="input pl-9" aria-label={t("searchAria")} />
         </form>
         <form
           onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
           className="relative min-w-[14rem] flex-1 sm:flex-none"
         >
-          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
+          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ec-ink-3" />
           <input
             value={judgeQ}
             onChange={(e) => setJudgeQ(e.target.value)}
@@ -95,9 +95,9 @@ export function Filters() {
             aria-label={t("judgeAria")}
           />
         </form>
-        <button type="button" onClick={submitSearch} className="btn btn-primary">{t("searchButton")}</button>
+        <button type="button" onClick={submitSearch} className="ec-btn ec-btn-ink">{t("searchButton")}</button>
         {hasFilters && (
-          <button type="button" onClick={clearAll} className="text-xs font-medium text-brand-700 hover:underline">{t("clearFilters")}</button>
+          <button type="button" onClick={clearAll} className="text-xs font-medium text-ec-bronze-deep hover:underline">{t("clearFilters")}</button>
         )}
       </div>
 
