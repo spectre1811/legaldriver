@@ -8,7 +8,7 @@ const read = (p: string) => readFileSync(p, "utf8");
 let ok = true;
 const fail = (m: string) => { ok = false; console.log("FAIL:", m); };
 
-const HIDDEN = ["voice", "messages", "portfolio", "notices"] as const;
+const HIDDEN = ["voice", "messages", "portfolio", "notices", "ip"] as const; // WO-201 W4: ip joined the trim (founder 2026-07-18).
 const STILL_ON = ["cases", "clients", "inbox", "notifications", "documents", "invoices"] as const;
 
 // 1. The single flag file lists exactly the four disabled routes.
