@@ -36,6 +36,7 @@ const OFFLINE = [
   "design_tokens_smoke",
   "i18n_coverage",
   "wo82_directory_nav",
+  "wo206_module_trim",
   "timeline_sort",
   "wo01_causelist_alert",
   "wo01_refresh_priority",

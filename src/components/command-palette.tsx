@@ -11,7 +11,7 @@ interface Item { kind: "action" | "nav" | "result"; type: string; label: string;
 // Quick create/do actions — deep-link to where the action begins.
 const QUICK: { key: string; href: string; icon: IconName; keywords: string }[] = [
   { key: "addCase", href: "/dashboard/search/directory", icon: "plus", keywords: "add case cnr track new matter lookup" },
-  { key: "newNotice", href: "/dashboard/notices", icon: "notices", keywords: "notice legal escalation" },
+  // WO-206: newNotice removed — the notices module is disabled (see nav.tsx DISABLED_MODULES).
   { key: "draft", href: "/dashboard/assistant/draft", icon: "edit", keywords: "draft document reply generate write" },
   { key: "upload", href: "/dashboard/documents", icon: "upload", keywords: "upload document file attach" },
   { key: "addAdvocate", href: "/dashboard/settings", icon: "clients", keywords: "advocate bar add settings profile" },

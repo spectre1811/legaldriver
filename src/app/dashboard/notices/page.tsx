@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { isDisabled } from "../modules";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, EmptyState } from "@/components/ui";
@@ -8,6 +10,7 @@ import { fetchNoticesPage } from "./notices-query";
 import { parsePage, clampPerPage } from "@/lib/paginate";
 
 export default async function NoticesPage({ searchParams }: { searchParams: { page?: string; per?: string } }) {
+  if (isDisabled("/dashboard/notices")) redirect("/dashboard"); // WO-206: hidden module (see modules.ts DISABLED_MODULES).
   const t = await getTranslations("notices");
   const supabase = createClient();
   const page = parsePage(searchParams.page);
