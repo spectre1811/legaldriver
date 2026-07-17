@@ -4,8 +4,8 @@
 // Breadcrumb · ⌘K search · + New · notifications · profile menu.
 // Below md the sticky MobileNav takes over; this bar is hidden there.
 // Replaces the old sidebar-footer account block (avatar + language + sign out
-// now live in the profile menu). Avatar is initials on bronze tint — there is
-// no profile photo field yet, so no gray silhouette and nothing fabricated.
+// now live in the profile menu). Avatar = the uploaded photo (signed URL) when
+// set, else initials on bronze tint — never a gray silhouette (honesty §7b).
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,9 +15,15 @@ import { CommandPalette } from "@/components/command-palette";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { NAV_TARGETS } from "./nav";
 
-type Props = { email: string; initial: string; fullName: string | null; designation: string | null };
+type Props = { email: string; initial: string; fullName: string | null; designation: string | null; photoUrl?: string | null };
 
-function Avatar({ initial }: { initial: string }) {
+function Avatar({ initial, photoUrl, name }: { initial: string; photoUrl?: string | null; name?: string }) {
+  if (photoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- signed one-off URL, not a static asset
+      <img src={photoUrl} alt={name ?? ""} className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-ec-hair" />
+    );
+  }
   return (
     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ec-bronze-tint text-sm font-semibold text-ec-ink ring-1 ring-ec-hair">
       {initial}
@@ -25,7 +31,7 @@ function Avatar({ initial }: { initial: string }) {
   );
 }
 
-export function TopBar({ email, initial, fullName, designation }: Props) {
+export function TopBar({ email, initial, fullName, designation, photoUrl }: Props) {
   const t = useTranslations("shell");
   const tn = useTranslations("nav");
   const pathname = usePathname();
@@ -68,13 +74,13 @@ export function TopBar({ email, initial, fullName, designation }: Props) {
         >
           <Icon name="bell" className="h-[1.15rem] w-[1.15rem]" />
         </Link>
-        <ProfileMenu email={email} initial={initial} fullName={fullName} designation={designation} />
+        <ProfileMenu email={email} initial={initial} fullName={fullName} designation={designation} photoUrl={photoUrl} />
       </div>
     </header>
   );
 }
 
-function ProfileMenu({ email, initial, fullName, designation }: Props) {
+function ProfileMenu({ email, initial, fullName, designation, photoUrl }: Props) {
   const t = useTranslations("shell");
   const tn = useTranslations("nav");
   const tl = useTranslations("common.language");
@@ -112,7 +118,7 @@ function ProfileMenu({ email, initial, fullName, designation }: Props) {
         aria-label={t("profileMenu")}
         className="flex items-center gap-2 rounded-ec-s py-1 pl-1 pr-1.5 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
       >
-        <Avatar initial={initial} />
+        <Avatar initial={initial} photoUrl={photoUrl} name={fullName ?? email} />
         <span className="hidden min-w-0 text-left leading-tight lg:block">
           <span className="block max-w-[10rem] truncate text-sm font-medium text-ec-ink">{fullName || email}</span>
           {designation && <span className="block max-w-[10rem] truncate text-xs text-ec-ink-3">{designation}</span>}
@@ -130,7 +136,7 @@ function ProfileMenu({ email, initial, fullName, designation }: Props) {
           className="absolute right-0 top-full z-40 mt-1.5 w-64 rounded-ec-m border border-ec-hair bg-ec-paper p-1.5 shadow-ec-2"
         >
           <div className="flex items-center gap-2.5 px-2.5 py-2">
-            <Avatar initial={initial} />
+            <Avatar initial={initial} photoUrl={photoUrl} name={fullName ?? email} />
             <span className="min-w-0">
               <span className="block truncate text-sm font-medium text-ec-ink">{fullName || t("workspace")}</span>
               <span className="block truncate text-xs text-ec-ink-3" title={email}>{email}</span>

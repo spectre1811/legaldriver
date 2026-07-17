@@ -14,6 +14,8 @@ import { causeListAlertsSupported } from "@/lib/court/client";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { SettingsTabs, SettingsPanel } from "./settings-tabs";
 import { ProfileForm } from "./profile-form";
+import { PhotoBlock } from "./photo-block";
+import { signAvatar } from "@/lib/profile/avatar";
 import { NotificationForm } from "./notification-form";
 import { getTranslations } from "next-intl/server";
 
@@ -28,9 +30,10 @@ export default async function SettingsPage() {
   const { data: tenant } = await supabase.from("tenant").select("name").maybeSingle();
   const { data: profile } = await supabase
     .from("profile")
-    .select("full_name, phone, designation, chamber")
+    .select("full_name, phone, designation, chamber, photo_url")
     .eq("id", user?.id ?? "")
     .maybeSingle();
+  const avatarUrl = await signAvatar(profile?.photo_url);
   const { data: notif } = await supabase
     .from("notification_prefs")
     .select("whatsapp_number, channel_whatsapp, channel_email, channel_sms, quiet_start, quiet_end, cause_list_time")
@@ -94,17 +97,15 @@ export default async function SettingsPage() {
         {/* ── Profile: account identity (read-only; editable fields need the profile migration) ── */}
         <SettingsPanel id="profile">
           <Card className="p-5">
-            {/* Identity lead — initials avatar only (no photo field on `profile`; honesty rule = never a
-                fabricated/silhouette image). Photo upload is a follow-up once the schema carries an avatar. */}
-            <div className="flex items-center gap-4">
-              <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-ec-bronze-tint font-display text-2xl font-semibold text-ec-ink ring-1 ring-ec-hair">
-                {(profile?.full_name?.trim()?.[0] ?? user?.email?.[0] ?? "?").toUpperCase()}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-base font-medium text-ink">{profile?.full_name?.trim() || user?.email || "—"}</p>
-                {profile?.designation && <p className="truncate text-sm text-ink-muted">{profile.designation}</p>}
-              </div>
-            </div>
+            {/* Identity lead — real photo (WO-147 W4) with initials fallback (honesty rule §7b:
+                never a fabricated/silhouette image). Stored in the `documents` bucket, shown via a
+                signed URL; upload/remove handled client-side by <PhotoBlock>. */}
+            <PhotoBlock
+              photoUrl={avatarUrl}
+              initial={(profile?.full_name?.trim()?.[0] ?? user?.email?.[0] ?? "?").toUpperCase()}
+              name={profile?.full_name?.trim() || user?.email || "—"}
+              designation={profile?.designation ?? null}
+            />
             <dl className="mt-5 grid gap-4 border-t border-line pt-5 sm:grid-cols-2">
               <div>
                 <dt className="ec-label">{t("profile.email")}</dt>

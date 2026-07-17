@@ -85,6 +85,7 @@ const OFFLINE = [
   "wo72_judgments_pagination",
   "wo83_case_links",
   "wo84_onboarding_phase",
+  "wo147_onboarding_stepper",
   "wo40_invoice",
   "wo124_athena_timeout",
   "wo148_comms",

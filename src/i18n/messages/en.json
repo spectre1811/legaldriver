@@ -1753,15 +1753,18 @@
       "heading": "How onboarding works",
       "one": {
         "title": "Enter your Bar number",
-        "body": "Your name and Bar registration — that's all we need to find you in the court record."
+        "body": "Your name and Bar registration — that's all we need to find you in the court record.",
+        "label": "Bar ID"
       },
       "two": {
         "title": "We gather every case",
-        "body": "We fetch your full roster in the background. Leave the page — we'll notify you when it's ready."
+        "body": "We fetch your full roster in the background. Leave the page — we'll notify you when it's ready.",
+        "label": "Fetch & verify"
       },
       "three": {
         "title": "Your practice comes alive",
-        "body": "Cases land on your calendar with hearings, deadlines, filed emails, and AI briefings."
+        "body": "Cases land on your calendar with hearings, deadlines, filed emails, and AI briefings.",
+        "label": "Practice assembled"
       }
     },
     "howHeading": "How this works — honestly",
@@ -1916,7 +1919,16 @@
       "save": "Save profile",
       "saving": "Saving…",
       "saved": "Profile saved.",
-      "residency": "Data residency: India · Encrypted at rest & in transit."
+      "residency": "Data residency: India · Encrypted at rest & in transit.",
+      "photoChange": "Change photo",
+      "photoRemove": "Remove",
+      "photoSaving": "Uploading…",
+      "photoSaved": "Photo updated.",
+      "photoRemoved": "Photo removed.",
+      "photoHint": "Shown on invoices and client updates. Square JPG or PNG, up to 1 MB.",
+      "photoNone": "Choose an image to upload.",
+      "photoType": "That file isn't a supported image. Use JPG, PNG, or WebP.",
+      "photoBig": "That image is too large. Keep it under 1 MB."
     },
     "notify": {
       "whatsappNumber": "WhatsApp number",
