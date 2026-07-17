@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { whyKey } from "@/lib/docs/review-why";
 import { ReviewInbox, type ReviewDoc } from "./review-inbox";
@@ -65,11 +64,13 @@ export default async function DocumentReviewPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <PageHeader title={t("title")} subtitle={t("subtitle")} />
-        <Link href="/dashboard/documents" className="btn-ghost shrink-0 text-sm">
-          <Icon name="back" className="h-4 w-4" />
-          <span className="ml-1.5">{t("back")}</span>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <header className="min-w-0">
+          <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
+          <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("subtitle")}</p>
+        </header>
+        <Link href="/dashboard/documents" className="ec-btn ec-btn-ghost shrink-0 text-sm">
+          <Icon name="back" className="h-4 w-4" /> {t("back")}
         </Link>
       </div>
       <ReviewInbox docs={reviewDocs} clients={clientOpts} matters={matterOpts} />
