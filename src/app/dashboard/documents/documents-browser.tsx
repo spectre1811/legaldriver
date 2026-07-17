@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "@/components/icons";
-import { Badge } from "@/components/ui";
 import { DocActions } from "@/components/doc-actions";
 import { DocPreview } from "@/components/doc-preview";
 import {
@@ -127,14 +126,16 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
           const allInSection = sel.allSelected(sectionIds);
           return (
             <div key={s.cat} className="ec-card overflow-hidden">
-              <div className="flex items-center gap-2.5 border-b border-line bg-paper/60 px-5 py-3">
-                <Icon name={(s.icon as IconName) ?? "documents"} className="h-4 w-4 text-brand-600" />
-                <h2 className="text-sm font-semibold text-ink">{s.label}</h2>
-                <span className="text-xs text-ink-faint">{s.rows.length}</span>
+              {/* Sand section band — the group divider (category / client / case). */}
+              <div className="flex items-center gap-2.5 border-b border-ec-hair bg-ec-paper-3 px-5 py-3">
+                <Icon name={(s.icon as IconName) ?? "documents"} className="h-4 w-4 text-ec-bronze" />
+                <h2 className="ec-label !tracking-normal text-[13px] normal-case text-ec-ink">{s.label}</h2>
+                <span className="num text-xs text-ec-ink-3">{s.rows.length}</span>
               </div>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-line text-left">
+                  <tr className="border-b border-ec-hair text-left">
                     <th className="w-10 px-4 py-3">
                       <SelectAllCheckbox
                         checked={allInSection}
@@ -142,12 +143,12 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
                         label={t("bulk.selectAll")}
                       />
                     </th>
-                    <th className="px-3 py-3 label">{t("field.file")}</th>
-                    <th className="hidden px-4 py-3 label sm:table-cell">{t("field.type")}</th>
-                    <th className="px-4 py-3 label">{t("field.filedUnder")}</th>
-                    <th className="hidden px-4 py-3 label md:table-cell">{t("field.source")}</th>
-                    <th className="hidden px-4 py-3 label lg:table-cell">{t("field.size")}</th>
-                    <th className="hidden px-4 py-3 label lg:table-cell">{t("field.added")}</th>
+                    <th className="px-3 py-3"><span className="ec-label">{t("field.file")}</span></th>
+                    <th className="hidden px-4 py-3 sm:table-cell"><span className="ec-label">{t("field.type")}</span></th>
+                    <th className="px-4 py-3"><span className="ec-label">{t("field.filedUnder")}</span></th>
+                    <th className="hidden px-4 py-3 md:table-cell"><span className="ec-label">{t("field.source")}</span></th>
+                    <th className="hidden px-4 py-3 lg:table-cell"><span className="ec-label">{t("field.size")}</span></th>
+                    <th className="hidden px-4 py-3 lg:table-cell"><span className="ec-label">{t("field.added")}</span></th>
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
@@ -155,7 +156,7 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
                   {s.rows.map((d) => {
                     const checked = sel.isSelected(d.id);
                     return (
-                      <tr key={d.id} className={`border-b border-line last:border-0 ${checked ? "bg-brand-50" : "hover:bg-paper"}`}>
+                      <tr key={d.id} className={`border-b border-ec-hair last:border-0 ${checked ? "bg-ec-brass-tint/40" : "ec-row"}`}>
                         <td className="px-4 py-3.5">
                           <RowCheckbox
                             checked={checked}
@@ -165,30 +166,31 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
                         </td>
                         <td className="px-3 py-3.5">
                           <Link href={`/dashboard/documents/${d.id}`} className="group flex items-center gap-2.5">
-                            <Icon name="documents" className="h-4 w-4 shrink-0 text-ink-faint" />
-                            <span className="font-medium text-ink group-hover:text-brand-700 group-hover:underline">{d.filename}</span>
+                            <Icon name="documents" className="h-4 w-4 shrink-0 text-ec-ink-3" />
+                            <span className="font-medium text-ec-ink group-hover:text-ec-bronze group-hover:underline">{d.filename}</span>
                           </Link>
                         </td>
-                        <td className="hidden px-4 py-3.5 sm:table-cell">{d.docType ? <Badge>{d.docType}</Badge> : <span className="text-ink-faint">—</span>}</td>
-                        <td className="px-4 py-3.5 text-ink-muted">
+                        <td className="hidden px-4 py-3.5 sm:table-cell">{d.docType ? <span className="ec-chip">{d.docType}</span> : <span className="text-ec-ink-3">—</span>}</td>
+                        <td className="px-4 py-3.5 text-ec-ink-2">
                           {d.primary ? (
                             <span className="flex flex-col leading-tight">
-                              <span className="font-medium text-ink">{d.primary}</span>
-                              {d.secondary && <span className="mt-0.5 text-xs text-ink-faint">{d.secondary}</span>}
+                              <span className="font-medium text-ec-ink">{d.primary}</span>
+                              {d.secondary && <span className="mt-0.5 text-xs text-ec-ink-3">{d.secondary}</span>}
                             </span>
                           ) : (
-                            <span className="text-amber-600">{t("unfiled")}</span>
+                            <span className="ec-chip ec-chip-warn">{t("unfiled")}</span>
                           )}
                         </td>
-                        <td className="hidden px-4 py-3.5 text-xs text-ink-faint md:table-cell">{d.sourceLabel}</td>
-                        <td className="hidden px-4 py-3.5 text-xs text-ink-faint lg:table-cell">{d.sizeLabel}</td>
-                        <td className="hidden px-4 py-3.5 text-xs text-ink-faint lg:table-cell">{d.dateLabel}</td>
+                        {/* Source chip — data-bound provenance (Gmail / Upload / Court order). */}
+                        <td className="hidden px-4 py-3.5 md:table-cell"><span className="ec-chip">{d.sourceLabel}</span></td>
+                        <td className="num hidden px-4 py-3.5 text-xs text-ec-ink-3 lg:table-cell">{d.sizeLabel}</td>
+                        <td className="num hidden px-4 py-3.5 text-xs text-ec-ink-3 lg:table-cell">{d.dateLabel}</td>
                         <td className="px-4 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
                               type="button"
                               onClick={() => setPreview(d)}
-                              className="rounded-lg p-1.5 text-ink-faint hover:bg-paper hover:text-ink"
+                              className="rounded-ec-s p-1.5 text-ec-ink-3 hover:bg-ec-paper-3 hover:text-ec-ink"
                               aria-label={t("preview.quickLook")}
                               title={t("preview.quickLook")}
                             >
@@ -202,6 +204,7 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           );
         })}
@@ -251,7 +254,7 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
 
       {/* Export failure toast. */}
       {exportErr && (
-        <div className="fixed inset-x-0 bottom-24 z-50 mx-auto flex w-fit items-center gap-3 rounded-lg bg-red-600 px-4 py-2.5 text-paper shadow-xl">
+        <div className="fixed inset-x-0 bottom-24 z-50 mx-auto flex w-fit items-center gap-3 rounded-ec-s bg-ec-danger px-4 py-2.5 text-ec-paper shadow-ec-2">
           <span className="text-sm">{t("bulk.exportFailed")}</span>
           <button onClick={() => setExportErr(false)} className="text-sm font-semibold underline">{t("bulk.clear")}</button>
         </div>
@@ -260,24 +263,24 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
       {/* Quick-look preview modal — reuses the same viewer as the detail page. */}
       {preview && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ec-ink/50 p-4"
           role="dialog"
           aria-modal="true"
           aria-label={preview.filename}
           onClick={() => setPreview(null)}
         >
-          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-surface shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
+          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-ec-m bg-ec-paper-2 shadow-ec-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between gap-3 border-b border-ec-hair bg-ec-paper-3 px-5 py-3.5">
               <div className="flex min-w-0 items-center gap-2.5">
-                <Icon name="documents" className="h-4 w-4 shrink-0 text-ink-faint" />
-                <span className="truncate font-medium text-ink">{preview.filename}</span>
+                <Icon name="documents" className="h-4 w-4 shrink-0 text-ec-ink-3" />
+                <span className="truncate font-medium text-ec-ink">{preview.filename}</span>
               </div>
               <div className="flex shrink-0 items-center gap-1">
-                <Link href={`/dashboard/documents/${preview.id}`} className="btn-ghost inline-flex items-center gap-1.5 text-sm" title={t("preview.open")}>
+                <Link href={`/dashboard/documents/${preview.id}`} className="ec-btn ec-btn-ghost inline-flex items-center gap-1.5 !px-3 !py-1.5 text-sm" title={t("preview.open")}>
                   <Icon name="external" className="h-4 w-4" />
                   <span className="hidden sm:inline">{t("preview.open")}</span>
                 </Link>
-                <button ref={closeBtnRef} onClick={() => setPreview(null)} className="rounded-lg p-1.5 text-ink-faint hover:bg-paper hover:text-ink" aria-label={t("preview.close")}>
+                <button ref={closeBtnRef} onClick={() => setPreview(null)} className="rounded-ec-s p-1.5 text-ec-ink-3 hover:bg-ec-paper-3 hover:text-ec-ink" aria-label={t("preview.close")}>
                   <Icon name="close" className="h-4 w-4" />
                 </button>
               </div>

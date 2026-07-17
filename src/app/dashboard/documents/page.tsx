@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, EmptyState, fmtSize } from "@/components/ui";
+import { fmtSize } from "@/components/ui";
 import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { CATEGORIES, CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/docs/categories";
@@ -63,7 +63,7 @@ export default async function DocumentsPage({
     ? query.not("extracted->>deletedAt", "is", null)
     : query.filter("extracted->>deletedAt", "is", null);
 
-  const [{ data: docs, count: docsTotal }, { data: clients }, { data: typeRows }, { count: trashCount }, { count: reviewCount }] = await Promise.all([
+  const [{ data: docs, count: docsTotal }, { data: clients }, { data: typeRows }, { count: trashCount }, { count: reviewCount }, { count: filedTotal }, { count: unfiledCount }] = await Promise.all([
     query,
     supabase.from("client").select("id, name"),
     supabase.from("document").select("doc_type").not("doc_type", "is", null).limit(1000),
@@ -72,6 +72,10 @@ export default async function DocumentsPage({
     supabase.from("document").select("id", { count: "exact", head: true })
       .filter("extracted->>deletedAt", "is", null)
       .or("extracted->>status.eq.needs_review,and(client_id.is.null,matter_id.is.null)"),
+    // Attention-card totals: everything in the file (not trashed) and the still-unfiled slice.
+    supabase.from("document").select("id", { count: "exact", head: true }).filter("extracted->>deletedAt", "is", null),
+    supabase.from("document").select("id", { count: "exact", head: true })
+      .filter("extracted->>deletedAt", "is", null).is("client_id", null).is("matter_id", null),
   ]);
 
   const clientName = new Map((clients ?? []).map((c) => [c.id, c.name]));
@@ -135,31 +139,37 @@ export default async function DocumentsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <PageHeader title={isTrash ? t("trash.title") : t("title")} subtitle={isTrash ? t("trash.subtitle") : t("subtitle")} />
-        <div className="flex shrink-0 items-center gap-2">
-          {!isTrash && (reviewCount ?? 0) > 0 && (
-            <Link href="/dashboard/documents/review" className="btn-primary text-sm">
-              <Icon name="sparkles" className="h-4 w-4" />
-              <span className="ml-1.5">{t("review.link", { n: reviewCount ?? 0 })}</span>
-            </Link>
-          )}
-          <Link href={isTrash ? "/dashboard/documents" : "/dashboard/documents?trash=1"} className="btn-ghost text-sm">
-            <Icon name={isTrash ? "back" : "trash"} className="h-4 w-4" />
-            <span className="ml-1.5">{isTrash ? t("trash.back") : t("trash.link", { n: trashCount ?? 0 })}</span>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <header className="min-w-0">
+          <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{isTrash ? t("trash.title") : t("title")}</h1>
+          <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{isTrash ? t("trash.subtitle") : t("subtitle")}</p>
+        </header>
+        {isTrash && (
+          <Link href="/dashboard/documents" className="ec-btn ec-btn-ghost text-sm">
+            <Icon name="back" className="h-4 w-4" /> {t("trash.back")}
           </Link>
-        </div>
+        )}
       </div>
+
+      {/* Label-top attention cards (DS §6): the filing state at a glance — each click-to-filter.
+          Encodes the product's promise (everything filed to the right matter), not decoration. */}
+      {!isTrash && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <StatCard href="/dashboard/documents" label={t("stat.inFile")} value={String(filedTotal ?? 0)} hint={t("stat.inFileHint")} />
+          <StatCard href="/dashboard/documents?filed=unfiled" label={t("stat.unfiled")} value={String(unfiledCount ?? 0)} hint={t("stat.unfiledHint")} tone={(unfiledCount ?? 0) > 0 ? "warn" : undefined} />
+          <StatCard href="/dashboard/documents/review" label={t("stat.review")} value={String(reviewCount ?? 0)} hint={t("stat.reviewHint")} tone={(reviewCount ?? 0) > 0 ? "hot" : undefined} />
+        </div>
+      )}
 
       {!isTrash && <DocumentsUpload />}
       {!isTrash && (
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="text-ink-faint">{t("group.by")}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="ec-label">{t("group.by")}</span>
           {(["category", "client", "case"] as const).map((g) => (
             <Link
               key={g}
               href={g === "category" ? "/dashboard/documents" : `/dashboard/documents?group=${g}`}
-              className={`rounded-full px-2.5 py-1 font-medium ${groupBy === g ? "bg-ink text-paper" : "text-ink-muted hover:bg-paper"}`}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${groupBy === g ? "bg-ec-ink text-ec-paper" : "border border-ec-hair text-ec-ink-2 hover:bg-ec-paper-3"}`}
             >
               {t(`group.${g}`)}
             </Link>
@@ -170,24 +180,44 @@ export default async function DocumentsPage({
 
       {sectionData.length ? (
         <>
-          <div className="text-xs text-ink-faint">
-            {isTrash
-              ? t("trash.count", { docs: docsTotal ?? 0 })
-              : t("summary.count", { docs: docsTotal ?? 0, categories: sectionData.length })}
-            {activeFilters ? ` · ${t("summary.filtered")}` : ""}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ec-ink-3">
+            <span>
+              {isTrash
+                ? t("trash.count", { docs: docsTotal ?? 0 })
+                : t("summary.count", { docs: docsTotal ?? 0, categories: sectionData.length })}
+              {activeFilters ? ` · ${t("summary.filtered")}` : ""}
+            </span>
+            {!isTrash && (
+              <Link href="/dashboard/documents?trash=1" className="inline-flex items-center gap-1.5 text-ec-ink-3 hover:text-ec-ink">
+                <Icon name="trash" className="h-3.5 w-3.5" /> {t("trash.link", { n: trashCount ?? 0 })}
+              </Link>
+            )}
           </div>
           <DocumentsBrowser sections={sectionData} orderedIds={orderedIds} matterOpts={matterOpts} clientOpts={clientOpts} trash={isTrash} />
           <Pagination page={page} perPage={per} total={docsTotal ?? 0} />
         </>
       ) : (
-        <EmptyState
-          icon={isTrash ? "trash" : "documents"}
-          title={isTrash ? t("trash.emptyTitle") : activeFilters ? t("empty.filteredTitle") : t("empty.emptyTitle")}
-          body={isTrash ? t("trash.emptyBody") : activeFilters ? t("empty.filteredBody") : t("empty.emptyBody")}
-        />
+        <div className="ec-card flex flex-col items-center gap-3 px-6 py-16 text-center">
+          <span className="rounded-full bg-ec-paper-3 p-3 text-ec-ink-3"><Icon name={isTrash ? "trash" : "documents"} className="h-6 w-6" /></span>
+          <p className="font-display text-lg text-ec-ink">{isTrash ? t("trash.emptyTitle") : activeFilters ? t("empty.filteredTitle") : t("empty.emptyTitle")}</p>
+          <p className="max-w-sm text-sm text-ec-ink-3">{isTrash ? t("trash.emptyBody") : activeFilters ? t("empty.filteredBody") : t("empty.emptyBody")}</p>
+        </div>
       )}
 
-      <p className="text-xs text-ink-faint">{t("storageNote")}</p>
+      <p className="text-xs text-ec-ink-3">{t("storageNote")}</p>
     </div>
+  );
+}
+
+// Label-top attention card (DS §6) — serif figure, smallcap label, one-line hint; the whole card
+// is a click-to-filter link. `tone` tints the figure when the count is worth the advocate's eye.
+function StatCard({ href, label, value, hint, tone }: { href: string; label: string; value: string; hint: string; tone?: "warn" | "hot" }) {
+  const figure = tone === "hot" ? "text-ec-brass-deep" : tone === "warn" ? "text-ec-warn" : "text-ec-ink";
+  return (
+    <Link href={href} className="ec-card block px-5 py-4 transition-shadow hover:shadow-ec-2">
+      <p className="ec-label">{label}</p>
+      <p className={`num mt-2 font-display text-[1.75rem] font-medium leading-none ${figure}`}>{value}</p>
+      <p className="mt-1.5 text-xs text-ec-ink-3">{hint}</p>
+    </Link>
   );
 }

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
-import { Badge } from "@/components/ui";
 import { Combobox } from "@/components/combobox";
 import { resolveReview, rescanUnfiled } from "../actions";
 
@@ -75,9 +74,9 @@ export function ReviewInbox({ docs, clients, matters }: { docs: ReviewDoc[]; cli
   if (!visible.length) {
     return (
       <div className="ec-card flex flex-col items-center gap-2 px-6 py-12 text-center">
-        <Icon name="check" className="h-6 w-6 text-emerald-600" />
-        <p className="text-sm font-medium text-ink">{t("allClear")}</p>
-        <p className="text-xs text-ink-muted">{t("allClearBody")}</p>
+        <Icon name="check" className="h-6 w-6 text-ec-success" />
+        <p className="font-display text-lg text-ec-ink">{t("allClear")}</p>
+        <p className="text-sm text-ec-ink-3">{t("allClearBody")}</p>
       </div>
     );
   }
@@ -85,12 +84,12 @@ export function ReviewInbox({ docs, clients, matters }: { docs: ReviewDoc[]; cli
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-ink-faint">{t("hint")}</p>
+        <p className="text-xs text-ec-ink-3">{t("hint")}</p>
         <div className="flex items-center gap-2">
-          {rescanMsg && <span className="text-xs text-ink-muted">{rescanMsg}</span>}
-          <button onClick={rescan} disabled={rescanning} className="btn-ghost px-2.5 py-1 text-xs">
+          {rescanMsg && <span className="text-xs text-ec-ink-2">{rescanMsg}</span>}
+          <button onClick={rescan} disabled={rescanning} className="ec-btn ec-btn-ghost !px-2.5 !py-1 text-xs">
             <Icon name="refresh" className={`h-3.5 w-3.5 ${rescanning ? "animate-spin" : ""}`} />
-            <span className="ml-1.5">{rescanning ? t("rescanning") : t("rescan")}</span>
+            {rescanning ? t("rescanning") : t("rescan")}
           </button>
         </div>
       </div>
@@ -101,33 +100,33 @@ export function ReviewInbox({ docs, clients, matters }: { docs: ReviewDoc[]; cli
           <div
             key={d.id}
             onClick={() => setActive(i)}
-            className={`ec-card p-4 transition-shadow ${isActive ? "ring-2 ring-brand-500" : "hover:shadow-sm"}`}
+            className={`ec-card p-4 transition-shadow ${isActive ? "ring-2 ring-ec-honey" : "hover:shadow-ec-2"}`}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <Link href={`/dashboard/documents/${d.id}`} className="flex items-center gap-2 font-medium text-ink hover:text-brand-700 hover:underline">
-                  <Icon name="documents" className="h-4 w-4 shrink-0 text-ink-faint" />
+                <Link href={`/dashboard/documents/${d.id}`} className="flex items-center gap-2 font-medium text-ec-ink hover:text-ec-bronze hover:underline">
+                  <Icon name="documents" className="h-4 w-4 shrink-0 text-ec-ink-3" />
                   <span className="truncate">{d.filename}</span>
                 </Link>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
-                  {d.docType && <Badge>{d.docType}</Badge>}
-                  <span>{d.sourceLabel}</span>
-                  {d.refiled && <Badge tone="brand">{t("newMatch")}</Badge>}
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ec-ink-3">
+                  {d.docType && <span className="ec-chip">{d.docType}</span>}
+                  <span className="ec-chip">{d.sourceLabel}</span>
+                  {d.refiled && <span className="ec-chip ec-chip-hot">{t("newMatch")}</span>}
                 </div>
               </div>
             </div>
 
             {/* The AI's read + why it proposes this filing */}
             {(d.summary || d.why) && (
-              <p className="mt-2 line-clamp-2 text-xs text-ink-muted">
-                {d.why && <span className="font-medium text-ink-soft">{d.why} · </span>}
+              <p className="mt-2 line-clamp-2 text-xs text-ec-ink-2">
+                {d.why && <span className="font-medium text-ec-ink">{d.why} · </span>}
                 {d.summary}
               </p>
             )}
 
             {/* Proposed filing — prefilled, editable */}
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-xs text-ink-faint">{t("fileTo")}</span>
+              <span className="ec-label">{t("fileTo")}</span>
               <Combobox
                 label={t("client")}
                 placeholder={`${t("clientOption")}${d.suggestedClientName ? ` (${d.suggestedClientName})` : ""}`}
@@ -144,10 +143,10 @@ export function ReviewInbox({ docs, clients, matters }: { docs: ReviewDoc[]; cli
                 onChange={(v) => setPick((p) => ({ ...p, [d.id]: { ...sel, m: v ?? "" } }))}
                 className="min-w-[11rem] max-w-[13rem]"
               />
-              <button onClick={() => file(d)} disabled={busy === d.id || (!sel.c && !sel.m)} className="btn-primary px-3 py-1.5 text-xs">
+              <button onClick={() => file(d)} disabled={busy === d.id || (!sel.c && !sel.m)} className="ec-btn ec-btn-ink !px-3 !py-1.5 text-xs">
                 {busy === d.id ? t("filing") : t("file")}
               </button>
-              <button onClick={() => skip(d.id)} className="btn-ghost px-3 py-1.5 text-xs">{t("skip")}</button>
+              <button onClick={() => skip(d.id)} className="ec-btn ec-btn-ghost !px-3 !py-1.5 text-xs">{t("skip")}</button>
             </div>
           </div>
         );

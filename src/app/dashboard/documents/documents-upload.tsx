@@ -39,14 +39,14 @@ export function DocumentsUpload() {
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
       className={`ec-card flex cursor-pointer flex-col items-center justify-center gap-1.5 border-2 border-dashed px-4 py-6 text-center transition-colors ${
-        drag ? "border-brass bg-brass/5" : "border-line hover:border-brass/50"
+        drag ? "border-ec-bronze bg-ec-bronze-tint/40" : "border-ec-hair-strong hover:border-ec-bronze/50"
       }`}
       aria-label={t("cta")}
     >
-      <Icon name="upload" className={`h-5 w-5 ${pending ? "animate-pulse" : "text-ink-muted"}`} />
-      <div className="text-sm font-medium text-ink">{pending ? t("uploading") : t("cta")}</div>
-      <div className="text-xs text-ink-muted">{t("hint")}</div>
-      {msg && <div className="mt-1 text-xs text-ink-muted">{msg}</div>}
+      <Icon name="upload" className={`h-5 w-5 ${pending ? "animate-pulse text-ec-bronze" : "text-ec-ink-3"}`} />
+      <div className="text-sm font-medium text-ec-ink">{pending ? t("uploading") : t("cta")}</div>
+      <div className="text-xs text-ec-ink-3">{t("hint")}</div>
+      {msg && <div className="mt-1 text-xs text-ec-ink-3">{msg}</div>}
       <input
         ref={inputRef}
         type="file"

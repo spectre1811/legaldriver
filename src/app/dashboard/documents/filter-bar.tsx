@@ -41,7 +41,7 @@ export function FilterBar({ types, clients }: { types: string[]; clients: Opt[] 
         onSubmit={(e) => { e.preventDefault(); setParam("q", q.trim()); }}
         className="relative min-w-[14rem] flex-1"
       >
-        <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" />
+        <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ec-ink-3" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("filter.searchPlaceholder")} className="input pl-9" aria-label={t("filter.searchAria")} />
       </form>
       {combo("client", t("filter.clientAria"), t("filter.allClients"), clients.map((c) => ({ value: c.id, label: c.label })), "min-w-[10rem] max-w-[13rem]")}

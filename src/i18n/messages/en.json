@@ -1361,6 +1361,14 @@
   "documents": {
     "title": "Documents",
     "subtitle": "Every document, organised by category and client. A case is an optional tag — file by client first, link to a case when it matters.",
+    "stat": {
+      "inFile": "In the file",
+      "inFileHint": "All documents, filed and unfiled",
+      "unfiled": "Unfiled",
+      "unfiledHint": "No client or case yet — tag them",
+      "review": "Needs review",
+      "reviewHint": "We read these but weren't sure where they go"
+    },
     "upload": {
       "cta": "Upload documents",
       "hint": "Drop files here or click — we read, type, and file each one to the right case.",
@@ -1543,14 +1551,18 @@
     },
     "channel": {
       "email": "Email",
-      "whatsapp": "WhatsApp",
-      "inapp": "In-app",
-      "sms": "SMS"
+      "inapp": "In-app"
     },
     "status": {
       "sent": "Sent",
       "pending": "Pending",
       "failed": "Failed"
+    },
+    "count": "{n, plural, one {# reminder} other {# reminders}}",
+    "day": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "yesterday": "Yesterday"
     },
     "empty": {
       "title": "Nothing needs you.",
