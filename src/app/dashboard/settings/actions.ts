@@ -3,11 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
 import { parseBarNumber, stateBarCouncil } from "@/lib/court/bar-number";
 import { normalizeE164 } from "@/lib/phone";
+import { AVATAR_BUCKET } from "@/lib/profile/avatar";
 
 export type ActionResult = { ok: boolean; message: string };
+
+const AVATAR_MAX_BYTES = 1_000_000; // 1 MB — the client crops to a square JPEG first; this is the guard.
+const AVATAR_MIME = /^image\/(jpeg|png|webp)$/;
 
 // WO-42: parse the ONE structured enrollment field (STATE/SERIAL/YEAR) + the chosen
 // State Bar Council. We keep the canonical enrollment string (which INCLUDES the year —
@@ -83,6 +88,63 @@ export async function updateProfile(_prev: ActionResult, formData: FormData): Pr
 
   revalidatePath("/dashboard/settings");
   return { ok: true, message: t("profile.saved") };
+}
+
+// WO-147 W4 — profile photo upload. The `documents` bucket + service-role upload/signed-URL
+// is the app's established storage pattern (docs/mail/voice all use it); `profile.photo_url`
+// already exists (0031). Path is tenant+user scoped so one advocate's photo can never collide
+// with or leak into another's. The client crops to a square JPEG ≤1 MB before sending; we still
+// validate mime + size server-side (trust boundary — the client is not the guard). No new bucket,
+// no migration.
+export async function uploadAvatar(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const t = await getTranslations("settings");
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const tenantId = await getTenantId(supabase);
+  if (!user || !tenantId) return { ok: false, message: t("form.noTenant") };
+
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: t("profile.photoNone") };
+  if (!AVATAR_MIME.test(file.type)) return { ok: false, message: t("profile.photoType") };
+  if (file.size > AVATAR_MAX_BYTES) return { ok: false, message: t("profile.photoBig") };
+
+  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const path = `avatars/${tenantId}/${user.id}/${Date.now()}.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const admin = createAdminClient();
+
+  // Remove the previous object so old avatars don't accumulate (best-effort; a leftover is harmless).
+  const { data: prev } = await supabase.from("profile").select("photo_url").eq("id", user.id).maybeSingle();
+  if (prev?.photo_url) await admin.storage.from(AVATAR_BUCKET).remove([prev.photo_url]).catch(() => {});
+
+  const { error: upErr } = await admin.storage
+    .from(AVATAR_BUCKET)
+    .upload(path, buffer, { contentType: file.type, upsert: true });
+  if (upErr) return { ok: false, message: upErr.message };
+
+  const { error } = await supabase.from("profile").update({ photo_url: path }).eq("id", user.id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard", "layout"); // refresh the top-bar avatar without a reload
+  return { ok: true, message: t("profile.photoSaved") };
+}
+
+export async function removeAvatar(): Promise<ActionResult> {
+  const t = await getTranslations("settings");
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: t("form.noTenant") };
+
+  const { data: prev } = await supabase.from("profile").select("photo_url").eq("id", user.id).maybeSingle();
+  if (prev?.photo_url) await createAdminClient().storage.from(AVATAR_BUCKET).remove([prev.photo_url]).catch(() => {});
+
+  const { error } = await supabase.from("profile").update({ photo_url: null }).eq("id", user.id);
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard", "layout");
+  return { ok: true, message: t("profile.photoRemoved") };
 }
 
 // Upsert the signed-in user's notification preferences (RLS: id = auth.uid()). WO-30 W2.

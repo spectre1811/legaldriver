@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
+import { signAvatar } from "@/lib/profile/avatar";
 import { NavLinks } from "./nav";
 import { MobileNav } from "./mobile-nav";
 import { TopBar } from "./top-bar";
@@ -22,11 +23,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: tenant } = await supabase.from("tenant").select("name").single();
   const { data: profile } = await supabase
     .from("profile")
-    .select("full_name, designation")
+    .select("full_name, designation, photo_url")
     .eq("id", user.id)
     .maybeSingle();
   const tenantName = tenant?.name ?? t("workspace");
   const initial = (profile?.full_name ?? user.email ?? "?").slice(0, 1).toUpperCase();
+  const avatarUrl = await signAvatar(profile?.photo_url);
 
   return (
     <div className="flex min-h-screen bg-ec-paper text-ec-ink">
@@ -58,6 +60,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           initial={initial}
           fullName={profile?.full_name ?? null}
           designation={profile?.designation ?? null}
+          photoUrl={avatarUrl}
         />
         <div className="mx-auto max-w-6xl animate-fade-in px-5 py-8 sm:px-8 lg:py-10">{children}</div>
       </main>

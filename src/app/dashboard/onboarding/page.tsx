@@ -8,6 +8,8 @@ import { getTenantId } from "@/lib/court/sync";
 import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
 import { AdvocateOnboarding } from "./onboarding-ui";
 import { AdvocateForm } from "../settings/advocate-form";
+import { Stepper } from "./stepper";
+import { onboardingStep } from "./step-state";
 
 export const dynamic = "force-dynamic";
 // BP-71: onboarding runs multi-stage server-side (fetch → enrich per-CNR → …). Give the server action
@@ -47,6 +49,15 @@ export default async function OnboardingPage() {
   const cases = (matterCount ?? 0) > 0 ? matterCount ?? 0 : (matters?.length ?? 0);
   const stepKeys = ["one", "two", "three"] as const;
 
+  // Onboarding progress, derived from real state (never fabricated): no advocate yet → step 1
+  // (Bar ID); advocate added but no synced cases → step 2 (Fetch & verify); cases on file → step 3
+  // (Practice assembled). Feeds the stepper's gold current-step dot.
+  const currentStep = onboardingStep(hasAdvocates, cases);
+  const steps: { label: string; icon: IconName }[] = stepKeys.map((k, i) => ({
+    label: t(`steps.${k}.label`),
+    icon: STEP_ICONS[i],
+  }));
+
   // The honest "how it works" disclosure — a wall of prose the first time, so it collapses out of the way
   // once the user has advocates (reference), but leads the hero when they're deciding whether to trust us.
   const howItWorks = (
@@ -65,6 +76,10 @@ export default async function OnboardingPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t("title")} subtitle={t("subtitle")} serif />
+
+      <Card className="px-6 py-5 sm:px-8">
+        <Stepper steps={steps} current={currentStep} />
+      </Card>
 
       {hasAdvocates ? (
         <>
@@ -152,22 +167,18 @@ export default async function OnboardingPage() {
 
             <div className="px-6 py-6 sm:px-8">
               <p className="label mb-4">{t("steps.heading")}</p>
-              <ol className="grid gap-5 sm:grid-cols-3 sm:gap-6">
+              {/* Descriptions for the three steps the top stepper tracks — no duplicate numbering. */}
+              <dl className="grid gap-5 sm:grid-cols-3 sm:gap-6">
                 {stepKeys.map((k, i) => (
-                  <li key={k} className="flex gap-3 sm:flex-col sm:gap-0">
-                    <div className="flex items-center gap-2 sm:mb-2.5">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-600 font-serif text-sm font-semibold tabular-nums text-white">
-                        {i + 1}
-                      </span>
-                      <Icon name={STEP_ICONS[i]} className="h-4 w-4 text-brand-500" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-ink">{t(`steps.${k}.title`)}</p>
-                      <p className="mt-1 text-sm leading-relaxed text-ink-muted">{t(`steps.${k}.body`)}</p>
-                    </div>
-                  </li>
+                  <div key={k} className="min-w-0">
+                    <dt className="flex items-center gap-2 font-medium text-ink">
+                      <Icon name={STEP_ICONS[i]} className="h-4 w-4 shrink-0 text-brand-500" />
+                      {t(`steps.${k}.title`)}
+                    </dt>
+                    <dd className="mt-1 text-sm leading-relaxed text-ink-muted">{t(`steps.${k}.body`)}</dd>
+                  </div>
                 ))}
-              </ol>
+              </dl>
             </div>
 
             <div className="border-t border-line px-6 py-6 sm:px-8">
