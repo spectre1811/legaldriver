@@ -268,9 +268,18 @@
       "allClear": "You're all caught up — nothing overdue or due this week.",
       "showingAll": "Showing these — tap to clear",
       "filterAria": "Show {label} cases",
-      "overdue": { "label": "Overdue", "hint": "Reschedule or follow up" },
-      "soon": { "label": "Due this week", "hint": "Prepare & confirm the hearing" },
-      "noDate": { "label": "No hearing date", "hint": "Set a diary date" }
+      "overdue": {
+        "label": "Overdue",
+        "hint": "Reschedule or follow up"
+      },
+      "soon": {
+        "label": "Due this week",
+        "hint": "Prepare & confirm the hearing"
+      },
+      "noDate": {
+        "label": "No hearing date",
+        "hint": "Set a diary date"
+      }
     },
     "title": "Cases",
     "subtitle": "Your running file — synced by CNR from the court record, refreshed nightly.",
@@ -989,7 +998,11 @@
     "title": "Diary",
     "subtitle": "Hearings, filings and limitation dates — the diary that keeps itself.",
     "viewLabel": "View",
-    "view": { "month": "Month", "week": "Week", "list": "List" },
+    "view": {
+      "month": "Month",
+      "week": "Week",
+      "list": "List"
+    },
     "todayBtn": "Today",
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
@@ -1108,7 +1121,27 @@
       "practiceArea": "Practice area",
       "checkingConflicts": "Checking for conflicts…",
       "possibleConflicts": "{count, plural, one {Possible conflict of interest} other {Possible conflicts of interest}}",
-      "matchPercent": "{percent}% match"
+      "matchPercent": "{percent}% match",
+      "contactPerson": "Contact person",
+      "contactPersonPlaceholder": "Name of the person we deal with",
+      "address": "Address",
+      "addressPlaceholder": "Office or registered address",
+      "notes": "Notes",
+      "notesPlaceholder": "Anything worth remembering about this client",
+      "practiceAreaPlaceholder": "Choose a practice area",
+      "addAnother": "Add another",
+      "remove": "Remove"
+    },
+    "colPracticeArea": "Practice area",
+    "colOutstanding": "Outstanding",
+    "clientSince": "Client since {date}",
+    "outstanding": "Outstanding",
+    "edit": {
+      "editClient": "Edit",
+      "heading": "Edit client",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "cancel": "Cancel"
     }
   },
   "notices": {
@@ -1686,9 +1719,18 @@
     },
     "steps": {
       "heading": "How onboarding works",
-      "one": { "title": "Enter your Bar number", "body": "Your name and Bar registration — that's all we need to find you in the court record." },
-      "two": { "title": "We gather every case", "body": "We fetch your full roster in the background. Leave the page — we'll notify you when it's ready." },
-      "three": { "title": "Your practice comes alive", "body": "Cases land on your calendar with hearings, deadlines, filed emails, and AI briefings." }
+      "one": {
+        "title": "Enter your Bar number",
+        "body": "Your name and Bar registration — that's all we need to find you in the court record."
+      },
+      "two": {
+        "title": "We gather every case",
+        "body": "We fetch your full roster in the background. Leave the page — we'll notify you when it's ready."
+      },
+      "three": {
+        "title": "Your practice comes alive",
+        "body": "Cases land on your calendar with hearings, deadlines, filed emails, and AI briefings."
+      }
     },
     "howHeading": "How this works — honestly",
     "intro1": "We <b>auto-fetch your cases by your name</b> from compliant sources — no manual upload. Active sources: <b>{providers}</b>. The free <b>open judgments corpus</b> covers High Courts + the Supreme Court (mostly decided cases); adding a licensed key (Indian Kanoon / Vakeel360) broadens coverage to live orders automatically.",

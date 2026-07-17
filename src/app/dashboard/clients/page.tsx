@@ -7,6 +7,9 @@ import { Pagination } from "@/components/pagination";
 import { fetchClientsPage } from "./clients-query";
 import { parsePage, clampPerPage } from "@/lib/paginate";
 
+// Minor units → ₹ (matches the invoices slice's formatter).
+const rupees = (m: number) => `₹${(m / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+
 export default async function ClientsPage({ searchParams }: { searchParams: { page?: string; per?: string } }) {
   const t = await getTranslations("clients");
   const supabase = createClient();
@@ -37,8 +40,10 @@ export default async function ClientsPage({ searchParams }: { searchParams: { pa
                 <tr className="border-b border-line text-left">
                   <th className="px-5 py-3 label">{t("colClient")}</th>
                   <th className="hidden px-5 py-3 label sm:table-cell">{t("colType")}</th>
+                  <th className="hidden px-5 py-3 label lg:table-cell">{t("colPracticeArea")}</th>
                   <th className="hidden px-5 py-3 label md:table-cell">{t("colContact")}</th>
                   <th className="px-5 py-3 label">{t("colCases")}</th>
+                  <th className="px-5 py-3 label text-right">{t("colOutstanding")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -46,8 +51,10 @@ export default async function ClientsPage({ searchParams }: { searchParams: { pa
                   <tr key={c.id} className="border-b border-line last:border-0 hover:bg-paper">
                     <td className="px-5 py-3.5"><Link href={`/dashboard/clients/${c.id}`} className="font-medium text-ink hover:text-brand-600">{c.name}</Link></td>
                     <td className="hidden px-5 py-3.5 sm:table-cell"><Badge>{c.type}</Badge></td>
+                    <td className="hidden px-5 py-3.5 text-ink-muted lg:table-cell">{c.practiceArea ?? "—"}</td>
                     <td className="hidden px-5 py-3.5 text-ink-muted md:table-cell">{c.emails?.[0] ?? c.phones?.[0] ?? "—"}</td>
                     <td className="px-5 py-3.5 text-ink-soft">{c.caseCount}</td>
+                    <td className="px-5 py-3.5 text-right num">{c.outstandingMinor > 0 ? rupees(c.outstandingMinor) : <span className="text-ink-faint">—</span>}</td>
                   </tr>
                 ))}
               </tbody>
