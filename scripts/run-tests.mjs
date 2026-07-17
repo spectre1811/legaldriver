@@ -89,6 +89,7 @@ const OFFLINE = [
   "wo40_invoice",
   "wo124_athena_timeout",
   "wo148_comms",
+  "wo148_email",
   "wo144_phone",
 ];
 
