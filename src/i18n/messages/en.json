@@ -2584,7 +2584,7 @@
     "welcome": {
       "subject": "Your practice, on watch",
       "greeting": "Namaste {name},",
-      "body": "Mukadma is now watching the record for you. Add matters by CNR and the rest assembles itself: the diary fills, orders arrive read, and tomorrow's board reaches your WhatsApp each evening.",
+      "body": "Mukadma is now watching the record for you. Add matters by CNR and the rest assembles itself: the diary fills, orders arrive read, and tomorrow's board reaches your inbox each evening.",
       "cta": "Add your first matter",
       "ctaHint": "one CNR is enough.",
       "signoff": "— Mukadma"
@@ -2592,7 +2592,7 @@
     "assembled": {
       "subject": "{matters} matters, assembled",
       "lead": "Your practice is on the record: {matters} matters synced, {hearings} hearings on the diary, {orders} orders read and briefed.",
-      "closing": "From tonight, the board arrives by 8 pm.",
+      "closing": "From this evening, the board reaches your inbox each evening.",
       "cta": "Open your practice"
     },
     "dailyHearings": {
@@ -2605,11 +2605,11 @@
     "weekly": {
       "subject": "Your week in the record",
       "hearingsAttended": "{hearings} hearings attended",
-      "ordersNoted": "{orders} orders in your favour noted",
+      "ordersNoted": "{orders} new orders on your matters",
       "filingsDue": "{filings} filings due next week",
       "billed": "₹{invoiced} invoiced, ₹{collected} collected",
       "ahead": "The week ahead, day by day.",
-      "briefsReady": "Prepared where it matters: {briefs} briefs ready.",
+      "briefsReady": "Open any matter for its case briefing, grounded in the record.",
       "cta": "Open your week"
     },
     "invoice": {
