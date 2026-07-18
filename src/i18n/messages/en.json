@@ -180,7 +180,14 @@
       "statePlaceholder": "Choose a state",
       "courtLabel": "Court",
       "courtPlaceholder": "Choose a court",
-      "courtNone": "No courts on record yet"
+      "courtNone": "No courts on record yet",
+      "tierLabel": "Court level",
+      "tierHigh": "High Court",
+      "tierDistrict": "District",
+      "districtLabel": "District",
+      "districtPlaceholder": "Choose a district",
+      "districtNone": "No districts on record yet",
+      "courtPickDistrict": "Choose a district first"
     },
     "courtBoard": {
       "heading": "Court board",
@@ -194,6 +201,10 @@
       "empty": {
         "title": "No board on record.",
         "body": "We don't hold a cause list for this court on this date. Try another date."
+      },
+      "hcUnheld": {
+        "title": "Not yet retrievable live",
+        "body": "High Court lists aren't available to pull for a date on demand yet. We hold the ones already on record — pick a date we have, or check the official record."
       }
     },
     "well": {
@@ -259,6 +270,19 @@
     },
     "uploader": {
       "heading": "Upload cause list"
+    },
+    "retrieve": {
+      "title": "Retrieving the board",
+      "body": "getting this court's list for the day",
+      "empty": {
+        "title": "No board on record.",
+        "body": "There's no cause list for this court on this date. Try another date."
+      },
+      "error": {
+        "title": "Couldn't retrieve the board",
+        "body": "Something went wrong getting this court's list. Try again in a moment.",
+        "retry": "Try again"
+      }
     }
   },
   "cases": {
