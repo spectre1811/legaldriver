@@ -2595,12 +2595,12 @@
       "closing": "From tonight, the board arrives by 8 pm.",
       "cta": "Open your practice"
     },
-    "digest": {
-      "subject": "Tomorrow's board · {matters} matters",
-      "date": "Tomorrow · {date}",
-      "listing": "{court} — {parties} · {stage}",
+    "dailyHearings": {
+      "subject": "Tomorrow: {count} hearings",
+      "date": "Listed for tomorrow · {date}",
+      "listing": "{court} · {time} — {parties}",
       "orders": "{orders} orders uploaded today · read on Mukadma",
-      "cta": "Open the full board"
+      "cta": "Open tomorrow"
     },
     "weekly": {
       "subject": "Your week in the record",
@@ -2633,6 +2633,19 @@
       "subject": "Your sign-in code",
       "code": "{code}",
       "note": "Valid 10 minutes. Not you? Ignore this email."
+    },
+    "caseUpdate": {
+      "subject": "{change}",
+      "lead": "{change} — {case}, a case you track.",
+      "ref": "{court} · CNR {cnr}",
+      "detail": "{detail}",
+      "cta": "View the case"
+    },
+    "trackConfirm": {
+      "subject": "Now tracking {case}",
+      "lead": "You're tracking {case} · {court}.",
+      "body": "We watch the record nightly. When an order is uploaded, a hearing is set, or the status changes, you'll hear from us here.",
+      "cta": "Open the case"
     }
   }
 }
