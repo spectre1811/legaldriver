@@ -2600,5 +2600,73 @@
       "search": "Nothing on the public record for this. Check the spelling, or try the party's full name as filed.",
       "notifications": "Nothing needs you. The record is quiet."
     }
+  },
+  "emails": {
+    "welcome": {
+      "subject": "Your practice, on watch",
+      "greeting": "Namaste {name},",
+      "body": "Mukadma is now watching the record for you. Add matters by CNR and the rest assembles itself: the diary fills, orders arrive read, and tomorrow's board reaches your inbox each evening.",
+      "cta": "Add your first matter",
+      "ctaHint": "one CNR is enough.",
+      "signoff": "— Mukadma"
+    },
+    "assembled": {
+      "subject": "{matters} matters, assembled",
+      "lead": "Your practice is on the record: {matters} matters synced, {hearings} hearings on the diary, {orders} orders read and briefed.",
+      "closing": "From this evening, the board reaches your inbox each evening.",
+      "cta": "Open your practice"
+    },
+    "dailyHearings": {
+      "subject": "Tomorrow: {count} hearings",
+      "date": "Listed for tomorrow · {date}",
+      "listing": "{court} · {time} — {parties}",
+      "orders": "{orders} orders uploaded today · read on Mukadma",
+      "cta": "Open tomorrow"
+    },
+    "weekly": {
+      "subject": "Your week in the record",
+      "hearingsAttended": "{hearings} hearings attended",
+      "ordersNoted": "{orders} new orders on your matters",
+      "filingsDue": "{filings} filings due next week",
+      "billed": "₹{invoiced} invoiced, ₹{collected} collected",
+      "ahead": "The week ahead, day by day.",
+      "briefsReady": "Open any matter for its case briefing, grounded in the record.",
+      "cta": "Open your week"
+    },
+    "invoice": {
+      "subject": "Your invoice is ready",
+      "from": "From {advocate}",
+      "body": "{clientName}, please find invoice {invoice} for ₹{amount} towards {description}.",
+      "pay": "Pay by UPI, card, or netbanking",
+      "cta": "Pay securely",
+      "reply": "Questions? Reply here — it reaches {advocate} directly."
+    },
+    "receipt": {
+      "subject": "Payment received — thank you",
+      "body": "₹{amount} received against invoice {invoice}. Your receipt is attached."
+    },
+    "syncFailure": {
+      "subject": "We could not reach the record",
+      "body": "The court record did not respond for {misses} nightly syncs. Your matters are unchanged since {since}; tonight's board may be incomplete.",
+      "reassure": "We retry hourly and will confirm the moment the record is current. No action needed from you."
+    },
+    "security": {
+      "subject": "Your sign-in code",
+      "code": "{code}",
+      "note": "Valid 10 minutes. Not you? Ignore this email."
+    },
+    "caseUpdate": {
+      "subject": "{change}",
+      "lead": "{change} — {case}, a case you track.",
+      "ref": "{court} · CNR {cnr}",
+      "detail": "{detail}",
+      "cta": "View the case"
+    },
+    "trackConfirm": {
+      "subject": "Now tracking {case}",
+      "lead": "You're tracking {case} · {court}.",
+      "body": "We watch the record nightly. When an order is uploaded, a hearing is set, or the status changes, you'll hear from us here.",
+      "cta": "Open the case"
+    }
   }
 }
