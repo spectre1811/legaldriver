@@ -173,7 +173,28 @@
   "causeList": {
     "page": {
       "title": "Cause lists",
-      "subtitle": "The cause list for the day, court by court — matched to your cases."
+      "subtitle": "The cause list for the day — pick a court in your state, then step through the dates. Your own matters are highlighted below."
+    },
+    "scope": {
+      "stateLabel": "State",
+      "statePlaceholder": "Choose a state",
+      "courtLabel": "Court",
+      "courtPlaceholder": "Choose a court",
+      "courtNone": "No courts on record yet"
+    },
+    "courtBoard": {
+      "heading": "Court board",
+      "freshToday": "updated today",
+      "freshDays": "updated {days, plural, one {# day} other {# days}} ago",
+      "pick": {
+        "title": "Choose a court",
+        "body": "Pick a court above to see its cause list for the day."
+      },
+      "noCourts": "We don't hold any court boards for this state yet.",
+      "empty": {
+        "title": "No board on record.",
+        "body": "We don't hold a cause list for this court on this date. Try another date."
+      }
     },
     "well": {
       "dateLabel": "Date",

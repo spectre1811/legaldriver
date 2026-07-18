@@ -38,6 +38,7 @@ const OFFLINE = [
   "wo82_directory_nav",
   "wo206_module_trim",
   "timeline_sort",
+  "wo205_causelist_directory",
   "wo01_causelist_alert",
   "wo01_refresh_priority",
   "wo01_sync_contract",
