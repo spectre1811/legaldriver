@@ -295,6 +295,31 @@ export class LegalDriverClient implements CourtDataClient {
     return items.map((it) => ({ listDate: q.date, court: courtId, itemNo: it.item_no ?? it.item_number, cnr: it.cnr, title: it.title ?? it.parties, raw: it }));
   }
 
+  // WO-205 W3 · On-demand cause-list fetch. A held miss for a District court+date enqueues a
+  // priority live fetch (the founder-opened FG-6 lane). We need the raw HTTP STATUS (200 found/empty
+  // · 202 fetching · 422 not-a-record/HC), which `req()` collapses to null — so this does its own
+  // fetch. The API-key stays server-side (this runs only from the /api/court/cause-list-fetch route).
+  async requestCauseListFetch(courtId: string, date: string): Promise<{ status: number; hasItems: boolean }> {
+    try {
+      const res = await fetch(`${this.base}/v1/cause-lists/fetch`, {
+        method: "POST",
+        headers: { "X-API-Key": this.apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ court_id: courtId, date }),
+        signal: AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "60000")),
+      });
+      // A 200 may carry a just-served board (found) or an honest-empty; peek at items for the caller.
+      let hasItems = false;
+      if (res.status === 200) {
+        const body = (await res.json().catch(() => null)) as { items?: unknown[]; cases?: unknown[] } | null;
+        hasItems = (body?.items?.length ?? 0) > 0 || (Array.isArray(body?.cases) && body!.cases!.length > 0);
+      }
+      return { status: res.status, hasItems };
+    } catch {
+      // Network/abort → surface as a transient error (never a fake empty; WO-68 rule).
+      return { status: 0, hasItems: false };
+    }
+  }
+
   async getCauseListByCNRs(cnrs: string[], date: string): Promise<CauseListListing[]> {
     // Ask the internal API which of our tracked CNRs are listed on `date` (across any court).
     // Batched so the query string stays bounded; dedupe + normalize CNRs first.
@@ -339,4 +364,31 @@ export class LegalDriverClient implements CourtDataClient {
     const streamPath = o.pdf_stream ?? (o.has_pdf ? `/order/${encodeURIComponent(orderId)}/pdf` : undefined);
     return { id: orderId, cnr, pdfUrl: streamPath ? `${this.base}${streamPath}` : undefined, markdown: o.text ?? undefined };
   }
+}
+
+// ── On-demand cause-list lane wiring (WO-205 W3) ──────────────────────────────────────────────
+// The UI depends only on this seam, never the fetch mechanism (queue/drainer). The lane is LIVE
+// only when the keyed provider is active AND the W2 endpoint is enabled in prod — a single flag the
+// route + page gate on, so the whole page ships (cascade + held board) before W2 lands and the
+// on-demand call simply no-ops to honest-empty until then.
+
+/** Whether the live on-demand cause-list fetch lane is available (keyed provider + W2 flag ON).
+ *  Off → a District miss renders the honest-empty state, never a spinner for a lane that can't run.
+ *  `LD_ONDEMAND_CAUSELIST=1` flips it on once W2 is verified live in prod (default OFF, ship-safe). */
+export function hasOnDemandCauseList(): boolean {
+  const { getCourtDataClient } = require("./client") as typeof import("./client");
+  return getCourtDataClient().source === "legaldriver" && process.env.LD_ONDEMAND_CAUSELIST === "1";
+}
+
+/** Enqueue an on-demand cause-list fetch via the keyed client. Returns the raw status class for the
+ *  route to hand the island. When the lane is off (or the active provider isn't the keyed one), we
+ *  return a synthetic 200/empty so the caller falls to the honest-empty state (never a live call). */
+export async function requestCauseListFetch(
+  courtId: string,
+  date: string,
+): Promise<{ status: number; hasItems: boolean }> {
+  if (!hasOnDemandCauseList()) return { status: 200, hasItems: false };
+  const { getCourtDataClient } = require("./client") as typeof import("./client");
+  const client = getCourtDataClient() as LegalDriverClient;
+  return client.requestCauseListFetch(courtId, date);
 }

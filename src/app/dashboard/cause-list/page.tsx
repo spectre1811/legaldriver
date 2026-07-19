@@ -5,11 +5,21 @@ import { Icon } from "@/components/icons";
 import { EmptyCell, Disclaimer } from "@/components/court";
 import { type ComboOption } from "@/components/combobox";
 import { STATE_BAR_COUNCILS } from "@/lib/court/bar-councils.data";
-import { getCourtDirectory, buildCourtOptions } from "@/lib/court/court-directory";
+import {
+  getCourtDirectory,
+  heldTiers,
+  districtOptions,
+  courtOptionsFor,
+  findCourt,
+  type Tier,
+} from "@/lib/court/court-directory";
 import { getCourtDataClient, isMockCourtProvider } from "@/lib/court/client";
+import { hasOnDemandCauseList } from "@/lib/court/legaldriver";
+import { initialBoardState } from "@/lib/court/causelist-state";
 import { CauseListUploader } from "./uploader";
 import { PrintButton } from "./print-button";
-import { CauseListPickers } from "./pickers";
+import { CauseListCascade } from "./cascade";
+import { CauseListFetchLane } from "./fetch-lane";
 
 export const metadata = { title: "Cause lists · Mukadma" };
 
@@ -47,7 +57,7 @@ type Entry = {
 };
 
 // States we hold a court directory for = councils carrying an eCourts state_code (Gujarat today;
-// grows as the platform verifies more). Labelled from the council registry. WO-205 W1.
+// grows as the platform verifies more). Labelled from the council registry.
 const STATE_OPTIONS: ComboOption[] = STATE_BAR_COUNCILS.filter((c) => c.stateCode != null)
   .map((c) => ({ value: String(c.stateCode), label: c.label }))
   .sort((a, b) => a.label.localeCompare(b.label));
@@ -56,7 +66,7 @@ const HELD_STATE_CODES = new Set(STATE_OPTIONS.map((o) => o.value));
 export default async function CauseListPage({
   searchParams,
 }: {
-  searchParams: { date?: string; state?: string; court_id?: string };
+  searchParams: { date?: string; state?: string; tier?: string; district?: string; court_id?: string };
 }) {
   const t = await getTranslations("causeList");
   const tc = await getTranslations("common");
@@ -69,9 +79,8 @@ export default async function CauseListPage({
 
   const supabase = createClient();
 
-  // ── Default state scope = the union of the tenant's advocates' enrolled states (RLS scopes the
-  // query to the tenant). If the URL names a held state, honour it; else preselect the tenant's
-  // (single state → that one; multiple → the first held one alphabetically for a stable default).
+  // ── Default state scope = the union of the tenant's advocates' enrolled states (RLS-scoped). URL
+  // state wins if held; else the tenant's first held state; else the first state we hold at all.
   const { data: advs } = await supabase.from("advocate").select("state_code");
   const tenantStates = [
     ...new Set((advs ?? []).map((a) => a.state_code).filter((s): s is string => HELD_STATE_CODES.has(s ?? ""))),
@@ -79,26 +88,54 @@ export default async function CauseListPage({
   const urlState = searchParams.state && HELD_STATE_CODES.has(searchParams.state) ? searchParams.state : null;
   const stateCode = urlState ?? tenantStates[0] ?? STATE_OPTIONS[0]?.value ?? null;
 
-  // ── Court directory for the selected state → the pickable courts (only ones we hold boards for).
-  // Skipped on the mock provider (no live directory → we never fabricate a court list).
+  // ── Court directory for the selected state → the cascade options (only held-board courts). Skipped
+  // on the mock provider (no live directory → we never fabricate a court list).
   const mock = isMockCourtProvider();
-  const groups = stateCode && !mock ? await getCourtDirectory(stateCode) : null;
-  const courtOptions = groups ? buildCourtOptions(groups) : [];
+  const groups = (stateCode && !mock ? await getCourtDirectory(stateCode) : null) ?? [];
+  const tiers = heldTiers(groups);
+
+  // ── Tier: URL wins if held; else default to the advocate's likeliest tier (District — most work
+  // happens there; also the only live-retrievable one). Falls to whatever tier the state holds.
+  const urlTier = (searchParams.tier ?? "").toUpperCase();
+  const tier: Tier | null =
+    urlTier === "HIGH" || urlTier === "DISTRICT"
+      ? (tiers.includes(urlTier as Tier) ? (urlTier as Tier) : null)
+      : tiers.includes("DISTRICT")
+        ? "DISTRICT"
+        : (tiers[0] ?? null);
+
+  // ── District (District tier only): URL value if it's a held district, else none (user picks).
+  const districts = tier === "DISTRICT" ? districtOptions(groups) : [];
+  const district =
+    tier === "DISTRICT" && searchParams.district && districts.some((d) => d.value === searchParams.district)
+      ? searchParams.district
+      : null;
+
+  // ── Court options within (tier, district). Court id honoured only if it's in the current options.
+  const courtOptions = tier ? courtOptionsFor(groups, tier, district) : [];
   const courtId =
     searchParams.court_id && courtOptions.some((o) => o.value === searchParams.court_id)
       ? searchParams.court_id
       : null;
-  const selectedCourt = courtOptions.find((o) => o.value === courtId) ?? null;
+  const selectedCourt = courtId ? findCourt(groups, courtId) : null;
 
-  // ── The state-scoped court board: the selected court's cause list for the selected date. Only
-  // fetched once a court is picked; honest-empty when we hold no board for that court/date (W1 has
-  // NO on-demand fetch lane — that's the founder-gated W2, FG-6).
+  // ── The state-scoped board: the selected court's cause list for the day (only when a court is
+  // picked). Honest-empty on a miss; the on-demand island (below) drives the District live lane.
   const board = courtId
     ? await getCourtDataClient().getCauseList({ court: courtId, date: selected })
     : [];
   const boardFreshDays = freshnessDays(selectedCourt?.freshness ?? null, today);
 
-  // ── The tenant "Your matters" board (WO-201 W1) — unchanged: your cases listed on the selected day.
+  // ── Resolve the board's honest state (pure machine). onDemandLive gates the District fetch lane.
+  const onDemandLive = !mock && hasOnDemandCauseList();
+  const boardState = initialBoardState({
+    courtId,
+    tier: selectedCourt?.tier ?? tier,
+    heldCount: board.length,
+    onDemandLive,
+  });
+
+  // ── The tenant "Your matters" board (WO-201 W1) — your cases listed on the selected day.
   const { data } = await supabase
     .from("cause_list_entry")
     .select("id, item_no, court, list_date, cnr, matter:matter_id (id, title)")
@@ -120,8 +157,13 @@ export default async function CauseListPage({
     return min === null || itemNum(r.item_no) < itemNum(min) ? r.item_no : min;
   }, null);
 
-  // Query strings for the date stepper links — preserve state + court so stepping keeps the scope.
-  const scopeParams = { ...(stateCode ? { state: stateCode } : {}), ...(courtId ? { court_id: courtId } : {}) };
+  // Date-stepper links — preserve the whole scope so stepping keeps state/tier/district/court.
+  const scopeParams = {
+    ...(stateCode ? { state: stateCode } : {}),
+    ...(tier ? { tier } : {}),
+    ...(district ? { district } : {}),
+    ...(courtId ? { court_id: courtId } : {}),
+  };
   const stepHref = (date?: string) =>
     `/dashboard/cause-list?${new URLSearchParams({ ...scopeParams, ...(date ? { date } : {}) }).toString()}`;
 
@@ -139,36 +181,33 @@ export default async function CauseListPage({
         <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("page.subtitle")}</p>
       </header>
 
-      {/* ── Selector well: state + court pickers (state-scoped board) + date stepper + print. ── */}
+      {/* ── Selector well: the picker cascade (state → tier → district → court) + date stepper + print. ── */}
       <div className="rounded-ec-s border border-ec-hair bg-ec-paper-3 p-4 print:hidden">
-        <div className="flex flex-wrap items-end gap-4">
+        <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
           {!mock && (
-            <CauseListPickers states={STATE_OPTIONS} courts={courtOptions} stateCode={stateCode} courtId={courtId} />
+            <CauseListCascade
+              states={STATE_OPTIONS}
+              tiers={tiers}
+              districts={districts}
+              courts={courtOptions}
+              stateCode={stateCode}
+              tier={tier}
+              district={district}
+              courtId={courtId}
+            />
           )}
 
           <div className="flex flex-col gap-1.5">
             <span className="ec-label">{t("well.dateLabel")}</span>
             <div className="flex items-center gap-1 rounded-ec-s border border-ec-hair bg-ec-paper-2 px-1 py-0.5" role="group" aria-label={t("well.dateLabel")}>
-              <Link
-                href={stepHref(prev)}
-                aria-label={t("well.prevDay")}
-                className="grid h-7 w-7 place-items-center rounded-ec-s text-ec-ink-3 hover:bg-ec-paper-3 hover:text-ec-ink"
-              >
+              <Link href={stepHref(prev)} aria-label={t("well.prevDay")} className="grid h-7 w-7 place-items-center rounded-ec-s text-ec-ink-3 hover:bg-ec-paper-3 hover:text-ec-ink">
                 <Icon name="back" className="h-3.5 w-3.5" />
               </Link>
-              <Link
-                href={stepHref()}
-                aria-label={t("well.jumpToday")}
-                className="num px-2 text-[11.5px] uppercase tracking-[0.08em] text-ec-ink"
-              >
+              <Link href={stepHref()} aria-label={t("well.jumpToday")} className="num px-2 text-[11.5px] uppercase tracking-[0.08em] text-ec-ink">
                 {selected === today ? `${t("well.today")} · ` : ""}
                 {dateLabel}
               </Link>
-              <Link
-                href={stepHref(next)}
-                aria-label={t("well.nextDay")}
-                className="grid h-7 w-7 place-items-center rounded-ec-s text-ec-ink-3 hover:bg-ec-paper-3 hover:text-ec-ink"
-              >
+              <Link href={stepHref(next)} aria-label={t("well.nextDay")} className="grid h-7 w-7 place-items-center rounded-ec-s text-ec-ink-3 hover:bg-ec-paper-3 hover:text-ec-ink">
                 <Icon name="chevron" className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -180,39 +219,30 @@ export default async function CauseListPage({
         </div>
       </div>
 
-      {/* ── State-scoped court board (the selected court's cause list for the day). ── */}
+      {/* ── State-scoped court board — the selected court's cause list for the day, with honest states. ── */}
       {!mock && (
         <section aria-label={t("courtBoard.heading")} className="space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-display text-[15px] text-ec-ink">
               {selectedCourt ? selectedCourt.label : t("courtBoard.heading")}
             </h2>
-            {selectedCourt && boardFreshDays !== null && (
+            {boardState === "held" && boardFreshDays !== null && (
               <span className="num text-[11px] text-ec-ink-2" aria-live="polite">
                 {boardFreshDays === 0 ? t("courtBoard.freshToday") : t("courtBoard.freshDays", { days: boardFreshDays })}
               </span>
             )}
           </div>
 
-          {!courtId ? (
-            <div className="grid min-h-[160px] place-items-center rounded-ec-s border border-dashed border-ec-hair bg-ec-paper-2/50 text-center">
-              <div>
-                <p className="font-display text-lg text-ec-ink">{t("courtBoard.pick.title")}</p>
-                <p className="mt-1 text-sm text-ec-ink-3">
-                  {courtOptions.length ? t("courtBoard.pick.body") : t("courtBoard.noCourts")}
-                </p>
-              </div>
-            </div>
-          ) : board.length === 0 ? (
-            // Honest empty — we hold no board for this court on this date. NO spinner, no fake queue
-            // (the on-demand fetch lane is the founder-gated W2).
-            <div className="grid min-h-[160px] place-items-center rounded-ec-s border border-dashed border-ec-hair bg-ec-paper-2/50 text-center">
-              <div>
-                <p className="font-display text-lg text-ec-ink">{t("courtBoard.empty.title")}</p>
-                <p className="mt-1 text-sm text-ec-ink-3">{t("courtBoard.empty.body")}</p>
-              </div>
-            </div>
-          ) : (
+          {boardState === "pick" ? (
+            <EmptyPanel
+              title={t("courtBoard.pick.title")}
+              body={courtOptions.length || tiers.length ? t("courtBoard.pick.body") : t("courtBoard.noCourts")}
+            />
+          ) : boardState === "hcUnheld" ? (
+            // High Court lists are PDF-only and not yet retrievable live (WO-150) — an HONEST state,
+            // never a fake queue or a spinner. No on-demand call is made for HC.
+            <EmptyPanel title={t("courtBoard.hcUnheld.title")} body={t("courtBoard.hcUnheld.body")} />
+          ) : boardState === "held" ? (
             <ul className="divide-y divide-ec-hair overflow-hidden rounded-ec-s border border-ec-hair bg-ec-paper-2">
               {board.map((it, i) => (
                 <li key={`${it.cnr ?? "row"}-${i}`} className="flex items-center gap-3 px-4 py-3">
@@ -229,6 +259,12 @@ export default async function CauseListPage({
                 </li>
               ))}
             </ul>
+          ) : boardState === "fetching" && courtId ? (
+            // District held-miss + live lane on → the non-blocking on-demand island retrieves + polls.
+            <CauseListFetchLane courtId={courtId} date={selected} />
+          ) : (
+            // empty — held-miss with no live lane (mock / flag off) or a lane-confirmed no-board.
+            <EmptyPanel title={t("courtBoard.empty.title")} body={t("courtBoard.empty.body")} />
           )}
         </section>
       )}
@@ -237,19 +273,10 @@ export default async function CauseListPage({
       <section aria-labelledby="yours-heading" className="space-y-3">
         <h2 id="yours-heading" className="font-display text-[15px] text-ec-ink">{t("summary.yours")}</h2>
         {rows.length === 0 ? (
-          <div className="grid min-h-[160px] place-items-center rounded-ec-s border border-dashed border-ec-hair bg-ec-paper-2/50 text-center">
-            <div>
-              <p className="font-display text-lg text-ec-ink">{t("boardEmpty.title")}</p>
-              <p className="mt-1 text-sm text-ec-ink-3">{t("boardEmpty.body")}</p>
-            </div>
-          </div>
+          <EmptyPanel title={t("boardEmpty.title")} body={t("boardEmpty.body")} />
         ) : (
           <>
-            <div
-              role="status"
-              aria-live="polite"
-              className="sticky top-0 z-10 rounded-ec-s border border-ec-hair bg-ec-paper-2/85 px-3 py-2 text-[12px] text-ec-ink-2 backdrop-blur"
-            >
+            <div role="status" aria-live="polite" className="sticky top-0 z-10 rounded-ec-s border border-ec-hair bg-ec-paper-2/85 px-3 py-2 text-[12px] text-ec-ink-2 backdrop-blur">
               {t("summary.yours")}: <span className="num text-ec-ink">{mineCount}</span>
               {earliest && (
                 <>
@@ -322,6 +349,18 @@ export default async function CauseListPage({
 
       <div className="print:hidden">
         <Disclaimer text={tc("disclaimer")} />
+      </div>
+    </div>
+  );
+}
+
+// The board's honest empty/pick/HC-unheld panel — one dashed card, one voice.
+function EmptyPanel({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="grid min-h-[160px] place-items-center rounded-ec-s border border-dashed border-ec-hair bg-ec-paper-2/50 text-center">
+      <div className="max-w-sm px-4">
+        <p className="font-display text-lg text-ec-ink">{title}</p>
+        <p className="mt-1 text-sm text-ec-ink-3">{body}</p>
       </div>
     </div>
   );

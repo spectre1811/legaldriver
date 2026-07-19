@@ -108,6 +108,78 @@ export function buildCourtOptions(
   return rows;
 }
 
+// ── Cascade builders (WO-205 W3) ──────────────────────────────────────────────────────────────
+// The W1 `buildCourtOptions` flattens BOTH tiers into one list (district folded into `hint`). The
+// v2 page reads as ONE instrument: State → Tier → District (DC only) → Court. These pure builders
+// slice the same directory by tier + district so each combobox narrows the next. No DOM/React — the
+// whole cascade contract is unit-tested offline (tests/wo205_causelist_cascade.ts).
+
+export type Tier = "HIGH" | "DISTRICT";
+
+const isTier = (g: CourtGroup, tier: Tier): boolean => (g.tier ?? "").toUpperCase() === tier;
+
+/** Which tiers this state actually has a held board for — drives the tier toggle (never offer an
+ *  empty tier). A tier counts only if ≥1 of its courts passes `courtHasData`. */
+export function heldTiers(groups: CourtGroup[]): Tier[] {
+  const has = (tier: Tier) => (groups ?? []).some((g) => isTier(g, tier) && g.courts.some(courtHasData));
+  return (["DISTRICT", "HIGH"] as Tier[]).filter(has);
+}
+
+/** The district options for the District tier — one per district that holds ≥1 board, sorted. The
+ *  value is the district name itself (the directory's own key; no separate district id exists). */
+export function districtOptions(groups: CourtGroup[]): ComboOption<string>[] {
+  const names = new Set<string>();
+  for (const g of groups ?? []) {
+    if (!isTier(g, "DISTRICT")) continue;
+    const d = (g.district ?? "").trim();
+    if (d && g.courts.some(courtHasData)) names.add(d);
+  }
+  return [...names]
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+    .map((d) => ({ value: d, label: d }));
+}
+
+/**
+ * The court options within a (tier, district) selection. HIGH ignores `district` (a state's High
+ * Court has no district level). DISTRICT requires a district — with none picked yet it returns []
+ * so the court combobox stays empty until the district is chosen (the cascade reads top-down).
+ * Reuses `courtHasData` + `courtLabel` so held-only + dedupe behaviour matches W1 exactly.
+ */
+export function courtOptionsFor(
+  groups: CourtGroup[],
+  tier: Tier,
+  district: string | null,
+): (ComboOption<string> & { freshness: string | null })[] {
+  if (tier === "DISTRICT" && !district) return [];
+  const wanted = (district ?? "").trim().toLowerCase();
+  const courts = (groups ?? [])
+    .filter((g) => isTier(g, tier) && (tier === "HIGH" || (g.district ?? "").trim().toLowerCase() === wanted))
+    .flatMap((g) => g.courts)
+    .filter(courtHasData)
+    .sort((a, b) => courtLabel(a).localeCompare(courtLabel(b), undefined, { sensitivity: "base" }));
+  return courts.map((c) => ({ value: String(c.court_id), label: courtLabel(c), freshness: c.latest_date ?? null }));
+}
+
+/** Look up a court's tier + district + freshness by its id across the whole directory. Drives the
+ *  board's tier gate (HC boards aren't retrievable live) and the freshness stamp. Null when unknown. */
+export function findCourt(
+  groups: CourtGroup[],
+  courtId: string,
+): { tier: Tier; district: string; label: string; freshness: string | null } | null {
+  for (const g of groups ?? []) {
+    const c = g.courts.find((x) => String(x.court_id) === courtId);
+    if (c) {
+      return {
+        tier: (g.tier ?? "").toUpperCase() === "HIGH" ? "HIGH" : "DISTRICT",
+        district: (g.district ?? "").trim(),
+        label: courtLabel(c),
+        freshness: c.latest_date ?? null,
+      };
+    }
+  }
+  return null;
+}
+
 // FAIL CLOSED (mirrors legaldriver.ts): a missing LD_API_BASE is a config error, never a silent
 // default to a raw origin IP. The public directory shares the platform host with the keyed API.
 function publicBase(): string {
