@@ -102,6 +102,14 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   // is "not on record at eCourts" the honest empty state; a manual case has no eCourts record to
   // compare against, so we don't render a 16-field "not on record" mirror for it (BP-24).
   const isCourtSourced = !!matter.source && matter.source !== "manual";
+  // Product voice (WO-132): the user never sees the internal pipeline name ("legaldriver") — a
+  // court-synced case reads as "the court record", a hand-entered one as "added manually", the demo
+  // seed as "demo data". Founder 2026-07-22: the raw "via legaldriver" leaked here.
+  const sourceLabel = matter.source === "manual"
+    ? t("sourceName.manual")
+    : matter.source === "mock"
+      ? t("sourceName.demo")
+      : t("sourceName.court");
   const isDisposed = (str(matter.status) ?? "").toUpperCase().includes("DISPOSED");
   // WO-41 tier-aware honest-empty. The field taxonomy + selection rule live in a pure module
   // (case-detail-fields.ts) so the trust contract is unit-tested; here we only supply values +
@@ -190,7 +198,6 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {matter.cnr && <span className={`num ${chip("brand")} inline-flex items-center gap-1`}><Icon name="cases" className="h-3 w-3" /> {matter.cnr}</span>}
             <span className={chip(STATUS_TONE[matter.status] ?? "neutral")}>{st(matter.status)}</span>
-            {matter.source && <span className="text-xs text-ec-ink-3">{t("via", { source: matter.source })}</span>}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -352,7 +359,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
 
       <div className="ec-card px-5 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="num text-sm text-ec-ink-3">{t("source.line", { source: matter.source ?? "manual", time: refreshed })}</p>
+          <p className="num text-sm text-ec-ink-3">{t("source.line", { source: sourceLabel, time: refreshed })}</p>
           <MatterDiaryDate matterId={matter.id} synced={matter.next_hearing_date} override={matter.next_hearing_override ?? null} />
         </div>
         <p className="mt-2 text-xs text-ec-ink-3">{t("source.note")} <span className="font-medium text-ec-ink-2">{t("source.verify")}</span> {t("source.diaryHint")}</p>
@@ -363,12 +370,15 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
 
       {(caseDetails.length > 0 || coramName) && (
         <div className="ec-card">
-          <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium">{t("details.title")}</h2></div>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-5 py-5 sm:grid-cols-3">
+          <div className="flex items-center gap-2 border-b border-ec-hair px-5 py-4">
+            <span aria-hidden className="h-3.5 w-[3px] rounded-full bg-ec-brass" />
+            <h2 className="font-display text-base font-medium">{t("details.title")}</h2>
+          </div>
+          <dl className="grid grid-cols-2 gap-x-8 gap-y-6 px-5 py-6 sm:grid-cols-3">
             {caseDetails.map(({ label, value, emptyReason, emptyLabel }) => (
-              <div key={label}>
+              <div key={label} className="min-w-0">
                 <dt className="ec-label">{label}</dt>
-                <dd className="mt-1 text-sm text-ec-ink">
+                <dd className="mt-1.5 text-[0.95rem] font-medium leading-snug text-ec-ink">
                   <CourtField
                     value={value}
                     emptyReason={emptyReason}
@@ -380,13 +390,13 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               </div>
             ))}
             {coramName && (
-              <div>
+              <div className="min-w-0">
                 <dt className="ec-label">{t("detail.coram")}</dt>
-                <dd className="mt-1 text-sm">
+                <dd className="mt-1.5 text-[0.95rem] font-medium leading-snug">
                   {isMaskedName(coramName) ? (
                     <MaskedName value={coramName} label={t("masked")} />
                   ) : (
-                    <Link href={`/dashboard/search/directory?q=${encodeURIComponent(coramName)}`} className="font-medium text-ec-brass-deep hover:text-ec-brass">
+                    <Link href={`/dashboard/search/directory?q=${encodeURIComponent(coramName)}`} className="text-ec-brass-deep hover:text-ec-brass">
                       {coramName}
                     </Link>
                   )}
@@ -631,7 +641,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               <li key={d.id} className="flex items-center gap-3 px-5 py-3 text-sm">
                 <Icon name="documents" className="h-4 w-4 shrink-0 text-ec-ink-3" />
                 <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{d.filename}</span>
-                <span className={chip("neutral")}>{d.doc_type ?? d.source}</span>
+                <span className={chip("neutral")}>{d.doc_type ?? t("documents.untyped")}</span>
                 <span className="num hidden text-xs text-ec-ink-3 sm:inline">{fmtSize(d.size_bytes)}</span>
                 <DocActions documentId={d.id} matterId={d.matter_id} clientId={d.client_id} matters={matterOpts} clients={clientOpts} shared={d.portal_shared} />
               </li>
