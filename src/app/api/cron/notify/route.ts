@@ -93,12 +93,17 @@ export async function GET(request: NextRequest) {
       if (email) {
         const group = n.kind === "case_update" ? caseUpdateGroup.get(n.tenant_id) : undefined;
         const rendered = renderForKind(n.kind, payload, group?.map((g) => g.payload));
+        // Siblings may only be flipped when the roundup actually composed — a null compose
+        // falls back to a single-row notice that does NOT carry the siblings' content
+        // (review finding, PR#192; unreachable today, cheap to make impossible).
+        const roundupComposed =
+          !!group && group.length > 1 && composeCaseUpdate(group.map((g) => g.payload)) !== null;
         if (rendered) {
           const res = await mailer.send(email, rendered.subject, rendered.html, rendered.text);
           ok = res.ok;
           await logOutboundEmail(supabase, { tenantId: n.tenant_id, to: email, subject: rendered.subject, kind: n.kind.includes("reminder") ? "reminder" : "notice", ok: res.ok, providerId: res.id });
           // Roundup: the siblings were delivered inside this email — flip them with the primary.
-          if (ok && group && group.length > 1) {
+          if (ok && roundupComposed && group) {
             const siblingIds = group.map((g) => g.id).filter((id) => id !== n.id);
             siblingIds.forEach((id) => handled.add(id));
             const { error: sibErr } = await supabase
