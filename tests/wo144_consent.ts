@@ -2,6 +2,7 @@
 // supabase client is a minimal chainable stub over an in-memory row array, so
 // this proves the seam's logic without the (founder-gated, unapplied) migration.
 // Run: npx tsx tests/wo144_consent.ts
+import { readFileSync } from "node:fs";
 import {
   isStopMessage,
   checkConsent,
@@ -32,6 +33,15 @@ eq("negative: stopp", isStopMessage("stopp"), false);
 eq("negative: empty", isStopMessage(""), false);
 eq("negative: null", isStopMessage(null), false);
 eq("negative: undefined", isStopMessage(undefined), false);
+
+// ── Wiring: both send paths must actually call the gate. A seam-only test stays
+// green if someone deletes the call site, so pin the wiring with a grep-style
+// source assertion (this repo's contract-pinning idiom; cf. wo01_sync_contract's
+// surface pinning — the send paths have no injectable seam to stub instead). ──
+const sendSrc = readFileSync("src/app/dashboard/messages/actions.ts", "utf8");
+const cronSrc = readFileSync("src/app/api/cron/notify/route.ts", "utf8");
+eq("wiring: sendMessage gates on canSendWhatsApp", sendSrc.includes("canSendWhatsApp("), true);
+eq("wiring: cron notify gates on canSendWhatsApp", cronSrc.includes("canSendWhatsApp("), true);
 
 // ── Minimal chainable supabase stub over an in-memory consent_ledger ─────────
 type Row = Record<string, unknown>;
@@ -69,6 +79,7 @@ function makeDb() {
 async function main() {
   const { db, rows } = makeDb();
   const num = "+919876543210";
+  const bare = "919876543210"; // Meta wa_id shape: bare digits, no "+"
 
   // No grant yet → no consent, no send.
   eq("checkConsent: none", await checkConsent(db, num, "service"), false);
@@ -80,28 +91,50 @@ async function main() {
   eq("canSendWhatsApp: open grant", await canSendWhatsApp(db, num), true);
   eq("grant row written", rows.length, 1);
   eq("wording_version default", rows[0].wording_version, "v1");
+  eq("ledger stores canonical E.164", rows[0].number, num);
 
-  // Dedupe: a second grant for the same (number, purpose) is a no-op.
+  // The seam normalizes: a bare-digits wa_id finds the +91 grant.
+  eq("checkConsent: bare digits find the E.164 grant", await checkConsent(db, bare, "service"), true);
+  eq("canSendWhatsApp: bare digits", await canSendWhatsApp(db, bare), true);
+
+  // Dedupe — including via a bare-digits re-grant (same canonical number).
   await recordConsent(db, { tenantId: "t1", number: num, purpose: "service", source: "settings/notifications" });
   eq("recordConsent dedupe: still one row", rows.length, 1);
+  await recordConsent(db, { tenantId: "t1", number: bare, purpose: "service", source: "settings/notifications" });
+  eq("recordConsent dedupe: bare digits, still one row", rows.length, 1);
 
   // A different purpose is a separate grant.
   await recordConsent(db, { tenantId: "t1", number: num, purpose: "marketing", source: "campaign/x" });
   eq("second purpose: two rows", rows.length, 2);
   eq("checkConsent: marketing open", await checkConsent(db, num, "marketing"), true);
 
-  // STOP closes ALL purposes, globally + instantly.
-  await recordOptOut(db, num);
-  eq("post-STOP: service closed", await checkConsent(db, num, "service"), false);
-  eq("post-STOP: marketing closed", await checkConsent(db, num, "marketing"), false);
+  // Purpose-scoped opt-out (settings channel-off): closes ONLY 'service'.
+  await recordOptOut(db, num, "service");
+  eq("scoped opt-out: service closed", await checkConsent(db, num, "service"), false);
+  eq("scoped opt-out: marketing still open", await checkConsent(db, num, "marketing"), true);
+
+  // Re-grant service, then a STOP arrives as a BARE wa_id → global + instant:
+  // ALL purposes close, matched through normalization.
+  await recordConsent(db, { tenantId: "t1", number: num, purpose: "service", source: "settings/notifications" });
+  eq("re-grant: sendable again", await canSendWhatsApp(db, num), true);
+  await recordOptOut(db, bare);
+  eq("post-STOP (bare wa_id): service closed", await checkConsent(db, num, "service"), false);
+  eq("post-STOP (bare wa_id): marketing closed", await checkConsent(db, num, "marketing"), false);
   eq("post-STOP: cannot send", await canSendWhatsApp(db, num), false);
-  eq("post-STOP: rows kept (append-only)", rows.length, 2);
+  eq("post-STOP: rows kept (append-only)", rows.length, 3);
   eq("post-STOP: all rows stamped", rows.every((r) => r.opt_out_at !== null), true);
 
   // Re-grant after STOP opens a NEW row (the closed one is never reopened).
   await recordConsent(db, { tenantId: "t1", number: num, purpose: "service", source: "settings/notifications" });
-  eq("re-grant: new row appended", rows.length, 3);
-  eq("re-grant: sendable again", await canSendWhatsApp(db, num), true);
+  eq("re-grant after STOP: new row appended", rows.length, 4);
+  eq("re-grant after STOP: sendable again", await canSendWhatsApp(db, num), true);
+
+  // Unparseable numbers fail closed: check false, record* no-op.
+  eq("unparseable: checkConsent false", await checkConsent(db, "not a phone", "service"), false);
+  eq("unparseable: cannot send", await canSendWhatsApp(db, "not a phone"), false);
+  await recordConsent(db, { tenantId: "t1", number: "not a phone", purpose: "service", source: "x" });
+  await recordOptOut(db, "not a phone");
+  eq("unparseable: record* wrote nothing", rows.length, 4);
 
   // Another number is independent — never sendable without its own grant.
   eq("other number: cannot send", await canSendWhatsApp(db, "+919999999999"), false);

@@ -197,7 +197,8 @@ export async function updateNotificationPrefs(_prev: ActionResult, formData: For
       await recordConsent(supabase, { tenantId, number: whatsappNumber, purpose: "service", source: "settings/notifications" });
     }
     if (priorNumber && (!channelWhatsapp || !whatsappNumber || whatsappNumber !== priorNumber)) {
-      await recordOptOut(supabase, priorNumber);
+      // Scoped to 'service': a settings channel-off must not close marketing grants.
+      await recordOptOut(supabase, priorNumber, "service");
     }
   } catch {
     // Swallowed by design — see above.
