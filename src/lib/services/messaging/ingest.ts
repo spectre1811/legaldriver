@@ -9,6 +9,7 @@ import {
   normalizeClassification,
 } from "@/lib/docs/classify-core";
 import { resolveFiling } from "@/lib/docs/autofile";
+import { isStopMessage, recordOptOut } from "./consent";
 import { logActivity } from "@/lib/activity";
 
 type DB = SupabaseClient<Database>;
@@ -62,6 +63,39 @@ export async function ingestInbound(
         duplicates++;
         continue;
       }
+    }
+
+    // WO-144 W2: STOP/unsubscribe — close every open consent grant for the
+    // sender (global + instant), persist the raw row (no AI call, no
+    // client/matter routing), log WITHOUT the number or body, move on.
+    if (isStopMessage(msg.body)) {
+      await recordOptOut(admin, msg.from);
+      const { error: stopErr } = await admin.from("msg_message").insert({
+        tenant_id: tenantId,
+        channel: msg.channel,
+        direction: "in",
+        provider: process.env.MESSAGING_PROVIDER ?? "mock",
+        external_id: msg.externalId ?? null,
+        thread_key: msg.threadKey,
+        from_addr: msg.from,
+        to_addr: msg.to,
+        body: msg.body || null,
+        media: (msg.media ?? []) as Database["public"]["Tables"]["msg_message"]["Insert"]["media"],
+        status: "received",
+        classified: null,
+        confidence: null,
+      });
+      if (stopErr) {
+        duplicates++; // partial-unique race, same as the main path
+        continue;
+      }
+      inserted++;
+      await logActivity(admin, tenantId, {
+        type: "message.stop",
+        summary: "STOP received — WhatsApp alerts suppressed",
+        meta: { channel: msg.channel },
+      });
+      continue;
     }
 
     // Classify the body to route it. Empty body (e.g. media-only) → fallback.

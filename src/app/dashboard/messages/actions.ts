@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { getMessagingClient } from "@/lib/services/messaging/client";
+import { canSendWhatsApp } from "@/lib/services/messaging/consent";
 import { normalizeE164 } from "@/lib/phone";
 import { logActivity } from "@/lib/activity";
 import type { Database } from "@/lib/db/database.types";
@@ -27,6 +28,12 @@ export async function sendMessage(
   const supabase = createClient();
   const tenantId = await getTenantId(supabase);
   if (!tenantId) return { ok: false, message: "No tenant." };
+
+  // WO-144 W2: consent gate — fail closed. No open 'service' grant in the
+  // consent ledger for this number ⇒ no send, ever.
+  if (!(await canSendWhatsApp(supabase, normalizedTo))) {
+    return { ok: false, message: "No WhatsApp consent on record for this number. The recipient must opt in first — sends stay blocked until they do." };
+  }
 
   const client = getMessagingClient();
   const result = await client.send({ to: normalizedTo, channel, body: trimmedBody, tenantId });
