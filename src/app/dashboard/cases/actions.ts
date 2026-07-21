@@ -13,6 +13,11 @@ import { logActivity } from "@/lib/activity";
 import { track } from "@/lib/analytics/track";
 import { fileUploadedDocument } from "@/lib/docs/file-upload";
 import { scheduleReminders } from "@/lib/notify/schedule";
+import { getMailer } from "@/lib/notify/mailer";
+import { logOutboundEmail } from "@/lib/notify/log";
+import { renderEmail } from "@/lib/email/templates";
+import { appUrl } from "@/lib/notify/email-render";
+import { caseDetailHref } from "@/lib/court/case-links";
 import type { Database } from "@/lib/db/database.types";
 
 // Set (or clear) the advocate's diary next-hearing date — overrides a stale/wrong
@@ -239,6 +244,24 @@ export async function trackCaseByCnr(cnr: string): Promise<{ ok: boolean; messag
   if (!fetched.case) return { ok: false, message: `No case found for ${clean}.` };
   const { matterId, isNew } = await upsertCase(supabase, tenantId, fetched.case);
   await logActivity(supabase, tenantId, { matterId, type: isNew ? "case.added" : "case.resynced", summary: `Tracked ${clean} from a caseload browse` });
+
+  // WO-264 · trackConfirm email, immediate + fire-and-forget: a mailer hiccup must
+  // never fail the tracking the user just did (EMAIL_META: "Now tracking {case}").
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      const rendered = renderEmail(
+        "trackConfirm",
+        { case: fetched.case.title, ...(fetched.case.court ? { court: fetched.case.court } : {}) },
+        appUrl(caseDetailHref(clean, matterId)),
+      );
+      if (rendered) {
+        const res = await getMailer().send(user.email, rendered.subject, rendered.html, rendered.text);
+        await logOutboundEmail(supabase, { tenantId, to: user.email, subject: rendered.subject, kind: "notice", matterId, ok: res.ok, providerId: res.id });
+      }
+    }
+  } catch { /* confirmation is best-effort — tracking already succeeded */ }
+
   revalidatePath("/dashboard/cases");
   return { ok: true, matterId, message: "Now tracking this case." };
 }

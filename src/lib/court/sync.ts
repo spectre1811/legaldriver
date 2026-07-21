@@ -144,11 +144,20 @@ export async function upsertCase(
     .eq("status", "pending")
     .contains("payload", { ref });
   if (c.nextHearingDate) {
+    // WO-264: pass case context so the hearingReminder email binds court/CNR + a real CTA;
+    // purpose comes from the hearing row for the next date when the record carries it.
+    const nextHearing = c.hearings.find((h) => h.date === c.nextHearingDate);
     await scheduleReminders(supabase, tenantId, {
       kind: "hearing_reminder",
       eventDate: c.nextHearingDate,
       ref,
       title: c.title,
+      extra: {
+        cnr: c.cnr,
+        matterId,
+        ...(c.court ? { court: c.court } : {}),
+        ...(nextHearing?.purpose ? { purpose: nextHearing.purpose } : {}),
+      },
     });
   }
 
@@ -157,6 +166,8 @@ export async function upsertCase(
   if (existing) {
     await recordCaseChanges(supabase, tenantId, matterId, {
       title: c.title,
+      cnr: c.cnr,
+      court: c.court ?? null,
       oldNext: existing.next_hearing_date ?? null,
       newNext: c.nextHearingDate ?? null,
       oldJudge: (existing.judge_names ?? [])[0] ?? null,
@@ -170,21 +181,38 @@ export async function upsertCase(
 }
 
 // Diff a refreshed case against its prior state and record any material changes as
-// an activity_event (case feed) + an immediate in-app notification (the bell). This
-// is the "we watch the court so you never miss a re-listing" alerting.
+// an activity_event (case feed) + an immediate in-app notification (the bell) + a
+// caseUpdate email row (WO-264 — rendered by the notify cron through the v2 template,
+// with same-day changes across matters rolled into one email per tenant). This is the
+// "we watch the court so you never miss a re-listing" alerting.
 async function recordCaseChanges(
   supabase: DB,
   tenantId: string,
   matterId: string,
-  s: { title: string; oldNext: string | null; newNext: string | null; oldJudge: string | null; newJudge: string | null; oldOrderDates: string[]; newOrderDates: string[] },
+  s: { title: string; cnr: string; court: string | null; oldNext: string | null; newNext: string | null; oldJudge: string | null; newJudge: string | null; oldOrderDates: string[]; newOrderDates: string[] },
 ): Promise<void> {
   const changes: string[] = [];
-  if (s.newNext && s.oldNext !== s.newNext) changes.push(`Next hearing ${s.oldNext ? `moved from ${s.oldNext} to ${s.newNext}` : `listed for ${s.newNext}`}`);
-  if (!s.newNext && s.oldNext) changes.push(`Case shows no next date (possibly disposed) — was ${s.oldNext}`);
-  if (s.newJudge && s.oldJudge && s.newJudge !== s.oldJudge) changes.push(`Bench changed to ${s.newJudge}`);
+  // The closed-set `change` label leads the email subject ("{change}" ≤4 words so the
+  // ≤6-word cap holds — WO-148 W2 rework rule). Priority: orders > next date > bench.
+  let change: string | null = null;
+  if (s.newNext && s.oldNext !== s.newNext) {
+    changes.push(`Next hearing ${s.oldNext ? `moved from ${s.oldNext} to ${s.newNext}` : `listed for ${s.newNext}`}`);
+    change = s.oldNext ? "Next hearing changed" : "Next hearing set";
+  }
+  if (!s.newNext && s.oldNext) {
+    changes.push(`Case shows no next date (possibly disposed) — was ${s.oldNext}`);
+    change = change ?? "No next date on record";
+  }
+  if (s.newJudge && s.oldJudge && s.newJudge !== s.oldJudge) {
+    changes.push(`Bench changed to ${s.newJudge}`);
+    change = change ?? "Bench changed";
+  }
   const oldSet = new Set(s.oldOrderDates);
   const newOrders = [...new Set(s.newOrderDates)].filter((d) => !oldSet.has(d));
-  if (newOrders.length && s.oldOrderDates.length) changes.push(`${newOrders.length} new order${newOrders.length > 1 ? "s" : ""} (latest ${newOrders.sort().reverse()[0]})`);
+  if (newOrders.length && s.oldOrderDates.length) {
+    changes.push(`${newOrders.length} new order${newOrders.length > 1 ? "s" : ""} (latest ${newOrders.sort().reverse()[0]})`);
+    change = newOrders.length > 1 ? "New orders" : "New order"; // orders outrank other labels
+  }
   if (!changes.length) return;
 
   try {
@@ -194,11 +222,26 @@ async function recordCaseChanges(
         meta: {} as Database["public"]["Tables"]["activity_event"]["Insert"]["meta"],
       });
     }
-    // One consolidated in-app alert per refresh (delivered immediately by the notify cron).
-    await supabase.from("notification").insert({
-      tenant_id: tenantId, channel: "inapp", kind: "case_update", status: "pending",
-      scheduled_for: new Date().toISOString(),
-      payload: { ref: `matter:${matterId}`, title: s.title, body: changes.join(" · "), eventDate: s.newNext ?? undefined } as Database["public"]["Tables"]["notification"]["Insert"]["payload"],
-    });
+    // One consolidated alert per refresh: the bell (in-app) + the caseUpdate email row
+    // (WO-264). Same payload; the email adds the closed-set label + case ref for the template.
+    const payload = { ref: `matter:${matterId}`, title: s.title, body: changes.join(" · "), eventDate: s.newNext ?? undefined };
+    await supabase.from("notification").insert([
+      {
+        tenant_id: tenantId, channel: "inapp", kind: "case_update", status: "pending",
+        scheduled_for: new Date().toISOString(),
+        payload: payload as Database["public"]["Tables"]["notification"]["Insert"]["payload"],
+      },
+      {
+        tenant_id: tenantId, channel: "email", kind: "case_update", status: "pending",
+        scheduled_for: new Date().toISOString(),
+        payload: {
+          ...payload,
+          change: change ?? "Case update",
+          cnr: s.cnr,
+          matterId,
+          ...(s.court ? { court: s.court } : {}),
+        } as Database["public"]["Tables"]["notification"]["Insert"]["payload"],
+      },
+    ]);
   } catch { /* alerting is best-effort — never break a sync */ }
 }

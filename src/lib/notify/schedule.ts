@@ -26,6 +26,9 @@ export async function scheduleReminders(
     ref: string; // e.g. "hearing:<id>"
     title: string;
     channels?: ("inapp" | "email")[];
+    // WO-264: case context so the email template binds an honest court/CNR ref line
+    // and a working CTA (caseDetailHref). Optional — legacy callers still work.
+    extra?: { cnr?: string; court?: string; matterId?: string; purpose?: string };
   },
 ): Promise<number> {
   const channels = opts.channels ?? ["inapp", "email"];
@@ -57,6 +60,7 @@ export async function scheduleReminders(
           title: opts.title,
           eventDate: opts.eventDate,
           offsetDays: offset,
+          ...(opts.extra ?? {}),
         },
         scheduled_for: scheduledFor,
         status: "pending",
