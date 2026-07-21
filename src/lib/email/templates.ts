@@ -17,8 +17,9 @@
 //
 // TRIGGER + TIMING per template are documented in EMAIL_META below (the "which email, when"
 // matrix the founder asked for) and surfaced in the styleguide. This module BUILDS templates;
-// it does NOT send. Wiring the cron/notify path to adopt these is follow-up (INBOX) — the
-// current ad-hoc htmlFor() stays until then; send-path stays WO-144/BSP-gated.
+// it does NOT send. WO-264 wired the live send path onto these renderers (cron/notify +
+// daily-hearings cron + trackConfirm); the pre-v2 ad-hoc htmlFor() is gone. Kinds without a
+// dedicated template render through renderNotice() below — same shell, one design system.
 
 import en from "@/i18n/messages/en.json";
 import { fillTemplate, type Slot } from "@/i18n/comms";
@@ -86,6 +87,11 @@ function bodyLines(key: EmailKey, sec: Record<string, string>, data: EmailData):
       return [...L("lead", "lead"), ...L("ref", "muted"), ...L("detail"), ...L("cta", "cta")];
     case "trackConfirm":
       return [...L("lead", "lead"), ...L("body"), ...L("cta", "cta")];
+    case "hearingReminder":
+      // WO-264 (founder 2026-07-22: the regular hearing emails had no format at all).
+      // {when} is a closed-set send-time label (today / tomorrow / in N days) — see
+      // hearingWhenLabel in src/lib/notify/email-render.ts; a stale reminder is skipped.
+      return [...L("lead", "lead"), ...L("ref", "muted"), ...L("detail", "muted"), ...L("cta", "cta")];
   }
 }
 
@@ -179,7 +185,12 @@ export function renderDailyHearings(
   if (subject === null) return null;
 
   const dateLine = fillTemplate(sec.date, { date: meta.date }); // "Listed for tomorrow · 24 Jul"; drops if date missing
-  const listings = rows.map((r) => fillTemplate(sec.listing, r)).filter((l): l is string => l !== null);
+  // Prefer the timed line; fall back to listingNoTime when {time} is absent — the court
+  // record carries item numbers, not clock times, so a time-less listing is the honest
+  // NORMAL case (WO-264), not an incomplete row to suppress. Court + parties still required.
+  const listings = rows
+    .map((r) => fillTemplate(sec.listing, r) ?? fillTemplate(sec.listingNoTime, r))
+    .filter((l): l is string => l !== null);
   if (!listings.length) return null; // no listed matter → no email (send rule above)
   const ordersLine = meta.orders === undefined ? null : fillTemplate(sec.orders, { orders: meta.orders });
 
@@ -196,6 +207,36 @@ export function renderDailyHearings(
 }
 
 /**
+ * Generic branded notice (WO-264) — the ONE fallback for notification kinds that have no
+ * dedicated catalog template yet (deadline_reminder, notice_escalation, legacy in-flight
+ * digest rows). Same shell, same disclaimer, same text part as every other email, so the
+ * pre-v2 ad-hoc HTML could be deleted without leaving a second design system behind.
+ * Subject + lines are caller-provided REAL data (the notification payload) — nothing here
+ * fabricates content; an empty line list still renders subject + disclaimer.
+ */
+export function renderNotice(
+  subject: string,
+  lines: { text: string; role?: "lead" | "muted" }[],
+  ctaUrl?: string,
+  ctaLabel = "Open Mukadma",
+): RenderedEmail {
+  const body: Line[] = lines
+    .filter((l) => l.text && l.text.trim())
+    .map((l, i) => ({ key: `line${i}`, text: l.text, role: l.role ?? (i === 0 ? "lead" : undefined) }));
+  if (ctaUrl) body.push({ key: "cta", text: ctaLabel, role: "cta" });
+  const inner = body.map(lineHtml).join("\n");
+  const html = shell(subject, inner).replace(/\{ctaUrl\}/g, esc(ctaUrl ?? "https://app.mukadma.in"));
+  const text = [
+    subject,
+    "",
+    ...body.map((l) => (l.role === "cta" ? `${l.text}: ${ctaUrl}` : l.text)),
+    "",
+    "Not legal advice — verify against the official record.",
+  ].join("\n");
+  return { subject, html, text };
+}
+
+/**
  * TRIGGER + TIMING matrix ("which email, when") — the catalog metadata the founder asked for.
  * Documentation only: this module does NOT schedule or send. `cta` is the case-relative link
  * PATTERN the send-path caller resolves to an absolute URL (base + path). Case-detail links use
@@ -207,9 +248,10 @@ export const EMAIL_META: Record<EmailKey, { trigger: string; timing: string; cta
   assembled: { trigger: "First onboarding sync finishes", timing: "Immediate, once", cta: "/dashboard/cases" },
   dailyHearings: {
     trigger: "Advocate has ≥1 matter listed for tomorrow — SKIP if none (never sent empty)",
-    timing: "~6 pm IST daily",
+    timing: "6 pm IST daily (cron /api/cron/daily-hearings, 12:30 UTC)",
     cta: "/dashboard/calendar",
-    wiring: "Send-path (cron) not wired — WO-144 / INBOX. This WO ships the template only.",
+    wiring:
+      "WIRED (WO-264): sourced from the synced record's next-hearing dates (tomorrow, IST) — the published cause list isn't out by 6 pm; the 7 am in-app cause-list alert stays the list-confirmed signal.",
   },
   weekly: { trigger: "Weekly recap", timing: "Sunday 6 pm IST", cta: "/dashboard/calendar" },
   invoice: {
@@ -225,12 +267,18 @@ export const EMAIL_META: Record<EmailKey, { trigger: string; timing: string; cta
     trigger: "A tracked case changes materially on nightly sync — new order · next-hearing set/changed · status/disposal change",
     timing: "On detection (day-of); tight per-user roundup if several change the same day, to avoid spam",
     cta: "caseDetailHref(cnr, matterId) → /dashboard/cases/{id}",
-    wiring: "Change-detection + send-path not wired — WO-144 / INBOX. Tracking itself IS live (trackCaseByCnr → a tenant matter); no new store to build. This WO ships the template only.",
+    wiring: "WIRED (WO-264): recordCaseChanges enqueues the email row; the notify cron folds a tenant's same-run changes into ONE email.",
   },
   trackConfirm: {
     trigger: "trackCaseByCnr succeeds (user tracks a case from any page)",
     timing: "Immediate",
     cta: "caseDetailHref(cnr, matterId) → /dashboard/cases/{id}",
-    wiring: "Send-path not wired — WO-144 / INBOX. This WO ships the template only.",
+    wiring: "WIRED (WO-264): sent inline from the track action, fire-and-forget (a mailer failure never fails tracking).",
+  },
+  hearingReminder: {
+    trigger: "T-3 / T-1 / day-of reminder for a hearing on a tracked matter (scheduleReminders)",
+    timing: "At each offset; the {when} label (today/tomorrow/in N days) is computed at send time in IST — a stale reminder is skipped, never sent late",
+    cta: "caseDetailHref(cnr, matterId) → /dashboard/cases/{id}",
+    wiring: "WIRED (WO-264): the notify cron renders hearing_reminder rows through this template. Founder 2026-07-22: these emails previously had no format at all.",
   },
 };

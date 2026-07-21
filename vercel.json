@@ -9,6 +9,7 @@
     { "path": "/api/cron/audit-refile", "schedule": "0 5 * * *" },
     { "path": "/api/cron/onboarding-drain", "schedule": "0 6 * * *" },
     { "path": "/api/cron/ld-api-canary", "schedule": "0 7 * * *" },
-    { "path": "/api/cron/deploy-freshness", "schedule": "0 8 * * *" }
+    { "path": "/api/cron/deploy-freshness", "schedule": "0 8 * * *" },
+    { "path": "/api/cron/daily-hearings", "schedule": "30 12 * * *" }
   ]
 }
