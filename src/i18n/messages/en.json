@@ -2644,6 +2644,7 @@
       "subject": "Tomorrow: {count} hearings",
       "date": "Listed for tomorrow · {date}",
       "listing": "{court} · {time} — {parties}",
+      "listingNoTime": "{court} — {parties}",
       "orders": "{orders} orders uploaded today · read on Mukadma",
       "cta": "Open tomorrow"
     },
@@ -2690,6 +2691,13 @@
       "subject": "Now tracking {case}",
       "lead": "You're tracking {case} · {court}.",
       "body": "We watch the record nightly. When an order is uploaded, a hearing is set, or the status changes, you'll hear from us here.",
+      "cta": "Open the case"
+    },
+    "hearingReminder": {
+      "subject": "Hearing {when}",
+      "lead": "{case} is listed {when}.",
+      "ref": "{court} · CNR {cnr}",
+      "detail": "Purpose on the record: {purpose}",
       "cta": "Open the case"
     }
   }

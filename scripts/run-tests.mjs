@@ -93,6 +93,7 @@ const OFFLINE = [
   "wo148_comms",
   "wo148_email",
   "wo144_phone",
+  "wo264_notify",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the

@@ -4,14 +4,19 @@ import { getMailer } from "@/lib/notify/mailer";
 import { getMessagingClient, messagingConfigured } from "@/lib/services/messaging/client";
 import { normalizeE164 } from "@/lib/phone";
 import { logOutboundEmail } from "@/lib/notify/log";
+import { resolveRecipientEmail } from "@/lib/notify/recipients";
+import { renderEmail, renderNotice, type RenderedEmail } from "@/lib/email/templates";
+import { appUrl, composeCaseUpdate, hearingWhenLabel, type CaseUpdatePayload } from "@/lib/notify/email-render";
+import { caseDetailHref } from "@/lib/court/case-links";
 import { brand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Notification send-worker. Vercel Cron hits this frequently. Picks up due,
-// pending notifications and delivers them: email via Resend, in-app marked sent
-// for display. Idempotent — each row flips pending -> sent exactly once.
+// Notification send-worker. Vercel Cron hits this daily. Picks up due, pending
+// notifications and delivers them: email via the WO-148 v2 template system
+// (WO-264 — the pre-v2 ad-hoc htmlFor() is gone), in-app marked sent for display.
+// Idempotent — each row flips pending -> sent exactly once.
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
@@ -30,11 +35,26 @@ export async function GET(request: NextRequest) {
     .limit(200);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // WO-264 · caseUpdate roundup ("tight per-user roundup, avoid spam"): all of a
+  // tenant's due caseUpdate email rows in this run fold into ONE email. The first
+  // row the loop reaches is the subject-bearer; siblings are folded + flipped with it.
+  const caseUpdateGroup = new Map<string, { id: string; payload: Payload }[]>();
+  for (const n of due ?? []) {
+    if (n.channel === "email" && n.kind === "case_update") {
+      const list = caseUpdateGroup.get(n.tenant_id) ?? caseUpdateGroup.set(n.tenant_id, []).get(n.tenant_id)!;
+      list.push({ id: n.id, payload: (n.payload ?? {}) as Payload });
+    }
+  }
+  const handled = new Set<string>();
+
   let sent = 0;
   let failed = 0;
   let skipped = 0;
+  let stale = 0;
+  let roundups = 0;
   for (const n of due ?? []) {
-    const payload = (n.payload ?? {}) as { ref?: string; title?: string; eventDate?: string; body?: string; count?: number; cases?: DigestCase[]; phone?: string };
+    if (handled.has(n.id)) continue; // delivered as part of a caseUpdate roundup
+    const payload = (n.payload ?? {}) as Payload;
     let ok = true;
 
     // WhatsApp (WO-144 W1): delivered through the real messaging gateway. Skip — NOT fail — while
@@ -57,30 +77,41 @@ export async function GET(request: NextRequest) {
     }
 
     if (n.channel === "email") {
-      // Resolve recipient: the row's user, else the tenant owner.
-      let email: string | undefined;
-      if (n.user_id) {
-        const { data: u } = await supabase.auth.admin.getUserById(n.user_id);
-        email = u.user?.email ?? undefined;
+      // Stale hearing reminder: the hearing date already passed at send time — a late
+      // reminder presented as current would be dishonest. Flip failed (undelivered), count it.
+      if (n.kind === "hearing_reminder" && hearingWhenLabel(payload.eventDate ?? "") === null) {
+        await supabase
+          .from("notification")
+          .update({ status: "failed", sent_at: null })
+          .eq("id", n.id)
+          .eq("status", "pending");
+        stale++;
+        continue;
       }
-      if (!email) {
-        const { data: owner } = await supabase
-          .from("profile")
-          .select("id")
-          .eq("tenant_id", n.tenant_id)
-          .eq("role", "owner")
-          .limit(1)
-          .maybeSingle();
-        if (owner?.id) {
-          const { data: u } = await supabase.auth.admin.getUserById(owner.id);
-          email = u.user?.email ?? undefined;
-        }
-      }
+
+      const email = await resolveRecipientEmail(supabase, n.tenant_id, n.user_id);
       if (email) {
-        const subject = subjectFor(n.kind, payload);
-        const res = await mailer.send(email, subject, htmlFor(n.kind, payload));
-        ok = res.ok;
-        await logOutboundEmail(supabase, { tenantId: n.tenant_id, to: email, subject, kind: n.kind.includes("reminder") ? "reminder" : "notice", ok: res.ok, providerId: res.id });
+        const group = n.kind === "case_update" ? caseUpdateGroup.get(n.tenant_id) : undefined;
+        const rendered = renderForKind(n.kind, payload, group?.map((g) => g.payload));
+        if (rendered) {
+          const res = await mailer.send(email, rendered.subject, rendered.html, rendered.text);
+          ok = res.ok;
+          await logOutboundEmail(supabase, { tenantId: n.tenant_id, to: email, subject: rendered.subject, kind: n.kind.includes("reminder") ? "reminder" : "notice", ok: res.ok, providerId: res.id });
+          // Roundup: the siblings were delivered inside this email — flip them with the primary.
+          if (ok && group && group.length > 1) {
+            const siblingIds = group.map((g) => g.id).filter((id) => id !== n.id);
+            siblingIds.forEach((id) => handled.add(id));
+            const { error: sibErr } = await supabase
+              .from("notification")
+              .update({ status: "sent", sent_at: new Date().toISOString() })
+              .in("id", siblingIds)
+              .eq("status", "pending");
+            if (!sibErr) sent += siblingIds.length;
+            roundups++;
+          }
+        } else {
+          ok = false; // subject slot couldn't fill — no honest email to send
+        }
       } else {
         ok = false;
       }
@@ -96,10 +127,59 @@ export async function GET(request: NextRequest) {
     else sent++;
   }
 
-  return NextResponse.json({ ok: true, channel: mailer.channel, whatsapp: messagingConfigured() ? "live" : "dark", considered: due?.length ?? 0, sent, failed, skipped });
+  return NextResponse.json({ ok: true, channel: mailer.channel, whatsapp: messagingConfigured() ? "live" : "dark", considered: due?.length ?? 0, sent, failed, skipped, stale, roundups });
 }
 
 type DigestCase = { title?: string; cnr?: string; itemNo?: string; type?: string; judge?: string };
+type Payload = CaseUpdatePayload & {
+  body?: string;
+  count?: number;
+  cases?: DigestCase[];
+  phone?: string;
+  purpose?: string;
+};
+
+// Render one notification kind to a v2 email (WO-264). Dedicated templates for
+// case_update + hearing_reminder; every other kind goes through the renderNotice
+// fallback shell — one design system, real payload data only.
+function renderForKind(kind: string, p: Payload, group?: CaseUpdatePayload[]): RenderedEmail | null {
+  const matterId = p.matterId ?? (p.ref?.startsWith("matter:") ? p.ref.slice("matter:".length) : undefined);
+
+  if (kind === "case_update") {
+    const composed = composeCaseUpdate(group && group.length ? group : [p]);
+    if (composed) return renderEmail("caseUpdate", composed.data, appUrl(composed.ctaPath));
+    // legacy row without a change label → honest generic notice below
+  }
+
+  if (kind === "hearing_reminder") {
+    const when = hearingWhenLabel(p.eventDate ?? ""); // caller already skipped null (stale)
+    if (when) {
+      const rendered = renderEmail(
+        "hearingReminder",
+        { when, case: p.title, court: p.court, cnr: p.cnr, purpose: p.purpose },
+        appUrl(p.cnr || matterId ? caseDetailHref(p.cnr ?? "", matterId) : "/dashboard/calendar"),
+      );
+      if (rendered) return rendered;
+    }
+  }
+
+  // Fallback: generic branded notice from the real payload (deadline_reminder,
+  // notice_escalation, legacy in-flight cause_list_digest rows, legacy case_update).
+  const lines: { text: string; role?: "lead" | "muted" }[] = [];
+  if (kind === "cause_list_digest" && p.cases?.length) {
+    lines.push({ text: `These tracked cases are listed on ${p.eventDate ?? "the next court day"}:`, role: "lead" });
+    for (const c of p.cases) {
+      const detail = [c.itemNo ? `Item ${c.itemNo}` : null, c.type, c.judge].filter(Boolean).join(" · ");
+      lines.push({ text: `${c.title ?? c.cnr ?? "Case"}${c.cnr ? ` (${c.cnr})` : ""}${detail ? ` — ${detail}` : ""}` });
+    }
+  } else if (p.body) {
+    lines.push({ text: p.body, role: "lead" });
+  } else {
+    lines.push({ text: `Open ${brand.name} to view details.`, role: "lead" });
+  }
+  const ctaPath = kind === "cause_list_digest" ? "/dashboard/calendar" : matterId || p.cnr ? caseDetailHref(p.cnr ?? "", matterId) : "/dashboard";
+  return renderNotice(subjectFor(kind, p), lines, appUrl(ctaPath), "Open " + brand.name);
+}
 
 function subjectFor(kind: string, p: { title?: string; eventDate?: string; count?: number }) {
   if (kind === "hearing_reminder") return `Hearing reminder: ${p.title ?? "case"} on ${p.eventDate ?? ""}`;
@@ -111,21 +191,4 @@ function subjectFor(kind: string, p: { title?: string; eventDate?: string; count
     return `Cause list: ${n} case${n === 1 ? "" : "s"} listed ${p.eventDate ?? "tomorrow"}`;
   }
   return `${brand.name} notification`;
-}
-function htmlFor(kind: string, p: { title?: string; eventDate?: string; body?: string; count?: number; cases?: DigestCase[] }) {
-  const esc = (s?: string) => (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  let inner = `<p>${esc(p.body) || `Open ${brand.name} to view details.`}</p>`;
-  if (kind === "cause_list_digest" && p.cases?.length) {
-    const rows = p.cases.map((c) => `<li style="margin:6px 0">
-        <strong>${esc(c.title) || esc(c.cnr) || "Case"}</strong>${c.cnr ? ` <span style="color:#64748b">(${esc(c.cnr)})</span>` : ""}
-        <br><span style="color:#475569;font-size:13px">${c.itemNo ? `Item ${esc(c.itemNo)}` : ""}${c.type ? ` · ${esc(c.type)}` : ""}${c.judge ? ` · ${esc(c.judge)}` : ""}</span>
-      </li>`).join("");
-    inner = `<p>These tracked cases are listed on <strong>${esc(p.eventDate) || "the next court day"}</strong>:</p>
-      <ul style="padding-left:18px;list-style:disc">${rows}</ul>`;
-  }
-  return `<div style="font-family:system-ui,sans-serif">
-    <h2 style="color:#0f172a">${subjectFor(kind, p)}</h2>
-    ${inner}
-    <p style="color:#94a3b8;font-size:12px">Not legal advice. Verify against the official record.</p>
-  </div>`;
 }

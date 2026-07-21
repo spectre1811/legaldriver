@@ -13,7 +13,8 @@ export interface SendResult {
 
 export interface Mailer {
   readonly channel: "email";
-  send(to: string, subject: string, html: string): Promise<SendResult>;
+  /** `text` is the plain-text alternative part (WO-264 — every v2 template renders one). */
+  send(to: string, subject: string, html: string, text?: string): Promise<SendResult>;
 }
 
 class ResendMailer implements Mailer {
@@ -23,7 +24,7 @@ class ResendMailer implements Mailer {
     private readonly from: string,
   ) {}
 
-  async send(to: string, subject: string, html: string): Promise<SendResult> {
+  async send(to: string, subject: string, html: string, text?: string): Promise<SendResult> {
     try {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -31,7 +32,7 @@ class ResendMailer implements Mailer {
           Authorization: `Bearer ${this.apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ from: this.from, to, subject, html }),
+        body: JSON.stringify({ from: this.from, to, subject, html, ...(text ? { text } : {}) }),
       });
       const body = (await res.json()) as { id?: string; message?: string };
       if (!res.ok) return { ok: false, error: body.message ?? `resend ${res.status}` };

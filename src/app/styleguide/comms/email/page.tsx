@@ -23,11 +23,14 @@ const SAMPLE: Record<EmailKey, EmailData> = {
   security: { code: "418 293" },
   caseUpdate: { change: "Next hearing set", case: "Patel v. State of Gujarat", court: "Gujarat HC", cnr: "GJHC010012342026", detail: "Next hearing on 12 Aug 2026 · for filing of reply." },
   trackConfirm: { case: "Shah Traders v. Mehta Buildcon", court: "City Civil Court" },
+  hearingReminder: { when: "tomorrow", case: "Patel v. State of Gujarat", court: "Gujarat HC", cnr: "GJHC010012342026", purpose: "Arguments" },
 };
 
+// One row has a clock time, one doesn't — the court record publishes item numbers, not
+// times, so the time-less listingNoTime line (WO-264) is the honest NORMAL rendering.
 const HEARING_ROWS: EmailData[] = [
   { court: "Gujarat HC · Court 7", time: "11:00", parties: "Patel v. State of Gujarat" },
-  { court: "City Civil · Court 3", time: "02:30", parties: "Shah Traders v. Mehta Buildcon" },
+  { court: "City Civil · Court 3", parties: "Shah Traders v. Mehta Buildcon" },
 ];
 
 const LABELS: Record<EmailKey, string> = {
@@ -41,6 +44,7 @@ const LABELS: Record<EmailKey, string> = {
   security: "Security / sign-in code (§2h)",
   caseUpdate: "Case update — tracked case (§2 · new #9)",
   trackConfirm: "Track confirmation (§2 · new #9)",
+  hearingReminder: "Hearing reminder (WO-264 — previously had no format)",
 };
 
 function Badge({ children }: { children: React.ReactNode }) {
@@ -101,11 +105,12 @@ export default function EmailStyleguide() {
           <Badge>English only</Badge>
         </div>
         <p className="text-sm text-ec-ink-2">
-          The comms-catalog-v2 §2 email set — 9 emails, English only (founder directive 2026-07-18). Each frame is
-          the exact inline-styled HTML a mail client receives, with its trigger, timing, and CTA target. Missing
-          slots drop their line — never faked; money and count lines drop rather than show a fabricated-looking 0.
-          Templates only — no live send/cron is wired here (WO-144 / BSP-gated); the &ldquo;Wiring&rdquo; note flags
-          each dependency.
+          The comms-catalog-v2 §2 email set, English only (founder directive 2026-07-18) — now including the
+          hearing reminder (WO-264; founder 2026-07-22: it previously had no format). Each frame is the exact
+          inline-styled HTML a mail client receives, with its trigger, timing, and CTA target. Missing slots drop
+          their line — never faked; money and count lines drop rather than show a fabricated-looking 0. The live
+          send path (notify + daily-hearings crons, trackConfirm) renders through these templates since WO-264;
+          each &ldquo;Wiring&rdquo; note states what fires it.
         </p>
       </header>
 

@@ -29,6 +29,9 @@ const SAMPLE: Record<EmailKey, EmailData> = {
   // ("{change} on a tracked case") is proven for the worst realistic input, not a lucky one.
   caseUpdate: { change: "New order uploaded", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026", detail: "Next hearing on 12 Aug." },
   trackConfirm: { case: "Shah v. Mehta", court: "City Civil" },
+  // {when} is a closed-set send-time label (WO-264); "in 365 days" is the longest form,
+  // so the ≤6-word subject cap is proven at the worst case, not a lucky sample.
+  hearingReminder: { when: "in 365 days", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026", purpose: "Arguments" },
 };
 
 const HEARING_ROWS: EmailData[] = [
