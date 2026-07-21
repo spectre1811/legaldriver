@@ -502,11 +502,16 @@
       "yourDiary": "(your diary)"
     },
     "source": {
-      "line": "Source {source} · last refreshed {time}",
+      "line": "Source: {source} · last refreshed {time}",
       "never": "never",
       "note": "Court data comes from the official court record — it can lag or contain errors.",
       "verify": "Always verify against the official record; not legal advice.",
       "diaryHint": "Set your own diary date above if the court record is wrong or stale."
+    },
+    "sourceName": {
+      "court": "the court record",
+      "manual": "added manually",
+      "demo": "demo data"
     },
     "details": {
       "title": "Case details"
@@ -602,6 +607,7 @@
     },
     "documents": {
       "title": "Documents",
+      "untyped": "Document",
       "upload": {
         "cta": "Upload documents",
         "hint": "Drop files here or click — we read, type, and file each one to the right case.",
