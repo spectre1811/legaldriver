@@ -536,6 +536,50 @@ export type Database = {
           },
         ]
       }
+      consent_ledger: {
+        Row: {
+          created_at: string
+          granted_at: string
+          id: string
+          number: string
+          opt_out_at: string | null
+          purpose: string
+          source: string
+          tenant_id: string | null
+          wording_version: string
+        }
+        Insert: {
+          created_at?: string
+          granted_at?: string
+          id?: string
+          number: string
+          opt_out_at?: string | null
+          purpose: string
+          source: string
+          tenant_id?: string | null
+          wording_version?: string
+        }
+        Update: {
+          created_at?: string
+          granted_at?: string
+          id?: string
+          number?: string
+          opt_out_at?: string | null
+          purpose?: string
+          source?: string
+          tenant_id?: string | null
+          wording_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_ledger_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       corpus_ingest_watermark: {
         Row: {
           last_ingested_at: string | null

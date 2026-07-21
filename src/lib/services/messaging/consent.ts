@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/db/database.types";
 import { normalizeE164 } from "@/lib/phone";
 
 // WO-144 W2 — the ONE consent seam (DPDP). Every WhatsApp send is gated here
@@ -9,13 +10,9 @@ import { normalizeE164 } from "@/lib/phone";
 // ledger always stores and matches canonical E.164. Unparseable ⇒ fail closed
 // (checkConsent false, record* no-op).
 //
-// TYPE NOTE: consent_ledger is deliberately NOT in the generated Database types —
-// the W2 migration is written but founder-gated and unapplied, and `npm run
-// db:types` regenerates only from the LIVE schema. So this module (and ONLY this
-// module) treats the client as untyped for consent_ledger queries; callers keep
-// passing their normally-typed clients. After the founder-approved apply +
-// db:types regen, drop this cast and use the generated row types.
-type DB = SupabaseClient<any>;
+// (The migration was founder-approved + applied 2026-07-22; consent_ledger is in
+// the generated Database types, so this seam is fully typed like every other.)
+type DB = SupabaseClient<Database>;
 
 export type ConsentPurpose = "service" | "marketing";
 
