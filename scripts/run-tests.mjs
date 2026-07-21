@@ -93,6 +93,7 @@ const OFFLINE = [
   "wo148_comms",
   "wo148_email",
   "wo144_phone",
+  "wo144_consent",
   "wo264_notify",
 ];
 

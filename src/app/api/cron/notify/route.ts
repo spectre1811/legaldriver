@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMailer } from "@/lib/notify/mailer";
 import { getMessagingClient, messagingConfigured } from "@/lib/services/messaging/client";
+import { canSendWhatsApp } from "@/lib/services/messaging/consent";
 import { normalizeE164 } from "@/lib/phone";
 import { logOutboundEmail } from "@/lib/notify/log";
 import { resolveRecipientEmail } from "@/lib/notify/recipients";
@@ -63,6 +64,8 @@ export async function GET(request: NextRequest) {
     if (n.channel === "whatsapp") {
       const to = normalizeE164(payload.phone);
       if (!messagingConfigured() || !to) { skipped++; continue; }
+      // WO-144 W2: no open consent ⇒ skip, row stays pending — delivers only once consent exists (skip-not-fail per W1).
+      if (!(await canSendWhatsApp(supabase, to))) { skipped++; continue; }
       const client = getMessagingClient();
       const res = await client.send({ to, channel: "whatsapp", body: payload.body ?? subjectFor(n.kind, payload), tenantId: n.tenant_id });
       ok = res.status !== "failed";

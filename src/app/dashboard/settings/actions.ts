@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getTenantId } from "@/lib/court/sync";
 import { parseBarNumber, stateBarCouncil } from "@/lib/court/bar-number";
 import { normalizeE164 } from "@/lib/phone";
+import { recordConsent, recordOptOut } from "@/lib/services/messaging/consent";
 import { AVATAR_BUCKET } from "@/lib/profile/avatar";
 
 export type ActionResult = { ok: boolean; message: string };
@@ -161,13 +162,21 @@ export async function updateNotificationPrefs(_prev: ActionResult, formData: For
   const rawWa = String(formData.get("whatsapp_number") ?? "").trim();
   const whatsappNumber = rawWa ? normalizeE164(rawWa) : null;
   if (rawWa && !whatsappNumber) return { ok: false, message: t("notify.invalidPhone") };
+  const channelWhatsapp = formData.get("channel_whatsapp") === "on";
+
+  // WO-144 W2: prior prefs, to detect the consent transitions (grant / revoke).
+  const { data: prior } = await supabase
+    .from("notification_prefs")
+    .select("whatsapp_number, channel_whatsapp")
+    .eq("id", user.id)
+    .maybeSingle();
 
   const time = (k: string) => (String(formData.get(k) ?? "").trim() || null);
   const { error } = await supabase.from("notification_prefs").upsert({
     id: user.id,
     tenant_id: tenantId,
     whatsapp_number: whatsappNumber,
-    channel_whatsapp: formData.get("channel_whatsapp") === "on",
+    channel_whatsapp: channelWhatsapp,
     channel_email: formData.get("channel_email") === "on",
     channel_sms: formData.get("channel_sms") === "on",
     quiet_start: time("quiet_start"),
@@ -176,6 +185,24 @@ export async function updateNotificationPrefs(_prev: ActionResult, formData: For
     updated_at: new Date().toISOString(),
   });
   if (error) return { ok: false, message: error.message };
+
+  // WO-144 W2 consent ledger — best-effort: a ledger write failure must NOT fail
+  // the settings save. Safe because the send gate fails closed anyway: no open
+  // grant means no send, so a missed grant only delays delivery (retried on the
+  // next save), never over-sends.
+  try {
+    const priorNumber = prior?.whatsapp_number ?? null;
+    const priorOn = Boolean(prior?.channel_whatsapp);
+    if (whatsappNumber && channelWhatsapp && (priorNumber !== whatsappNumber || !priorOn)) {
+      await recordConsent(supabase, { tenantId, number: whatsappNumber, purpose: "service", source: "settings/notifications" });
+    }
+    if (priorNumber && (!channelWhatsapp || !whatsappNumber || whatsappNumber !== priorNumber)) {
+      // Scoped to 'service': a settings channel-off must not close marketing grants.
+      await recordOptOut(supabase, priorNumber, "service");
+    }
+  } catch {
+    // Swallowed by design — see above.
+  }
 
   revalidatePath("/dashboard/settings");
   return { ok: true, message: t("notify.saved") };
