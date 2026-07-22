@@ -7,7 +7,7 @@ import { normalizeE164 } from "@/lib/phone";
 import { logOutboundEmail } from "@/lib/notify/log";
 import { resolveRecipientEmail } from "@/lib/notify/recipients";
 import { renderEmail, renderNotice, type RenderedEmail } from "@/lib/email/templates";
-import { appUrl, composeCaseUpdate, hearingWhenLabel, type CaseUpdatePayload } from "@/lib/notify/email-render";
+import { appUrl, composeCaseUpdate, hearingWhenLabel, matterIdOf, type CaseUpdatePayload } from "@/lib/notify/email-render";
 import { caseDetailHref } from "@/lib/court/case-links";
 import { brand } from "@/lib/brand";
 
@@ -36,12 +36,36 @@ export async function GET(request: NextRequest) {
     .limit(200);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // WO-264 defect fix (2026-07-22, founder-hit live): notification rows can OUTLIVE
+  // their matter — something hard-deletes matters without an audit trail (INBOX:
+  // data-lifecycle investigation), and a reminder sent afterwards deep-links to a 404.
+  // Verify every matter-linked email row against the live table in ONE batch; dead
+  // refs flip failed and never send. 290/1846 pending rows were dead on discovery day.
+  const refIds = [
+    ...new Set(
+      (due ?? [])
+        .filter((n) => n.channel === "email")
+        .map((n) => matterIdOf((n.payload ?? {}) as Payload))
+        .filter((id): id is string => !!id),
+    ),
+  ];
+  const liveMatters = new Set<string>();
+  if (refIds.length) {
+    const { data: live } = await supabase.from("matter").select("id").in("id", refIds).is("deleted_at", null);
+    for (const m of live ?? []) liveMatters.add(m.id);
+  }
+  const isDeadRef = (p: Payload) => {
+    const id = matterIdOf(p);
+    return !!id && !liveMatters.has(id);
+  };
+
   // WO-264 · caseUpdate roundup ("tight per-user roundup, avoid spam"): all of a
   // tenant's due caseUpdate email rows in this run fold into ONE email. The first
   // row the loop reaches is the subject-bearer; siblings are folded + flipped with it.
+  // Dead-ref rows never join a group — a vanished matter must not ride into a roundup.
   const caseUpdateGroup = new Map<string, { id: string; payload: Payload }[]>();
   for (const n of due ?? []) {
-    if (n.channel === "email" && n.kind === "case_update") {
+    if (n.channel === "email" && n.kind === "case_update" && !isDeadRef((n.payload ?? {}) as Payload)) {
       const list = caseUpdateGroup.get(n.tenant_id) ?? caseUpdateGroup.set(n.tenant_id, []).get(n.tenant_id)!;
       list.push({ id: n.id, payload: (n.payload ?? {}) as Payload });
     }
@@ -52,6 +76,7 @@ export async function GET(request: NextRequest) {
   let failed = 0;
   let skipped = 0;
   let stale = 0;
+  let deadRefs = 0;
   let roundups = 0;
   for (const n of due ?? []) {
     if (handled.has(n.id)) continue; // delivered as part of a caseUpdate roundup
@@ -80,6 +105,18 @@ export async function GET(request: NextRequest) {
     }
 
     if (n.channel === "email") {
+      // Dead matter ref: the case this row points at no longer exists — sending would
+      // deep-link to a 404. Flip failed (undeliverable), count it.
+      if (isDeadRef(payload)) {
+        await supabase
+          .from("notification")
+          .update({ status: "failed", sent_at: null })
+          .eq("id", n.id)
+          .eq("status", "pending");
+        deadRefs++;
+        continue;
+      }
+
       // Stale hearing reminder: the hearing date already passed at send time — a late
       // reminder presented as current would be dishonest. Flip failed (undelivered), count it.
       if (n.kind === "hearing_reminder" && hearingWhenLabel(payload.eventDate ?? "") === null) {
@@ -135,7 +172,7 @@ export async function GET(request: NextRequest) {
     else sent++;
   }
 
-  return NextResponse.json({ ok: true, channel: mailer.channel, whatsapp: messagingConfigured() ? "live" : "dark", considered: due?.length ?? 0, sent, failed, skipped, stale, roundups });
+  return NextResponse.json({ ok: true, channel: mailer.channel, whatsapp: messagingConfigured() ? "live" : "dark", considered: due?.length ?? 0, sent, failed, skipped, stale, deadRefs, roundups });
 }
 
 type DigestCase = { title?: string; cnr?: string; itemNo?: string; type?: string; judge?: string };

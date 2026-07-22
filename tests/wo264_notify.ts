@@ -4,7 +4,7 @@
 // (real titles folded, nothing fabricated), the listingNoTime fallback (a time-less
 // court row renders — the record carries item numbers, not clock times), and the
 // renderNotice fallback shell (escaping, disclaimer, text part, single CTA link).
-import { hearingWhenLabel, istDate, istFriendlyDate, composeCaseUpdate, appUrl } from "@/lib/notify/email-render";
+import { hearingWhenLabel, istDate, istFriendlyDate, composeCaseUpdate, appUrl, matterIdOf } from "@/lib/notify/email-render";
 import { renderNotice, renderDailyHearings, renderEmail } from "@/lib/email/templates";
 
 let ok = true;
@@ -80,6 +80,15 @@ check("renderNotice has exactly one link", (notice.html.match(/<a /g) ?? []).len
 check("no leftover {ctaUrl}", !notice.html.includes("{ctaUrl}"));
 const noCta = renderNotice("Just a note", [{ text: "Body." }]);
 check("renderNotice without ctaUrl has zero links", !/<a /.test(noCta.html));
+
+// --- matterIdOf: the dead-ref guard's parser (a row must be verifiable to be guarded) ---
+const U = "9cd1b8e6-4e2b-444c-ad93-9686eb23ef91";
+check("matterIdOf reads explicit matterId", matterIdOf({ matterId: U }) === U);
+check("matterIdOf reads matter:<uuid> ref", matterIdOf({ ref: `matter:${U}` }) === U);
+check("matterIdOf prefers explicit matterId over ref", matterIdOf({ matterId: U, ref: "matter:other" }) === U);
+check("non-matter ref → undefined", matterIdOf({ ref: `deadline:${U}` }) === undefined);
+check("non-uuid ref suffix → undefined", matterIdOf({ ref: "matter:not-a-uuid" }) === undefined);
+check("empty payload → undefined", matterIdOf({}) === undefined);
 
 // --- appUrl ---
 check("appUrl joins cleanly", /^https:\/\/.+\/dashboard\/calendar$/.test(appUrl("/dashboard/calendar")));
