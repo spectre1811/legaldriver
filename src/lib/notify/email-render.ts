@@ -54,6 +54,22 @@ export type CaseUpdatePayload = {
 };
 
 /**
+ * The matter id a notification payload points at, when it points at one:
+ * explicit `matterId`, else a `matter:<uuid>` ref. Non-uuid refs → undefined
+ * (nothing to verify). WO-264 defect fix: rows can OUTLIVE their matter, so
+ * every matter-linked email is verified against the live table before sending.
+ */
+export function matterIdOf(p: { matterId?: unknown; ref?: unknown }): string | undefined {
+  // jsonb payloads are untrusted shapes — a non-string ref/matterId must parse to
+  // "no ref", never throw (one malformed row must not crash the whole cron run).
+  const explicit = typeof p.matterId === "string" ? p.matterId : undefined;
+  const fromRef =
+    typeof p.ref === "string" && p.ref.startsWith("matter:") ? p.ref.slice("matter:".length) : undefined;
+  const id = explicit ?? fromRef;
+  return id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? id : undefined;
+}
+
+/**
  * Fold one tenant's due caseUpdate rows into ONE email's data (the founder's
  * "tight per-user roundup, avoid spam" rule). The first change is the
  * subject-bearer; further changed matters ride the honest free-text detail slot
