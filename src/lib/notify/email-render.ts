@@ -59,8 +59,13 @@ export type CaseUpdatePayload = {
  * (nothing to verify). WO-264 defect fix: rows can OUTLIVE their matter, so
  * every matter-linked email is verified against the live table before sending.
  */
-export function matterIdOf(p: { matterId?: string; ref?: string }): string | undefined {
-  const id = p.matterId ?? (p.ref?.startsWith("matter:") ? p.ref.slice("matter:".length) : undefined);
+export function matterIdOf(p: { matterId?: unknown; ref?: unknown }): string | undefined {
+  // jsonb payloads are untrusted shapes — a non-string ref/matterId must parse to
+  // "no ref", never throw (one malformed row must not crash the whole cron run).
+  const explicit = typeof p.matterId === "string" ? p.matterId : undefined;
+  const fromRef =
+    typeof p.ref === "string" && p.ref.startsWith("matter:") ? p.ref.slice("matter:".length) : undefined;
+  const id = explicit ?? fromRef;
   return id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? id : undefined;
 }
 

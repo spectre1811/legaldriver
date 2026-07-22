@@ -89,6 +89,10 @@ check("matterIdOf prefers explicit matterId over ref", matterIdOf({ matterId: U,
 check("non-matter ref → undefined", matterIdOf({ ref: `deadline:${U}` }) === undefined);
 check("non-uuid ref suffix → undefined", matterIdOf({ ref: "matter:not-a-uuid" }) === undefined);
 check("empty payload → undefined", matterIdOf({}) === undefined);
+// jsonb is untrusted — non-string shapes must parse to undefined, never throw (review must-fix #2)
+check("non-string ref (number) → undefined, no throw", matterIdOf({ ref: 42 as unknown as string }) === undefined);
+check("non-string ref (object) → undefined, no throw", matterIdOf({ ref: { x: 1 } as unknown as string }) === undefined);
+check("non-string matterId → undefined, no throw", matterIdOf({ matterId: 7 as unknown as string }) === undefined);
 
 // --- appUrl ---
 check("appUrl joins cleanly", /^https:\/\/.+\/dashboard\/calendar$/.test(appUrl("/dashboard/calendar")));

@@ -51,7 +51,16 @@ export async function GET(request: NextRequest) {
   ];
   const liveMatters = new Set<string>();
   if (refIds.length) {
-    const { data: live } = await supabase.from("matter").select("id").in("id", refIds).is("deleted_at", null);
+    // Fail CLOSED-for-the-run, open-for-the-rows: a failed existence read must abort
+    // (rows stay pending, retried next run) — an empty liveMatters set would otherwise
+    // mass-flip every matter-linked row to failed on a transient DB error (review
+    // finding, PR#194; this stack had an all-reads outage on 2026-07-20).
+    const { data: live, error: liveErr } = await supabase
+      .from("matter")
+      .select("id")
+      .in("id", refIds)
+      .is("deleted_at", null);
+    if (liveErr) return NextResponse.json({ error: `matter existence check failed: ${liveErr.message}` }, { status: 500 });
     for (const m of live ?? []) liveMatters.add(m.id);
   }
   const isDeadRef = (p: Payload) => {
@@ -188,7 +197,7 @@ type Payload = CaseUpdatePayload & {
 // case_update + hearing_reminder; every other kind goes through the renderNotice
 // fallback shell — one design system, real payload data only.
 function renderForKind(kind: string, p: Payload, group?: CaseUpdatePayload[]): RenderedEmail | null {
-  const matterId = p.matterId ?? (p.ref?.startsWith("matter:") ? p.ref.slice("matter:".length) : undefined);
+  const matterId = matterIdOf(p); // one strict parser everywhere (reviewer note, PR#194)
 
   if (kind === "case_update") {
     const composed = composeCaseUpdate(group && group.length ? group : [p]);
