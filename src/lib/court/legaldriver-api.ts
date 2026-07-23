@@ -5,23 +5,32 @@
 const BASE = () => process.env.LD_API_BASE || "http://13.202.148.71:8080";
 export function ldEnabled(): boolean { return !!process.env.LD_API_KEY; }
 
-async function ldGet<T>(path: string): Promise<T | null> {
+// strict: only a real 404 maps to null (→ the page's notFound()); 5xx/timeout/network
+// throw so the segment error boundary renders retry instead of a phantom "page not found"
+// (a cold heavy-roster profile can hit the API's read statement cap → 500, seen live 2026-07-24).
+// Non-strict (searches, timeline) keeps degrade-to-null.
+async function ldGet<T>(path: string, strict = false): Promise<T | null> {
   const key = process.env.LD_API_KEY;
   if (!key) return null;
   try {
     const res = await fetch(`${BASE()}${path}`, { headers: { "X-API-Key": key }, signal: AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "60000")) });
-    return res.ok ? ((await res.json()) as T) : null;
-  } catch { return null; }
+    if (res.ok) return (await res.json()) as T;
+    if (strict && res.status !== 404) throw new Error(`LD API ${res.status} on ${path.split("?")[0]}`);
+    return null;
+  } catch (e) {
+    if (strict) throw e;
+    return null;
+  }
 }
 
 export interface AdvocateCaseItem { cnr: string; side?: string; case_type?: string; status?: string; tier?: string; registration_year?: number; advocate_bar_id?: string | null }
 export interface AdvocateProfile { bar_id: string; names: string[]; case_count: number; cases: AdvocateCaseItem[]; registration_year?: number | null }
 // bar_id is numeric (HC) or slash-form "G/NN/YYYY" (district) — keep slashes raw (:path route).
-export const getAdvocateProfile = (barId: string) => ldGet<AdvocateProfile>(`/advocate/${barId.split("/").map(encodeURIComponent).join("/")}`);
+export const getAdvocateProfile = (barId: string) => ldGet<AdvocateProfile>(`/advocate/${barId.split("/").map(encodeURIComponent).join("/")}`, true);
 
 export interface JudgeCaseItem { cnr: string; case_type?: string; status?: string; decision_date?: string | null; tier?: string; disposal_nature?: string | null; advocate_names?: string[] }
 export interface JudgeProfile { judge_id: string; name: string; case_count: number; returned: number; cases: JudgeCaseItem[] }
-export const getJudge = (judgeId: string) => ldGet<JudgeProfile>(`/judge/${encodeURIComponent(judgeId)}`);
+export const getJudge = (judgeId: string) => ldGet<JudgeProfile>(`/judge/${encodeURIComponent(judgeId)}`, true);
 
 export interface AdvocateSearchResult { name_raw: string; bar_id: string | null; cases: number }
 export async function searchAdvocates(name: string): Promise<AdvocateSearchResult[]> {

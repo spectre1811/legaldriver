@@ -95,6 +95,7 @@ const OFFLINE = [
   "wo144_phone",
   "wo144_consent",
   "wo264_notify",
+  "profile_error_states",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the
