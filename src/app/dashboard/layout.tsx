@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
+import { isAllowedAdmin } from "@/lib/access/validate";
 import { signAvatar } from "@/lib/profile/avatar";
 import { NavLinks } from "./nav";
 import { MobileNav } from "./mobile-nav";
@@ -19,6 +20,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user.email_confirmed_at && !user.confirmed_at) {
     redirect("/login?message=Please confirm your email — check your inbox — before signing in.");
   }
+
+  // WO-272 — founder-only admin nav link (access-request console). Gated by the
+  // same ADMIN_EMAILS allowlist as the page; regular users never see it.
+  const isAdmin = isAllowedAdmin(user.email, process.env.ADMIN_EMAILS);
 
   const { data: tenant } = await supabase.from("tenant").select("name").single();
   const { data: profile } = await supabase
@@ -49,12 +54,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </Link>
 
         <div className="mt-7 flex-1 overflow-y-auto">
-          <NavLinks />
+          <NavLinks isAdmin={isAdmin} />
         </div>
       </aside>
 
       <main className="min-w-0 flex-1">
-        <MobileNav email={user.email ?? ""} tenantName={tenantName} initial={initial} />
+        <MobileNav email={user.email ?? ""} tenantName={tenantName} initial={initial} isAdmin={isAdmin} />
         <TopBar
           email={user.email ?? ""}
           initial={initial}
