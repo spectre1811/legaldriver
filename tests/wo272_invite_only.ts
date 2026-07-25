@@ -5,7 +5,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { isValidEmail, normalizeEmail } from "../src/lib/access/validate";
+import { isValidEmail, normalizeEmail, isAllowedAdmin } from "../src/lib/access/validate";
 import { mapAuthError, isAuthErrorCode, AUTH_ERROR_CODES } from "../src/lib/auth/errors";
 
 let failed = 0;
@@ -114,6 +114,28 @@ ok("map: 'Signups not allowed' msg → inviteOnly (oauth)", mapAuthError({ messa
   ok("i18n: requestAccess.* EN+HI", raKeys.every((k) => en.requestAccess?.[k] && hi.requestAccess?.[k]));
   ok("i18n: requestAccess.errors EN+HI", Boolean(en.requestAccess?.errors?.email && hi.requestAccess?.errors?.email));
   ok("i18n: inviteOnly is in AUTH_ERROR_CODES", AUTH_ERROR_CODES.includes("inviteOnly"));
+}
+
+// ── W2 admin gate (pure) ──
+ok("admin: allow-listed email passes", isAllowedAdmin("yash@mukadma.in", "yash@mukadma.in, ops@mukadma.in"));
+ok("admin: case/space-insensitive match", isAllowedAdmin("  YASH@Mukadma.IN ", "yash@mukadma.in"));
+ok("admin: non-listed email fails", !isAllowedAdmin("stranger@gmail.com", "yash@mukadma.in"));
+ok("admin: empty allowlist denies all", !isAllowedAdmin("yash@mukadma.in", ""));
+ok("admin: missing email denies", !isAllowedAdmin(null, "yash@mukadma.in"));
+
+// ── W2 admin console: gated page + provisioning action contracts ──
+{
+  const page = src("src/app/dashboard/access-requests/page.tsx");
+  ok("admin page: gated by ADMIN_EMAILS + notFound for non-admins", page.includes("isAllowedAdmin") && page.includes("ADMIN_EMAILS") && page.includes("notFound()"));
+  ok("admin page: reads via the service-role admin client", page.includes("createAdminClient"));
+
+  const acts = src("src/app/dashboard/access-requests/actions.ts");
+  ok("approve: re-checks admin server-side", acts.includes("requireAdmin") && acts.includes("isAllowedAdmin"));
+  ok("approve: creates the user (email_confirm) + resets if it exists (idempotent)", acts.includes("createUser") && acts.includes("email_confirm: true") && acts.includes("updateUserById"));
+  ok("approve: issues BOTH a temp password AND a set-password link", acts.includes("tempPassword") && acts.includes('generateLink({ type: "recovery"'));
+  ok("approve: emails the requester + marks provisioned", acts.includes("getMailer().send") && acts.includes('status: "provisioned"'));
+  ok("approve: email spells out email+password next-login", acts.includes("email and password"));
+  ok("reject: marks the row rejected", acts.includes('status: "rejected"'));
 }
 
 console.log(failed ? `WO-272 INVITE-ONLY: FAIL (${failed})` : "WO-272 INVITE-ONLY: PASS");
