@@ -12,7 +12,7 @@ import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { brand } from "@/lib/brand";
 
-export function MobileNav({ email, tenantName, initial }: { email: string; tenantName: string; initial: string }) {
+export function MobileNav({ email, tenantName, initial, isAdmin = false }: { email: string; tenantName: string; initial: string; isAdmin?: boolean }) {
   const [open, setOpen] = useState(false);
   const t = useTranslations("shell");
   const pathname = usePathname();
@@ -61,7 +61,7 @@ export function MobileNav({ email, tenantName, initial }: { email: string; tenan
               </button>
             </div>
             <p className="mt-1.5 truncate px-2 text-xs text-ec-ink-3" title={tenantName}>{tenantName}</p>
-            <div className="mt-6 flex-1 overflow-y-auto"><NavLinks /></div>
+            <div className="mt-6 flex-1 overflow-y-auto"><NavLinks isAdmin={isAdmin} /></div>
             <div className="mt-4 border-t border-ec-hair pt-4">
               <div className="mb-3"><AccountNav /></div>
               <div className="mb-3 px-1"><LanguageSwitcher /></div>

@@ -91,7 +91,8 @@
       "communication": "Communication",
       "insight": "Insight",
       "assistant": "AI",
-      "account": "Account"
+      "account": "Account",
+      "admin": "Admin"
     },
     "item": {
       "overview": "Overview",
@@ -114,7 +115,8 @@
       "notifications": "Notifications",
       "assistant": "Assistant",
       "aiUsage": "AI usage",
-      "settings": "Settings"
+      "settings": "Settings",
+      "accessRequests": "Access requests"
     },
     "aiUsage": "AI usage"
   },

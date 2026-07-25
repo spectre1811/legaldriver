@@ -138,5 +138,15 @@ ok("admin: missing email denies", !isAllowedAdmin(null, "yash@mukadma.in"));
   ok("reject: marks the row rejected", acts.includes('status: "rejected"'));
 }
 
+// ── W3 admin nav link: gated to admins, and NOT leaked into the ⌘K palette ──
+{
+  const nav = src("src/app/dashboard/nav.tsx");
+  ok("nav: access-requests link exists + is admin-gated", nav.includes("/dashboard/access-requests") && /isAdmin\s*&&[\s\S]*ADMIN_ITEMS/.test(nav));
+  const navTargets = nav.split("\n").find((l) => l.includes("export const NAV_TARGETS")) ?? "";
+  ok("nav: admin link NOT in NAV_TARGETS (no ⌘K leak to non-admins)", navTargets !== "" && !navTargets.includes("ADMIN_ITEMS"));
+  const layout = src("src/app/dashboard/layout.tsx");
+  ok("layout: isAdmin from ADMIN_EMAILS, passed to nav", layout.includes("isAllowedAdmin(user.email, process.env.ADMIN_EMAILS)") && layout.includes("isAdmin={isAdmin}"));
+}
+
 console.log(failed ? `WO-272 INVITE-ONLY: FAIL (${failed})` : "WO-272 INVITE-ONLY: PASS");
 process.exit(failed ? 1 : 0);

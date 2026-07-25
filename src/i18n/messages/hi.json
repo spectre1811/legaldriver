@@ -91,7 +91,8 @@
       "communication": "संवाद",
       "insight": "अंतर्दृष्टि",
       "assistant": "एआई",
-      "account": "खाता"
+      "account": "खाता",
+      "admin": "एडमिन"
     },
     "item": {
       "overview": "अवलोकन",
@@ -114,7 +115,8 @@
       "notifications": "सूचनाएँ",
       "assistant": "सहायक",
       "aiUsage": "AI उपयोग",
-      "settings": "सेटिंग्स"
+      "settings": "सेटिंग्स",
+      "accessRequests": "एक्सेस अनुरोध"
     },
     "aiUsage": "AI उपयोग"
   },

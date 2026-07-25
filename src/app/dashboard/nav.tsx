@@ -65,6 +65,11 @@ const SECTIONS: { heading: string; items: NavEntry[] }[] = [
 // Pinned in the sidebar footer (out of the scroll region) so it never clips off short viewports.
 const ACCOUNT_ITEMS: NavEntry[] = [{ href: "/dashboard/settings", label: "settings", icon: "settings" }];
 
+// WO-272 — founder-only. Rendered ONLY when the layout passes isAdmin (ADMIN_EMAILS
+// gate). Deliberately NOT in NAV_TARGETS, so it never leaks into the ⌘K palette for
+// non-admins (that list is static/client-side and can't be gated per-user).
+const ADMIN_ITEMS: NavEntry[] = [{ href: "/dashboard/access-requests", label: "accessRequests", icon: "inbox" }];
+
 // Sections with disabled modules filtered out; sections that empty out are dropped entirely.
 const VISIBLE_SECTIONS = SECTIONS.map((s) => ({ ...s, items: s.items.filter((i) => !isDisabled(i.href)) })).filter(
   (s) => s.items.length > 0,
@@ -99,7 +104,7 @@ function NavItem({ item, active, t }: { item: NavEntry; active: boolean; t: (k: 
   );
 }
 
-export function NavLinks() {
+export function NavLinks({ isAdmin = false }: { isAdmin?: boolean }) {
   const t = useTranslations("nav");
   const isActive = useIsActive();
 
@@ -115,6 +120,16 @@ export function NavLinks() {
           </div>
         </div>
       ))}
+      {isAdmin && (
+        <div>
+          <p className="ec-label mb-2 px-3">{t("heading.admin")}</p>
+          <div className="flex flex-col gap-0.5">
+            {ADMIN_ITEMS.map((item) => (
+              <NavItem key={item.href} item={item} active={isActive(item.href)} t={t} />
+            ))}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
