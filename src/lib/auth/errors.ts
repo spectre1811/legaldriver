@@ -9,6 +9,7 @@ export const AUTH_ERROR_CODES = [
   "invalidCredentials", // password sign-in: could not tell which of the two
   "unconfirmed", // email exists but was never confirmed
   "accountExists", // sign-up with an email that already has an account
+  "inviteOnly", // WO-272: public account creation is closed — signup/new-Google blocked, invite only
   "weakPassword", // sign-up/reset: password too short/weak
   "samePassword", // reset: new password equals the old one
   "rateLimited", // too many attempts / emails — try later
@@ -38,6 +39,12 @@ export function mapAuthError(error: AuthErrorLike, ctx: AuthContext): AuthErrorC
 
   if (code === "over_request_rate_limit" || code === "over_email_send_rate_limit" || status === 429 || msg.includes("rate limit"))
     return "rateLimited";
+  // WO-272 invite-only: GoTrue refuses new-user creation (email signup OR
+  // first-time OAuth) with `signup_disabled` / "Signups not allowed for this
+  // instance" once disable_signup is set. Surface it as the friendly invite-only
+  // notice, never a raw provider string.
+  if (code === "signup_disabled" || msg.includes("signups not allowed") || msg.includes("signup is disabled"))
+    return "inviteOnly";
   if (code === "email_not_confirmed" || msg.includes("email not confirmed")) return "unconfirmed";
   if (code === "invalid_credentials" || msg.includes("invalid login credentials")) return "invalidCredentials";
   if (code === "user_already_exists" || code === "email_exists" || msg.includes("already registered"))

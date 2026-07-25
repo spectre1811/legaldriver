@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_requests: {
+        Row: {
+          created_at: string
+          email: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          name: string | null
+          note: string | null
+          source: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          name?: string | null
+          note?: string | null
+          source?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          name?: string | null
+          note?: string | null
+          source?: string
+          status?: string
+        }
+        Relationships: []
+      }
       activity_event: {
         Row: {
           actor_id: string | null

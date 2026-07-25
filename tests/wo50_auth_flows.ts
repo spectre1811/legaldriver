@@ -105,7 +105,12 @@ ok("err: isAuthErrorCode guards URL input", isAuthErrorCode("googleUnavailable")
 
   const actions = src("src/app/login/actions.ts");
   ok("actions: OAuth uses explicit redirectTo via callbackUrl", /signInWithOAuth[\s\S]*?redirectTo: callbackUrl/.test(actions));
-  ok("actions: signup confirmation email carries the intent", /signUp\(\{[\s\S]*?emailRedirectTo: callbackUrl/.test(actions));
+  // WO-272 — signup is invite-only blocked: the action refuses before touching
+  // GoTrue, so actions.ts no longer calls supabase.auth.signUp at all.
+  ok(
+    "actions: signup is invite-only blocked (no GoTrue signUp call)",
+    /export async function signUp[\s\S]*?return \{ error: "inviteOnly" \}/.test(actions) && !actions.includes("supabase.auth.signUp"),
+  );
   ok("actions: reset flow lands on /reset-password", actions.includes("resetPasswordForEmail") && actions.includes("/reset-password"));
   ok("actions: no raw provider message reaches the UI", !actions.includes("error.message"));
   ok(

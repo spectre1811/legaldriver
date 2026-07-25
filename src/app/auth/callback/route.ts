@@ -18,14 +18,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}/auth/error?${q.toString()}`);
   };
 
+  // WO-272 invite-only: a NEW Google user is refused by GoTrue (disable_signup)
+  // only after the round-trip — either as a forwarded ?error_description here, or
+  // as the exchange error below. That's an expected, meaningful outcome (not a
+  // failure to retry), so route it to the login page's invite-only notice with a
+  // clear code — never the scary generic error page.
+  const signupsDisabled = (s?: string | null) =>
+    !!s && /signups?\s+not\s+allowed|signup[_\s]?disabled/i.test(s);
+  const inviteOnly = () => NextResponse.redirect(`${origin}/login?error=inviteOnly`);
+
   // Upstream (Google/GoTrue) refused before a code was ever issued — GoTrue
   // forwards ?error/&error_description. Don't log the description (may echo PII).
-  if (searchParams.get("error")) return errorPage("provider");
+  if (searchParams.get("error")) {
+    if (signupsDisabled(searchParams.get("error_description"))) return inviteOnly();
+    return errorPage("provider");
+  }
   if (!code) return errorPage("missing");
 
   const supabase = createClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return errorPage("exchange");
+  if (error) {
+    if (signupsDisabled(error.message)) return inviteOnly();
+    return errorPage("exchange");
+  }
 
   const res = NextResponse.redirect(`${origin}${next}`);
   // Seed the UI locale from the user's stored preference so the first authed
