@@ -21,7 +21,10 @@ export default async function LoginPage({
 }) {
   const t = await getTranslations("auth");
 
-  const mode = searchParams.mode === "signup" ? "signup" : searchParams.mode === "forgot" ? "forgot" : "signin";
+  // WO-272 invite-only: there is no signup mode. A legacy/deep ?mode=signup link
+  // lands on sign-in with the invite-only notice (which routes to /request-access).
+  const wantsSignup = searchParams.mode === "signup";
+  const mode = searchParams.mode === "forgot" ? "forgot" : "signin";
   // Only known codes render translated copy; anything else (incl. legacy raw
   // messages in old links) collapses to the generic error.
   const urlError: AuthErrorCode | undefined = searchParams.error
@@ -29,7 +32,7 @@ export default async function LoginPage({
       ? searchParams.error
       : "unknown"
     : undefined;
-  const notice = searchParams.notice === "confirmEmail" ? ("confirmEmail" as const) : undefined;
+  const notice = searchParams.notice === "confirmEmail" ? ("confirmEmail" as const) : wantsSignup ? ("inviteOnly" as const) : undefined;
   const next = sanitizeNext(searchParams.next) ?? undefined;
   const track = sanitizeTrack(searchParams.track) ?? undefined;
 

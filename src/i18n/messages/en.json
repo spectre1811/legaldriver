@@ -777,12 +777,19 @@
     "notice": {
       "confirmEmail": "Please confirm your email first — the link is in your inbox."
     },
+    "invite": {
+      "prompt": "New to Mukadma?",
+      "cta": "Request access",
+      "noticeTitle": "Mukadma is invite-only",
+      "noticeBody": "We're onboarding advocates by invitation right now. Leave your details and we'll be in touch."
+    },
     "errors": {
       "wrongPassword": "That password doesn't match this account. Try again, or reset it below.",
       "noAccount": "No account exists for this email yet.",
       "invalidCredentials": "Email or password is incorrect — or the account doesn't exist yet.",
       "unconfirmed": "This email hasn't been confirmed yet — check your inbox for the link.",
       "accountExists": "An account with this email already exists.",
+      "inviteOnly": "Mukadma is invite-only right now — request access and we'll be in touch.",
       "weakPassword": "That password is too short — use at least 6 characters.",
       "samePassword": "The new password must be different from your current one.",
       "rateLimited": "Too many attempts — wait a minute, then try again.",
@@ -795,6 +802,27 @@
       "unknown": "Something went wrong — please try again."
     },
     "disclaimer": "By continuing you agree this is informational only and not legal advice."
+  },
+  "requestAccess": {
+    "title": "Request access",
+    "subtitle": "Mukadma is invite-only. Leave your details and we'll reach out to set you up.",
+    "name": "Full name",
+    "email": "Email",
+    "note": "Anything we should know? (optional)",
+    "ph": {
+      "name": "Adv. Full Name",
+      "email": "you@firm.in",
+      "note": "Your firm, practice area, or who referred you"
+    },
+    "cta": "Request access",
+    "pending": "Sending…",
+    "sentTitle": "Request received",
+    "sentBody": "Thanks — we've got your request and will be in touch at {email}.",
+    "backToLogin": "← Back to sign in",
+    "errors": {
+      "email": "Enter a valid email address.",
+      "failed": "Something went wrong — please try again in a minute."
+    }
   },
   "invoices": {
     "title": "Invoices",

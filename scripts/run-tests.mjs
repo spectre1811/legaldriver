@@ -95,6 +95,7 @@ const OFFLINE = [
   "wo144_phone",
   "wo144_consent",
   "wo264_notify",
+  "wo272_invite_only",
   "profile_error_states",
 ];
 

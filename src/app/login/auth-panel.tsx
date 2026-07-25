@@ -1,9 +1,14 @@
 "use client";
 
-// WO-50 — the /login auth panel: two explicit modes (Sign in / Create account),
-// method-first (Google on top), plus forgot-password and the post-signup
-// "check your inbox" screen. Every submit shows a pending state; every failure
-// renders distinct translated copy (EN+HI) from a stable error code.
+// WO-50 — the /login auth panel: method-first (Google on top), email/password
+// sign-in, forgot-password, and the "check your inbox" screen. Every submit
+// shows a pending state; every failure renders distinct translated copy (EN+HI)
+// from a stable error code.
+//
+// WO-272 — Mukadma is invite-only. The self-serve "Create account" mode is
+// removed: no signup form, no signin↔signup toggle. Google stays (existing
+// Google users keep signing in; NEW Google users are blocked by Supabase). Where
+// a person would have signed up, they're routed to /request-access instead.
 
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
@@ -14,13 +19,12 @@ import {
   resendConfirmation,
   signIn,
   signInWithGoogle,
-  signUp,
   type AuthFormState,
 } from "./actions";
 
 const initial: AuthFormState = {};
 
-type Mode = "signin" | "signup" | "forgot";
+type Mode = "signin" | "forgot";
 
 function Spinner() {
   return (
@@ -52,6 +56,16 @@ function ErrorNote({ code }: { code?: AuthErrorCode }) {
     <p role="alert" className="rounded-ec-s bg-ec-danger-t px-3.5 py-2.5 text-sm text-ec-danger">
       {t(`errors.${code}`)}
     </p>
+  );
+}
+
+// WO-272 — the one entry point for people without an account: request access.
+function RequestAccessLink() {
+  const t = useTranslations("auth");
+  return (
+    <a href="/request-access" className="font-medium text-ec-brass-deep underline-offset-2 hover:underline">
+      {t("invite.cta")} →
+    </a>
   );
 }
 
@@ -108,13 +122,11 @@ function SignInForm({
   track,
   onUnconfirmed,
   onForgot,
-  onSwitch,
 }: {
   next?: string;
   track?: string;
   onUnconfirmed: (email: string) => void;
   onForgot: () => void;
-  onSwitch: () => void;
 }) {
   const t = useTranslations("auth");
   const [state, formAction] = useFormState(signIn, initial);
@@ -144,58 +156,17 @@ function SignInForm({
       </div>
       <ErrorNote code={inlineError} />
       {inlineError === "noAccount" && (
-        <button type="button" onClick={onSwitch} className="text-sm font-medium text-ec-brass-deep underline-offset-2 hover:underline">
-          {t("signup.switchCta")} →
-        </button>
+        // WO-272 — no self-serve signup; send them to request access instead.
+        <RequestAccessLink />
       )}
       <SubmitButton label={t("signin.cta")} pendingLabel={t("signin.pending")} />
     </form>
   );
 }
 
-function SignUpForm({
-  next,
-  track,
-  onConfirm,
-  onSwitch,
-}: {
-  next?: string;
-  track?: string;
-  onConfirm: (email: string) => void;
-  onSwitch: () => void;
-}) {
-  const t = useTranslations("auth");
-  const [state, formAction] = useFormState(signUp, initial);
-
-  useEffect(() => {
-    if (state.ok === "confirm" && state.email) onConfirm(state.email);
-  }, [state, onConfirm]);
-
-  return (
-    <form action={formAction} className="space-y-4">
-      <HiddenIntent next={next} track={track} />
-      <div>
-        <label className="ec-label" htmlFor="email">{t("email")}</label>
-        <input id="email" name="email" type="email" required autoComplete="email" className="input mt-1.5" placeholder={t("ph.email")} />
-      </div>
-      <div>
-        <label className="ec-label" htmlFor="password">{t("password")}</label>
-        <input id="password" name="password" type="password" required minLength={6} autoComplete="new-password" className="input mt-1.5" placeholder="••••••••" />
-        <p className="mt-1.5 text-xs text-ec-ink-3">{t("signup.passwordHint")}</p>
-      </div>
-      <ErrorNote code={state.error} />
-      {state.error === "accountExists" && (
-        <button type="button" onClick={onSwitch} className="text-sm font-medium text-ec-brass-deep underline-offset-2 hover:underline">
-          {t("signin.switchCta")} →
-        </button>
-      )}
-      <SubmitButton label={t("signup.cta")} pendingLabel={t("signup.pending")} />
-    </form>
-  );
-}
-
 // Post-signup (or unconfirmed sign-in) — explicit "check your inbox" screen
-// with resend + change-email escape hatches.
+// with resend + change-email escape hatches. WO-272: only reachable now via an
+// existing but unconfirmed account signing in (no signup path creates one).
 function ConfirmScreen({
   email,
   next,
@@ -279,7 +250,7 @@ export function AuthPanel({
 }: {
   initialMode: Mode;
   urlError?: AuthErrorCode;
-  notice?: "confirmEmail";
+  notice?: "confirmEmail" | "inviteOnly";
   next?: string;
   track?: string;
 }) {
@@ -293,7 +264,7 @@ export function AuthPanel({
         email={confirmEmail}
         next={next}
         track={track}
-        onChangeEmail={() => { setConfirmEmail(null); setMode("signup"); }}
+        onChangeEmail={() => setConfirmEmail(null)}
         onSignIn={() => { setConfirmEmail(null); setMode("signin"); }}
       />
     );
@@ -314,6 +285,14 @@ export function AuthPanel({
           {t("notice.confirmEmail")}
         </p>
       )}
+      {notice === "inviteOnly" && (
+        // WO-272 — arrived via a signup deep-link; explain invite-only + route on.
+        <div className="mt-5 rounded-ec-s bg-ec-brass-tint px-3.5 py-3 text-sm text-ec-brass-deep">
+          <p className="font-medium">{t("invite.noticeTitle")}</p>
+          <p className="mt-1 text-ec-ink-2">{t("invite.noticeBody")}</p>
+          <p className="mt-2"><RequestAccessLink /></p>
+        </div>
+      )}
 
       <div className="mt-6">
         {mode !== "forgot" && (
@@ -329,25 +308,14 @@ export function AuthPanel({
             track={track}
             onUnconfirmed={setConfirmEmail}
             onForgot={() => setMode("forgot")}
-            onSwitch={() => setMode("signup")}
           />
-        )}
-        {mode === "signup" && (
-          <SignUpForm next={next} track={track} onConfirm={setConfirmEmail} onSwitch={() => setMode("signin")} />
         )}
         {mode === "forgot" && <ForgotForm onBack={() => setMode("signin")} />}
       </div>
 
       {mode !== "forgot" && (
         <p className="mt-6 text-center text-sm text-ec-ink-2">
-          {mode === "signin" ? t("signin.noAccountYet") : t("signup.haveAccount")}{" "}
-          <button
-            type="button"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-            className="font-medium text-ec-brass-deep underline-offset-2 hover:underline"
-          >
-            {mode === "signin" ? t("signup.switchCta") : t("signin.switchCta")}
-          </button>
+          {t("invite.prompt")} <RequestAccessLink />
         </p>
       )}
     </div>

@@ -9,7 +9,6 @@ import { callbackUrl, loginUrl, postAuthPath, requestOrigin } from "@/lib/auth/r
 // `track` (the analytics seam) is imported as `trackEvent` — a local `track` form field (a CNR
 // deep-link, WO-50) shadows the name in these actions. WO-184 user-lifecycle instrumentation.
 import { track as trackEvent } from "@/lib/analytics/track";
-import { sanitizeSource } from "@/lib/analytics/events";
 
 // WO-50 login/signup redesign — every action returns a stable error CODE (the
 // client renders translated copy, EN+HI) and redirects on success. Emails stay
@@ -73,34 +72,13 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
   redirect(postAuthPath(next, track));
 }
 
-export async function signUp(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const email = field(formData, "email");
-  const password = String(formData.get("password") ?? "");
-  const next = field(formData, "next") || null;
-  const track = field(formData, "track") || null;
-  const source = sanitizeSource(formData.get("source")); // acquisition channel (peshi edge later)
-
-  const supabase = createClient();
-  // Full name is NOT collected here — it belongs to onboarding (WO-50 ruling).
-  // The handle_new_user trigger tolerates a missing full_name.
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { emailRedirectTo: callbackUrl(base(), next, track) },
-  });
-  if (error) return { error: mapAuthError(error, "signup") };
-  // With confirmations ON, GoTrue obfuscates "already registered" as a success
-  // whose user has no identities — surface it honestly as "account exists".
-  if (data.user && (data.user.identities?.length ?? 0) === 0) return { error: "accountExists" };
-  // A real new account was created (email path). `registration_completed` fires later at the
-  // email-verify callback; here we only mark the signup itself.
-  if (data.user) trackEvent("signup", data.user.id, { source });
-  if (data.session) {
-    // Email confirmations disabled (e.g. local dev) — user is signed in already.
-    revalidatePath("/", "layout");
-    redirect(postAuthPath(next, track));
-  }
-  return { ok: "confirm", email };
+// WO-272 — Mukadma is invite-only. Public account creation is closed: this
+// action NO LONGER creates accounts. It refuses before ever touching GoTrue, so
+// the lock holds even if the Supabase `disable_signup` flag is toggled off (the
+// flag is the serving-side boundary; this is defense-in-depth). The login UI no
+// longer surfaces a signup form; interested people are routed to /request-access.
+export async function signUp(_prev: AuthFormState, _formData: FormData): Promise<AuthFormState> {
+  return { error: "inviteOnly" };
 }
 
 export async function resendConfirmation(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
