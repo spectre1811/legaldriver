@@ -339,6 +339,28 @@ export async function fetchAdvocateFanoutStatus(jobId: string): Promise<Advocate
   } catch { return null; }
 }
 
+// WO-278: attribute a COLD advocate's freshly-INGESTED roster to their bar id. The async fleet ingests
+// the roster CNRs into the warehouse over the minutes AFTER `startLiveAdvocateRefresh` fires — but the
+// enrolment→CNR gold-link is written server-side ONLY when `GET /advocate/refresh/{job}` is polled
+// (`roster_job_status` → `link_roster_cnrs` links the `state='done'` CNRs). Onboarding's harvest reads
+// `GET /advocate/{bar}` (`advocate_profile`), which only READS those links — so without this poke a cold
+// advocate's fleet-scraped roster is NEVER linked → the warehouse read returns 0 → onboarding stalls at
+// "Paused" until a manual re-run. We poke the refresh endpoint for its server-side LINKING side-effect so
+// the harvest's very next warehouse read finds the now-linked roster (it converges as the fleet drains).
+// Guarded EXACTLY like `startLiveAdvocateRefresh` (LD_API_KEY + a parsed enrolment + a verified council):
+// if no refresh could have been fired, there is nothing to link. Best-effort + idempotent (the server
+// link is `ON CONFLICT DO NOTHING`); `fetchAdvocateFanoutStatus` already swallows all errors. Returns true
+// iff a link poke was dispatched (for honest callers + the offline test).
+export async function linkIngestedRoster(q: AdvocateQuery): Promise<boolean> {
+  const parsed = parseBarNumber(q.barNumber);
+  const council = stateBarCouncil(q.stateCode) ?? (parsed ? councilByStatePrefix(parsed.stateBar) : null);
+  if (!process.env.LD_API_KEY || !parsed || !council?.verified) return false;
+  // The GET runs `roster_job_status` server-side, which gold-links the roster's `done` CNRs to the bar id;
+  // the returned status is unused here — we call it purely for that linking side-effect.
+  await fetchAdvocateFanoutStatus(advocateFanoutJobId(parsed, council));
+  return true;
+}
+
 // Honest "we searched N courts across <state>" coverage copy from the server fan-out record. NEVER a bare
 // "0 cases" (info-integrity ⭐): a zero is framed as "none in the N courts we searched", and a WAF-stopped
 // / partial run says so — so re-onboarding to finish reads as expected, not as "you have none". Returns
