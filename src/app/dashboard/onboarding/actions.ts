@@ -166,7 +166,12 @@ export async function harvestOnboarding(advocateId: string): Promise<{ added: nu
   const { data: adv } = await supabase.from("advocate").select("name, bar_registration_number, state_code").eq("id", advocateId).maybeSingle();
   if (!adv) return { added: 0 };
 
-  const { fetchAdvocateCases } = await import("@/lib/court/advocate-cases");
+  const { fetchAdvocateCases, linkIngestedRoster } = await import("@/lib/court/advocate-cases");
+  // WO-278: poke the roster gold-link FIRST so a cold advocate's freshly-ingested CNRs are attributed to
+  // the bar id before we read the warehouse. Without this, harvest reads an unlinked profile (0 cases) and
+  // onboarding stalls at "Paused" until a manual re-run. Best-effort + self-guarded (enrolment + verified
+  // council); the link lands on the primary, so it's the NEXT harvest tick's read that reliably sees it.
+  await linkIngestedRoster({ name: adv.name, barNumber: adv.bar_registration_number, stateCode: adv.state_code });
   const cases = await fetchAdvocateCases({ name: adv.name, barNumber: adv.bar_registration_number, stateCode: adv.state_code, live: false });
   const added = await seedFetchedMatters(supabase, tenantId, cases);
   if (added > 0) {
