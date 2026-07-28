@@ -86,7 +86,10 @@ ok("map: 'Signups not allowed' msg → inviteOnly (oauth)", mapAuthError({ messa
   ok("intake: stores via the service-role admin client", a.includes("createAdminClient") && a.includes('from("access_requests").insert'));
   ok("intake: recipient from ACCESS_REQUEST_NOTIFY env", a.includes("ACCESS_REQUEST_NOTIFY"));
   ok("intake: 10-min notification dedupe", a.includes("DEDUPE_MS") && a.includes("recentlyNotified"));
-  ok("intake: a failed email never fails the request", a.includes(".catch(() => {})"));
+  // WO-288: the old `.catch(() => {})` silent swallow is GONE — a failed email still
+  // never fails the request (caught → SendResult), but the outcome is always logged.
+  ok("intake: a failed email never fails the request", a.includes(".catch(") && !a.includes(".catch(() => {})"));
+  ok("intake: the notify outcome is logged (WO-288)", a.includes("logOutboundEmail"));
 }
 
 // ── migration: access_requests is RLS-enabled and NON-tenant (deny-all, service-role only) ──
@@ -133,7 +136,7 @@ ok("admin: missing email denies", !isAllowedAdmin(null, "yash@mukadma.in"));
   ok("approve: re-checks admin server-side", acts.includes("requireAdmin") && acts.includes("isAllowedAdmin"));
   ok("approve: creates the user (email_confirm) + resets if it exists (idempotent)", acts.includes("createUser") && acts.includes("email_confirm: true") && acts.includes("updateUserById"));
   ok("approve: issues BOTH a temp password AND a set-password link", acts.includes("tempPassword") && acts.includes('generateLink({ type: "recovery"'));
-  ok("approve: emails the requester + marks provisioned", acts.includes("getMailer().send") && acts.includes('status: "provisioned"'));
+  ok("approve: emails the requester + marks provisioned", acts.includes("getMailer()") && acts.includes(".send(row.email") && acts.includes('status: "provisioned"'));
   ok("approve: email spells out email+password next-login", acts.includes("email and password"));
   ok("reject: marks the row rejected", acts.includes('status: "rejected"'));
 }

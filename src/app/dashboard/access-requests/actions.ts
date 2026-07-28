@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getMailer } from "@/lib/notify/mailer";
+import { getMailer, type SendResult } from "@/lib/notify/mailer";
+import { logOutboundEmail } from "@/lib/notify/log";
 import { requestOrigin } from "@/lib/auth/redirects";
 import { isAllowedAdmin } from "@/lib/access/validate";
 
@@ -109,7 +110,12 @@ export async function approveRequest(_prev: AdminActionState, formData: FormData
 
   const loginUrl = `${origin}/login`;
   const { html, text } = credentialsEmail(row.email, result.password, result.link, loginUrl);
-  const sent = await getMailer().send(row.email, "Your Mukadma access is ready", html, text).catch(() => ({ ok: false }));
+  // WO-288 (a): the credentials email outcome is logged — a swallowed failure here
+  // left approved users silently locked out during the 2026-07-26 outage.
+  const sent = await getMailer()
+    .send(row.email, "Your Mukadma access is ready", html, text)
+    .catch((e): SendResult => ({ ok: false, error: e instanceof Error ? e.message : "send threw" }));
+  await logOutboundEmail(admin, { tenantId: null, to: row.email, subject: "Your Mukadma access is ready", kind: "notice", ok: sent.ok, providerId: sent.id, error: sent.error });
 
   await admin
     .from("access_requests")

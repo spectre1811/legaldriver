@@ -23,7 +23,7 @@ export default async function AccessRequestsPage() {
     .order("created_at", { ascending: false })
     .limit(200);
 
-  const mail = getMailerReadiness();
+  const mail = await getMailerReadiness(admin); // WO-288: outcome-derived (all recent sends)
   const list = (rows ?? []) as Row[];
 
   return (

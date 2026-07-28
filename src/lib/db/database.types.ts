@@ -2238,6 +2238,7 @@ export type Database = {
       }
       notification: {
         Row: {
+          attempts: number
           channel: string
           created_at: string
           id: string
@@ -2250,6 +2251,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          attempts?: number
           channel: string
           created_at?: string
           id?: string
@@ -2262,6 +2264,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          attempts?: number
           channel?: string
           created_at?: string
           id?: string
@@ -2442,37 +2445,40 @@ export type Database = {
         Row: {
           client_id: string | null
           created_at: string
+          error: string | null
           id: string
           kind: string
           matter_id: string | null
           provider_id: string | null
           status: string
           subject: string | null
-          tenant_id: string
+          tenant_id: string | null
           to_addr: string
         }
         Insert: {
           client_id?: string | null
           created_at?: string
+          error?: string | null
           id?: string
           kind?: string
           matter_id?: string | null
           provider_id?: string | null
           status?: string
           subject?: string | null
-          tenant_id: string
+          tenant_id?: string | null
           to_addr: string
         }
         Update: {
           client_id?: string | null
           created_at?: string
+          error?: string | null
           id?: string
           kind?: string
           matter_id?: string | null
           provider_id?: string | null
           status?: string
           subject?: string | null
-          tenant_id?: string
+          tenant_id?: string | null
           to_addr?: string
         }
         Relationships: [

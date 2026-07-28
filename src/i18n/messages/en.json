@@ -2105,7 +2105,11 @@
         "restricted": "Email restricted to your own inbox",
         "restrictedHint": "Sending from {from} (Resend shared sender) reaches only the account owner. Verify a domain and set FROM_EMAIL to deliver to clients and advocates.",
         "unconfigured": "Email not configured",
-        "unconfiguredHint": "No RESEND_API_KEY set — reminder and digest emails are logged, not delivered. Add the key (and a verified FROM_EMAIL) to send."
+        "unconfiguredHint": "No RESEND_API_KEY set — reminder and digest emails are logged, not delivered. Add the key (and a verified FROM_EMAIL) to send.",
+        "misconfigured": "Email misconfigured — sends are failing",
+        "misconfiguredHint": "Production has no RESEND_API_KEY — every email attempt fails loudly (and is logged) until the key is restored.",
+        "failing": "Email sends are failing",
+        "failingHint": "Recent email attempts failed at the provider. Check the sending key, the sender domain for {from}, and the outbound email log."
       },
       "causeList": {
         "on": "Cause-list alerts active",

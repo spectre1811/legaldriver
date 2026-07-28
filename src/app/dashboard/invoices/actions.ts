@@ -168,7 +168,7 @@ export async function emailInvoice(invoiceId: string): Promise<InvoiceResult> {
   const html = renderInvoiceHtml({ invoice: fresh.data!, lines: lines ?? [], firm: firm ?? null, clientName: client?.name ?? "Client" });
   const subject = `Invoice ${fresh.data?.number} — ${firm?.legal_name ?? "Legal services"}`;
   const r = await getMailer().send(to, subject, html);
-  await logOutboundEmail(supabase, { tenantId, to, subject, kind: "invoice", matterId: fresh.data?.matter_id ?? null, clientId: fresh.data?.client_id ?? null, ok: r.ok, providerId: r.id });
+  await logOutboundEmail(supabase, { tenantId, to, subject, kind: "invoice", matterId: fresh.data?.matter_id ?? null, clientId: fresh.data?.client_id ?? null, ok: r.ok, providerId: r.id, error: r.error });
   if (!r.ok) return { ok: false, message: `Email failed: ${r.error}` };
   await supabase.from("invoice").update({ status: "sent", updated_at: new Date().toISOString() }).eq("id", invoiceId);
   revalidatePath(`/dashboard/invoices/${invoiceId}`);
