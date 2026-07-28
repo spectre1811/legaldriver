@@ -66,8 +66,8 @@ export const pricing = {
 /** Grievance Officer contact (IT Rules 2021 §3(2)). Founder fills when appointed;
  *  empty strings → the footer renders the honest "being appointed" placeholder. */
 export const grievanceOfficer = {
-  name: "",
-  email: "",
+  name: "Yash Maheshwari",
+  email: "yash@mukadma.in",
 } as const;
 
 /** True once the founder has appointed the grievance officer. */

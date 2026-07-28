@@ -20,7 +20,7 @@ export default async function DataCorrectionsPage() {
         </ul>
 
         <h2>{t("howToRaise.heading")}</h2>
-        <p>{t.rich("howToRaise.body", { email: (c) => <a href="mailto:grievance@mukadma.in">{c}</a> })}</p>
+        <p>{t.rich("howToRaise.body", { email: (c) => <a href="mailto:yash@mukadma.in">{c}</a> })}</p>
 
         <h2>{t("whatHappensNext.heading")}</h2>
         <ul>
@@ -33,7 +33,7 @@ export default async function DataCorrectionsPage() {
         <p>{t.rich("howWeAct.body", { b: (c) => <strong>{c}</strong> })}</p>
 
         <h2>{t("grievanceOfficer.heading")}</h2>
-        <p>{t.rich("grievanceOfficer.body", { email: (c) => <a href="mailto:grievance@mukadma.in">{c}</a> })}</p>
+        <p>{t.rich("grievanceOfficer.body", { email: (c) => <a href="mailto:yash@mukadma.in">{c}</a> })}</p>
       </Prose>
     </MarketingShell>
   );

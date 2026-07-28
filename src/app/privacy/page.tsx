@@ -26,7 +26,7 @@ export default async function PrivacyPage() {
         <p>
           {t.rich("rightsBody", {
             corrections: (c) => <a href="/data-corrections">{c}</a>,
-            email: (c) => <a href="mailto:grievance@mukadma.in">{c}</a>,
+            email: (c) => <a href="mailto:yash@mukadma.in">{c}</a>,
           })}
         </p>
 

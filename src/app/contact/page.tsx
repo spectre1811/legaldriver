@@ -13,13 +13,13 @@ export default async function ContactPage() {
           <li>
             {t.rich("support", {
               b: (c) => <strong>{c}</strong>,
-              mail: (c) => <a href="mailto:hello@mukadma.in">{c}</a>,
+              mail: (c) => <a href="mailto:yash@mukadma.in">{c}</a>,
             })}
           </li>
           <li>
             {t.rich("grievances", {
               b: (c) => <strong>{c}</strong>,
-              mail: (c) => <a href="mailto:grievance@mukadma.in">{c}</a>,
+              mail: (c) => <a href="mailto:yash@mukadma.in">{c}</a>,
               corrections: (c) => <a href="/data-corrections">{c}</a>,
             })}
           </li>
