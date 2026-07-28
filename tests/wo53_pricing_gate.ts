@@ -29,9 +29,12 @@ check("every tier carries feature keys (rendered only when public)", pricing.tie
 check("public-search link defaults to the brand search origin (search.mukadma.in)", links.publicSearch === "https://search.mukadma.in");
 check("public-search link is absolute https (external)", /^https:\/\//.test(links.publicSearch));
 
-// --- grievance officer: honest empty state until the founder appoints one ---
-check("grievance officer is unappointed by default", grievanceOfficer.name === "" && grievanceOfficer.email === "");
-check("hasGrievanceOfficer() is false while unappointed (footer shows the 'being appointed' line)", hasGrievanceOfficer() === false);
+// --- grievance officer: appointed (40d391d published Yash Maheshwari) — the gate is
+// name+email BOTH set ⇒ hasGrievanceOfficer(), else the honest "being appointed" line.
+// (Assertions updated by WO-288 gate-fix: 40d391d landed without refreshing them,
+// leaving typecheck red on main.)
+check("grievance officer is appointed with a real contact", grievanceOfficer.name.trim() !== "" && /@mukadma\.in$/.test(grievanceOfficer.email));
+check("hasGrievanceOfficer() reflects the appointment (footer shows the officer)", hasGrievanceOfficer() === true);
 
 // --- the client message catalog carries NO unconfirmed numbers while gated ---
 // layout.tsx passes getMessages() through stripGatedPricing() before shipping it to
