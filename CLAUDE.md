@@ -19,6 +19,7 @@ pack at `~/personal/legalmarketplace/plan/exec/`: **`00-OPERATING-PROTOCOL.md`**
 - **Cheapest capable model** — Sonnet by default; Opus only for schema/RLS/security/product-wide-interface (say so).
 - **No hacks** — diagnose the root cause; never disable a gate, swallow an error, or silently degrade.
 - **Deploy discipline:** `main` **auto-deploys** to Vercel via native git-integration on merge (WO-09 ✅) — do **NOT** run `vercel --prod` manually. **Ship your own PR:** push `wt/<id>` → open a PR → CI green → **self-merge** (`gh pr merge <n> --merge`, or self-apply the **`automerge`** label) → it lands on `main` + deploys. **Always self-merge — never wait for a separate reviewer/integrator** (founder rule 2026-07-05). Env/crons are on the Vercel project.
+- **UI carve-out (WO-254):** if your PR changes anything user-visible (pages, components, styles, layout, user-facing copy), do **NOT self-merge** — attach a 3-width (390/768/1440) × en/hi Playwright screenshot artifact to the PR, request founder click-through of preview-vs-reference, and stop; CI-green self-merge still applies only to PRs with **zero** user-visible change (`plan/exec/skills/ui-pipeline.md`).
 - **CI/CD runs on our SELF-HOSTED runner** (2026-07-09; `runs-on: [self-hosted, mukadma]`, an ASG in `mukadma-infra`) — zero GitHub-hosted minutes, Actions budget **$0**. Coordination (automerge/branch-guardian) is unchanged; only the compute moved to our VPC. **Do NOT switch a workflow back to `ubuntu-latest`** — the free tier is spent until Aug 1, so a hosted job silently won't start. **If CI won't start, it's the runner, not the quota:** `gh api /repos/spectre1811/legaldriver/actions/runners` (expect `mukadma-*` online) → restart via `mukadma-infra` (SSM). **Exception:** `db-tests` stays GitHub-hosted (needs Docker for `supabase start`). Runbook: `mukadma-infra/docs/gha-runner-migration-plan.md`.
 - **Parallel sessions run concurrently** — touch only your work order's files; edit only your own TRACKER/SESSION-LOG rows; flag shared-config (package.json/CI) changes first.
 
@@ -104,7 +105,7 @@ local `main`). Then `git push origin
 wt/<WO>`, **open a PR**, then **SELF-MERGE it once CI is green** — `gh pr merge <n> --merge`, or self-apply
 the **`automerge`** label (`.github/workflows/automerge.yml`) which merges to `main` (serialized) → Vercel deploys.
 **Founder rule (2026-07-05): always self-merge your own PR — never wait for a separate reviewer/integrator to
-land it.** Self-merging *through a PR* is not "touching `main`" — you still never commit/push/reset `main`
+land it.** **Exception: user-visible UI changes — see the UI carve-out (WO-254) above; those wait for founder click-through.** Self-merging *through a PR* is not "touching `main`" — you still never commit/push/reset `main`
 directly (a `pre-push` hook blocks direct/force pushes; `branch-guardian` alarms on any force-move).
 `plan/exec/integrate.sh` is only a fallback.
 **New clone/worktree, run once:** `git config core.hooksPath .githooks` (`new-wt.sh` does this for you).
