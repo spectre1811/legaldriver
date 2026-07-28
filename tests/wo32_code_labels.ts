@@ -2,7 +2,7 @@
 // Verifies expandCode over the real corpus vocabulary: self-labeled strings, the corpus-derived
 // master, disposal parsing, advocate role-as-entity, and that unknown codes stay RAW (not faked).
 import {
-  expandCaseType, expandDisposal, advocateRole, cleanPurpose, smartTitleCase, expandCode,
+  expandCaseType, expandDisposal, advocateRole, cleanPurpose, smartTitleCase, expandCode, courtDisplayName,
 } from "../src/lib/court/code-labels";
 import { CASE_TYPE_MASTER, UNRESOLVED_CASE_TYPES } from "../src/lib/court/code-labels.data";
 
@@ -84,6 +84,14 @@ ok("W2: master is contract-sourced (title-cased, not raw ALL-CAPS)",
   CASE_TYPE_MASTER.ANY["CR A"] === "Criminal Appeal" && CASE_TYPE_MASTER.DISTRICT["CC"] === "Criminal Case");
 ok("W2: no master value is a raw ALL-CAPS run (would mean the CSV leaked back in)",
   !Object.values(CASE_TYPE_MASTER.ANY).some((v) => /[A-Z]{4,}/.test(v) && v === v.toUpperCase()));
+
+// ── WO-281: practice-court name display (collapse the "X / X" HC duplicate, keep complex context) ──
+eq("courtDisplayName collapses the redundant HC duplicate",
+  courtDisplayName("High Court of Gujarat / High Court of Gujarat"), "High Court of Gujarat");
+eq("courtDisplayName keeps complex context for a district court",
+  courtDisplayName("GANDHINAGAR / Gandhinagar District"), "Gandhinagar / Gandhinagar District");
+eq("courtDisplayName title-cases a single-part name", courtDisplayName("High Court of Gujarat"), "High Court of Gujarat");
+eq("courtDisplayName is honest-empty on null/empty", courtDisplayName(null), "");
 
 console.log(failed === 0 ? "\nPASS" : `\nFAIL (${failed})`);
 process.exit(failed === 0 ? 0 : 1);

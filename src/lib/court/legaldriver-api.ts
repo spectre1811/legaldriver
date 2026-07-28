@@ -24,7 +24,13 @@ async function ldGet<T>(path: string, strict = false): Promise<T | null> {
 }
 
 export interface AdvocateCaseItem { cnr: string; side?: string; case_type?: string; status?: string; tier?: string; registration_year?: number; advocate_bar_id?: string | null }
-export interface AdvocateProfile { bar_id: string; names: string[]; case_count: number; cases: AdvocateCaseItem[]; registration_year?: number | null }
+// WO-281: a practice-court from the roster enrichment (WO-280) — one court + this advocate's case count there.
+export interface AdvocatePracticeCourt { court_id: number; name: string; tier?: string | null; cases: number }
+// WO-281: `caseload` (full-corpus PENDING/DISPOSED split — accurate even for a >limit roster, unlike the
+// windowed client count), `practice_courts` (top courts), and `hc_codes` (HC display code(s)) are the
+// WO-280 enrichment the raw /advocate/{bar_id} endpoint already returns. All optional/honest-empty: an
+// older API response or a bare-name advocate omits them → the page degrades to its prior behaviour.
+export interface AdvocateProfile { bar_id: string; names: string[]; case_count: number; cases: AdvocateCaseItem[]; registration_year?: number | null; caseload?: { pending?: number; disposed?: number } | null; practice_courts?: AdvocatePracticeCourt[] | null; hc_codes?: (string | number)[] | null }
 // bar_id is numeric (HC) or slash-form "G/NN/YYYY" (district) — keep slashes raw (:path route).
 export const getAdvocateProfile = (barId: string) => ldGet<AdvocateProfile>(`/advocate/${barId.split("/").map(encodeURIComponent).join("/")}`, true);
 

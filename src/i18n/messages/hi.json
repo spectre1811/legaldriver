@@ -2435,6 +2435,8 @@
     "otherSides": "{n} अन्य भूमिकाओं में",
     "caseTypeBreakdownTitle": "मुकदमा प्रकार विश्लेषण",
     "tierBreakdownTitle": "न्यायालय स्तर",
+    "practiceCourtsTitle": "प्रमुख न्यायालय",
+    "hcCodeLabel": "HC कोड · {code}",
     "topJudgesTitle": "सर्वाधिक बार सामना किए न्यायाधीश",
     "topJudgesHelp": "उपस्थिति के आधार पर क्रम (नमूना)।",
     "dataGapLabel": "डेटा अंतराल:",
