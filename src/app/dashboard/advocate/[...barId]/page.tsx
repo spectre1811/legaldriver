@@ -10,7 +10,7 @@ import { getAdvocateProfile, ldEnabled } from "@/lib/court/legaldriver-api";
 import { caseDetailHref } from "@/lib/court/case-links";
 import { Pagination } from "@/components/pagination";
 import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
-import { expandCaseType, advocateRole } from "@/lib/court/code-labels";
+import { expandCaseType, advocateRole, courtDisplayName } from "@/lib/court/code-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -63,9 +63,15 @@ export default async function AdvocatePage({
   const byCnr = new Map((tracked ?? []).map((m) => [m.cnr, m.id]));
 
   // ── Core aggregations ─────────────────────────────────────────────────────
-  const pending = profile.cases.filter(
+  // WO-281: prefer the full-corpus caseload split (WO-280 enrichment) over a client count over the
+  // WINDOWED `cases` array — the client count under-reports a >limit roster (the bug this WO fixes,
+  // e.g. 108 cases with only ≤500 rows windowed). Fall back to the windowed compute only when the API
+  // omits `caseload` (older response / bare-name profile), so the tiles never render blank.
+  const clientPending = profile.cases.filter(
     (c) => (c.status ?? "").toUpperCase() === "PENDING"
   ).length;
+  const pending = profile.caseload?.pending ?? clientPending;
+  const disposed = profile.caseload?.disposed ?? profile.case_count - clientPending;
 
   // Side split (petitioner vs respondent)
   const sideCounts = new Map<string, number>();
@@ -150,6 +156,10 @@ export default async function AdvocatePage({
                 {t("seniorityLabel", { year: regYear, years: seniority ?? 0 })}
               </CourtChip>
             )}
+            {/* WO-281: HC display code(s) from the roster enrichment — honest-empty for a bare-name advocate */}
+            {(profile.hc_codes ?? []).map((code) => (
+              <CourtChip key={String(code)}>{t("hcCodeLabel", { code: String(code) })}</CourtChip>
+            ))}
             {aliases.length > 0 && (
               <>
                 <span className="text-xs text-ink-faint">{t("aliasesLabel")}</span>
@@ -179,7 +189,7 @@ export default async function AdvocatePage({
         <Card>
           <div className="px-4 py-3">
             <p className="label">{t("disposed")}</p>
-            <p className="text-2xl font-semibold">{profile.case_count - pending}</p>
+            <p className="text-2xl font-semibold">{disposed}</p>
           </div>
         </Card>
         <Card>
@@ -276,6 +286,31 @@ export default async function AdvocatePage({
                       <span className="num text-xs text-ink-faint">{n}</span>
                     </li>
                   ))}
+              </ul>
+            </Card>
+          )}
+
+          {/* Practice courts — where this advocate appears most (WO-281 · WO-280 roster enrichment) */}
+          {(profile.practice_courts?.length ?? 0) > 0 && (
+            <Card>
+              <div className="border-b border-line px-5 py-4">
+                <p className="font-medium">{t("practiceCourtsTitle")}</p>
+              </div>
+              <ul className="divide-y divide-line text-sm">
+                {profile.practice_courts!.slice(0, 8).map((pc) => (
+                  <li
+                    key={pc.court_id}
+                    className="flex items-center justify-between gap-3 px-5 py-2.5"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      {pc.tier ? <Badge tone={tierTone(pc.tier)}>{pc.tier}</Badge> : null}
+                      <span className="min-w-0 truncate" title={courtDisplayName(pc.name)}>
+                        {courtDisplayName(pc.name)}
+                      </span>
+                    </span>
+                    <span className="num shrink-0 text-xs text-ink-faint">{pc.cases}</span>
+                  </li>
+                ))}
               </ul>
             </Card>
           )}

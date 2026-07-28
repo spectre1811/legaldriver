@@ -2435,6 +2435,8 @@
     "otherSides": "{n} in other roles",
     "caseTypeBreakdownTitle": "Case-type breakdown",
     "tierBreakdownTitle": "Court tier",
+    "practiceCourtsTitle": "Practice courts",
+    "hcCodeLabel": "HC code · {code}",
     "topJudgesTitle": "Most frequent judges",
     "topJudgesHelp": "Ranked by appearances (sample).",
     "dataGapLabel": "DATA GAP:",

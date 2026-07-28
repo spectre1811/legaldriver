@@ -68,6 +68,17 @@ export function smartTitleCase(s: string): string {
     .join(" ");
 }
 
+// WO-281: a practice-court `name` from the roster enrichment reads "COMPLEX / COURT"
+// (e.g. "GANDHINAGAR / Gandhinagar District"); an HC row often duplicates ("High Court of
+// Gujarat / High Court of Gujarat"). Title-case each half and collapse the redundant duplicate
+// so the display never shows the "X / X" eyesore, while keeping the complex context otherwise.
+// Display-only (never persisted / matched on).
+export function courtDisplayName(raw?: string | null): string {
+  const parts = (raw ?? "").split(" / ").map((p) => smartTitleCase(p.trim())).filter(Boolean);
+  if (parts.length === 2 && parts[0].toUpperCase() === parts[1].toUpperCase()) return parts[0];
+  return parts.join(" / ");
+}
+
 // Normalize a case-type code so punctuation/spacing variants collapse (matches gen-code-labels.mjs).
 const normCode = (c: string) => c.toUpperCase().replace(/[.\-\s]+/g, " ").trim();
 
