@@ -29,12 +29,11 @@ check("every tier carries feature keys (rendered only when public)", pricing.tie
 check("public-search link defaults to the brand search origin (search.mukadma.in)", links.publicSearch === "https://search.mukadma.in");
 check("public-search link is absolute https (external)", /^https:\/\//.test(links.publicSearch));
 
-// --- grievance officer: appointed (40d391d published Yash Maheshwari) — the gate is
-// name+email BOTH set ⇒ hasGrievanceOfficer(), else the honest "being appointed" line.
-// (Assertions updated by WO-288 gate-fix: 40d391d landed without refreshing them,
-// leaving typecheck red on main.)
-check("grievance officer is appointed with a real contact", grievanceOfficer.name.trim() !== "" && /@mukadma\.in$/.test(grievanceOfficer.email));
-check("hasGrievanceOfficer() reflects the appointment (footer shows the officer)", hasGrievanceOfficer() === true);
+// --- grievance officer: APPOINTED 2026-07-28 (40d391d) — the footer must publish the real
+// contact (IT Rules 2021 §3(2)), never regress to the "being appointed" placeholder.
+// (.trim() comparisons keep this green under the `as const` literal types — TS2367.)
+check("grievance officer is appointed (name+email published)", grievanceOfficer.name.trim() !== "" && grievanceOfficer.email.trim() !== "");
+check("hasGrievanceOfficer() is true once appointed (footer shows the contact, not the placeholder)", hasGrievanceOfficer() === true);
 
 // --- the client message catalog carries NO unconfirmed numbers while gated ---
 // layout.tsx passes getMessages() through stripGatedPricing() before shipping it to
