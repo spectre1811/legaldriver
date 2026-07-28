@@ -75,7 +75,7 @@ export default async function SettingsPage() {
       .limit(8)
       .then((r) => r.data ?? []),
   ]);
-  const mailer = getMailerReadiness();
+  const mailer = await getMailerReadiness(supabase); // WO-288: outcome-derived (tenant's own send log)
   const causeListOk = causeListAlertsSupported();
 
   const SECTIONS: { id: string; label: string; icon: IconName }[] = [

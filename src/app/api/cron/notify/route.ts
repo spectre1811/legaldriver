@@ -5,6 +5,7 @@ import { getMessagingClient, messagingConfigured } from "@/lib/services/messagin
 import { canSendWhatsApp } from "@/lib/services/messaging/consent";
 import { normalizeE164 } from "@/lib/phone";
 import { logOutboundEmail } from "@/lib/notify/log";
+import { retryPlan, MAX_SEND_ATTEMPTS } from "@/lib/notify/retry";
 import { resolveRecipientEmail } from "@/lib/notify/recipients";
 import { renderEmail, renderNotice, type RenderedEmail } from "@/lib/email/templates";
 import { appUrl, composeCaseUpdate, hearingWhenLabel, matterIdOf, type CaseUpdatePayload } from "@/lib/notify/email-render";
@@ -36,6 +37,39 @@ export async function GET(request: NextRequest) {
     .limit(200);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // WO-288 (e): second pickup — transiently-failed email rows come back for a
+  // bounded retry (attempts < MAX, due per their backoff). Fail-soft pre-migration:
+  // no `attempts` column ⇒ this select errors ⇒ empty lane (today's behavior). A
+  // NULL attempts (mid-migration shape) is excluded by the lt() filter — never
+  // crashes, never retries unbounded.
+  type Row = NonNullable<typeof due>[number] & { attempts?: number | null };
+  let retryRows: Row[] = [];
+  {
+    const { data: retriable } = await supabase
+      .from("notification")
+      .select("id, tenant_id, user_id, channel, kind, payload, attempts")
+      .eq("status", "failed")
+      .eq("channel", "email")
+      .lt("attempts", MAX_SEND_ATTEMPTS)
+      .lte("scheduled_for", nowIso)
+      .limit(100);
+    retryRows = (retriable ?? []) as Row[];
+  }
+  const rows: Row[] = [...(due ?? []), ...retryRows];
+
+  // WO-288: a row leaves the queue for good — undeliverable-by-definition (dead
+  // matter ref, stale reminder) or retries exhausted. Fail-soft pre-migration:
+  // 'dead' violates the old status check ⇒ fall back to today's 'failed' flip.
+  const flipTerminal = async (id: string) => {
+    const { error: deadErr } = await supabase
+      .from("notification")
+      .update({ status: "dead", sent_at: null })
+      .eq("id", id)
+      .in("status", ["pending", "failed"]);
+    if (deadErr)
+      await supabase.from("notification").update({ status: "failed", sent_at: null }).eq("id", id).eq("status", "pending");
+  };
+
   // WO-264 defect fix (2026-07-22, founder-hit live): notification rows can OUTLIVE
   // their matter — something hard-deletes matters without an audit trail (INBOX:
   // data-lifecycle investigation), and a reminder sent afterwards deep-links to a 404.
@@ -43,7 +77,7 @@ export async function GET(request: NextRequest) {
   // refs flip failed and never send. 290/1846 pending rows were dead on discovery day.
   const refIds = [
     ...new Set(
-      (due ?? [])
+      rows
         .filter((n) => n.channel === "email")
         .map((n) => matterIdOf((n.payload ?? {}) as Payload))
         .filter((id): id is string => !!id),
@@ -73,7 +107,7 @@ export async function GET(request: NextRequest) {
   // row the loop reaches is the subject-bearer; siblings are folded + flipped with it.
   // Dead-ref rows never join a group — a vanished matter must not ride into a roundup.
   const caseUpdateGroup = new Map<string, { id: string; payload: Payload }[]>();
-  for (const n of due ?? []) {
+  for (const n of rows) {
     if (n.channel === "email" && n.kind === "case_update" && !isDeadRef((n.payload ?? {}) as Payload)) {
       const list = caseUpdateGroup.get(n.tenant_id) ?? caseUpdateGroup.set(n.tenant_id, []).get(n.tenant_id)!;
       list.push({ id: n.id, payload: (n.payload ?? {}) as Payload });
@@ -87,7 +121,12 @@ export async function GET(request: NextRequest) {
   let stale = 0;
   let deadRefs = 0;
   let roundups = 0;
-  for (const n of due ?? []) {
+  let dead = 0;
+  // WO-288 (f): provider-outcome counters feed the email-sendpath dead-man row below.
+  let emailAttempts = 0;
+  let emailFailures = 0;
+  let lastSendError: string | null = null;
+  for (const n of rows) {
     if (handled.has(n.id)) continue; // delivered as part of a caseUpdate roundup
     const payload = (n.payload ?? {}) as Payload;
     let ok = true;
@@ -115,25 +154,17 @@ export async function GET(request: NextRequest) {
 
     if (n.channel === "email") {
       // Dead matter ref: the case this row points at no longer exists — sending would
-      // deep-link to a 404. Flip failed (undeliverable), count it.
+      // deep-link to a 404. Terminal 'dead' (undeliverable by definition, never retried).
       if (isDeadRef(payload)) {
-        await supabase
-          .from("notification")
-          .update({ status: "failed", sent_at: null })
-          .eq("id", n.id)
-          .eq("status", "pending");
+        await flipTerminal(n.id);
         deadRefs++;
         continue;
       }
 
       // Stale hearing reminder: the hearing date already passed at send time — a late
-      // reminder presented as current would be dishonest. Flip failed (undelivered), count it.
+      // reminder presented as current would be dishonest. Terminal 'dead', count it.
       if (n.kind === "hearing_reminder" && hearingWhenLabel(payload.eventDate ?? "") === null) {
-        await supabase
-          .from("notification")
-          .update({ status: "failed", sent_at: null })
-          .eq("id", n.id)
-          .eq("status", "pending");
+        await flipTerminal(n.id);
         stale++;
         continue;
       }
@@ -150,7 +181,12 @@ export async function GET(request: NextRequest) {
         if (rendered) {
           const res = await mailer.send(email, rendered.subject, rendered.html, rendered.text);
           ok = res.ok;
-          await logOutboundEmail(supabase, { tenantId: n.tenant_id, to: email, subject: rendered.subject, kind: n.kind.includes("reminder") ? "reminder" : "notice", ok: res.ok, providerId: res.id });
+          emailAttempts++;
+          if (!res.ok) {
+            emailFailures++;
+            lastSendError = res.error ?? "send failed";
+          }
+          await logOutboundEmail(supabase, { tenantId: n.tenant_id, to: email, subject: rendered.subject, kind: n.kind.includes("reminder") ? "reminder" : "notice", ok: res.ok, providerId: res.id, error: res.error });
           // Roundup: the siblings were delivered inside this email — flip them with the primary.
           if (ok && roundupComposed && group) {
             const siblingIds = group.map((g) => g.id).filter((id) => id !== n.id);
@@ -159,7 +195,7 @@ export async function GET(request: NextRequest) {
               .from("notification")
               .update({ status: "sent", sent_at: new Date().toISOString() })
               .in("id", siblingIds)
-              .eq("status", "pending");
+              .in("status", ["pending", "failed"]); // a retried sibling folds in too
             if (!sibErr) sent += siblingIds.length;
             roundups++;
           }
@@ -172,16 +208,65 @@ export async function GET(request: NextRequest) {
     }
     // in-app: nothing to deliver; flipping to sent makes it visible in the bell.
 
-    const { error: upErr } = await supabase
-      .from("notification")
-      .update({ status: ok ? "sent" : "failed", sent_at: ok ? new Date().toISOString() : null })
-      .eq("id", n.id)
-      .eq("status", "pending"); // idempotency guard
+    // Idempotency guard on every flip: only a still-queued row ('pending', or
+    // 'failed' for the retry lane) can transition — a row already flipped 'sent'
+    // can never be re-flipped, and the pickup queries above never select 'sent'/'dead'
+    // rows, so one logical notification sends at most once successfully (WO-288 e).
+    let upErr: { message: string } | null = null;
+    if (ok) {
+      ({ error: upErr } = await supabase
+        .from("notification")
+        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .eq("id", n.id)
+        .in("status", ["pending", "failed"]));
+    } else {
+      const plan = retryPlan(n.attempts);
+      if (plan.status === "dead") dead++;
+      ({ error: upErr } = await supabase
+        .from("notification")
+        .update({
+          status: plan.status,
+          attempts: plan.attempts,
+          sent_at: null,
+          ...(plan.scheduled_for ? { scheduled_for: plan.scheduled_for } : {}),
+        })
+        .eq("id", n.id)
+        .in("status", ["pending", "failed"]));
+      // Pre-migration fail-soft: no `attempts` column / no 'dead' status ⇒ today's plain flip.
+      if (upErr)
+        ({ error: upErr } = await supabase
+          .from("notification")
+          .update({ status: "failed", sent_at: null })
+          .eq("id", n.id)
+          .eq("status", "pending"));
+    }
     if (upErr || !ok) failed++;
     else sent++;
   }
 
-  return NextResponse.json({ ok: true, channel: mailer.channel, whatsapp: messagingConfigured() ? "live" : "dark", considered: due?.length ?? 0, sent, failed, skipped, stale, deadRefs, roundups });
+  // WO-288 (f): dead-man signal on the existing court_provider_health surface
+  // (settings diagnostics reads it) — every-attempted-send-failed is exactly the
+  // outage shape (2026-07-26: 403 on 100% of sends). Best-effort, like the
+  // deploy-freshness row. W2 wires a real GChat/SNS alarm; no webhook URL exists
+  // in-repo for the Vercel runtime to call, so this surface is the honest interim.
+  if (emailAttempts > 0) {
+    try {
+      await supabase.from("court_provider_health").upsert(
+        {
+          provider: "email-sendpath",
+          ok: emailFailures < emailAttempts,
+          last_error: emailFailures === emailAttempts ? (lastSendError ?? "all sends failed").slice(0, 200) : null,
+          ...(emailFailures < emailAttempts ? { last_ok_at: new Date().toISOString() } : {}),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "provider" },
+      );
+    } catch {
+      /* the response counters below still tell the story */
+    }
+  }
+
+  return NextResponse.json({ ok: true, channel: mailer.channel, whatsapp: messagingConfigured() ? "live" : "dark", considered: rows.length, retried: retryRows.length, sent, failed, dead, skipped, stale, deadRefs, roundups });
 }
 
 type DigestCase = { title?: string; cnr?: string; itemNo?: string; type?: string; judge?: string };

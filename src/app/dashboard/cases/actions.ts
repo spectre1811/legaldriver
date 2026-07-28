@@ -257,7 +257,7 @@ export async function trackCaseByCnr(cnr: string): Promise<{ ok: boolean; messag
       );
       if (rendered) {
         const res = await getMailer().send(user.email, rendered.subject, rendered.html, rendered.text);
-        await logOutboundEmail(supabase, { tenantId, to: user.email, subject: rendered.subject, kind: "notice", matterId, ok: res.ok, providerId: res.id });
+        await logOutboundEmail(supabase, { tenantId, to: user.email, subject: rendered.subject, kind: "notice", matterId, ok: res.ok, providerId: res.id, error: res.error });
       }
     }
   } catch { /* confirmation is best-effort — tracking already succeeded */ }

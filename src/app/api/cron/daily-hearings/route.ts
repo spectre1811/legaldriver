@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     if (!email) { failed++; continue; }
 
     const res = await mailer.send(email, rendered.subject, rendered.html, rendered.text);
-    await logOutboundEmail(supabase, { tenantId, to: email, subject: rendered.subject, kind: "reminder", ok: res.ok, providerId: res.id });
+    await logOutboundEmail(supabase, { tenantId, to: email, subject: rendered.subject, kind: "reminder", ok: res.ok, providerId: res.id, error: res.error });
     if (!res.ok) { failed++; continue; }
 
     await supabase.from("notification").insert({

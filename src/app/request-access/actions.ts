@@ -1,7 +1,8 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getMailer } from "@/lib/notify/mailer";
+import { getMailer, type SendResult } from "@/lib/notify/mailer";
+import { logOutboundEmail } from "@/lib/notify/log";
 import { isValidEmail, normalizeEmail } from "@/lib/access/validate";
 
 // WO-272 — invite-only intake. Mukadma no longer lets the public self-serve an
@@ -62,8 +63,14 @@ export async function requestAccess(_prev: RequestAccessState, formData: FormDat
       .filter((l): l is string => Boolean(l));
     const html = `<h2>New access request</h2>${lines.map((l) => `<p>${esc(l)}</p>`).join("")}<p>Approve or reject in the admin console.</p>`;
     const text = `New access request\n\n${lines.join("\n")}\n\nApprove or reject in the admin console.`;
-    // A failed notification must never fail the request (the row is stored).
-    await getMailer().send(notifyTo(), `New access request: ${email}`, html, text).catch(() => {});
+    // A failed notification must never fail the request (the row is stored) — but it
+    // must never be SILENT either (WO-288 a: the old empty catch swallowed the
+    // founder-notify outage whole). Log the outcome; tenantId null = system send.
+    const subject = `New access request: ${email}`;
+    const res = await getMailer()
+      .send(notifyTo(), subject, html, text)
+      .catch((e): SendResult => ({ ok: false, error: e instanceof Error ? e.message : "send threw" }));
+    await logOutboundEmail(admin, { tenantId: null, to: notifyTo(), subject, kind: "notice", ok: res.ok, providerId: res.id, error: res.error });
   }
 
   return { ok: true, email };
