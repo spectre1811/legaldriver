@@ -60,8 +60,16 @@ jobs:
           if [ "${{ github.event_name }}" != "pull_request" ]; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"; echo "full run (${{ github.event_name }})"; exit 0
           fi
-          base=$(git merge-base origin/${{ github.base_ref }} HEAD)
-          changed=$(git diff --name-only "$base" HEAD)
+          # actions/checkout gives a PR the MERGE ref, so HEAD^1 is the base tip and
+          # `HEAD^1..HEAD` is exactly this PR's diff. FAIL SAFE: if that can't be
+          # resolved (checkout config changed, shallow clone), run the full suite.
+          base=$(git rev-parse --verify --quiet HEAD^1 || true)
+          changed=$(git diff --name-only "$base" HEAD 2>/dev/null || true)
+          if [ -z "$base" ] || [ -z "$changed" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            echo "→ could not resolve the PR diff (base='$base') — running the full suite rather than assuming safe"
+            exit 0
+          fi
           echo "$changed" | sed 's/^/  /'
           if echo "$changed" | grep -qE '^(supabase/|tests/|scripts/|src/lib/db/|src/lib/court/|src/lib/supabase/|package(-lock)?\.json|\.github/workflows/db-tests\.yml)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
