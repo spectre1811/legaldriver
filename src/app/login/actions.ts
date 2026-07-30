@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { mapAuthError, type AuthErrorCode } from "@/lib/auth/errors";
+import { revokeAllSessions, PASSWORD_CHANGED_DESTINATION } from "@/lib/auth/guard";
 import { callbackUrl, loginUrl, postAuthPath, requestOrigin } from "@/lib/auth/redirects";
 // `track` (the analytics seam) is imported as `trackEvent` — a local `track` form field (a CNR
 // deep-link, WO-50) shadows the name in these actions. WO-184 user-lifecycle instrumentation.
@@ -27,27 +28,13 @@ export type AuthFormState = {
 const base = () => requestOrigin(headers());
 const field = (formData: FormData, name: string) => String(formData.get(name) ?? "").trim();
 
-// GoTrue deliberately answers "Invalid login credentials" for BOTH a wrong
-// password and a missing account. The WO wants distinct, human copy — ask the
-// admin users endpoint (service role, server-only, exact-match check). Fails
-// soft: null = cannot tell (no key / network) → generic combined copy.
-async function emailHasAccount(email: string): Promise<boolean | null> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  try {
-    const res = await fetch(
-      `${url}/auth/v1/admin/users?per_page=50&filter=${encodeURIComponent(email)}`,
-      { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: "no-store" },
-    );
-    if (!res.ok) return null;
-    const body = (await res.json()) as { users?: { email?: string }[] };
-    const target = email.toLowerCase();
-    return Boolean(body.users?.some((u) => u.email?.toLowerCase() === target));
-  } catch {
-    return null;
-  }
-}
+// WO-316 — the user-enumeration oracle is GONE. GoTrue deliberately answers the
+// same "Invalid login credentials" for a wrong password and for an unknown email;
+// WO-50 un-blurred that by asking the service-role admin users endpoint, which
+// handed anyone an unauthenticated, unthrottled "is this person a customer?" probe
+// — and Mukadma is invite-only, so the customer list IS the secret. One code,
+// `invalidCredentials`, now covers both, and nothing on this path can tell them
+// apart. Do not reintroduce a distinguishing lookup here.
 
 export async function signIn(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = field(formData, "email");
@@ -60,11 +47,6 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
   if (error) {
     const code = mapAuthError(error, "signin");
     if (code === "unconfirmed") return { error: "unconfirmed", email };
-    if (code === "invalidCredentials") {
-      const exists = await emailHasAccount(email);
-      if (exists === true) return { error: "wrongPassword" };
-      if (exists === false) return { error: "noAccount" };
-    }
     return { error: code };
   }
   if (data.user) trackEvent("login", data.user.id, { method: "password" });
@@ -116,8 +98,12 @@ export async function updatePassword(_prev: AuthFormState, formData: FormData): 
   if (!user) return { error: "sessionExpired" };
   const { error } = await supabase.auth.updateUser({ password });
   if (error) return { error: mapAuthError(error, "update") };
+  // WO-316 — a password change REVOKES every session, this one included. Before
+  // this, changing a password evicted nobody: a stolen cookie survived the very
+  // action taken to kill it. See revokeAllSessions for why the scope is global.
+  await revokeAllSessions(supabase);
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect(PASSWORD_CHANGED_DESTINATION);
 }
 
 // "Continue with Google". Plain form action: success leaves the site for

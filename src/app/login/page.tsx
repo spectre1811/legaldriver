@@ -13,7 +13,8 @@ const TRUST: [IconName, string][] = [
 ];
 
 // WO-50 — method-first auth, two explicit modes. Deep-link params:
-//   ?mode=signup|forgot  ?next=/path  ?track=<CNR>  ?error=<code>  ?notice=confirmEmail
+//   ?mode=signup|forgot  ?next=/path  ?track=<CNR>  ?error=<code>
+//   ?notice=confirmEmail|passwordChanged
 export default async function LoginPage({
   searchParams,
 }: {
@@ -32,7 +33,16 @@ export default async function LoginPage({
       ? searchParams.error
       : "unknown"
     : undefined;
-  const notice = searchParams.notice === "confirmEmail" ? ("confirmEmail" as const) : wantsSignup ? ("inviteOnly" as const) : undefined;
+  // WO-316 — ?notice=passwordChanged is set by the password-update action, which
+  // globally revokes every session (this one included) and lands here.
+  const notice =
+    searchParams.notice === "confirmEmail"
+      ? ("confirmEmail" as const)
+      : searchParams.notice === "passwordChanged"
+        ? ("passwordChanged" as const)
+        : wantsSignup
+          ? ("inviteOnly" as const)
+          : undefined;
   const next = sanitizeNext(searchParams.next) ?? undefined;
   const track = sanitizeTrack(searchParams.track) ?? undefined;
 

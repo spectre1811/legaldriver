@@ -43,6 +43,7 @@
   "shell": {
     "workspace": "Workspace",
     "signOut": "Sign out",
+    "signOutEverywhere": "Sign out on all devices",
     "home": "Home",
     "nav": "Navigation",
     "openNav": "Open menu",
@@ -777,7 +778,8 @@
       "hint": "If this keeps happening, request a fresh link or contact support."
     },
     "notice": {
-      "confirmEmail": "Please confirm your email first — the link is in your inbox."
+      "confirmEmail": "Please confirm your email first — the link is in your inbox.",
+      "passwordChanged": "Your password has been changed and every signed-in device was signed out. Sign in again with your new password."
     },
     "invite": {
       "prompt": "New to Mukadma?",
@@ -786,8 +788,6 @@
       "noticeBody": "We're onboarding advocates by invitation right now. Leave your details and we'll be in touch."
     },
     "errors": {
-      "wrongPassword": "That password doesn't match this account. Try again, or reset it below.",
-      "noAccount": "No account exists for this email yet.",
       "invalidCredentials": "Email or password is incorrect — or the account doesn't exist yet.",
       "unconfirmed": "This email hasn't been confirmed yet — check your inbox for the link.",
       "accountExists": "An account with this email already exists.",

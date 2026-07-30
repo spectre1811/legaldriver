@@ -98,6 +98,7 @@ const OFFLINE = [
   "wo264_notify",
   "wo272_invite_only",
   "wo288_email_sendpath",
+  "wo316_session_security",
   "profile_error_states",
 ];
 

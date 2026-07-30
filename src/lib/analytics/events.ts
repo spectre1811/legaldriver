@@ -9,7 +9,7 @@ export const ALLOWED_PROPS = {
   signup: ["source"], // source = acquisition channel bucket (see sanitizeSource) — NEVER a URL/referrer
   registration_completed: ["method"], // email | oauth — account fully created / email verified
   login: ["method"], // password | oauth | otp
-  logout: [],
+  logout: ["scope"], // local | global — WO-316: how often "sign out everywhere" is actually used
   // Activation funnel
   onboarding_completed: [],
   case_added: ["source", "isNew"], // source = provider (legaldriver|mock|…); isNew = "true"|"false"
