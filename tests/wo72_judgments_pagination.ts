@@ -1,7 +1,10 @@
-// WO-72 — Judgments corpus search pagination. Offline, no secrets (Athena SQL itself is
-// live-verified on deploy). Run: npx tsx tests/wo72_judgments_pagination.ts
-// Locks the honesty invariant: the page slice, the count, and the JS de-dupe all collapse
-// on the SAME key, so the numbered pager's "of N" agrees with what a page actually shows.
+// WO-72 — Judgments corpus search. Offline, no secrets. Run: npx tsx tests/wo72_judgments_pagination.ts
+//
+// The corpus-athena.ts pure-function assertions below (dedup key parallelism, dedupeJudgments)
+// still hold — that module is untouched (it still backs the judgment reader's caseDetailByCnr
+// enrichment + other consumers). WO-289 retired ONLY the Judgments LIST page's use of Athena
+// (searchJudgments/countJudgments/numbered pagination) in favor of `/search/order-text` BM25 (this
+// WO's Athena-zero render-test requirement) — the page.tsx block below asserts that migration.
 import { readFileSync } from "node:fs";
 import {
   dedupeJudgments,
@@ -58,17 +61,17 @@ function row(o: Partial<JudgmentRow>): JudgmentRow {
   ok("countJudgments counts DISTINCT on the same key", /count\(\*\) n FROM \(\s*SELECT DISTINCT \$\{DEDUP_KEY_SQL_COLS/.test(corpus));
 }
 
-// ── page.tsx: numbered <Pagination> wired, honest total, no silent "100+" ──
+// ── page.tsx: WO-289 · Athena retired from the render path, BM25 order-text is the data source ──
 {
   const page = src("src/app/dashboard/search/judgments/page.tsx");
-  ok("page fetches the honest total via countJudgments", /countJudgments\(filter\)/.test(page));
-  ok("page requests only this page's slice (per-limit + offset)", /limit: per, offset:/.test(page));
-  ok("page renders the shared <Pagination> with the real total", /<Pagination page=\{safePage\} perPage=\{per\} total=\{total\} \/>/.test(page));
-  ok("page clamps an out-of-range ?page into range", /Math\.min\(page, totalPages\)/.test(page));
-  ok("old silent 100+ truncation removed", !/rows\.length === 100/.test(page));
-  ok("count header shows the real total, not rows.length", /t\("results", \{ count: total \}\)/.test(page));
-  // Existing dedupe/react-key contract from WO-42 must survive (row key still index-suffixed).
-  ok("row key still index-suffixed", /<tr key=\{`\$\{r\.cnr \?\? r\.title \?\? "row"\}-\$\{i\}`\}/.test(page));
+  ok("page does NOT import corpus-athena (zero Athena in the render path)", !/from "@\/lib\/court\/corpus-athena"/.test(page));
+  ok("page does NOT call searchJudgments/countJudgments", !/searchJudgments\(|countJudgments\(/.test(page));
+  ok("page fetches via the keyed BM25 order-text search", /searchOrderText\(/.test(page));
+  ok("page is gated on ldEnabled(), not corpusEnabled()", /ldEnabled\(\)/.test(page) && !/corpusEnabled\(/.test(page));
+  ok("a search failure renders an honest error state (never a silent empty)", /searchErrorTitle/.test(page) && /error/.test(page));
+  ok("the tenant matter read is bounded (WO-289: was unbounded)", /\.limit\(\d+\)/.test(page));
+  // Row key stays collision-proof (cnr + index) — the WO-42 contract, re-asserted against the new page.
+  ok("row key is cnr + index (collision-proof)", /key=\{`\$\{r\.cnr\}-\$\{i\}`\}/.test(page));
 }
 
 // ── i18n: pager + count render bilingually with NO new keys ──

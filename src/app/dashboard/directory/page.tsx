@@ -33,12 +33,29 @@ export default async function DirectoryPage({
   const cnYear = (searchParams.cy ?? "").trim();
   const cnActive = Boolean(cnNumber && cnYear);
   const enabled = ldEnabled();
-  const cnResults = enabled && cnActive
-    ? await searchByCaseNumber(cnType, cnNumber, cnYear).catch(() => [])
-    : [];
-  const [advocates, judges, parties, stats] = enabled && q.length >= 2
-    ? await Promise.all([searchAdvocates(q).catch(() => []), searchJudges(q).catch(() => []), searchParties(q).catch(() => []), getStats().catch(() => null)])
-    : [[], [], [], enabled ? await getStats().catch(() => null) : null];
+
+  // WO-289: searchAdvocates/searchJudges/searchParties/searchByCaseNumber are now STRICT (they
+  // throw on a 503/timeout/network failure instead of degrading to []) — safeSearch() catches that
+  // per-section so ONE heavy query can't blank the whole page, while still telling the difference
+  // between "genuinely zero results" and "the search is unavailable right now" (never a lying empty).
+  // `active=false` short-circuits with no network call at all (mirrors the old ternary gating).
+  async function safeSearch<T>(active: boolean, fn: () => Promise<T[]>): Promise<{ data: T[]; error: boolean }> {
+    if (!active) return { data: [], error: false };
+    try { return { data: await fn(), error: false }; } catch { return { data: [], error: true }; }
+  }
+
+  const qActive = enabled && q.length >= 2;
+  const [cnSafe, advSafe, judSafe, partySafe, stats] = await Promise.all([
+    safeSearch(enabled && cnActive, () => searchByCaseNumber(cnType, cnNumber, cnYear)),
+    safeSearch(qActive, () => searchAdvocates(q)),
+    safeSearch(qActive, () => searchJudges(q)),
+    safeSearch(qActive, () => searchParties(q)),
+    enabled ? getStats().catch(() => null) : Promise.resolve(null),
+  ]);
+  const cnResults = cnSafe.data;
+  const advocates = advSafe.data;
+  const judges = judSafe.data;
+  const parties = partySafe.data;
 
   const coverage = stats
     ? t("coverage", {
@@ -127,6 +144,8 @@ export default async function DirectoryPage({
                     </li>
                   ))}
                 </ul>
+              ) : cnSafe.error ? (
+                <EmptyState icon="alert" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
               ) : <EmptyState icon="search" title={t("caseNumber.noResults")} body={t("caseNumber.noResultsBody")} />}
             </div>
           )}
@@ -159,6 +178,8 @@ export default async function DirectoryPage({
                     );
                   })}
                 </ul>
+              ) : advSafe.error ? (
+                <EmptyState icon="alert" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
               ) : <EmptyState icon="scale" title={t("noAdvocates")} />}
             </Card>
 
@@ -173,6 +194,8 @@ export default async function DirectoryPage({
                     </li>
                   ))}
                 </ul>
+              ) : judSafe.error ? (
+                <EmptyState icon="alert" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
               ) : <EmptyState icon="scale" title={t("noJudges")} />}
             </Card>
           </div>
@@ -195,6 +218,8 @@ export default async function DirectoryPage({
                   </li>
                 ))}
               </ul>
+            ) : partySafe.error ? (
+              <EmptyState icon="alert" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
             ) : <EmptyState icon="search" title={t("noParties")} body={t("noPartiesBody")} />}
           </Card>
         </>

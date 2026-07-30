@@ -16,7 +16,11 @@ const DEFAULT_TTL_MS = Number(process.env.COURT_CACHE_TTL_MS ?? 1000 * 60 * 60 *
 
 type Admin = ReturnType<typeof createAdminClient>;
 
-async function markHealth(admin: Admin, provider: string, ok: boolean, err?: unknown) {
+// Exported (WO-289): the console-search health signal (legaldriver-api.ts) writes to the SAME
+// `court_provider_health` table/surface via this function, so a search-fetch outage shows up on
+// the settings/diagnostics page alongside the case-fetch health it already tracked — one health
+// surface, not a second invisible one.
+export async function markHealth(admin: Admin, provider: string, ok: boolean, err?: unknown) {
   // No PII in logs/state: store only a short error string, never response bodies.
   const last_error = ok ? null : String(err instanceof Error ? err.message : err ?? "error").slice(0, 200);
   await admin
