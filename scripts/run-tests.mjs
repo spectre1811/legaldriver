@@ -62,6 +62,7 @@ const OFFLINE = [
   "wo35_provider_signal",
   "wo39_paginate",
   "wo41_migration_guard",
+  "wo310_tenancy_guard",
   "wo42_qa_fixes",
   "wo42_bar_number",
   "wo61_enrolment_validation",

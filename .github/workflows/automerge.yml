@@ -26,13 +26,21 @@ name: automerge
 # `schedule` is unrelated to the Vercel Hobby "≤1 cron/day" limit (vercel.json crons).
 # Also flips this job off `ubuntu-latest` → the self-hosted `mukadma` runner (the
 # documented standard; hosted minutes are spent till Aug 1 so a hosted job silently
-# won't start). CI green gates only the `build` check, matching prior behaviour —
-# DB Tests / E2E / QA Sweep do NOT block automerge here.
+# won't start).
+#
+# WO-310 W1 (2026-07-30) — REQUIRED CHECKS. This previously gated on the `build` check
+# ALONE and said so out loud: "DB Tests / E2E / QA Sweep do NOT block automerge here."
+# That meant a PR which broke tenant isolation merged green. Tenancy is OPERATING §4
+# always-high, so `db-tests` is now required alongside `build`, and REQUIRED means
+# PRESENT-AND-SUCCESSFUL: a missing check is not green. db-tests.yml therefore reports
+# on every PR (it self-skips the expensive ephemeral stack when no DB-surface file
+# changed) so this can never deadlock on a check that never arrives.
+# E2E / QA Sweep remain advisory.
 
 on:
-  # Any CI completion → reconcile every labelled PR (not just this run's PR).
+  # Any required-check completion → reconcile every labelled PR (not just this run's).
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["CI", "DB Tests"]
     types: [completed]
   # The moment the label is applied.
   pull_request_target:
@@ -68,6 +76,32 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
 
+            // WO-310 W1 · DB-SURFACE REGEX — MUST STAY BYTE-IDENTICAL to the `grep -E`
+            // pattern in .github/workflows/db-tests.yml (step "Does this change touch the
+            // DB surface?"). `tests/wo310_tenancy_guard.ts` fails CI if the two drift.
+            const DB_SURFACE_RE = /^(supabase\/|tests\/|scripts\/|src\/lib\/db\/|src\/lib\/court\/|src\/lib\/supabase\/|package(-lock)?\.json|\.github\/workflows\/db-tests\.yml)/;
+
+            // The checks a PR MUST clear before it may land. `match` is a substring test
+            // on the check-run name (lowercased); `when` decides if it applies to this PR.
+            //   build    → CI's `build` job: lint, typecheck, next build, and the offline
+            //              suite — which includes the WO-310 migration/tenancy schema
+            //              guard, so a table that forgets tenancy is refused on EVERY PR.
+            //   db-tests → DB Tests' `db-tests` job: the runtime RLS/tenancy proof on an
+            //              ephemeral `supabase start` DB across every tenant-scoped table.
+            //              Required ONLY for PRs that touch the DB surface — that job is
+            //              the one workflow still on a GitHub-hosted runner (it needs
+            //              Docker), and hosted minutes are metered and have run out
+            //              before. Requiring it on every PR would hand a billing outage
+            //              the power to freeze the entire fleet's merge queue; scoping it
+            //              to DB-touching PRs means a quota failure stalls exactly the
+            //              PRs that must not merge unproven, and nothing else.
+            // Anything not listed here (E2E, QA Sweep) stays advisory. A required check
+            // that is ABSENT blocks — never assume-green.
+            const REQUIRED = [
+              { match: 'build',    label: 'CI / build',           applies: () => true },
+              { match: 'db-tests', label: 'DB Tests / db-tests',  applies: (files) => files.some(f => DB_SURFACE_RE.test(f)) },
+            ];
+
             // Level-triggered: consider EVERY open PR, regardless of what fired us.
             const all = await github.paginate(github.rest.pulls.list, {
               owner, repo, state: 'open', per_page: 100,
@@ -88,15 +122,22 @@ jobs:
               if (pr.state !== 'open' || pr.draft) { core.info(`PR #${number}: not an open non-draft — skip`); continue; }
               if (!pr.labels.map(l => l.name).includes('automerge')) { core.info(`PR #${number}: label removed — skip`); continue; }
 
-              // Green = all checks on the head SHA concluded success. Prefer the
-              // `build` check (our CI job) so unrelated neutral/skipped checks from
-              // other workflows (DB Tests / E2E / QA Sweep) don't hold a PR hostage.
+              // Green = EVERY required check on the head SHA is present and succeeded.
+              // Non-required checks (E2E, QA Sweep) are ignored entirely.
               const { data: cs } = await github.rest.checks.listForRef({ owner, repo, ref: pr.head.sha });
               const runs = cs.check_runs.filter(c => c.name !== 'merge'); // ignore our own job if ever listed
-              const build = runs.filter(c => (c.name || '').toLowerCase().includes('build'));
-              const relevant = build.length ? build : runs;
-              const green = relevant.length > 0 && relevant.every(c => c.conclusion === 'success');
-              if (!green) { core.info(`PR #${number}: checks not all green yet — skip this pass (will reconcile next trigger)`); continue; }
+              const files = (await github.paginate(github.rest.pulls.listFiles, {
+                owner, repo, pull_number: number, per_page: 100,
+              })).map(f => f.filename);
+              const blockers = [];
+              for (const req of REQUIRED) {
+                if (!req.applies(files)) { core.info(`PR #${number}: ${req.label} not applicable (no DB-surface file changed)`); continue; }
+                const hits = runs.filter(c => (c.name || '').toLowerCase().includes(req.match));
+                if (!hits.length) { blockers.push(`${req.label}: not reported yet`); continue; }
+                const bad = hits.filter(c => c.conclusion !== 'success');
+                if (bad.length) blockers.push(`${req.label}: ${bad.map(c => c.conclusion ?? c.status).join(', ')}`);
+              }
+              if (blockers.length) { core.info(`PR #${number}: required checks not green — ${blockers.join(' | ')} — skip this pass (will reconcile next trigger)`); continue; }
 
               if (pr.mergeable === false) { core.warning(`PR #${number}: not mergeable (conflicts) — bounce to author`); continue; }
               // pr.mergeable may be null while GitHub recomputes (e.g. right after a

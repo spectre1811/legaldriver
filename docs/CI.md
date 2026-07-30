@@ -7,8 +7,8 @@ What runs on every PR, what's dormant, and how to activate the rest.
 | Workflow | File | Gates a PR? | What it does |
 |---|---|---|---|
 | **CI** | `.github/workflows/ci.yml` | ✅ yes (`build` check) | `npm ci` → `lint` → `typecheck` → `build` → **secret-free test suite** (`node scripts/run-tests.mjs offline`). |
-| **DB Tests** | `.github/workflows/db-tests.yml` | advisory (post-merge) | DB/RLS integration tests against an **ephemeral local Supabase** (`supabase start`) spun up fresh on the runner — no secret, no remote DB. Runs on push to `main` + on demand (`workflow_dispatch`) — **not** on `pull_request` (see below). Separate workflow so it never feeds the automerge queue. |
-| automerge | `.github/workflows/automerge.yml` | — | Label-gated merge queue (unchanged by WO-11). |
+| **DB Tests** | `.github/workflows/db-tests.yml` | ✅ yes (`db-tests` check) — **WO-310** | DB/RLS integration tests against an **ephemeral local Supabase** (`supabase start`) spun up fresh on the runner — no secret, no remote DB. Runs on `pull_request` + push to `main` + on demand. The job always reports; it only spins the stack up when the PR touches the DB surface (see below). |
+| automerge | `.github/workflows/automerge.yml` | — | Label-gated merge queue. Requires `build` always, and `db-tests` on DB-surface PRs (WO-310). |
 
 ## The test suite (`scripts/run-tests.mjs`)
 
@@ -82,8 +82,29 @@ node scripts/run-tests.mjs db
 supabase stop
 ```
 
-Promote the DB Tests check to required via branch protection once you want it to gate merges
-(today it runs on `push:[main]` + `workflow_dispatch`, advisory).
+### WO-310 · DB Tests is a REQUIRED check (2026-07-30)
+
+It used to be advisory, and `automerge.yml` said so out loud — so a PR that broke tenant
+isolation merged green. Now:
+
+- `db-tests.yml` also triggers on `pull_request`, and `automerge.yml` lists `db-tests`
+  alongside `build` in its `REQUIRED` array. **Required means present-and-successful** — a
+  check that never reported is not green.
+- The job cannot use the self-hosted runner (`supabase start` needs Docker), so it burns
+  metered GitHub-hosted minutes. It therefore **always reports** but only does the
+  expensive work when the PR touches the DB surface — `supabase/`, `tests/`, `scripts/`,
+  `src/lib/{db,court,supabase}/`, `package*.json`, or the workflow itself. Anything else
+  finishes in ~15s. RLS policies live only in `supabase/migrations/**`, so nothing outside
+  that list can alter one.
+- Symmetrically, automerge only *requires* `db-tests` on DB-surface PRs, so a hosted-minutes
+  outage stalls exactly the PRs that must not merge unproven — not the whole fleet. The path
+  pattern is duplicated (shell ERE + JS regex) and `tests/wo310_tenancy_guard.ts` fails CI if
+  the two ever drift.
+- `tests/rls_isolation.ts` enumerates its table list **from the migrations at test time**
+  (45 tenant-scoped tables today; it was a hand-written 12), so a new table is covered the
+  moment its migration lands. `scripts/check-migrations.mjs` enforces the static half on
+  every PR via the offline suite: tenant_id + RLS + a readable policy on every new table,
+  no blanket-`true` write policy, no ungated `security definer` function.
 
 ## Running tests locally
 
