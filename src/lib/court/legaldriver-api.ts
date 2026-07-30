@@ -27,6 +27,33 @@ async function ldGet<T>(path: string, strict = false): Promise<T | null> {
   }
 }
 
+// WO-289 observability: a console-search failure writes to the SAME `court_provider_health` table
+// the case-fetch gateway already uses (settings/diagnostics page) — tagged distinctly ("legaldriver-
+// search") so a search-engine outage shows up there instead of being invisible until a user
+// complains. Fire-and-forget: a health-write failure must never mask the real error or add latency
+// to the throw the caller is already handling.
+function markSearchHealth(err: unknown): void {
+  void (async () => {
+    try {
+      const [{ createAdminClient }, { markHealth }] = await Promise.all([
+        import("@/lib/supabase/admin"),
+        import("./gateway"),
+      ]);
+      await markHealth(createAdminClient(), "legaldriver-search", false, err);
+    } catch { /* best-effort only */ }
+  })();
+}
+
+// Strict ldGet for the console search surfaces, +health signal on failure.
+async function ldGetSearch<T>(path: string): Promise<T | null> {
+  try {
+    return await ldGet<T>(path, true);
+  } catch (e) {
+    markSearchHealth(e);
+    throw e;
+  }
+}
+
 export interface AdvocateCaseItem { cnr: string; side?: string; case_type?: string; status?: string; tier?: string; registration_year?: number; advocate_bar_id?: string | null }
 // WO-281: a practice-court from the roster enrichment (WO-280) — one court + this advocate's case count there.
 export interface AdvocatePracticeCourt { court_id: number; name: string; tier?: string | null; cases: number }
@@ -50,20 +77,20 @@ export const getJudge = (judgeId: string) => ldGet<JudgeProfile>(`/judge/${encod
 // catch locally below, so this doesn't change their contract.
 export interface AdvocateSearchResult { name_raw: string; bar_id: string | null; cases: number }
 export async function searchAdvocates(name: string): Promise<AdvocateSearchResult[]> {
-  const d = await ldGet<{ results?: AdvocateSearchResult[] }>(`/search/advocate?name=${encodeURIComponent(name)}`, true);
+  const d = await ldGetSearch<{ results?: AdvocateSearchResult[] }>(`/search/advocate?name=${encodeURIComponent(name)}`);
   return (d?.results ?? []).filter((r) => (r.name_raw ?? "").trim().length > 2);
 }
 
 // /search/party — fuzzy litigant search → the cases that party appears in.
 export interface PartyCaseResult { cnr: string; side?: string; name: string; case_type?: string; tier?: string }
 export async function searchParties(name: string): Promise<PartyCaseResult[]> {
-  const d = await ldGet<{ results?: PartyCaseResult[] }>(`/search/party?name=${encodeURIComponent(name)}`, true);
+  const d = await ldGetSearch<{ results?: PartyCaseResult[] }>(`/search/party?name=${encodeURIComponent(name)}`);
   return (d?.results ?? []).filter((r) => (r.name ?? "").trim().length > 1 && r.name !== "XXXXXXX");
 }
 
 // /search/case-number — find a case by registration type/number/year (alt to CNR).
 export async function searchByCaseNumber(type: string, number: string, year: string): Promise<PartyCaseResult[]> {
-  const d = await ldGet<{ results?: PartyCaseResult[] }>(`/search/case-number?type=${encodeURIComponent(type)}&number=${encodeURIComponent(number)}&year=${encodeURIComponent(year)}`, true);
+  const d = await ldGetSearch<{ results?: PartyCaseResult[] }>(`/search/case-number?type=${encodeURIComponent(type)}&number=${encodeURIComponent(number)}&year=${encodeURIComponent(year)}`);
   return d?.results ?? [];
 }
 
@@ -75,7 +102,7 @@ export const getStats = () => ldGet<CorpusStats>("/stats");
 
 export interface JudgeSearchResult { judge_id: string; name_raw: string; cases: number }
 export async function searchJudges(name: string): Promise<JudgeSearchResult[]> {
-  const d = await ldGet<{ results?: JudgeSearchResult[] }>(`/judges?name=${encodeURIComponent(name)}`, true);
+  const d = await ldGetSearch<{ results?: JudgeSearchResult[] }>(`/judges?name=${encodeURIComponent(name)}`);
   return d?.results ?? [];
 }
 
@@ -90,7 +117,7 @@ export interface OrderTextHit {
   snippet?: string | null; score?: number | null; match_kind?: string | null;
 }
 export async function searchOrderText(q: string, limit = 25): Promise<OrderTextHit[]> {
-  const d = await ldGet<{ results?: OrderTextHit[] }>(`/search/order-text?q=${encodeURIComponent(q)}&limit=${limit}`, true);
+  const d = await ldGetSearch<{ results?: OrderTextHit[] }>(`/search/order-text?q=${encodeURIComponent(q)}&limit=${limit}`);
   return (d?.results ?? []).filter((r) => !!r.cnr);
 }
 
