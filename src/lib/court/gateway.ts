@@ -110,16 +110,6 @@ export async function liveRefreshCase(cnr: string): Promise<CaseFetch> {
   }
 }
 
-// Refresh many CNRs through the cache (used by the scheduled refresh + worker).
-export async function refreshCasesCached(cnrs: string[]): Promise<NormalizedCase[]> {
-  const out: NormalizedCase[] = [];
-  for (const cnr of cnrs.slice(0, 50)) {
-    const r = await getCaseCached(cnr, { force: true });
-    if (r.case) out.push(r.case);
-  }
-  return out;
-}
-
 // Provider-health snapshot for the settings/diagnostics surface.
 export async function getProviderHealth() {
   const admin = createAdminClient();
