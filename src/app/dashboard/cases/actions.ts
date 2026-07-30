@@ -543,3 +543,23 @@ export async function refreshCase(matterId: string): Promise<ActionResult> {
   revalidatePath("/dashboard/calendar");
   return { ok: true, message: "Refreshed from the court record." };
 }
+
+// WO-289 · "Check for update" on the read-only CNR preview (not-yet-tracked case). Mirrors
+// refreshCase's live-refetch semantics but keyed by CNR alone — there's no tenant matter row yet
+// to update (court records are a shared, public cache; see gateway.ts), so this is just an authed
+// gate + liveRefreshCase + a page re-render. Ports peshi's Provenance/RefreshButton pattern (an
+// honest "last updated {ts} + Check for update" on every case surface, tracked or not).
+export async function refreshCasePreview(cnr: string): Promise<ActionResult> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Not signed in." };
+
+  const fetched = await liveRefreshCase(cnr);
+  if (!fetched.case) return { ok: false, message: "Couldn't fetch the court record right now, and there's no synced copy to show yet." };
+  if (fetched.stale) {
+    // Reached the source but it returned no fresh record — tell the truth, don't claim "Updated".
+    return { ok: false, message: "Couldn't fetch a fresh court record just now — showing the last synced copy." };
+  }
+  revalidatePath(`/dashboard/cases/cnr/${encodeURIComponent(cnr.toUpperCase())}`);
+  return { ok: true, message: "Updated from the court record." };
+}

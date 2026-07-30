@@ -14,6 +14,7 @@ import { normalizeCnr } from "@/lib/court/case-links";
 import { OrdersPanel } from "@/app/dashboard/cases/[id]/orders-panel";
 import { CaseTimeline } from "@/app/dashboard/cases/[id]/case-timeline";
 import { TrackCaseCta } from "./track-cta";
+import { CheckForUpdateButton } from "./check-for-update";
 
 export const dynamic = "force-dynamic";
 
@@ -163,7 +164,10 @@ export default async function CasePreviewPage({ params }: { params: { cnr: strin
             {c.source && <span className="text-xs text-ec-ink-3">{tcd("via", { source: c.source })}</span>}
           </div>
         </div>
-        <TrackCaseCta cnr={c.cnr} />
+        <div className="flex items-start gap-2">
+          <CheckForUpdateButton cnr={c.cnr} />
+          <TrackCaseCta cnr={c.cnr} />
+        </div>
       </header>
 
       {/* Track CTA banner — the case is not yet tracked; explain what tracking unlocks. */}

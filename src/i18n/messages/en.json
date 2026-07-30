@@ -1747,7 +1747,9 @@
       "noResults": "No case matched",
       "noResultsBody": "Check the type, number and year against the filing receipt, or search by CNR above."
     },
-    "typeMore": "Type at least 2 characters to search."
+    "typeMore": "Type at least 2 characters to search.",
+    "searchErrorTitle": "Search temporarily unavailable",
+    "searchErrorBody": "This search is too heavy for the current engine right now — try a more specific query, or try again shortly."
   },
   "analytics": {
     "title": "Analytics",
@@ -2152,12 +2154,12 @@
   },
   "research": {
     "title": "Case Research",
-    "subtitle": "Now searching the full judgment corpus across every Indian High Court — not just the local slice. Find judgments by party, case number, judge, court, or year.",
-    "subtitleNotConfigured": "Search the full judgment corpus across every Indian High Court — by party, case number, judge, court, or year.",
+    "subtitle": "Full-text search across the order and judgment text we hold for your tracked courts. Find matches by party detail, case description, or judge.",
+    "subtitleNotConfigured": "Full-text search across the order and judgment text we hold for your tracked courts.",
     "notConfiguredTitle": "Corpus not configured",
-    "notConfiguredBody": "The court-judgments corpus is not connected in this environment yet. Once the S3 lake credentials are set, live search across all High Courts becomes available here.",
-    "searchHint": "Search matches parties, case number, and judge across the full multi-court corpus. Queries run live against our S3 lake, so results take a moment to load.",
-    "results": "{count, plural, one {judgment} other {judgments}} from the full multi-court corpus",
+    "notConfiguredBody": "Live court search isn't configured in this environment yet (LD_API_KEY).",
+    "searchHint": "Search matches order and judgment text we already hold — a fast, focused search, not a wait for a live fetch.",
+    "results": "{count, plural, one {match} other {matches}}",
     "filtered": "filtered",
     "clearFilters": "Clear filters",
     "caseCol": "Case",
@@ -2166,12 +2168,15 @@
     "courtCol": "Court",
     "decidedCol": "Decided",
     "dispositionCol": "Disposition",
-    "noMatchTitle": "No matching judgments",
-    "emptyTitle": "Search the judgment corpus",
-    "noMatchBody": "Try a different search or clear the filters.",
-    "emptyBody": "Search by party name, case number, or judge — or filter by court and year across every High Court.",
-    "sourceListing": "Source: Indian High Court Judgments (AWS Open Data, CC-BY 4.0), queried live from our S3 lake. Reference only; not legal advice — verify against the official record.",
-    "searchPlaceholder": "Search by party, case number, or judge…",
+    "noMatchTitle": "No matching orders or judgments",
+    "emptyTitle": "Search orders and judgments",
+    "noMatchBody": "Try a different search term.",
+    "emptyBody": "Search by party name, case detail, or judge.",
+    "sourceListing": "Source: the court record — order and judgment text held for your tracked courts. Reference only; not legal advice — verify against the official record.",
+    "searchErrorTitle": "Search temporarily unavailable",
+    "searchErrorBody": "This search is too heavy for the current engine right now — try a more specific query, or try again shortly.",
+    "trackedBadge": "Tracked",
+    "searchPlaceholder": "Search by party, case detail, or judge…",
     "searchAria": "Search judgments",
     "courtAria": "Court",
     "allCourts": "All courts",
@@ -2629,7 +2634,12 @@
     "invalidCnr": {
       "title": "That doesn't look like a valid CNR",
       "body": "\"{cnr}\" isn't a complete CNR. Go back and open the case from a search result."
-    }
+    },
+    "checkForUpdate": "Check for update",
+    "checkingForUpdate": "Checking…",
+    "updated": "Updated",
+    "updateFailed": "Couldn't check for an update — please try again.",
+    "updateNoChange": "Checked — no update found, showing the last synced copy."
   },
   "comms": {
     "notification": {

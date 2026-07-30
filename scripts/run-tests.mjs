@@ -41,6 +41,7 @@ const OFFLINE = [
   "timeline_sort",
   "wo205_causelist_directory",
   "wo205_causelist_cascade",
+  "wo289_causelist_fetch_contract",
   "wo01_causelist_alert",
   "wo01_refresh_priority",
   "wo01_sync_contract",

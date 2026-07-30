@@ -3,83 +3,46 @@ import { getTranslations } from "next-intl/server";
 import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/server";
-import { corpusEnabled, searchJudgments, countJudgments, judgmentPdfUrl, courtLabel, type JudgmentRow } from "@/lib/court/corpus-athena";
-import { expandDisposal } from "@/lib/court/code-labels";
-import { Pagination } from "@/components/pagination";
-import { parsePage, clampPerPage, pageCount } from "@/lib/paginate";
+import { searchOrderText, ldEnabled, type OrderTextHit } from "@/lib/court/legaldriver-api";
+import { caseDetailHref } from "@/lib/court/case-links";
+import { expandCaseType } from "@/lib/court/code-labels";
 import { Filters } from "./filters";
 
 export const dynamic = "force-dynamic";
 
-const COURT_RE = /^(SC|[0-9]+_[0-9]+)$/;
-// disposal values come from URL; allow only known safe labels (alpha + spaces) to prevent injection.
-const DISPOSAL_RE = /^[A-Za-z\s]{1,40}$/;
+// WO-289 · Judgments/Case Research, migrated off the Athena-backed "every Indian High Court" open-
+// data lake (2 lake-scans + an unbounded Supabase read per render, no loading.tsx, 30s poll) onto
+// `/search/order-text` — BM25 full-text search over OUR OWN ingested order/judgment text, on the
+// SAME keyed data plane as the rest of the console (~72ms warm). This narrows the feature's scope:
+// it now searches only what we've ingested (not the full India-wide open corpus), and the endpoint
+// is a bounded top-K search (no court/year/disposal facets, no offset/total) — an honest trade for
+// zero Athena in the render path. Zero-Athena is asserted by tests/wo72_judgments_pagination.ts.
 
-// Build the judgment-reader href, omitting any null/empty params.
-function judgmentHref(r: JudgmentRow): string {
-  const params = new URLSearchParams();
-  const add = (k: string, v: string | null | undefined) => { if (v) params.set(k, v); };
-  add("cnr", r.cnr);
-  add("src", r.src);
-  add("court", r.court);
-  add("year", r.year);
-  add("pdf", r.pdf_link);
-  add("title", r.title);
-  add("judge", r.judge);
-  add("citation", r.citation);
-  add("date", r.decision_date);
-  add("disposal", r.disposal_nature);
-  return `/dashboard/search/judgments/judgment?${params.toString()}`;
-}
-
-// Title looks like "CR.RA/952/2023 of ARTHKUMAR... Vs BINALBEN...".
-// Split on " of " to separate case number from parties, then split parties on a
-// "versus" connective to render "X v. Y".
-function parseTitle(title: string | null): { caseNumber: string | null; parties: string | null } {
-  if (!title) return { caseNumber: null, parties: null };
-  const ofIdx = title.search(/\sof\s/i);
-  if (ofIdx === -1) return { caseNumber: title.trim() || null, parties: null };
-  const caseNumber = title.slice(0, ofIdx).trim() || null;
-  const rest = title.slice(ofIdx + 4).trim();
-  const vsParts = rest.split(/\s+(?:Vs|Versus|V\/s)\s+/i);
-  if (vsParts.length >= 2) {
-    const a = vsParts[0].trim();
-    const b = vsParts.slice(1).join(" ").trim();
-    return { caseNumber, parties: a && b ? `${a} v. ${b}` : rest || null };
+// A search too heavy for the engine surfaces as a 503 (WO-215/WO-266 pattern, thrown by the
+// strict searchOrderText) — caught here so the page renders an honest error state, never a
+// silent empty.
+async function runSearch(q: string): Promise<{ rows: OrderTextHit[]; error: boolean }> {
+  try {
+    return { rows: await searchOrderText(q, 50), error: false };
+  } catch {
+    return { rows: [], error: true };
   }
-  return { caseNumber, parties: rest || null };
 }
 
-// Truncate long advocate names cleanly.
-function truncate(s: string | null, max = 32): string {
-  if (!s) return "—";
-  return s.length > max ? s.slice(0, max - 1) + "…" : s;
+// Title-ish identity for a row: the registration number when we have it, else the bare CNR.
+function caseLabel(r: OrderTextHit): string {
+  return r.registration_number?.trim() || r.cnr;
 }
 
-// Check if a judgment row shares CNR or parties with tracked matters.
-// Returns the matter title if related, null otherwise.
-function relatesToMatter(
-  r: JudgmentRow,
-  matters: Array<{ cnr: string | null; title: string; partyNames: string[] }>,
-): string | null {
-  if (!matters.length) return null;
-  // CNR match is definitive.
-  if (r.cnr) {
-    const byC = matters.find((m) => m.cnr && m.cnr === r.cnr);
-    if (byC) return byC.title;
-  }
-  // Party name substring match: if the judgment's title contains any tracked party name (5+ chars).
-  const titleLower = (r.title ?? "").toLowerCase();
-  for (const m of matters) {
-    for (const name of m.partyNames) {
-      if (name.length >= 5 && titleLower.includes(name.toLowerCase())) return m.title;
-    }
-  }
-  return null;
+// ts_headline/paradedb.snippet wrap matched terms in <b>…</b> — strip tags rather than render them
+// (dangerouslySetInnerHTML is unwarranted risk/complexity for a nice-to-have highlight; plain text
+// with the terms visible, unbolded, still tells the user why the row matched).
+function plainSnippet(s?: string | null): string {
+  return (s ?? "").replace(/<\/?[^>]+>/g, "");
 }
 
-// DS-v2 empty/not-configured state — sand icon well, serif title.
-function EmptyPanel({ icon, title, body }: { icon: "scale" | "alert"; title: string; body?: string }) {
+// DS-v2 empty/not-configured/error state — sand icon well, serif title.
+function EmptyPanel({ icon, title, body }: { icon: "scale" | "alert" | "search"; title: string; body?: string }) {
   return (
     <div className="ec-card flex flex-col items-center justify-center px-6 py-14 text-center">
       <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-ec-s bg-ec-paper-3 text-ec-bronze">
@@ -94,12 +57,11 @@ function EmptyPanel({ icon, title, body }: { icon: "scale" | "alert"; title: str
 export default async function ResearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string; court?: string; year?: string; disposal?: string; judge?: string; page?: string; per?: string };
+  searchParams: { q?: string };
 }) {
-  const { q, court, year, disposal, judge } = searchParams;
-  const page = parsePage(searchParams.page);
-  const per = clampPerPage(searchParams.per);
+  const q = (searchParams.q ?? "").trim();
   const t = await getTranslations("research");
+  const enabled = ldEnabled();
 
   const header = (subtitle: string) => (
     <header>
@@ -108,7 +70,7 @@ export default async function ResearchPage({
     </header>
   );
 
-  if (!corpusEnabled()) {
+  if (!enabled) {
     return (
       <div className="space-y-6">
         {header(t("subtitleNotConfigured"))}
@@ -117,45 +79,16 @@ export default async function ResearchPage({
     );
   }
 
-  const validCourt = court && COURT_RE.test(court) ? court : undefined;
-  const validDisposal = disposal && DISPOSAL_RE.test(disposal) ? disposal : undefined;
-  const validJudge = judge?.trim() || undefined;
-
-  const filter = {
-    q,
-    court: validCourt,
-    year: year ? Number(year) : undefined,
-    disposal: validDisposal,
-    judgeFilter: validJudge,
-  };
-
-  // Fetch this page's slice + the honest total + the tenant's tracked matters in parallel.
-  const supabase = createClient();
-  const [initialRows, total, mattersRes] = await Promise.all([
-    searchJudgments({ ...filter, limit: per, offset: (page - 1) * per }),
-    countJudgments(filter),
-    supabase.from("matter").select("cnr, title, party_names").order("title"),
+  // /search/order-text requires min_length=3 — below that, show the empty/starting-point state
+  // without querying (mirrors the directory page's q.length>=2 gate).
+  const searchActive = q.length >= 3;
+  const [{ rows, error }, mattersRes] = await Promise.all([
+    searchActive ? runSearch(q) : Promise.resolve({ rows: [] as OrderTextHit[], error: false }),
+    // Bounded (WO-289: this was an unbounded `select(...)` over the whole tenant matter table on
+    // every render) — only cnr is needed for the cross-link check below.
+    createClient().from("matter").select("cnr").limit(2000),
   ]);
-  const { data: mattersData } = mattersRes;
-
-  // Clamp an out-of-range page (manual ?page= tampering) into range so we never show an empty
-  // table with a non-zero total; the numbered pager itself never navigates past the last page.
-  const totalPages = pageCount(total, per);
-  const safePage = totalPages > 0 ? Math.min(page, totalPages) : 1;
-  const rows =
-    safePage !== page && total > 0
-      ? await searchJudgments({ ...filter, limit: per, offset: (safePage - 1) * per })
-      : initialRows;
-
-  // Build a lightweight matter index for cross-link detection.
-  // party_names is string[] — confirmed in DB schema. Use for substring match.
-  const matters = (mattersData ?? []).map((m) => ({
-    cnr: (m as { cnr?: string | null }).cnr as string | null,
-    title: m.title as string,
-    partyNames: (m as { party_names?: string[] }).party_names ?? [],
-  }));
-
-  const activeFilters = Boolean(q || court || year || disposal || judge);
+  const trackedCnrs = new Set((mattersRes.data ?? []).map((m) => (m as { cnr?: string | null }).cnr).filter(Boolean) as string[]);
 
   return (
     <div className="space-y-6">
@@ -168,111 +101,64 @@ export default async function ResearchPage({
         {t("searchHint")}
       </p>
 
-      {rows.length ? (
-       <>
+      {!searchActive ? (
+        <EmptyPanel icon="scale" title={t("emptyTitle")} body={t("emptyBody")} />
+      ) : error ? (
+        <EmptyPanel icon="alert" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
+      ) : rows.length ? (
         <div className="ec-card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ec-hair bg-ec-paper-3 px-5 py-3">
             <div className="text-xs text-ec-ink-2">
-              <span className="num font-medium text-ec-ink">{total}</span> {t("results", { count: total })}
-              {activeFilters ? ` · ${t("filtered")}` : ""}
+              <span className="num font-medium text-ec-ink">{rows.length}</span> {t("results", { count: rows.length })}
             </div>
-            {activeFilters && (
-              <a href="/dashboard/search/judgments" className="text-xs font-medium text-ec-bronze-deep hover:underline">{t("clearFilters")}</a>
-            )}
+            <a href="/dashboard/search/judgments" className="text-xs font-medium text-ec-bronze-deep hover:underline">{t("clearFilters")}</a>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-ec-hair text-left">
-                  <th className="px-5 py-3 ec-label">{t("caseCol")}</th>
-                  <th className="px-5 py-3 ec-label">{t("partiesCol")}</th>
-                  <th className="hidden px-5 py-3 ec-label xl:table-cell">{t("petAdvCol")}</th>
-                  <th className="hidden px-5 py-3 ec-label xl:table-cell">{t("resAdvCol")}</th>
-                  <th className="hidden px-5 py-3 ec-label lg:table-cell">{t("judgeCol")}</th>
-                  <th className="hidden px-5 py-3 ec-label md:table-cell">{t("courtCol")}</th>
-                  <th className="hidden px-5 py-3 ec-label sm:table-cell">{t("decidedCol")}</th>
-                  <th className="px-5 py-3 ec-label">{t("dispositionCol")}</th>
-                  <th className="px-5 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => {
-                  const { caseNumber, parties } = parseTitle(r.title);
-                  const pdfUrl = judgmentPdfUrl(r.pdf_link, r.court, r.year, r.src);
-                  const relatedMatter = relatesToMatter(r, matters);
-                  return (
-                    <tr key={`${r.cnr ?? r.title ?? "row"}-${i}`} className={`ec-row border-b border-ec-hair last:border-0 ${relatedMatter ? "bg-ec-bronze-tint/25" : ""}`}>
-                      <td className="px-5 py-3.5 align-top">
-                        <Link href={judgmentHref(r)} className="group flex flex-col leading-tight">
-                          <span className="flex items-center gap-2 font-medium text-ec-ink group-hover:text-ec-bronze-deep group-hover:underline">
-                            <Icon name="cases" className="h-4 w-4 shrink-0 text-ec-ink-3" />
-                            {caseNumber ?? r.title ?? "—"}
+          <ul className="divide-y divide-ec-hair">
+            {rows.map((r, i) => {
+              const ct = expandCaseType(r.case_type ?? undefined, r.tier ?? undefined);
+              const related = r.cnr && trackedCnrs.has(r.cnr);
+              return (
+                <li key={`${r.cnr}-${i}`} className="px-5 py-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <Link href={caseDetailHref(r.cnr)} className="group min-w-0 flex-1">
+                      <span className="flex items-center gap-2 font-medium text-ec-ink group-hover:text-ec-bronze-deep group-hover:underline">
+                        <Icon name="cases" className="h-4 w-4 shrink-0 text-ec-ink-3" />
+                        {caseLabel(r)}
+                      </span>
+                      <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 pl-6 text-xs text-ec-ink-3">
+                        <span className="num">CNR {r.cnr}</span>
+                        {ct.full && <span>· {ct.full}</span>}
+                        {r.court_name && <span>· {r.court_name}{r.bench_label ? ` (${r.bench_label})` : ""}</span>}
+                        {related && (
+                          <span className="inline-flex items-center gap-1 font-medium text-ec-bronze-deep">
+                            <Icon name="cases" className="h-3 w-3 shrink-0" /> {t("trackedBadge")}
                           </span>
-                          {r.cnr && <span className="num mt-0.5 pl-6 text-xs text-ec-ink-3">CNR {r.cnr}</span>}
-                          {relatedMatter && (
-                            <span className="mt-1 pl-6 inline-flex items-center gap-1 text-xs font-medium text-ec-bronze-deep">
-                              <Icon name="cases" className="h-3 w-3 shrink-0" />
-                              {t("relatedToMatter", { matter: relatedMatter })}
-                            </span>
-                          )}
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3.5 align-top text-ec-ink-2">
-                        {parties ? <span className="font-medium text-ec-ink">{parties}</span> : <span className="text-ec-ink-3">—</span>}
-                      </td>
-                      <td className="hidden px-5 py-3.5 align-top text-xs text-ec-ink-2 xl:table-cell">
-                        {truncate(r.petitioner)}
-                      </td>
-                      <td className="hidden px-5 py-3.5 align-top text-xs text-ec-ink-2 xl:table-cell">
-                        {truncate(r.respondent)}
-                      </td>
-                      <td className="hidden px-5 py-3.5 align-top text-ec-ink-2 lg:table-cell">
-                        {r.judge
-                          ? <a href={`/dashboard/search/judgments?judge=${encodeURIComponent(r.judge)}`} className="hover:text-ec-bronze-deep hover:underline" aria-label={`Filter by judge ${r.judge}`}>{r.judge}</a>
-                          : <span className="text-ec-ink-3">—</span>}
-                      </td>
-                      <td className="hidden px-5 py-3.5 align-top text-xs text-ec-ink-3 md:table-cell">{courtLabel(r.court)}</td>
-                      <td className="hidden px-5 py-3.5 align-top text-xs text-ec-ink-3 sm:table-cell num">
-                        {(formatCourtDate(r.decision_date) ?? "—")}
-                        {r.year && !r.decision_date ? <span>{r.year}</span> : null}
-                      </td>
-                      <td className="px-5 py-3.5 align-top">
-                        {r.disposal_nature
-                          ? <a href={`/dashboard/search/judgments?disposal=${encodeURIComponent(r.disposal_nature)}`} title={t("filterByDisposal")} className="hover:opacity-70 transition-opacity">
-                              <span className="ec-chip">{expandDisposal(r.disposal_nature).full}</span>
-                            </a>
-                          : <span className="text-ec-ink-3">—</span>}
-                      </td>
-                      <td className="px-5 py-3.5 align-top text-right">
-                        {pdfUrl ? (
-                          <a
-                            href={pdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-medium text-ec-bronze-deep hover:underline"
-                          >
-                            PDF
-                            <Icon name="external" className="h-3.5 w-3.5" />
-                          </a>
-                        ) : (
-                          <span className="text-xs text-ec-ink-3">—</span>
                         )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </span>
+                    </Link>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      {r.status && <span className="ec-chip">{r.status}</span>}
+                      {r.order_date && <span className="ec-chip num">{formatCourtDate(r.order_date) ?? r.order_date}</span>}
+                    </div>
+                  </div>
+                  {(r.snippet || r.description) && (
+                    <p className="mt-2 pl-6 text-sm text-ec-ink-2">{plainSnippet(r.snippet || r.description)}</p>
+                  )}
+                  {r.coram && (
+                    <p className="mt-1.5 pl-6 text-xs text-ec-ink-3">
+                      {t("judgeCol")}:{" "}
+                      <Link href={`/dashboard/search/judgments?q=${encodeURIComponent(r.coram)}`} className="hover:text-ec-bronze-deep hover:underline">
+                        {r.coram}
+                      </Link>
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
-        <Pagination page={safePage} perPage={per} total={total} />
-       </>
       ) : (
-        <EmptyPanel
-          icon="scale"
-          title={activeFilters ? t("noMatchTitle") : t("emptyTitle")}
-          body={activeFilters ? t("noMatchBody") : t("emptyBody")}
-        />
+        <EmptyPanel icon="search" title={t("noMatchTitle")} body={t("noMatchBody")} />
       )}
 
       <p className="flex items-start gap-1.5 text-xs text-ec-ink-3">

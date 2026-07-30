@@ -63,13 +63,16 @@ check(
 );
 
 // Positive adoption proof: the flagship + a representative picker consume the Combobox.
+// WO-289: judgments/filters.tsx dropped off this list — the Athena→order-text migration retired
+// the court/year/disposal Combobox facets (the endpoint has no server-side filter support for
+// them), leaving a single plain-text search input (the same pattern as the directory page's own
+// search box, which never used Combobox either — a text input isn't a picker).
 const ADOPTED = [
   "src/app/dashboard/cases/cases-toolbar.tsx",
   "src/app/dashboard/documents/filter-bar.tsx",
   "src/app/dashboard/inbox/inbox-workspace.tsx",
   "src/app/dashboard/calendar/add-entry.tsx",
   "src/app/dashboard/notices/notice-form.tsx",
-  "src/app/dashboard/search/judgments/filters.tsx",
   "src/app/dashboard/clients/client-intake.tsx",
 ];
 for (const f of ADOPTED) {
