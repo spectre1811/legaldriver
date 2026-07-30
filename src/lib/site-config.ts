@@ -64,9 +64,11 @@ export const pricing = {
 } as const;
 
 /** Grievance Officer contact (IT Rules 2021 §3(2)). Founder fills when appointed;
- *  empty strings → the footer renders the honest "being appointed" placeholder. */
+ *  empty strings → the footer renders the honest "being appointed" placeholder.
+ *  WO-291: corrected name (the 2026-07-28 commit that first published this line
+ *  carried the wrong surname — the appointed officer is Yash Bahety). */
 export const grievanceOfficer = {
-  name: "Yash Maheshwari",
+  name: "Yash Bahety",
   email: "yash@mukadma.in",
 } as const;
 
@@ -74,3 +76,10 @@ export const grievanceOfficer = {
 export function hasGrievanceOfficer(): boolean {
   return grievanceOfficer.name.trim() !== "" && grievanceOfficer.email.trim() !== "";
 }
+
+/** Effective date stamped on the legal pages (privacy/terms/refund/cancellation).
+ *  WO-291. Bump this — and note the change in the relevant page copy if material —
+ *  whenever a legal page's substance changes. Deliberately unlocalized (like court
+ *  dates elsewhere in the product): a legal effective date should read identically
+ *  in every language. */
+export const legalEffectiveDate = "30 July 2026";

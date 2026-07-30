@@ -38,7 +38,7 @@ const notoGuj = Noto_Sans_Gujarati({
 export const metadata: Metadata = {
   title: `${brand.name} — ${brand.tagline.replace(/\.$/, "")}`,
   description:
-    "Track cases by CNR, get tomorrow's cause list on WhatsApp before 8pm, and run your whole practice — built for Indian courts.",
+    "Track cases by CNR, get tomorrow's cause list ready before 8pm, and run your whole practice — built for Indian courts.",
   openGraph: {
     title: `${brand.name} — ${brand.tagline.replace(/\.$/, "")}`,
     description:

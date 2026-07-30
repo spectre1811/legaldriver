@@ -3,10 +3,23 @@ import { getTranslations } from "next-intl/server";
 import { brand } from "@/lib/brand";
 import { BrandMark } from "@/components/brand-mark";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { grievanceOfficer, hasGrievanceOfficer } from "@/lib/site-config";
 
 // Shared chrome for the public secondary pages (legal/company). Editorial
 // Chambers, tokened. Content pages compose <MarketingShell><Prose>…</Prose>.
-export async function MarketingShell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+export async function MarketingShell({
+  title,
+  subtitle,
+  effectiveDate,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  /** WO-291: legal pages (privacy/terms/refund/cancellation) stamp this — see
+   *  `site-config.legalEffectiveDate`. Omit for non-legal secondary pages. */
+  effectiveDate?: string;
+  children: React.ReactNode;
+}) {
   const t = await getTranslations("pages");
   const tl = await getTranslations("landing");
   return (
@@ -27,6 +40,7 @@ export async function MarketingShell({ title, subtitle, children }: { title: str
       <main className="mx-auto max-w-3xl px-6 py-12">
         <h1 className="font-display text-[clamp(2rem,4vw,2.75rem)] font-medium leading-tight tracking-tight">{title}</h1>
         {subtitle && <p className="mt-3 text-[17px] leading-relaxed text-ec-ink-2">{subtitle}</p>}
+        {effectiveDate && <p className="mt-2 text-[13px] text-ec-ink-3">{t("effectiveDate", { date: effectiveDate })}</p>}
         <div className="mt-8">{children}</div>
       </main>
 
@@ -41,11 +55,22 @@ export async function MarketingShell({ title, subtitle, children }: { title: str
           <nav aria-label={tl("footer.col.legal.h")} className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[13px]">
             <Link href="/privacy" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.legal.a")}</Link>
             <Link href="/terms" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.legal.b")}</Link>
+            <Link href="/refund" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.legal.d")}</Link>
+            <Link href="/cancellation" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.legal.e")}</Link>
             <Link href="/data-corrections" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.legal.c")}</Link>
             <Link href="/contact" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.company.c")}</Link>
             <Link href="/about" className="text-ec-ink-2 hover:text-ec-brass-deep">{tl("footer.col.company.a")}</Link>
           </nav>
-          <p className="mt-3 text-[11.5px] leading-relaxed text-ec-ink-3">{tl("footer.compliance")}</p>
+          {/* WO-291 · grievance officer (IT Rules 2021 §3(2)) — same site-config source
+              of truth the landing footer reads, so the two surfaces can never drift. */}
+          <p className="mt-3 text-[11.5px] leading-relaxed text-ec-ink-3">
+            {hasGrievanceOfficer() ? (
+              <span>{tl("footer.grievance.label")}: {grievanceOfficer.name} · <a href={`mailto:${grievanceOfficer.email}`} className="hover:text-ec-brass-deep">{grievanceOfficer.email}</a>. </span>
+            ) : (
+              <span>{tl("footer.grievance.label")}: {tl("footer.grievance.pending")}. </span>
+            )}
+            {tl("footer.compliance")}
+          </p>
         </div>
       </footer>
     </div>
