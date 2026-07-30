@@ -91,7 +91,7 @@ S3 + Athena lake (your AWS, ap-south-1): **18,554,467 High Court (all 25 HCs) + 
 - Self-hosted embeddings deps (`@xenova/transformers`) carry npm-audit advisories (worker-only, not in the request path) — review.
 - CI runs lint+typecheck+build only; add the `tests/*` suite (gateway, agent, filing, embed, RLS, portal) to CI.
 - Party names stored ALL-CAPS from eCourts (cosmetic).
-- WhatsApp/telephony webhooks use a single-tenant fallback (`MESSAGING_DEFAULT_TENANT_ID`) — add a firm-number→tenant map for true multi-tenant inbound.
+- ~~WhatsApp/telephony webhooks use a single-tenant fallback — add a firm-number→tenant map for true multi-tenant inbound.~~ → **DONE WO-311** (2026-07-30): `messaging_identity` mapping, fail-closed on a miss, env default deleted.
 
 ## 🔵 Later phase
 Native mobile capture app (voice/E5) · enterprise SSO/SCIM · BigQuery analytics warehouse · multi-region residency · faceted search service (Typesense/Meilisearch) when FTS stops scaling.

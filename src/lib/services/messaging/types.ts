@@ -35,7 +35,15 @@ export interface InboundMessage {
   externalId?: string;
   threadKey: string;
   from: string;
+  /** Display form of the receiving number. NOT a routing key — see below. */
   to: string;
+  // WO-311 · The RECEIVING identity this message arrived on — WhatsApp's stable
+  // `phone_number_id`, a telephony DID. This is the ONLY tenant routing key
+  // (`messaging_identity`); `from` is caller-controlled and `to` is display
+  // text. Optional on purpose: a provider adapter that cannot produce one leaves
+  // it undefined, and the webhook then refuses the message (fail closed) instead
+  // of guessing a tenant.
+  receivingIdentity?: string;
   body: string;
   media?: InboundMedia[];
   receivedAt: string;
