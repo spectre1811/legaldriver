@@ -28,7 +28,9 @@ export async function scheduleReminders(
     channels?: ("inapp" | "email")[];
     // WO-264: case context so the email template binds an honest court/CNR ref line
     // and a working CTA (caseDetailHref). Optional — legacy callers still work.
-    extra?: { cnr?: string; court?: string; matterId?: string; purpose?: string };
+    // WO-314: + courtNo/stage so hearingReminder can print the actual date, court room, and
+    // stage — not just a "today/tomorrow/in N days" label.
+    extra?: { cnr?: string; court?: string; matterId?: string; purpose?: string; courtNo?: string; stage?: string };
   },
 ): Promise<number> {
   const channels = opts.channels ?? ["inapp", "email"];

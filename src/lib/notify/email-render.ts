@@ -51,6 +51,14 @@ export type CaseUpdatePayload = {
   cnr?: string;
   court?: string;
   matterId?: string;
+  // WO-314: widened at the producer (recordCaseChanges) so the email answers "what happened,
+  // to which case, what's next" from the body alone — not just change + title.
+  stage?: string;
+  purpose?: string; // the next hearing's purpose, when the record carries one
+  coram?: string; // full bench, pre-joined ("Justice A, Justice B") — never just judges[0]
+  regNo?: string; // registration number, from matter.detail.registrationNumber (no case_number column)
+  orderTitle?: string;
+  orderDate?: string; // the latest order on file, human-formatted (IST)
 };
 
 /**
@@ -88,6 +96,16 @@ export function composeCaseUpdate(rows: CaseUpdatePayload[]): { data: Record<str
     ...(primary.court ? { court: primary.court } : {}),
     ...(primary.cnr ? { cnr: primary.cnr } : {}),
     ...(detail ? { detail } : {}),
+    // WO-314: eventDate was already on the payload and silently dropped here — the founder's
+    // "shows nothing about the case" complaint's first cause. It carries the CURRENT next
+    // hearing date regardless of which field changed (order/bench/date), so it shows even when
+    // the change itself was e.g. a bench swap.
+    ...(primary.eventDate ? { nextHearingDate: istFriendlyDate(primary.eventDate) } : {}),
+    ...(primary.stage ? { stage: primary.stage } : {}),
+    ...(primary.purpose ? { purpose: primary.purpose } : {}),
+    ...(primary.coram ? { coram: primary.coram } : {}),
+    ...(primary.regNo ? { regNo: primary.regNo } : {}),
+    ...(primary.orderTitle && primary.orderDate ? { orderTitle: primary.orderTitle, orderDate: primary.orderDate } : {}),
   };
   // One CTA per email: the primary case when addressable, else the caseload.
   const ctaPath =

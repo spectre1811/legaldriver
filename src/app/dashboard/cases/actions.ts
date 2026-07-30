@@ -16,8 +16,9 @@ import { scheduleReminders } from "@/lib/notify/schedule";
 import { getMailer } from "@/lib/notify/mailer";
 import { logOutboundEmail } from "@/lib/notify/log";
 import { renderEmail } from "@/lib/email/templates";
-import { appUrl } from "@/lib/notify/email-render";
+import { appUrl, istFriendlyDate } from "@/lib/notify/email-render";
 import { caseDetailHref } from "@/lib/court/case-links";
+import { maskTitle } from "@/lib/court/mask";
 import type { Database } from "@/lib/db/database.types";
 
 // Set (or clear) the advocate's diary next-hearing date — overrides a stale/wrong
@@ -247,12 +248,23 @@ export async function trackCaseByCnr(cnr: string): Promise<{ ok: boolean; messag
 
   // WO-264 · trackConfirm email, immediate + fire-and-forget: a mailer hiccup must
   // never fail the tracking the user just did (EMAIL_META: "Now tracking {case}").
+  // WO-314: the whole freshly-fetched NormalizedCase is already in hand here — surface
+  // stage/status/next hearing/coram instead of just title + court.
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.email) {
+      const fc = fetched.case;
+      const coramNames = fc.judges?.length ? fc.judges : fc.judge ? fc.judge.split(",").map((j) => j.trim()).filter(Boolean) : [];
       const rendered = renderEmail(
         "trackConfirm",
-        { case: fetched.case.title, ...(fetched.case.court ? { court: fetched.case.court } : {}) },
+        {
+          case: maskTitle(fc.title),
+          ...(fc.court ? { court: fc.court } : {}),
+          ...(fc.stage ? { stage: fc.stage } : {}),
+          ...(fc.status ? { status: fc.status } : {}),
+          ...(fc.nextHearingDate ? { nextHearingDate: istFriendlyDate(fc.nextHearingDate) } : {}),
+          ...(coramNames.length ? { coram: coramNames.join(", ") } : {}),
+        },
         appUrl(caseDetailHref(clean, matterId)),
       );
       if (rendered) {

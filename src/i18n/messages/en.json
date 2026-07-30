@@ -2687,6 +2687,9 @@
       "date": "Listed for tomorrow · {date}",
       "listing": "{court} · {time} — {parties}",
       "listingNoTime": "{court} — {parties}",
+      "listingCnr": "CNR {cnr}",
+      "listingStage": "Stage: {stage}",
+      "listingWhere": "Court {courtNo} · Purpose: {purpose}",
       "orders": "{orders} orders uploaded today · read on Mukadma",
       "cta": "Open tomorrow"
     },
@@ -2726,19 +2729,32 @@
       "subject": "{change}",
       "lead": "{change} — {case}, a case you track.",
       "ref": "{court} · CNR {cnr}",
+      "regNo": "Registration No. {regNo}",
+      "hearing": "Next hearing: {nextHearingDate}",
+      "stage": "Stage: {stage}",
+      "purpose": "Purpose: {purpose}",
+      "coram": "Coram: {coram}",
+      "order": "Latest order: {orderTitle} · {orderDate}",
       "detail": "{detail}",
       "cta": "View the case"
     },
     "trackConfirm": {
       "subject": "Now tracking {case}",
       "lead": "You're tracking {case} · {court}.",
+      "stage": "Stage: {stage}",
+      "status": "Status: {status}",
+      "hearing": "Next hearing: {nextHearingDate}",
+      "coram": "Coram: {coram}",
       "body": "We watch the record nightly. When an order is uploaded, a hearing is set, or the status changes, you'll hear from us here.",
       "cta": "Open the case"
     },
     "hearingReminder": {
       "subject": "Hearing {when}",
       "lead": "{case} is listed {when}.",
+      "date": "Listed on {date}",
       "ref": "{court} · CNR {cnr}",
+      "courtNo": "Court No. {courtNo}",
+      "stage": "Stage: {stage}",
       "detail": "Purpose on the record: {purpose}",
       "cta": "Open the case"
     }
