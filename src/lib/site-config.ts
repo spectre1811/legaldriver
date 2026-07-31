@@ -65,10 +65,10 @@ export const pricing = {
 
 /** Grievance Officer contact (IT Rules 2021 §3(2)). Founder fills when appointed;
  *  empty strings → the footer renders the honest "being appointed" placeholder.
- *  WO-291: corrected name (the 2026-07-28 commit that first published this line
- *  carried the wrong surname — the appointed officer is Yash Bahety). */
+ *  WO-291: name confirmed by founder 2026-07-31 (Yash Maheshwari — matches the
+ *  repo's git author identity; the "Bahety" variant was not adopted). */
 export const grievanceOfficer = {
-  name: "Yash Bahety",
+  name: "Yash Maheshwari",
   email: "yash@mukadma.in",
 } as const;
 
