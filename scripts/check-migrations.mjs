@@ -83,6 +83,11 @@ export const DEFINER_EXEMPT = {
     "OPEN QUESTION, not a clean grandfather: 0020 defines it definer with NO revoke, unlike store_secret " +
     "(0002:30-33). WO-310 W4(a) must confirm the live grant and codify the revoke; until then it is pinned " +
     "here so the guard is honest about the debt rather than silently ignoring it.",
+  get_provider_health:
+    "INTENTIONALLY anon-callable — the external GChat alarm poller (.github/workflows/health-alarm.yml) hits " +
+    "it with the anon key. Definer + `grant to anon, authenticated` is by design (WO-290, applied to prod " +
+    "2026-07-31). Returns only provider/ok/updated_at for 4 named infra providers — no tenant data, no PII, " +
+    "no error bodies — so bypassing RLS leaks nothing. Revoking would break the health alarm.",
 };
 
 const DEFAULT_DIR = "supabase/migrations";
