@@ -3,6 +3,8 @@ import type { Database } from "@/lib/db/database.types";
 import type { NormalizedCase } from "./types";
 import { scheduleReminders } from "@/lib/notify/schedule";
 import { normalizeTier } from "./tier";
+import { maskTitle } from "./mask";
+import { istFriendlyDate } from "@/lib/notify/email-render";
 
 type DB = SupabaseClient<Database>;
 
@@ -133,6 +135,18 @@ export async function upsertCase(
     }
   }
 
+  // WO-314: hoisted so both the reminder scheduler AND change-detection alert can bind the
+  // same next-hearing row (purpose/court no.) and the most recent order — the founder's "shows
+  // nothing about the case" complaint, fixed at the one place both alert paths read from.
+  const nextHearing = c.nextHearingDate ? c.hearings.find((h) => h.date === c.nextHearingDate) : undefined;
+  const latestOrder = [...(c.orders ?? [])].filter((o) => o.date).sort((a, b) => (a.date! < b.date! ? 1 : -1))[0];
+  // Registration number lives inside `detail` jsonb (no `case_number` column on `matter`) — the
+  // SAME key the case-detail page reads (case-detail-fields.ts extractCaseDetailValues).
+  const caseDetail = (c.detail ?? {}) as Record<string, unknown>;
+  const regNo = typeof caseDetail.registrationNumber === "string" && caseDetail.registrationNumber.trim()
+    ? caseDetail.registrationNumber.trim()
+    : undefined;
+
   // Schedule reminders for the next hearing. Replace-on-change: clear pending
   // reminders for this matter, then (re)schedule for the current next date.
   const ref = `matter:${matterId}`;
@@ -146,17 +160,19 @@ export async function upsertCase(
   if (c.nextHearingDate) {
     // WO-264: pass case context so the hearingReminder email binds court/CNR + a real CTA;
     // purpose comes from the hearing row for the next date when the record carries it.
-    const nextHearing = c.hearings.find((h) => h.date === c.nextHearingDate);
+    // WO-314: + court number + stage — BP-24 masked titles never ride into an email raw.
     await scheduleReminders(supabase, tenantId, {
       kind: "hearing_reminder",
       eventDate: c.nextHearingDate,
       ref,
-      title: c.title,
+      title: maskTitle(c.title),
       extra: {
         cnr: c.cnr,
         matterId,
         ...(c.court ? { court: c.court } : {}),
         ...(nextHearing?.purpose ? { purpose: nextHearing.purpose } : {}),
+        ...(nextHearing?.courtNo ? { courtNo: nextHearing.courtNo } : {}),
+        ...(c.stage ? { stage: c.stage } : {}),
       },
     });
   }
@@ -174,6 +190,12 @@ export async function upsertCase(
       newJudge: judgeNames[0] ?? null,
       oldOrderDates,
       newOrderDates: (c.orders ?? []).map((o) => o.date).filter((d): d is string => !!d),
+      // WO-314: the founder's screenshot was a bench-change alert saying nothing about the case.
+      stage: c.stage ?? null,
+      purpose: nextHearing?.purpose ?? null,
+      coram: judgeNames.length ? judgeNames.join(", ") : null,
+      regNo: regNo ?? null,
+      latestOrder: latestOrder?.date ? { title: latestOrder.title ?? null, date: latestOrder.date } : null,
     });
   }
 
@@ -189,7 +211,14 @@ async function recordCaseChanges(
   supabase: DB,
   tenantId: string,
   matterId: string,
-  s: { title: string; cnr: string; court: string | null; oldNext: string | null; newNext: string | null; oldJudge: string | null; newJudge: string | null; oldOrderDates: string[]; newOrderDates: string[] },
+  s: {
+    title: string; cnr: string; court: string | null; oldNext: string | null; newNext: string | null;
+    oldJudge: string | null; newJudge: string | null; oldOrderDates: string[]; newOrderDates: string[];
+    // WO-314: the email producer widening — everything the enriched caseUpdate template needs
+    // that a simple before/after diff doesn't otherwise carry.
+    stage: string | null; purpose: string | null; coram: string | null; regNo: string | null;
+    latestOrder: { title: string | null; date: string } | null;
+  },
 ): Promise<void> {
   const changes: string[] = [];
   // The closed-set `change` label leads the email subject ("{change}" ≤4 words so the
@@ -224,7 +253,10 @@ async function recordCaseChanges(
     }
     // One consolidated alert per refresh: the bell (in-app) + the caseUpdate email row
     // (WO-264). Same payload; the email adds the closed-set label + case ref for the template.
-    const payload = { ref: `matter:${matterId}`, title: s.title, body: changes.join(" · "), eventDate: s.newNext ?? undefined };
+    // WO-314: title is masked here (BP-24) — this payload feeds the email renderer directly,
+    // not a component that masks at render time, so an unmasked title would leak a protected
+    // party's name verbatim into the inbox.
+    const payload = { ref: `matter:${matterId}`, title: maskTitle(s.title), body: changes.join(" · "), eventDate: s.newNext ?? undefined };
     await supabase.from("notification").insert([
       {
         tenant_id: tenantId, channel: "inapp", kind: "case_update", status: "pending",
@@ -240,6 +272,11 @@ async function recordCaseChanges(
           cnr: s.cnr,
           matterId,
           ...(s.court ? { court: s.court } : {}),
+          ...(s.stage ? { stage: s.stage } : {}),
+          ...(s.purpose ? { purpose: s.purpose } : {}),
+          ...(s.coram ? { coram: s.coram } : {}),
+          ...(s.regNo ? { regNo: s.regNo } : {}),
+          ...(s.latestOrder ? { orderTitle: s.latestOrder.title ?? "Order", orderDate: istFriendlyDate(s.latestOrder.date) } : {}),
         } as Database["public"]["Tables"]["notification"]["Insert"]["payload"],
       },
     ]);

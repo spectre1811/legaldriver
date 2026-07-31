@@ -79,7 +79,16 @@ export class WhatsAppBspClient implements MessagingClient {
             }
           | undefined;
         if (!value || !Array.isArray(value.messages)) continue;
+        // `to` is DISPLAY ONLY (it lands in msg_message.to_addr).
         const to = value.metadata?.display_phone_number ?? value.metadata?.phone_number_id ?? this.phoneNumberId;
+        // WO-311 · the routing key: Meta's stable per-WABA `phone_number_id`,
+        // taken from the payload and NOTHING else. Deliberately no fallback to
+        // display_phone_number (human-formatted, not stable) and none to
+        // this.phoneNumberId — falling back to our own configured number is the
+        // exact "default to a tenant" bug this WO deletes: a payload with no
+        // metadata would silently file into whichever tenant owns OUR number.
+        // Absent → undefined → the webhook refuses the message.
+        const receivingIdentity = value.metadata?.phone_number_id?.trim() || undefined;
 
         for (const raw of value.messages) {
           const m = raw as {
@@ -107,6 +116,7 @@ export class WhatsAppBspClient implements MessagingClient {
             threadKey: `whatsapp:${m.from}`,
             from: m.from,
             to,
+            receivingIdentity,
             body: m.text?.body ?? "",
             media,
             receivedAt: m.timestamp ? new Date(Number(m.timestamp) * 1000).toISOString() : new Date().toISOString(),

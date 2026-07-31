@@ -75,7 +75,9 @@ Provider & integration keys:
   `OCR_MIN_CONFIDENCE`, `COURT_CACHE_TTL_MS`, `DEPLOY_GRACE_MIN`,
   `ONBOARDING_DRAIN_MAX_RUNS`, `ONBOARDING_DRAIN_STALE_MINUTES`, `REFRESH_MAX_PER_RUN`,
   `LD_API_TIMEOUT_MS`, `LD_API_CANARY_TIMEOUT_MS`, `LD_API_CANARY_BAR_ID`,
-  `LD_REFRESH_TIMEOUT_MS`, `MESSAGING_DEFAULT_TENANT_ID`.
+  `LD_REFRESH_TIMEOUT_MS`. (WO-311 deleted the messaging tenant-default env — inbound
+  routing is the `messaging_identity` table; `TELEPHONY_WEBHOOK_SECRET` and
+  `OPS_ALERT_WEBHOOK_URL` are new and belong in the same inventory.)
 - **OCR toolchain config:** `SURYA_OCR_CMD`, `SURYA_TIMEOUT_MS`, `TESSERACT_DATA`,
   `TESSERACT_LANG_PATH`, `TESSERACT_LANGS`.
 - **Corpus / Athena:** `ATHENA_DB`, `ATHENA_OUTPUT`, `CORPUS_BUCKET`, `CORPUS_AWS_REGION`.

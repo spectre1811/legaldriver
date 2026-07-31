@@ -167,6 +167,15 @@ function ProfileMenu({ email, initial, fullName, designation, photoUrl }: Props)
               {t("signOut")}
             </button>
           </form>
+          {/* WO-316 — opt-in global revocation: kills every session this account holds,
+              on every device. The only "I think I'm compromised" control we have. */}
+          <form action="/auth/signout" method="post">
+            <input type="hidden" name="scope" value="global" />
+            <button role="menuitem" type="submit" className={item}>
+              <Icon name="logout" className={ico} />
+              {t("signOutEverywhere")}
+            </button>
+          </form>
         </div>
       )}
     </div>

@@ -1,10 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { currentUser, unauthorizedResponse } from "@/lib/auth/guard";
 import { resolveAdvocateBar, ldEnabled } from "@/lib/court/legaldriver-api";
 
 export const dynamic = "force-dynamic";
 
 // Resolve an advocate NAME (from a judgment/case) → bar code → advocate dossier.
 export async function GET(request: NextRequest) {
+  // WO-316 — same gate as /api/court/judge: a keyed upstream call must never be
+  // reachable anonymously (middleware does not cover /api).
+  if (!(await currentUser(createClient()))) return unauthorizedResponse();
+
   const name = request.nextUrl.searchParams.get("name");
   if (!name || !ldEnabled()) return NextResponse.redirect(new URL("/dashboard/search/judgments", request.url));
   const bar = await resolveAdvocateBar(name);

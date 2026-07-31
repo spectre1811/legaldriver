@@ -41,9 +41,11 @@ const OFFLINE = [
   "timeline_sort",
   "wo205_causelist_directory",
   "wo205_causelist_cascade",
+  "wo289_causelist_fetch_contract",
   "wo01_causelist_alert",
   "wo01_refresh_priority",
   "wo01_sync_contract",
+  "wo286_live_lane",
   "wo15_analytics",
   "wo27_export",
   "wo27_filing_decision",
@@ -99,6 +101,9 @@ const OFFLINE = [
   "wo264_notify",
   "wo272_invite_only",
   "wo288_email_sendpath",
+  "wo316_session_security",
+  "wo290_reminder_feeder",
+  "wo311_webhook_tenant",
   "profile_error_states",
 ];
 
@@ -108,6 +113,7 @@ const DB = [
   "p1_smoke",
   "portal_isolation",
   "rls_isolation",
+  "wo311_messaging_isolation",
   "wo01_tenancy_sync",
 ];
 

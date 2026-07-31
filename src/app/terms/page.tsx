@@ -1,13 +1,13 @@
-import { MarketingShell, Prose, DraftNotice } from "@/components/marketing-shell";
+import { MarketingShell, Prose } from "@/components/marketing-shell";
 import { getTranslations } from "next-intl/server";
+import { legalEffectiveDate } from "@/lib/site-config";
 
 export const metadata = { title: "Terms · Mukadma" };
 
 export default async function TermsPage() {
   const t = await getTranslations("terms");
   return (
-    <MarketingShell title={t("title")} subtitle={t("subtitle")}>
-      <DraftNotice />
+    <MarketingShell title={t("title")} subtitle={t("subtitle")} effectiveDate={legalEffectiveDate}>
       <Prose>
         <h2>{t("whatHeading")}</h2>
         <p>{t("whatBody")}</p>

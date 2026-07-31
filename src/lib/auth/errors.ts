@@ -1,12 +1,15 @@
 // WO-50 — map Supabase auth failures to stable i18n error codes (auth.errors.*).
-// Distinct, human copy per failure class: wrong password ≠ no account ≠
-// unconfirmed email ≠ OAuth failure. Pure + unit-tested (tests/wo50_auth_flows.ts);
-// the raw provider message never reaches the UI (English-only + leaky).
+// Distinct, human copy per failure class: unconfirmed email ≠ OAuth failure ≠
+// expired reset link. Pure + unit-tested (tests/wo50_auth_flows.ts); the raw
+// provider message never reaches the UI (English-only + leaky).
+//
+// WO-316 — `wrongPassword` and `noAccount` are DELETED, not deprecated. Telling a
+// caller which of the two failed is a user-enumeration oracle on an unauthenticated
+// endpoint, and on an invite-only product the customer list is the thing worth
+// stealing. Sign-in has exactly one failure code for both. Never split it again.
 
 export const AUTH_ERROR_CODES = [
-  "wrongPassword", // password sign-in: account exists, password wrong
-  "noAccount", // password sign-in: no account for this email
-  "invalidCredentials", // password sign-in: could not tell which of the two
+  "invalidCredentials", // password sign-in: wrong password OR unknown email — indistinguishable, by design
   "unconfirmed", // email exists but was never confirmed
   "accountExists", // sign-up with an email that already has an account
   "inviteOnly", // WO-272: public account creation is closed — signup/new-Google blocked, invite only

@@ -154,11 +154,12 @@ function SignInForm({
         </div>
         <input id="password" name="password" type="password" required autoComplete="current-password" className="input mt-1.5" placeholder="••••••••" />
       </div>
+      {/* WO-316 — sign-in has ONE failure code now: a bad password and an unknown
+          email are indistinguishable. The branch that used to detect "this email has
+          no account" and offer a request-access link is gone — it was the visible
+          half of a user-enumeration oracle. People without an account are served by
+          the standing "New to Mukadma? Request access" line at the foot of the panel. */}
       <ErrorNote code={inlineError} />
-      {inlineError === "noAccount" && (
-        // WO-272 — no self-serve signup; send them to request access instead.
-        <RequestAccessLink />
-      )}
       <SubmitButton label={t("signin.cta")} pendingLabel={t("signin.pending")} />
     </form>
   );
@@ -250,7 +251,7 @@ export function AuthPanel({
 }: {
   initialMode: Mode;
   urlError?: AuthErrorCode;
-  notice?: "confirmEmail" | "inviteOnly";
+  notice?: "confirmEmail" | "inviteOnly" | "passwordChanged";
   next?: string;
   track?: string;
 }) {
@@ -283,6 +284,13 @@ export function AuthPanel({
       {notice === "confirmEmail" && (
         <p className="mt-5 rounded-ec-s bg-ec-brass-tint px-3.5 py-2.5 text-sm text-ec-brass-deep">
           {t("notice.confirmEmail")}
+        </p>
+      )}
+      {notice === "passwordChanged" && (
+        // WO-316 — a password change revokes EVERY session, this browser included,
+        // so the landing here is expected. Say so instead of leaving a silent bounce.
+        <p role="status" className="mt-5 rounded-ec-s bg-ec-brass-tint px-3.5 py-2.5 text-sm text-ec-brass-deep">
+          {t("notice.passwordChanged")}
         </p>
       )}
       {notice === "inviteOnly" && (

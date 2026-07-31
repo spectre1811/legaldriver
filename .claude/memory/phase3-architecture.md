@@ -15,6 +15,6 @@ Phase 3 ("platform") added a Court Data Gateway + Messaging/Voice/Lawyer-Agent s
 
 **Gated (built behind seam, mock/manual now):** WhatsApp BSP, cloud telephony (Exotel/Knowlarity), Indic STT (Sarvam/AI4Bharat), Indian Kanoon API, embeddings/pgvector RAG (`document_chunk` + FTS works now), multi-provider court routing (Vakeel360/kanoon.dev). All keys in `.env.example`.
 
-**Known follow-up:** messaging/voice webhooks use a single-tenant fallback (`MESSAGING_DEFAULT_TENANT_ID`) — need a firm-number→tenant map for true multi-tenant inbound.
+**Resolved 2026-07-30 (WO-311):** messaging/voice webhooks no longer guess a tenant. Inbound routes on the RECEIVING identity (WhatsApp `phone_number_id` / telephony DID) via the `messaging_identity` mapping; an unmapped identity writes nothing, returns 200, records a `court_provider_health` row and alerts. Both webhooks now verify a signature or hard-refuse.
 
 Related: [[classifier-local-claude-cli]], [[court-data-own-datastore-direction]], [[deployment-vercel]].

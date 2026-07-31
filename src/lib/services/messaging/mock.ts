@@ -38,6 +38,10 @@ export class MockMessagingClient implements MessagingClient {
         threadKey: typeof m.threadKey === "string" && m.threadKey ? m.threadKey : `whatsapp:${m.from}`,
         from: String(m.from),
         to: String(m.to),
+        // WO-311 · dev shape: an explicit receivingIdentity wins, else the
+        // hand-rolled `to`. Still only a LOOKUP key — the mock cannot conjure a
+        // tenant; a dev must seed a messaging_identity row like production does.
+        receivingIdentity: typeof m.receivingIdentity === "string" && m.receivingIdentity ? m.receivingIdentity : String(m.to),
         body: typeof m.body === "string" ? m.body : "",
         media: Array.isArray(m.media) ? m.media : [],
         receivedAt: typeof m.receivedAt === "string" ? m.receivedAt : new Date().toISOString(),

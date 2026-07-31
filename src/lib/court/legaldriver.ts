@@ -4,6 +4,7 @@ import type {
 } from "./types";
 import type { CourtDataClient } from "./client";
 import { isMaskedName, maskName } from "./mask";
+import { resolveLdApiBase, LD_CONSOLE_FETCH_TIMEOUT_MS } from "./ld-api-base";
 
 // Adapter for the LegalDriver court-data API (our own, compliant, licensed-consumption
 // model — we call a REST API with a key; we do NOT scrape eCourts ourselves). Read-
@@ -20,18 +21,9 @@ import { isMaskedName, maskName } from "./mask";
 
 // FAIL CLOSED (WO-190, WO-52 pattern — see peshi's upstream.ts): there is NO hardcoded prod-IP
 // fallback. A missing LD_API_BASE is a configuration error surfaced loudly at construction time —
-// never a silent default to a raw origin IP, which (a) rots the day the box IP changes and (b)
-// bakes an origin IP into the app. CI/Vercel set the env; a deploy without it fails fast with a
-// clear message instead of talking to a ghost.
-function resolveBase(): string {
-  const base = process.env.LD_API_BASE;
-  if (!base) {
-    throw new Error(
-      "LD_API_BASE is not set — refusing to consume court data with no configured API base (fail-closed, WO-190/WO-52).",
-    );
-  }
-  return base;
-}
+// never a silent default to a raw origin IP. WO-289: extracted to the shared `ld-api-base.ts` seam
+// so every LD API consumer resolves the base identically (was duplicated per-file).
+const resolveBase = resolveLdApiBase;
 
 // Sync contract (02-DATA §3): we consume the versioned /v1 surface and the provider stamps
 // every /v1 response with `schema_version`. We pin the MAJOR we were built against; a major
@@ -299,13 +291,21 @@ export class LegalDriverClient implements CourtDataClient {
   // priority live fetch (the founder-opened FG-6 lane). We need the raw HTTP STATUS (200 found/empty
   // · 202 fetching · 422 not-a-record/HC), which `req()` collapses to null — so this does its own
   // fetch. The API-key stays server-side (this runs only from the /api/court/cause-list-fetch route).
+  //
+  // WO-289 fix: the API declares `court_id`/`date` as QUERY params (`api/main.py:791-794`), not a
+  // JSON body — the old `body: JSON.stringify(...)` POST 422'd on every call (dead on arrival the
+  // day LD_ONDEMAND_CAUSELIST flips). Send query params + coerce court_id to an int (a non-numeric
+  // courtId would 422 anyway; fail fast client-side as an honest transient error, never a wasted
+  // round trip). Pinned by tests/wo289_causelist_fetch_contract.ts.
   async requestCauseListFetch(courtId: string, date: string): Promise<{ status: number; hasItems: boolean }> {
+    const courtIdNum = Number(courtId);
+    if (!Number.isFinite(courtIdNum)) return { status: 0, hasItems: false };
     try {
-      const res = await fetch(`${this.base}/v1/cause-lists/fetch`, {
+      const qs = new URLSearchParams({ court_id: String(courtIdNum), date });
+      const res = await fetch(`${this.base}/v1/cause-lists/fetch?${qs.toString()}`, {
         method: "POST",
-        headers: { "X-API-Key": this.apiKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ court_id: courtId, date }),
-        signal: AbortSignal.timeout(Number(process.env.LD_API_TIMEOUT_MS ?? "60000")),
+        headers: { "X-API-Key": this.apiKey },
+        signal: AbortSignal.timeout(LD_CONSOLE_FETCH_TIMEOUT_MS),
       });
       // A 200 may carry a just-served board (found) or an honest-empty; peek at items for the caller.
       let hasItems = false;
