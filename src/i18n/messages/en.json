@@ -158,7 +158,7 @@
       "body": "Add your advocate name and Bar registration number — we'll fetch your entire caseload from the public court record automatically. Cases, hearings and deadlines, on one calendar. No manual entry.",
       "step1": "Add your advocate + Bar number",
       "step2": "We pull your cases & hearing dates",
-      "step3": "Get tomorrow's cause list on WhatsApp",
+      "step3": "Cause list ready daily (WhatsApp alerts coming soon)",
       "primaryCta": "Set up my practice",
       "secondaryCta": "Add a case by CNR",
       "foot": "Takes about 2 minutes · From public court records."
@@ -960,14 +960,14 @@
       "overline": "आज की पेशी, कल की तैयारी।",
       "title1": "Every order read. Every date kept.",
       "title2": "Every evening.",
-      "sub": "Mukadma is the AI that keeps your practice from the court record itself — cases synced by CNR, new orders read and briefed, emails filed to the right matter, and tomorrow's board on your WhatsApp by 8 pm.",
+      "sub": "Mukadma is the AI that keeps your practice from the court record itself — cases synced by CNR, new orders read and briefed, emails filed to the right matter, and tomorrow's board ready by 8 pm.",
       "ctaStart": "Put 25 cases on watch — free",
       "ctaSearch": "Look up a case first — no login",
       "note": "No card. No clerk calls. Cancel anytime.",
       "oneCnr": "One CNR is enough.",
       "ctaPricing": "See pricing",
       "overline2": "आज की पेशी",
-      "miniFoot": "Tomorrow's list reaches WhatsApp before 8 pm"
+      "miniFoot": "Tomorrow's list, ready before 8 pm"
     },
     "proof": {
       "judgments": "18.6M judgments indexed",
@@ -1008,7 +1008,7 @@
           "name": "Free",
           "f": {
             "cases": "25 tracked cases",
-            "digest": "Daily WhatsApp digest",
+            "digest": "Daily cause-list digest",
             "clients": "10 clients & matters",
             "search": "Search 18.6M judgments"
           },
@@ -1018,7 +1018,7 @@
           "name": "Basic",
           "f": {
             "cases": "200 tracked cases",
-            "alerts": "Per-case WhatsApp alerts",
+            "alerts": "Per-case cause-list alerts",
             "invoicing": "Invoicing + UPI collection",
             "credits": "100 AI credits / mo"
           },
@@ -1072,7 +1072,9 @@
           "h": "Legal",
           "a": "Privacy",
           "b": "Terms",
-          "c": "Data corrections"
+          "c": "Data corrections",
+          "d": "Refund",
+          "e": "Cancellation"
         }
       },
       "compliance": "Case data is sourced from public court records and refreshed daily. Mukadma is practice software and a neutral directory; it does not rank, recommend or endorse advocates. © 2026 Mukadma.",
@@ -1085,7 +1087,7 @@
     "family": {
       "eyebrow": "one workflow, three ways in",
       "title": "Everything a case touches — one Mukadma.",
-      "sub": "Run a whole practice, look up a single case, or just get tomorrow's board on WhatsApp. Same court data, three ways to use it.",
+      "sub": "Run a whole practice, look up a single case, or just get tomorrow's board delivered. Same court data, three ways to use it.",
       "app": {
         "title": "Mukadma for advocates",
         "body": "Track every case by CNR, keep your cause list and diary current, and bill clients — a whole litigation practice, kept from the record.",
@@ -1098,14 +1100,15 @@
       },
       "alerts": {
         "title": "WhatsApp alerts",
-        "body": "Tomorrow's cause list — court, item number, stage — reaches your WhatsApp before 8 pm. Add your cases once; the alerts keep coming.",
+        "body": "Tomorrow's cause list — court, item number, stage — straight to your WhatsApp. Add your cases now; delivery activates once the messaging provider is live.",
         "cta": "Get alerts"
       }
     }
   },
   "pages": {
     "backHome": "Home",
-    "draftNotice": "This is a working draft; the final version is under legal review. A translated version will follow."
+    "draftNotice": "This is a working draft; the final version is under legal review. A translated version will follow.",
+    "effectiveDate": "Effective from {date}."
   },
   "calendar": {
     "title": "Diary",
@@ -1747,7 +1750,9 @@
       "noResults": "No case matched",
       "noResultsBody": "Check the type, number and year against the filing receipt, or search by CNR above."
     },
-    "typeMore": "Type at least 2 characters to search."
+    "typeMore": "Type at least 2 characters to search.",
+    "searchErrorTitle": "Search temporarily unavailable",
+    "searchErrorBody": "This search is too heavy for the current engine right now — try a more specific query, or try again shortly."
   },
   "analytics": {
     "title": "Analytics",
@@ -2152,12 +2157,12 @@
   },
   "research": {
     "title": "Case Research",
-    "subtitle": "Now searching the full judgment corpus across every Indian High Court — not just the local slice. Find judgments by party, case number, judge, court, or year.",
-    "subtitleNotConfigured": "Search the full judgment corpus across every Indian High Court — by party, case number, judge, court, or year.",
+    "subtitle": "Full-text search across the order and judgment text we hold for your tracked courts. Find matches by party detail, case description, or judge.",
+    "subtitleNotConfigured": "Full-text search across the order and judgment text we hold for your tracked courts.",
     "notConfiguredTitle": "Corpus not configured",
-    "notConfiguredBody": "The court-judgments corpus is not connected in this environment yet. Once the S3 lake credentials are set, live search across all High Courts becomes available here.",
-    "searchHint": "Search matches parties, case number, and judge across the full multi-court corpus. Queries run live against our S3 lake, so results take a moment to load.",
-    "results": "{count, plural, one {judgment} other {judgments}} from the full multi-court corpus",
+    "notConfiguredBody": "Live court search isn't configured in this environment yet (LD_API_KEY).",
+    "searchHint": "Search matches order and judgment text we already hold — a fast, focused search, not a wait for a live fetch.",
+    "results": "{count, plural, one {match} other {matches}}",
     "filtered": "filtered",
     "clearFilters": "Clear filters",
     "caseCol": "Case",
@@ -2166,12 +2171,15 @@
     "courtCol": "Court",
     "decidedCol": "Decided",
     "dispositionCol": "Disposition",
-    "noMatchTitle": "No matching judgments",
-    "emptyTitle": "Search the judgment corpus",
-    "noMatchBody": "Try a different search or clear the filters.",
-    "emptyBody": "Search by party name, case number, or judge — or filter by court and year across every High Court.",
-    "sourceListing": "Source: Indian High Court Judgments (AWS Open Data, CC-BY 4.0), queried live from our S3 lake. Reference only; not legal advice — verify against the official record.",
-    "searchPlaceholder": "Search by party, case number, or judge…",
+    "noMatchTitle": "No matching orders or judgments",
+    "emptyTitle": "Search orders and judgments",
+    "noMatchBody": "Try a different search term.",
+    "emptyBody": "Search by party name, case detail, or judge.",
+    "sourceListing": "Source: the court record — order and judgment text held for your tracked courts. Reference only; not legal advice — verify against the official record.",
+    "searchErrorTitle": "Search temporarily unavailable",
+    "searchErrorBody": "This search is too heavy for the current engine right now — try a more specific query, or try again shortly.",
+    "trackedBadge": "Tracked",
+    "searchPlaceholder": "Search by party, case detail, or judge…",
     "searchAria": "Search judgments",
     "courtAria": "Court",
     "allCourts": "All courts",
@@ -2488,6 +2496,34 @@
     "liabilityHeading": "Liability & governing law",
     "liabilityBody": "Mukadma is provided “as is” to the extent permitted by law; we are not liable for actions taken in reliance on informational data. These terms are governed by the laws of India, with courts at Ahmedabad, Gujarat having jurisdiction. We may update these terms; material changes will be notified."
   },
+  "refund": {
+    "title": "Refund policy",
+    "subtitle": "How refunds work for Mukadma subscriptions and AI credit packs.",
+    "entityHeading": "Entity",
+    "entityBody": "This policy is issued by Mukadma. Our registered business address is available on request. For refund queries, write to <email>yash@mukadma.in</email>.",
+    "subscriptionsHeading": "Subscription refunds",
+    "subscriptionsBody": "Paid plans are billed per lawyer, in advance, as described on our <pricing>pricing</pricing>. If you cancel, you keep full access until the end of the period you already paid for — we do not refund the unused portion of a current billing period, in line with our <terms>terms</terms>. If a payment was charged in error — a duplicate charge, the wrong plan, or a paid feature that never activated for you — write to us within 7 days of the charge and we will refund it in full.",
+    "creditsHeading": "AI credit packs",
+    "creditsBody": "Prepaid AI credit packs are non-refundable once any credit in the pack has been used. Unused packs remain valid for 90 days and are refundable in full if you request a refund before spending any credit from that pack.",
+    "autopayHeading": "UPI Autopay mandates",
+    "autopayBody": "If you pay by UPI Autopay, you can cancel the mandate at any time from your bank or UPI app, or by writing to us — see our cancellation policy. Cancelling stops future charges immediately; it does not itself refund an amount already billed, which follows the subscription-refund terms above.",
+    "howHeading": "How to request a refund",
+    "howBody": "Email <email>yash@mukadma.in</email> with your registered email and the payment reference. We acknowledge within 48 hours and resolve within 7 business days. Approved refunds are returned to the original payment method via Razorpay, typically within 5–7 business days of approval."
+  },
+  "cancellation": {
+    "title": "Cancellation policy",
+    "subtitle": "How to cancel your Mukadma subscription, and what happens to your data.",
+    "entityHeading": "Entity",
+    "entityBody": "This policy is issued by Mukadma. Our registered business address is available on request (contact yash@mukadma.in).",
+    "howHeading": "How to cancel",
+    "howBody": "Cancel any time from your account billing settings, or by writing to <email>yash@mukadma.in</email>. There is no minimum term and no cancellation fee.",
+    "accessHeading": "What happens after you cancel",
+    "accessBody": "You keep full access to your paid plan until the end of the period you already paid for; after that, your workspace reverts to the free tier. Your cases, clients, documents and billing history are not deleted and remain accessible — see our <privacy>privacy policy</privacy> for how we retain data.",
+    "autopayHeading": "UPI Autopay",
+    "autopayBody": "If you pay by UPI Autopay, cancelling your subscription also cancels the mandate, so no further amount is charged. You can also cancel the mandate directly from your bank or UPI app at any time, independent of Mukadma.",
+    "refundsHeading": "Refunds on cancellation",
+    "refundsBody": "Cancelling stops future billing; it does not itself refund the period you already paid for. See our <refund>refund policy</refund> for when a refund applies."
+  },
   "dataCorrections": {
     "title": "Data corrections & takedowns",
     "subtitle": "Case data on Mukadma comes from public court records and can lag or contain errors. If something about you or a matter is wrong, here’s how to have it corrected or removed.",
@@ -2529,7 +2565,7 @@
   "whyUs": {
     "title": "Why Mukadma",
     "subtitle": "Built for how Indian litigation actually runs — the daily cause list, the CNR, WhatsApp, two languages.",
-    "item1": "<b>Tomorrow’s hearings, before 8 pm.</b> Your full cause list for the next day reaches your WhatsApp every evening — no portal logins, no calls to the clerk.",
+    "item1": "<b>Tomorrow’s hearings, before 8 pm.</b> Your full cause list for the next day reaches you by email every evening — no portal logins, no calls to the clerk. WhatsApp delivery activates once the messaging provider is live.",
     "item2": "<b>CNR-native.</b> Add a case once; hearings, orders and next dates keep themselves current from the court record.",
     "item3": "<b>Everything in its matter.</b> Cases, clients, deadlines, documents and GST invoicing filed to the right case — the whole practice in one place, instead of five.",
     "item4": "<b>Bilingual by default.</b> The whole product works in English and Hindi, with Gujarati following — first-class, not bolted on.",
@@ -2546,7 +2582,7 @@
   "forClients": {
     "title": "For clients",
     "subtitle": "Finding the right advocate — and following your own case — shouldn’t be a shot in the dark.",
-    "today": "Today, Mukadma is where advocates run their practice. Many already use it to keep their clients updated — case status, next hearing dates and documents, in plain language, on WhatsApp.",
+    "today": "Today, Mukadma is where advocates run their practice. Many already use it to keep their clients updated — case status, next hearing dates and documents, in plain language. WhatsApp updates activate once the messaging provider is live.",
     "comingNextHeading": "Coming next",
     "comingNext": "We’re building a place where any citizen can find the right advocate with clarity and trust — drawn from the public court record, never rankings or “best lawyer” claims. If you’d like to be told when it opens, write to <email>yash@mukadma.in</email>.",
     "portal": "Already working with an advocate on Mukadma? Ask them to share your case portal."
@@ -2629,7 +2665,12 @@
     "invalidCnr": {
       "title": "That doesn't look like a valid CNR",
       "body": "\"{cnr}\" isn't a complete CNR. Go back and open the case from a search result."
-    }
+    },
+    "checkForUpdate": "Check for update",
+    "checkingForUpdate": "Checking…",
+    "updated": "Updated",
+    "updateFailed": "Couldn't check for an update — please try again.",
+    "updateNoChange": "Checked — no update found, showing the last synced copy."
   },
   "comms": {
     "notification": {
@@ -2687,6 +2728,9 @@
       "date": "Listed for tomorrow · {date}",
       "listing": "{court} · {time} — {parties}",
       "listingNoTime": "{court} — {parties}",
+      "listingCnr": "CNR {cnr}",
+      "listingStage": "Stage: {stage}",
+      "listingWhere": "Court {courtNo} · Purpose: {purpose}",
       "orders": "{orders} orders uploaded today · read on Mukadma",
       "cta": "Open tomorrow"
     },
@@ -2726,19 +2770,32 @@
       "subject": "{change}",
       "lead": "{change} — {case}, a case you track.",
       "ref": "{court} · CNR {cnr}",
+      "regNo": "Registration No. {regNo}",
+      "hearing": "Next hearing: {nextHearingDate}",
+      "stage": "Stage: {stage}",
+      "purpose": "Purpose: {purpose}",
+      "coram": "Coram: {coram}",
+      "order": "Latest order: {orderTitle} · {orderDate}",
       "detail": "{detail}",
       "cta": "View the case"
     },
     "trackConfirm": {
       "subject": "Now tracking {case}",
       "lead": "You're tracking {case} · {court}.",
+      "stage": "Stage: {stage}",
+      "status": "Status: {status}",
+      "hearing": "Next hearing: {nextHearingDate}",
+      "coram": "Coram: {coram}",
       "body": "We watch the record nightly. When an order is uploaded, a hearing is set, or the status changes, you'll hear from us here.",
       "cta": "Open the case"
     },
     "hearingReminder": {
       "subject": "Hearing {when}",
       "lead": "{case} is listed {when}.",
+      "date": "Listed on {date}",
       "ref": "{court} · CNR {cnr}",
+      "courtNo": "Court No. {courtNo}",
+      "stage": "Stage: {stage}",
       "detail": "Purpose on the record: {purpose}",
       "cta": "Open the case"
     }

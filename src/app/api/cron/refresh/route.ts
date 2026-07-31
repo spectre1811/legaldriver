@@ -128,7 +128,8 @@ export async function GET(request: NextRequest) {
   // folds in both signals this row can carry: didn't need to truncate for time, and didn't fail
   // every attempted case. There is no Vercel→GChat relay in-repo (per WO-288); the real GChat push
   // rides the shared WO-288 W2 bridge — this row is the honest interim signal.
-  const ok = !hitDeadline && (attempted === 0 || failed < attempted);
+  // hitDeadline is normal bounded behavior (recorded in the summary/last_error), NOT unhealthy — only a systemic failure (all attempts failed) flips ok.
+  const ok = attempted === 0 || failed < attempted;
   try {
     await supabase.from("court_provider_health").upsert(
       {

@@ -8,7 +8,7 @@ import { logOutboundEmail } from "@/lib/notify/log";
 import { retryPlan, MAX_SEND_ATTEMPTS } from "@/lib/notify/retry";
 import { resolveRecipientEmail } from "@/lib/notify/recipients";
 import { renderEmail, renderNotice, type RenderedEmail } from "@/lib/email/templates";
-import { appUrl, composeCaseUpdate, hearingWhenLabel, matterIdOf, type CaseUpdatePayload } from "@/lib/notify/email-render";
+import { appUrl, composeCaseUpdate, hearingWhenLabel, istFriendlyDate, matterIdOf, type CaseUpdatePayload } from "@/lib/notify/email-render";
 import { caseDetailHref } from "@/lib/court/case-links";
 import { brand } from "@/lib/brand";
 
@@ -276,6 +276,9 @@ type Payload = CaseUpdatePayload & {
   cases?: DigestCase[];
   phone?: string;
   purpose?: string;
+  // WO-314: hearingReminder-only field — the hearing row's court number, not part of
+  // CaseUpdatePayload since the caseUpdate template doesn't carry a per-hearing court no.
+  courtNo?: string;
 };
 
 // Render one notification kind to a v2 email (WO-264). Dedicated templates for
@@ -293,9 +296,19 @@ function renderForKind(kind: string, p: Payload, group?: CaseUpdatePayload[]): R
   if (kind === "hearing_reminder") {
     const when = hearingWhenLabel(p.eventDate ?? ""); // caller already skipped null (stale)
     if (when) {
+      // WO-314: {when} alone never said WHEN — add the actual date, court number, and stage.
       const rendered = renderEmail(
         "hearingReminder",
-        { when, case: p.title, court: p.court, cnr: p.cnr, purpose: p.purpose },
+        {
+          when,
+          case: p.title,
+          court: p.court,
+          cnr: p.cnr,
+          purpose: p.purpose,
+          date: p.eventDate ? istFriendlyDate(p.eventDate) : undefined,
+          courtNo: p.courtNo,
+          stage: p.stage,
+        },
         appUrl(p.cnr || matterId ? caseDetailHref(p.cnr ?? "", matterId) : "/dashboard/calendar"),
       );
       if (rendered) return rendered;

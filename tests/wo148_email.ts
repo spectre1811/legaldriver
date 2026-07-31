@@ -27,11 +27,19 @@ const SAMPLE: Record<EmailKey, EmailData> = {
   // `change` is a caller-supplied CLOSED-SET label — the 3 longest are "Next hearing set" /
   // "Case disposed" / "New order uploaded"; sample the longest so the ≤6-word subject cap
   // ("{change} on a tracked case") is proven for the worst realistic input, not a lucky one.
-  caseUpdate: { change: "New order uploaded", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026", detail: "Next hearing on 12 Aug." },
-  trackConfirm: { case: "Shah v. Mehta", court: "City Civil" },
+  // WO-314: enriched with the producer-widened fields (next hearing / stage / purpose / full
+  // coram / registration no. / latest order) — none of these are subject slots, so they can't
+  // affect the ≤6-word cap; the sweep below proves that.
+  caseUpdate: {
+    change: "New order uploaded", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026",
+    detail: "Next hearing on 12 Aug.", nextHearingDate: "12 Aug", stage: "Arguments", purpose: "Final hearing",
+    coram: "Justice A. Shah, Justice B. Mehta", regNo: "SCA/1234/2026", orderTitle: "Order", orderDate: "20 Jul",
+  },
+  trackConfirm: { case: "Shah v. Mehta", court: "City Civil", stage: "Evidence", status: "active", nextHearingDate: "5 Aug", coram: "Judge R. Iyer" },
   // {when} is a closed-set send-time label (WO-264); "in 365 days" is the longest form,
   // so the ≤6-word subject cap is proven at the worst case, not a lucky sample.
-  hearingReminder: { when: "in 365 days", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026", purpose: "Arguments" },
+  // WO-314: + the actual date / court number / stage — {when} alone never said WHEN.
+  hearingReminder: { when: "in 365 days", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026", purpose: "Arguments", date: "30 Jul", courtNo: "7", stage: "Arguments" },
 };
 
 const HEARING_ROWS: EmailData[] = [
@@ -101,6 +109,55 @@ for (const k of ["receipt", "syncFailure", "security"] as const) {
   const r = renderEmail(k, SAMPLE[k]);
   check(`${k} has no CTA link`, !!r && !/<a /.test(r.html));
 }
+
+// --- WO-314: caseUpdate carries next hearing / stage / purpose / FULL coram / regNo / latest order ---
+const caseUpdateFull = renderEmail("caseUpdate", SAMPLE.caseUpdate);
+check("caseUpdate carries next hearing date", !!caseUpdateFull && /Next hearing: 12 Aug/.test(caseUpdateFull.text));
+check("caseUpdate carries stage", !!caseUpdateFull && /Stage: Arguments/.test(caseUpdateFull.text));
+check("caseUpdate carries purpose", !!caseUpdateFull && /Purpose: Final hearing/.test(caseUpdateFull.text));
+check("caseUpdate carries the FULL coram, not judges[0]", !!caseUpdateFull && /Coram: Justice A\. Shah, Justice B\. Mehta/.test(caseUpdateFull.text));
+check("caseUpdate carries the registration number", !!caseUpdateFull && /Registration No\. SCA\/1234\/2026/.test(caseUpdateFull.text));
+check("caseUpdate carries the latest order", !!caseUpdateFull && /Latest order: Order · 20 Jul/.test(caseUpdateFull.text));
+
+// absent enrichment fields degrade gracefully — the email still sends with fewer lines,
+// never a fabricated value (a bench-change alert with no known next date must not print one).
+const caseUpdateSparse = renderEmail("caseUpdate", { change: "Bench changed", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026" });
+check("caseUpdate with absent enrichment fields still sends", caseUpdateSparse !== null);
+if (caseUpdateSparse) {
+  check("caseUpdate sparse: no next-hearing line", !/Next hearing:/.test(caseUpdateSparse.text));
+  check("caseUpdate sparse: no stage line", !/Stage:/.test(caseUpdateSparse.text));
+  check("caseUpdate sparse: no coram line", !/Coram:/.test(caseUpdateSparse.text));
+  check("caseUpdate sparse: no registration line", !/Registration No\./.test(caseUpdateSparse.text));
+  check("caseUpdate sparse: no latest-order line", !/Latest order:/.test(caseUpdateSparse.text));
+}
+
+// --- WO-314: trackConfirm carries stage / status / next hearing / coram (was title + court only) ---
+const trackFull = renderEmail("trackConfirm", SAMPLE.trackConfirm);
+check("trackConfirm carries stage", !!trackFull && /Stage: Evidence/.test(trackFull.text));
+check("trackConfirm carries status", !!trackFull && /Status: active/.test(trackFull.text));
+check("trackConfirm carries next hearing", !!trackFull && /Next hearing: 5 Aug/.test(trackFull.text));
+check("trackConfirm carries coram", !!trackFull && /Coram: Judge R\. Iyer/.test(trackFull.text));
+
+// --- WO-314: hearingReminder carries the actual date + court number + stage, not just {when} ---
+const reminderFull = renderEmail("hearingReminder", SAMPLE.hearingReminder);
+check("hearingReminder carries the actual date", !!reminderFull && /Listed on 30 Jul/.test(reminderFull.text));
+check("hearingReminder carries the court number", !!reminderFull && /Court No\. 7/.test(reminderFull.text));
+check("hearingReminder carries stage", !!reminderFull && /Stage: Arguments/.test(reminderFull.text));
+
+// --- WO-314: dailyHearings carries CNR (was SELECTed, never bound), purpose, court item, stage ---
+const enrichedRows: EmailData[] = [
+  { court: "Gujarat HC · Court 7", time: "11:00", parties: "Patel v. State", cnr: "GJHC010012342026", stage: "Arguments", courtNo: "7", purpose: "Final hearing" },
+];
+const enrichedBoard = renderDailyHearings(enrichedRows, { date: "24 Jul", count: 1 });
+check("dailyHearings row carries CNR", !!enrichedBoard && /CNR GJHC010012342026/.test(enrichedBoard.text));
+check("dailyHearings row carries stage", !!enrichedBoard && /Stage: Arguments/.test(enrichedBoard.text));
+check("dailyHearings row carries court no. + purpose", !!enrichedBoard && /Court 7 · Purpose: Final hearing/.test(enrichedBoard.text));
+
+// a row missing cnr/stage/purpose still renders its core listing line — one absent sub-field
+// never drops the court/parties line (each sub-line is independently droppable).
+const partialRow = renderDailyHearings([{ court: "City Civil · Court 3", time: "02:30", parties: "Shah v. Mehta" }], { date: "24 Jul", count: 1 });
+check("dailyHearings row without enrichment still renders its core listing", !!partialRow && /Shah v\. Mehta/.test(partialRow.text));
+check("dailyHearings row without enrichment carries no CNR line", !!partialRow && !/CNR /.test(partialRow.text));
 
 // silence the unused import lint if Slot ever drops out of use
 const _slotType: Slot = null;

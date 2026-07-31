@@ -48,11 +48,14 @@ function row(o: Partial<JudgmentRow>): JudgmentRow {
 }
 
 // ── F3: the render key is collision-proof (index-suffixed, never bare CNR) ──
+// WO-289: the judgments list moved from a <table><tr> to a <ul><li> (order-text search replaced
+// the Athena corpus browse) — the row-key regex is element-agnostic so it still locks the SAME
+// invariant (index-suffixed, never a bare identity) regardless of markup.
 {
   const page = src("src/app/dashboard/search/judgments/page.tsx");
-  const trKey = (page.match(/<tr key=\{([^\n]*?)\} className/) ?? [])[1] ?? "";
-  ok("F3: judgments <tr> key includes the row index", /r\.cnr/.test(trKey) && /\$\{i\}/.test(trKey));
-  ok("F3: judgments key is not the bare `r.cnr` fallback-to-title", trKey !== "r.cnr ?? `${r.title}-${i}`");
+  const rowKey = (page.match(/<(?:tr|li) key=\{([^\n]*?)\} className/) ?? [])[1] ?? "";
+  ok("F3: judgments row key includes the row index", /r\.cnr/.test(rowKey) && /\$\{i\}/.test(rowKey));
+  ok("F3: judgments key is not the bare `r.cnr` fallback-to-title", rowKey !== "r.cnr ?? `${r.title}-${i}`");
 }
 
 // ── F1: icon-only delete has an accessible name (falls back to confirmLabel) ──

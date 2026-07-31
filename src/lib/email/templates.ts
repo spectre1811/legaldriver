@@ -84,14 +84,47 @@ function bodyLines(key: EmailKey, sec: Record<string, string>, data: EmailData):
     case "security":
       return [...L("code", "code"), ...L("note", "muted")];
     case "caseUpdate":
-      return [...L("lead", "lead"), ...L("ref", "muted"), ...L("detail"), ...L("cta", "cta")];
+      // WO-314: the founder's complaint — "this shows nothing about the case" — so every
+      // structured fact the producer can supply gets its own line; each drops independently
+      // when the sync didn't carry it (comms.ts slot-drop), never fabricating a value.
+      return [
+        ...L("lead", "lead"),
+        ...L("ref", "muted"),
+        ...L("regNo", "muted"),
+        ...L("hearing", "muted"),
+        ...L("stage", "muted"),
+        ...L("purpose", "muted"),
+        ...L("coram", "muted"),
+        ...L("order", "muted"),
+        ...L("detail"),
+        ...L("cta", "cta"),
+      ];
     case "trackConfirm":
-      return [...L("lead", "lead"), ...L("body"), ...L("cta", "cta")];
+      // WO-314: the whole NormalizedCase is in hand at the call site — surface it instead of
+      // just title + court.
+      return [
+        ...L("lead", "lead"),
+        ...L("stage", "muted"),
+        ...L("status", "muted"),
+        ...L("hearing", "muted"),
+        ...L("coram", "muted"),
+        ...L("body"),
+        ...L("cta", "cta"),
+      ];
     case "hearingReminder":
       // WO-264 (founder 2026-07-22: the regular hearing emails had no format at all).
       // {when} is a closed-set send-time label (today / tomorrow / in N days) — see
       // hearingWhenLabel in src/lib/notify/email-render.ts; a stale reminder is skipped.
-      return [...L("lead", "lead"), ...L("ref", "muted"), ...L("detail", "muted"), ...L("cta", "cta")];
+      // WO-314: {when} alone never said WHEN — add the actual date + court number + stage.
+      return [
+        ...L("lead", "lead"),
+        ...L("date", "muted"),
+        ...L("ref", "muted"),
+        ...L("courtNo", "muted"),
+        ...L("stage", "muted"),
+        ...L("detail", "muted"),
+        ...L("cta", "cta"),
+      ];
   }
 }
 
@@ -170,6 +203,11 @@ export const EMAIL_KEYS = Object.keys(en.emails) as EmailKey[];
  * each row drops if any of its slots ({court}/{time}/{parties}) is missing, so an incomplete row
  * is never faked. `orders` (the count line) drops when the count is missing — 0 is a real value.
  *
+ * WO-314: each row may also carry {cnr}/{stage}/{courtNo}/{purpose} — the cron SELECTed cnr but
+ * never bound it, and item/stage/purpose were dropped entirely. These ride as INDEPENDENT
+ * sub-lines under the row (not folded into the main listing line) so one absent field never
+ * drops the court/parties line the founder actually needs — only its own sub-line disappears.
+ *
  * SEND RULE (documented, not wired here): the caller SKIPS sending entirely when no matter is
  * listed for tomorrow — this email is never sent empty (unlike the WhatsApp evening board, which
  * always fires). So there is no empty-board fallback line: an empty board means no email, and
@@ -188,21 +226,40 @@ export function renderDailyHearings(
   // Prefer the timed line; fall back to listingNoTime when {time} is absent — the court
   // record carries item numbers, not clock times, so a time-less listing is the honest
   // NORMAL case (WO-264), not an incomplete row to suppress. Court + parties still required.
-  const listings = rows
-    .map((r) => fillTemplate(sec.listing, r) ?? fillTemplate(sec.listingNoTime, r))
-    .filter((l): l is string => l !== null);
-  if (!listings.length) return null; // no listed matter → no email (send rule above)
+  // Each surviving row carries its own optional sub-lines (CNR / stage / court+purpose).
+  const rowBlocks: Line[][] = rows
+    .map((r): Line[] | null => {
+      const main = fillTemplate(sec.listing, r) ?? fillTemplate(sec.listingNoTime, r);
+      if (main === null) return null;
+      const block: Line[] = [{ key: "listing", text: main, role: "lead" }];
+      const cnrLine = fillTemplate(sec.listingCnr, r);
+      if (cnrLine) block.push({ key: "listingCnr", text: cnrLine, role: "muted" });
+      const stageLine = fillTemplate(sec.listingStage, r);
+      if (stageLine) block.push({ key: "listingStage", text: stageLine, role: "muted" });
+      const whereLine = fillTemplate(sec.listingWhere, r);
+      if (whereLine) block.push({ key: "listingWhere", text: whereLine, role: "muted" });
+      return block;
+    })
+    .filter((b): b is Line[] => b !== null);
+  if (!rowBlocks.length) return null; // no listed matter → no email (send rule above)
   const ordersLine = meta.orders === undefined ? null : fillTemplate(sec.orders, { orders: meta.orders });
 
   const inner = [
     ...(dateLine ? [lineHtml({ key: "date", text: dateLine, role: "muted" })] : []),
-    ...listings.map((l) => lineHtml({ key: "listing", text: l, role: "lead" })),
+    ...rowBlocks.flat().map(lineHtml),
     ...(ordersLine ? [lineHtml({ key: "orders", text: ordersLine, role: "muted" })] : []),
     lineHtml({ key: "cta", text: sec.cta, role: "cta" }),
   ].join("\n");
 
   const html = shell(subject, inner).replace(/\{ctaUrl\}/g, esc(ctaUrl));
-  const text = [subject, "", ...(dateLine ? [dateLine] : []), ...listings, ...(ordersLine ? [ordersLine] : []), `${sec.cta}: ${ctaUrl}`, "", "Not legal advice — verify against the official record."].join("\n");
+  const text = [
+    subject, "",
+    ...(dateLine ? [dateLine] : []),
+    ...rowBlocks.flat().map((l) => l.text),
+    ...(ordersLine ? [ordersLine] : []),
+    `${sec.cta}: ${ctaUrl}`, "",
+    "Not legal advice — verify against the official record.",
+  ].join("\n");
   return { subject, html, text };
 }
 

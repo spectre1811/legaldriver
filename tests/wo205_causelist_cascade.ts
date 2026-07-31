@@ -87,7 +87,7 @@ check("HC held → held (still renders what we hold)", initialBoardState({ court
 check("200 + items → found", outcomeFromStatus(200, true) === "found");
 check("200 + no items → empty", outcomeFromStatus(200, false) === "empty");
 check("202 → fetching", outcomeFromStatus(202, false) === "fetching");
-check("422 → empty (pre-gated HC/not-a-record)", outcomeFromStatus(422, false) === "empty");
+check("422 → error (WO-289: a 422 reaching here is a contract bug, never a genuine 'no board')", outcomeFromStatus(422, false) === "error");
 check("null (network) → error", outcomeFromStatus(null, false) === "error");
 check("500 → error (never a silent empty)", outcomeFromStatus(500, false) === "error");
 check("0 (synthetic network fail) → error", outcomeFromStatus(0, false) === "error");
