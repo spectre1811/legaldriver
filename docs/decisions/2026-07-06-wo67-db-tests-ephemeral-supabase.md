@@ -1,6 +1,12 @@
 # WO-67 · DB Tests run on an ephemeral local Supabase (not a long-lived remote throwaway)
 
-**Date:** 2026-07-06 · **Status:** Adopted · **Owner:** S-WO67-opus-20260706 · **Scope:** CI/test-infra (non-gated — no prod migration, no RLS/app-code change)
+**Date:** 2026-07-06 · **Status:** Adopted; **advisory posture SUPERSEDED by WO-310 (2026-07-30)** · **Owner:** S-WO67-opus-20260706 · **Scope:** CI/test-infra (non-gated — no prod migration, no RLS/app-code change)
+
+> **WO-310 update (2026-07-30):** the "advisory / not on `pull_request`" decision below is
+> reversed. `DB Tests` now runs on `pull_request` and is a **required check** for automerge on
+> DB-surface PRs; `rls_isolation.ts` enumerates all tenant-scoped tables from the migrations
+> instead of a hand-written list. The ephemeral-stack mechanism this ADR established is
+> unchanged and is what made the promotion possible. See `docs/CI.md` § "WO-310".
 
 ## Context / problem
 The `DB Tests` workflow (`db-tests.yml`) — `p1_smoke`, `rls_isolation`, `portal_isolation`,

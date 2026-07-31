@@ -17,33 +17,80 @@ name: DB Tests
 # installed CLI (no committed-config-vs-CLI schema drift; the migrations are the
 # only committed contract). See docs/CI.md.
 #
-# Advisory / post-merge: runs on push to `main` + on demand — NOT on `pull_request`,
-# so it never feeds the automerge queue's `build` check. Promote to a required check
-# via branch protection to gate merges once desired (docs/CI.md).
+# WO-310 W1 · BLOCKING, not advisory. This used to run `on: push: branches: [main]`
+# only, and automerge.yml explicitly did not gate on it — so a PR that broke tenant
+# isolation merged green and the breakage was discovered on main, if at all. It now
+# runs on `pull_request` too and automerge.yml requires the `db-tests` check.
+#
+# Cost shape (this is why the job self-skips instead of using a `paths:` trigger):
+# `supabase start` needs Docker, so this job cannot use the self-hosted `mukadma`
+# runner — it burns GitHub-hosted minutes, which are metered on a private repo and
+# have run out before (see automerge.yml). A `paths:` filter would make the check
+# NEVER APPEAR on unrelated PRs, and a required check that never appears blocks the
+# whole fleet's merge queue. So the trigger is unconditional (the check always
+# reports) and the EXPENSIVE part is gated on a changed-file test: a PR that cannot
+# possibly alter a policy finishes in ~15s having spun up nothing.
+#
+# The DB surface = anything that can define or exercise an RLS policy. RLS policies
+# live ONLY in supabase/migrations/**; the rest is what the `db` test group reads.
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
   db-tests:
+    name: db-tests
     # Stays on GitHub-hosted: `supabase start` needs Docker, which doesn't fit the
-    # containerized self-hosted runner. Low-frequency (main push only) + advisory
-    # (does not gate automerge), so it's cheap on the free tier. See
-    # docs/gha-runner-migration-plan.md.
+    # containerized self-hosted runner. See docs/gha-runner-migration-plan.md.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Does this change touch the DB surface?
+        id: scope
+        # push/dispatch always run the full job; a PR runs it only if it touches SQL,
+        # the DB test group, or the code that group imports. KEEP THE LIST HONEST —
+        # under-listing here is how the proof silently stops protecting anyone (WO-67).
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"; echo "full run (${{ github.event_name }})"; exit 0
+          fi
+          # actions/checkout gives a PR the MERGE ref, so HEAD^1 is the base tip and
+          # `HEAD^1..HEAD` is exactly this PR's diff. FAIL SAFE: if that can't be
+          # resolved (checkout config changed, shallow clone), run the full suite.
+          base=$(git rev-parse --verify --quiet HEAD^1 || true)
+          changed=$(git diff --name-only "$base" HEAD 2>/dev/null || true)
+          if [ -z "$base" ] || [ -z "$changed" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            echo "→ could not resolve the PR diff (base='$base') — running the full suite rather than assuming safe"
+            exit 0
+          fi
+          echo "$changed" | sed 's/^/  /'
+          if echo "$changed" | grep -qE '^(supabase/|tests/|scripts/|src/lib/db/|src/lib/court/|src/lib/supabase/|package(-lock)?\.json|\.github/workflows/db-tests\.yml)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            echo "→ DB surface touched: running the full RLS/tenancy suite"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "→ no DB-surface file changed: nothing here can alter an RLS policy, skipping the ephemeral stack"
+          fi
+
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.relevant == 'true'
         with:
           node-version: 22
           cache: npm
       - uses: supabase/setup-cli@v1
+        if: steps.scope.outputs.relevant == 'true'
         with:
           version: latest
 
       - name: Start ephemeral Supabase (clean migrate + fresh schema cache every run)
+        if: steps.scope.outputs.relevant == 'true'
         run: |
           # Generate config.toml against the installed CLI (nothing committed to drift).
           [ -f supabase/config.toml ] || supabase init < /dev/null
@@ -68,6 +115,7 @@ jobs:
           supabase start
 
       - name: Point .env at the local stack
+        if: steps.scope.outputs.relevant == 'true'
         run: |
           eval "$(supabase status -o env)"
           {
@@ -82,9 +130,11 @@ jobs:
           } > .env
 
       - name: Install deps
+        if: steps.scope.outputs.relevant == 'true'
         run: npm ci
 
       - name: Grant Supabase role privileges on public (hosted-parity)
+        if: steps.scope.outputs.relevant == 'true'
         # Hosted Supabase auto-grants anon/authenticated/service_role on every public
         # table; our migrations rely on that. The local `supabase start` does NOT grant
         # them on migration-created tables, so the service_role hits "permission denied
@@ -104,11 +154,18 @@ jobs:
           psql "$DB_URL" -c "notify pgrst, 'reload schema';" || true
 
       - name: Seed the demo tenant + user
+        if: steps.scope.outputs.relevant == 'true'
         run: npx --yes tsx@4.23.0 scripts/seed-demo.ts
 
+      # WO-310 W1: rls_isolation.ts enumerates ALL tenant-scoped tables from
+      # supabase/migrations at runtime (45 today, previously a hand-written 12) and
+      # probes each one three ways — no visible foreign row, no direct primary-key read
+      # of a foreign row, and the seeded tenant still sees its own data. A new table is
+      # covered the moment its migration lands.
       - name: DB / RLS / tenancy tests
+        if: steps.scope.outputs.relevant == 'true'
         run: node scripts/run-tests.mjs db
 
       - name: Stop Supabase
-        if: always()
+        if: always() && steps.scope.outputs.relevant == 'true'
         run: supabase stop --no-backup || true
