@@ -12,6 +12,23 @@ export function normalizeEmail(v: string): string {
 }
 
 /**
+ * WO-316 — hard length caps for the PUBLIC, unauthenticated /request-access form.
+ * A free-text field on an anonymous write is a storage amplifier: without a cap,
+ * one POST can carry megabytes. Truncate rather than reject — a long note is a
+ * clumsy human, not an attacker, and the founder still gets the first NAME_MAX /
+ * NOTE_MAX characters. Empty (or whitespace-only) collapses to null so the column
+ * stores NULL, not "".
+ */
+export const NAME_MAX = 120;
+export const NOTE_MAX = 2000;
+
+export function capText(v: string | null | undefined, max: number): string | null {
+  const s = (v ?? "").trim();
+  if (!s) return null;
+  return s.length <= max ? s : s.slice(0, max);
+}
+
+/**
  * WO-272 W2 — global-admin gate for the access-request console. The app's
  * profile.role is tenant-scoped (owner/lawyer/staff), so it can't express
  * "founder"; instead an ADMIN_EMAILS allowlist names the platform admins.

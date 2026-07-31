@@ -85,7 +85,14 @@ ok("map: 'Signups not allowed' msg → inviteOnly (oauth)", mapAuthError({ messa
   ok("intake: honeypot field checked", a.includes('field(formData, "company")'));
   ok("intake: stores via the service-role admin client", a.includes("createAdminClient") && a.includes('from("access_requests").insert'));
   ok("intake: recipient from ACCESS_REQUEST_NOTIFY env", a.includes("ACCESS_REQUEST_NOTIFY"));
-  ok("intake: 10-min notification dedupe", a.includes("DEDUPE_MS") && a.includes("recentlyNotified"));
+  // WO-316 — the 10-minute window now gates the WRITE, not just the notification:
+  // the count probe runs BEFORE the insert, so N rapid posts cost ≤1 row and ≤1
+  // email. The behavioural drill (real action, stubbed transport, counted INSERTs)
+  // lives in tests/wo316_session_security.ts §E.
+  ok(
+    "intake: the 10-min window check runs BEFORE the insert (WO-316)",
+    a.includes("WINDOW_MS") && a.indexOf("count: \"exact\"") < a.indexOf('from("access_requests").insert'),
+  );
   // WO-288: the old `.catch(() => {})` silent swallow is GONE — a failed email still
   // never fails the request (caught → SendResult), but the outcome is always logged.
   ok("intake: a failed email never fails the request", a.includes(".catch(") && !a.includes(".catch(() => {})"));

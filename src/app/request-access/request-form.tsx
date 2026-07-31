@@ -6,6 +6,7 @@
 
 import { useFormState, useFormStatus } from "react-dom";
 import { useTranslations } from "next-intl";
+import { NAME_MAX, NOTE_MAX } from "@/lib/access/validate";
 import { requestAccess, type RequestAccessState } from "./actions";
 
 const initial: RequestAccessState = {};
@@ -43,7 +44,9 @@ export function RequestAccessForm() {
       <form action={action} className="mt-6 space-y-4">
         <div>
           <label className="ec-label" htmlFor="name">{t("name")}</label>
-          <input id="name" name="name" type="text" autoComplete="name" className="input mt-1.5" placeholder={t("ph.name")} />
+          {/* WO-316 — maxLength mirrors the server cap so the browser stops at the
+              same boundary instead of the server silently truncating. */}
+          <input id="name" name="name" type="text" maxLength={NAME_MAX} autoComplete="name" className="input mt-1.5" placeholder={t("ph.name")} />
         </div>
         <div>
           <label className="ec-label" htmlFor="email">{t("email")}</label>
@@ -51,7 +54,7 @@ export function RequestAccessForm() {
         </div>
         <div>
           <label className="ec-label" htmlFor="note">{t("note")}</label>
-          <textarea id="note" name="note" rows={3} className="input mt-1.5" placeholder={t("ph.note")} />
+          <textarea id="note" name="note" rows={3} maxLength={NOTE_MAX} className="input mt-1.5" placeholder={t("ph.note")} />
         </div>
         {/* Honeypot — off-screen + tab-skipped; humans never fill it, bots do. */}
         <div className="hidden" aria-hidden="true">
