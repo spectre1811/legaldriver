@@ -102,6 +102,7 @@ const OFFLINE = [
   "wo288_email_sendpath",
   "wo316_session_security",
   "wo290_reminder_feeder",
+  "wo311_webhook_tenant",
   "profile_error_states",
 ];
 
@@ -111,6 +112,7 @@ const DB = [
   "p1_smoke",
   "portal_isolation",
   "rls_isolation",
+  "wo311_messaging_isolation",
   "wo01_tenancy_sync",
 ];
 
