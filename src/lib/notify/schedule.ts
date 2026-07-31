@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
+import { istDate } from "@/lib/notify/email-render";
 
 type DB = SupabaseClient<Database>;
 
@@ -16,6 +17,8 @@ function atNineLocal(dateISO: string, offsetDays: number): Date {
 // Schedule T-3/T-1/day-of reminders for one dated event (hearing/deadline).
 // Idempotent: a (tenant, ref, scheduled_for, channel) tuple is inserted at most
 // once, and past send-times are skipped. `ref` ties reminders to their source row.
+// A past EVENT date (WO-290 W2, see guard below) is rejected outright — never
+// even queried against `existing`.
 export async function scheduleReminders(
   supabase: DB,
   tenantId: string,
@@ -30,9 +33,22 @@ export async function scheduleReminders(
     // and a working CTA (caseDetailHref). Optional — legacy callers still work.
     extra?: { cnr?: string; court?: string; matterId?: string; purpose?: string };
   },
+  now: Date = new Date(), // injectable for deterministic IST-boundary tests, same pattern as istDate()/hearingWhenLabel()
 ): Promise<number> {
+  // WO-290 W2: a stale court record can still hand sync an eventDate whose hearing
+  // already happened (the hearing passed but the source record wasn't refreshed) —
+  // never enqueue a reminder for it. This is the daily hearing_reminder "dead row"
+  // feeder (WO-290): a scheduled_for in the past gets picked up by the notify cron,
+  // fails (hearingWhenLabel returns null for a past hearing), and dies. Guard on the
+  // EVENT date directly rather than relying on the per-offset scheduled_for check
+  // below. "Today" is IST (product's tz for all today/tomorrow logic — WO-256/257);
+  // reuse istDate() instead of reimplementing IST day math. The broader IST day-of
+  // scheduling-geometry (offset boundary correctness) is WO-257's scope — this is
+  // only the contained enqueue guard that closes the feeder.
+  if (opts.eventDate.slice(0, 10) < istDate(0, now)) return 0;
+
   const channels = opts.channels ?? ["inapp", "email"];
-  const now = Date.now();
+  const nowMs = now.getTime();
 
   // What's already scheduled for this ref?
   const { data: existing } = await supabase
@@ -46,7 +62,7 @@ export async function scheduleReminders(
   const rows: Database["public"]["Tables"]["notification"]["Insert"][] = [];
   for (const offset of REMINDER_OFFSETS) {
     const when = atNineLocal(opts.eventDate, offset);
-    if (when.getTime() < now) continue; // don't schedule reminders in the past
+    if (when.getTime() < nowMs) continue; // don't schedule reminders in the past
     const scheduledFor = when.toISOString();
     for (const channel of channels) {
       if (seen.has(`${channel}@${scheduledFor}`)) continue;

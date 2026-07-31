@@ -100,6 +100,7 @@ const OFFLINE = [
   "wo264_notify",
   "wo272_invite_only",
   "wo288_email_sendpath",
+  "wo290_reminder_feeder",
   "profile_error_states",
 ];
 
