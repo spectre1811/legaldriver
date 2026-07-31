@@ -16,17 +16,24 @@
 export type BoardState = "pick" | "held" | "fetching" | "empty" | "hcUnheld" | "error";
 
 /** The on-demand fetch outcome, mapped from the W2 endpoint's HTTP status:
- *  200 found → "found" · 200/empty → "empty" · 202 → "fetching" · 422 (not_a_record/HC) → "empty"
- *  (the surface already gates HC before calling, so a 422 here means "no board") · network → "error". */
+ *  200 found → "found" · 200/empty → "empty" · 202 → "fetching" · 422 (not_a_record/HC) → "error"
+ *  · network → "error". */
 export type FetchOutcome = "found" | "fetching" | "empty" | "error";
 
 /** Map a W2 `POST /v1/cause-lists/fetch` HTTP status to a fetch outcome. `null` = the request never
- *  completed (network / abort) → "error". 200 needs the body to tell found vs empty (see caller). */
+ *  completed (network / abort) → "error". 200 needs the body to tell found vs empty (see caller).
+ *
+ * WO-289: 422 now maps to "error", not "empty". The surface already gates HC client-side (a District
+ * miss is the only case that calls this lane), so a 422 reaching here means the request itself is
+ * broken — either a genuine unknown-court edge case or a param-shape regression (the exact body-vs-
+ * query bug this WO fixed) — never a legitimate "no board". Silently swallowing it as "empty" is
+ * precisely the "lying empty" this WO's design invariant forbids; render the honest error/retry state
+ * instead so a future contract drift is immediately visible, not masked as zero results. */
 export function outcomeFromStatus(status: number | null, hasItems: boolean): FetchOutcome {
   if (status === null) return "error";
   if (status === 200) return hasItems ? "found" : "empty";
   if (status === 202) return "fetching";
-  if (status === 422) return "empty"; // HC/District-only/not_a_record — the surface pre-gates HC, so this is "no board"
+  if (status === 422) return "error"; // not_a_record/HC/unknown-court reaching here is a contract bug, not a genuine "no board"
   return "error"; // 5xx and anything unexpected → honest retry, never a silent empty
 }
 

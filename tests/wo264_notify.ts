@@ -6,6 +6,7 @@
 // renderNotice fallback shell (escaping, disclaimer, text part, single CTA link).
 import { hearingWhenLabel, istDate, istFriendlyDate, composeCaseUpdate, appUrl, matterIdOf } from "@/lib/notify/email-render";
 import { renderNotice, renderDailyHearings, renderEmail } from "@/lib/email/templates";
+import { maskTitle } from "@/lib/court/mask";
 
 let ok = true;
 const check = (name: string, cond: boolean) => {
@@ -50,6 +51,42 @@ check("roundup folds sibling titles into detail", !!multi && /Also updated today
 check("roundup keeps the primary as subject-bearer", !!multi && multi.data.change === "New order");
 const legacy = composeCaseUpdate([{ title: "Old row, no change label" }]);
 check("legacy row without a change label → null (caller falls back to renderNotice)", legacy === null);
+
+// --- WO-314: composeCaseUpdate surfaces eventDate (was silently dropped — the founder's
+// screenshot's first cause) + the producer's widened fields ---
+const enriched = composeCaseUpdate([{
+  change: "Bench changed", title: "A v. B", cnr: "CNR1", matterId: "m1", court: "HC",
+  eventDate: "2026-08-12", stage: "Arguments", purpose: "Final hearing",
+  coram: "Justice A, Justice B", regNo: "SCA/1/2026", orderTitle: "Order", orderDate: "20 Jul",
+}]);
+check("composeCaseUpdate surfaces eventDate as a human next-hearing date", !!enriched && enriched.data.nextHearingDate === "12 Aug");
+check(
+  "composeCaseUpdate carries stage/purpose/coram/regNo/latest-order through",
+  !!enriched &&
+    enriched.data.stage === "Arguments" &&
+    enriched.data.purpose === "Final hearing" &&
+    enriched.data.coram === "Justice A, Justice B" &&
+    enriched.data.regNo === "SCA/1/2026" &&
+    enriched.data.orderTitle === "Order" &&
+    enriched.data.orderDate === "20 Jul",
+);
+// absent enrichment fields never fabricate a value — the keys are simply not present
+const sparse = composeCaseUpdate([{ change: "Bench changed", title: "A v. B" }]);
+check(
+  "composeCaseUpdate without enrichment carries none of the new keys",
+  !!sparse && !("nextHearingDate" in sparse.data) && !("stage" in sparse.data) && !("coram" in sparse.data) && !("regNo" in sparse.data),
+);
+
+// --- WO-314: a masked party's title survives maskTitle() → composeCaseUpdate as "name
+// withheld" — never the raw "XXXXXXX" the court record carries (BP-24). This is the exact
+// pipeline recordCaseChanges (src/lib/court/sync.ts) uses before writing the email payload. ---
+const maskedInput = maskTitle("XXXXXXX v. State");
+check("maskTitle converts the protected side to 'name withheld'", maskedInput === "name withheld v. State");
+const maskedRow = composeCaseUpdate([{ change: "Bench changed", title: maskedInput, cnr: "CNR9", court: "HC" }]);
+check(
+  "a masked-party matter's caseUpdate never carries the raw XXXXXXX value",
+  !!maskedRow && maskedRow.data.case === "name withheld v. State" && !/XXXXXXX/i.test(maskedRow.data.case),
+);
 
 // --- listingNoTime: a time-less row renders; a timed row still prefers the timed line ---
 const board = renderDailyHearings(
