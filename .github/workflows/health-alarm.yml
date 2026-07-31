@@ -1,0 +1,79 @@
+name: Health Alarm
+
+# WO-290 / WO-288 W2: polls the court_provider_health snapshot (via the anon get_provider_health
+# RPC) every 30 min and posts to the founder's "Critical AWS Alerts" GChat space (see NOW.md) on
+# any FRESH provider failure (email-sendpath, refresh-cron, deploy-freshness, legaldriver-canary).
+# The Vercel runtime has no AWS creds / no outbound alert relay, so this workflow is the external
+# bridge — Supabase creds + the GChat webhook are GH secrets (SUPABASE_URL, SUPABASE_ANON_KEY,
+# GCHAT_WEBHOOK), never committed. A flaky poll must never page or fail the run: every step is
+# best-effort and the job always exits 0.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  poll:
+    runs-on: [self-hosted, mukadma]
+    timeout-minutes: 5
+    steps:
+      - name: Poll provider health and alert on fresh failures
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          GCHAT_WEBHOOK: ${{ secrets.GCHAT_WEBHOOK }}
+        run: |
+          set +e
+          curl -sS -X POST "$SUPABASE_URL/rest/v1/rpc/get_provider_health" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' -o "$RUNNER_TEMP/health.json"
+
+          if [ ! -s "$RUNNER_TEMP/health.json" ]; then
+            echo "empty/failed RPC response — transient, skipping this cycle"
+            exit 0
+          fi
+
+          python3 <<'PY' || true
+          import json, os, datetime, subprocess
+
+          try:
+              with open(os.path.join(os.environ["RUNNER_TEMP"], "health.json")) as f:
+                  rows = json.load(f)
+          except Exception as e:
+              print(f"could not parse RPC response ({e}) — transient, skipping")
+              raise SystemExit(0)
+
+          now = datetime.datetime.now(datetime.timezone.utc)
+          fresh_down = []
+          for row in rows if isinstance(rows, list) else []:
+              if row.get("ok") is False:
+                  ts = row.get("updated_at") or ""
+                  try:
+                      updated = datetime.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                  except Exception:
+                      continue
+                  if now - updated <= datetime.timedelta(minutes=90):
+                      fresh_down.append((row.get("provider"), ts))
+
+          if not fresh_down:
+              print("all healthy")
+              raise SystemExit(0)
+
+          lines = "\n".join(f"- {p} (last update: {ts})" for p, ts in fresh_down)
+          text = f"\U0001F534 Mukadma health alarm:\n{lines}"
+          print(text)
+
+          webhook = os.environ.get("GCHAT_WEBHOOK", "")
+          if webhook:
+              payload = json.dumps({"text": text})
+              subprocess.run(
+                  ["curl", "-sS", "-X", "POST", "-H", "Content-Type: application/json",
+                   "-d", payload, webhook],
+                  check=False,
+              )
+          PY
+
+          exit 0
