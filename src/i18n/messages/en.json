@@ -847,6 +847,7 @@
     },
     "cta": "Request access",
     "pending": "Sending…",
+    "requiredHint": "Fields marked * are required.",
     "sentTitle": "Request received",
     "sentBody": "Thanks — we've got your request and will be in touch at {email}.",
     "backToLogin": "← Back to sign in",
