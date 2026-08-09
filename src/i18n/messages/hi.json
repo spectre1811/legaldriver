@@ -1636,6 +1636,7 @@
     "filter": {
       "searchPlaceholder": "दस्तावेज़ खोजें (फ़ाइल नाम + सामग्री)…",
       "searchAria": "दस्तावेज़ खोजें",
+      "fullText": "पूर्ण-पाठ",
       "clientAria": "मुवक्किल",
       "allClients": "सभी मुवक्किल",
       "categoryAria": "श्रेणी",
