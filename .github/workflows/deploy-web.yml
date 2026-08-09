@@ -1,0 +1,46 @@
+# WO-323 · Auto-deploy the standalone app to the self-hosted web box on merge to main.
+# Off Vercel there is no git auto-deploy; this restores it. Builds on the self-hosted runner
+# (canvas/pdf-to-img is a RUNTIME dep — `next build` only traces it; the box has cairo/pango),
+# ships the bundle via S3, then SSM-restarts + health-gates the box. Uses the runner instance
+# role (legaldriver-gha-runner-role → web-deploy policy) — no AWS secrets in the repo.
+name: deploy-web
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web-legaldriver
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, mukadma]
+    env:
+      AWS_REGION: ap-south-1
+      APP: legaldriver
+      PORT: "3000"
+      HEALTH_PATH: /api/health
+      SSM_PATH: /mukadma/web/legaldriver
+      BUCKET: legaldriver-corpus-872253065260
+      INSTANCE_ID: i-091ae99c81004c6fb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build standalone (real NEXT_PUBLIC_* from SSM)
+        run: |
+          set -euo pipefail
+          # NEXT_PUBLIC_* are inlined at build — pull the real (public-by-design) values from SSM.
+          while IFS=$'\t' read -r name value; do
+            [ -n "$name" ] && export "${name##*/}=$value"
+          done < <(aws ssm get-parameters-by-path --region "$AWS_REGION" --path "$SSM_PATH" --recursive \
+                    --query "Parameters[?contains(Name, 'NEXT_PUBLIC_')].[Name,Value]" --output text)
+          export BUILD_SHA="$(git rev-parse --short HEAD)"
+          npm ci --no-audit --no-fund
+          npm run build:standalone
+
+      - name: Ship to the web box + health-gate
+        run: GIT_SHA="$(git rev-parse --short HEAD)" python3 scripts/deploy-to-box.py
