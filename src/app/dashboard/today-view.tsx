@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Icon } from "@/components/icons";
 import { cleanPurpose } from "@/lib/court/code-labels";
+import { CountUp, Reveal } from "./motion";
 
 // Presentational "Today" ledger — Chambers/Daybreak skin (WO-330), matching the
 // design reference's layout/hierarchy while binding every value to real data
@@ -100,7 +101,7 @@ export async function TodayView({
       </header>
 
       {/* week strip */}
-      <div className="num grid grid-cols-6 divide-x divide-ec-hair border-y border-ec-hair" aria-label={t("weekAria")}>
+      <Reveal delay={60} className="num grid grid-cols-6 divide-x divide-ec-hair border-y border-ec-hair" aria-label={t("weekAria")}>
         {week.map((d) => (
           <div key={d.iso} aria-current={d.isToday ? "date" : undefined} className={`px-2 py-3 text-center ${d.isToday ? "bg-ec-bronze-tint/40" : ""}`}>
             <div className="ec-label">{wd(d.iso, { weekday: "short", timeZone: "UTC" })}</div>
@@ -111,11 +112,11 @@ export async function TodayView({
             {d.isToday && <div className="mx-auto mt-1.5 h-[2px] w-6 rounded-full bg-ec-honey" />}
           </div>
         ))}
-      </div>
+      </Reveal>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px]">
         {/* ledger */}
-        <section className="min-w-0">
+        <Reveal delay={120} as="section" className="min-w-0">
           {hearings.length > 0 ? (
             <>
               <div className="mb-1.5 flex items-end justify-between gap-3">
@@ -217,13 +218,15 @@ export async function TodayView({
           ) : (
             <p className="py-3 text-sm text-ec-ink-3">{to("deadlines.empty")}</p>
           )}
-        </section>
+        </Reveal>
 
         {/* right rail */}
-        <aside className="min-w-0 space-y-6">
+        <Reveal delay={180} as="aside" className="min-w-0 space-y-6">
           <Link href="/dashboard/inbox" className="ec-card block p-4 transition-colors hover:bg-ec-bronze-tint/25">
             <div className="ec-label">{to("inbox.eyebrow")}</div>
-            <div className="font-display num mt-1 text-[30px] leading-none text-ec-ink">{inboxReview}</div>
+            <div className="font-display num mt-1 text-[30px] leading-none text-ec-ink">
+              <CountUp value={inboxReview} />
+            </div>
             <span className="mt-2 inline-flex items-center gap-1 text-[12.5px] text-ec-bronze-deep">
               {to("inbox.cta")} →
             </span>
@@ -235,11 +238,24 @@ export async function TodayView({
             <dl className="divide-y divide-ec-hair border-b border-ec-hair">
               <div className="flex items-baseline justify-between py-2.5">
                 <dt className="text-[13px] text-ec-ink-2">{to("practice.hearings")}</dt>
-                <dd className="font-display num text-[18px] text-ec-ink">{hearingsThisWeek}</dd>
+                <dd className="font-display num text-[18px] text-ec-ink">
+                  <CountUp value={hearingsThisWeek} />
+                </dd>
+              </div>
+              {/* "Filings made" has no reliable backing timestamp in the schema (no filing-event
+                  table/column) — kept in the reference's exact slot, rendered honestly-pending
+                  rather than a fabricated count (WO-330 founder direction). */}
+              <div className="flex items-baseline justify-between py-2.5">
+                <dt className="text-[13px] text-ec-ink-2">{to("practice.filings")}</dt>
+                <dd className="font-display num text-[18px] text-ec-ink-3" aria-label={to("practice.notTracked")} title={to("practice.notTracked")}>
+                  —
+                </dd>
               </div>
               <div className="flex items-baseline justify-between py-2.5">
                 <dt className="text-[13px] text-ec-ink-2">{to("practice.orders")}</dt>
-                <dd className="font-display num text-[18px] text-ec-ink">{ordersThisWeek}</dd>
+                <dd className="font-display num text-[18px] text-ec-ink">
+                  <CountUp value={ordersThisWeek} />
+                </dd>
               </div>
             </dl>
           </div>
@@ -261,7 +277,7 @@ export async function TodayView({
               <p className="text-sm text-ec-ink-3">{to("lastSync.never")}</p>
             )}
           </div>
-        </aside>
+        </Reveal>
       </div>
     </div>
   );

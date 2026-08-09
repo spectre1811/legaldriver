@@ -191,6 +191,8 @@
       "practice": {
         "title": "Your practice this week",
         "hearings": "Hearings",
+        "filings": "Filings made",
+        "notTracked": "Not yet tracked",
         "orders": "Orders on your cases"
       },
       "lastSync": {
