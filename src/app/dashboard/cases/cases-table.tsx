@@ -5,15 +5,14 @@
 // + 10s Undo), reversible bulk stage-change, CSV export, and sortable column headers. The server
 // page still does the fetch + pagination; this owns the client-side selection/sort interactions.
 
-import { useState, type KeyboardEvent } from "react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
-import { fmtAgo } from "@/components/ui";
 import { cleanPurpose } from "@/lib/court/code-labels";
 import { maskTitle } from "@/lib/court/mask";
-import { CourtChip, formatCourtDate } from "@/components/court";
+import { CourtChip, formatCourtDate, stalenessState, relativeAge } from "@/components/court";
 import {
   useSelection, useUndo, BulkBar, bulkBtn, RowCheckbox, SelectAllCheckbox, UndoToast,
 } from "@/components/selection";
@@ -22,12 +21,19 @@ import { hearingUrgency, courtCaseNo } from "./cases-row";
 import { DENSITIES, DENSITY_COOKIE, type Density } from "./density";
 import { parseSort, toCasesCsv } from "./cases-query";
 import type { MatterRow } from "./cases-query";
+import { Segmented } from "./segmented";
 import {
   bulkDeleteMatters, restoreMatters, bulkSetStage, bulkRestoreStages, type StageSnapshot,
 } from "./actions";
 
 // A sortable column: `key` is the `sort` param key resolved by cases-query's allowlist.
 type SortKey = "title" | "court" | "stage" | "status" | "next";
+
+// WO-331 Daybreak reskin · the per-row "Synced" dot's freshness bar. The product already promises
+// "refreshed nightly" (cases.subtitle) — real, so past 48h the sync is honestly no longer "fresh".
+// A SEPARATE, longer bar (STALE_SYNC_DAYS in cases-query.ts) gates the attention-strip's "stale
+// records" bucket — the dot flags routine lag; that strip flags "this needs you".
+const SYNCED_FRESH_SLO_HOURS = 48;
 
 export function CasesTable({
   rows, today, stages, initialDensity = "cozy",
@@ -41,6 +47,7 @@ export function CasesTable({
   const te = useTranslations("enum");
   const tcd = useTranslations("caseDetail");
   const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
+  const locale = useLocale();
 
   const router = useRouter();
   const sp = useSearchParams();
@@ -61,6 +68,31 @@ export function CasesTable({
   const [drawerRow, setDrawerRow] = useState<MatterRow | null>(null);
   // Prior stages captured by the last bulk stage-change, so its Undo can restore per-row values.
   const [stageUndo, setStageUndo] = useState<StageSnapshot[] | null>(null);
+
+  // WO-331 Daybreak reskin · List/Agenda view toggle (reference: cases.tsx's `view` state). Agenda
+  // groups the SAME page of `rows` this component already has by real upcoming hearing date — no
+  // second fetch, no full-account scan. It's honestly scoped to the current filtered/paginated page,
+  // same as the table itself; there's no per-hearing TIME or courtroom field in the data model (the
+  // reference's dummy "10:30"/"Court 12" columns), so those are dropped rather than fabricated.
+  const [view, setView] = useState<"list" | "agenda">("list");
+  const agenda = useMemo(() => {
+    const upcoming = rows
+      .map((r) => ({ row: r, eff: r.next_hearing_override ?? r.next_hearing_date }))
+      .filter((x): x is { row: MatterRow; eff: string } => x.eff != null && x.eff >= today)
+      .sort((a, b) => (a.eff < b.eff ? -1 : a.eff > b.eff ? 1 : 0));
+    const groups = new Map<string, MatterRow[]>();
+    for (const { row, eff } of upcoming) {
+      const day = eff.slice(0, 10);
+      (groups.get(day) ?? groups.set(day, []).get(day)!).push(row);
+    }
+    return [...groups.entries()].map(([day, items]) => ({ day, items }));
+  }, [rows, today]);
+  // Locale-aware short weekday (native Intl, matches the app's existing today-view.tsx pattern) —
+  // UTC-pinned so the day label never rolls across a client-timezone midnight.
+  const dow = (isoDay: string) =>
+    new Intl.DateTimeFormat(locale === "hi" ? "hi-IN" : "en-IN", { weekday: "short", timeZone: "UTC" }).format(
+      new Date(`${isoDay}T00:00:00Z`),
+    );
 
   const active = parseSort(sp.get("sort") ?? undefined);
 
@@ -134,8 +166,17 @@ export function CasesTable({
 
   return (
     <>
-      {/* WO-54 W4 · density control — a segmented toggle; instant + persisted, no save button. */}
-      <div className="mb-2.5 flex items-center justify-end">
+      {/* WO-331 · List/Agenda (reference view toggle) + WO-54 W4 density control, one row. */}
+      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+        <Segmented
+          label={t("view.aria")}
+          value={view}
+          onChange={(v) => setView(v as "list" | "agenda")}
+          options={[
+            { value: "list", label: t("view.list") },
+            { value: "agenda", label: t("view.agenda") },
+          ]}
+        />
         <div className="inline-flex items-center gap-0.5 rounded-full border border-ec-hair-strong p-0.5" role="group" aria-label={t("density.aria")}>
           {DENSITIES.map((d) => (
             <button
@@ -154,7 +195,8 @@ export function CasesTable({
         </div>
       </div>
 
-      <div className="ec-card overflow-hidden">
+      {view === "list" ? (
+      <div className="ec-card stagger overflow-hidden">
         <table className="cases-table w-full text-sm" data-density={density}>
           <thead>
             <tr className="border-b border-ec-hair-strong text-left">
@@ -166,12 +208,9 @@ export function CasesTable({
                 />
               </th>
               <SortHeader label={t("th.case")} col="title" active={active} onSort={setSort} />
-              <th className="ec-label hidden px-5 py-3 lg:table-cell">{t("th.client")}</th>
               <SortHeader label={t("th.court")} col="court" active={active} onSort={setSort} className="hidden md:table-cell" />
-              <SortHeader label={t("th.stage")} col="stage" active={active} onSort={setSort} className="hidden sm:table-cell" />
-              <SortHeader label={t("th.status")} col="status" active={active} onSort={setSort} className="hidden sm:table-cell" />
-              <SortHeader label={t("th.next")} col="next" active={active} onSort={setSort} />
-              <th className="ec-label hidden px-5 py-3 lg:table-cell">{t("th.source")}</th>
+              <SortHeader label={t("th.next")} col="next" active={active} onSort={setSort} className="w-44" />
+              <th className="ec-label hidden w-20 px-5 py-3 text-right sm:table-cell">{t("th.synced")}</th>
               <th className="w-10 px-3 py-3" aria-hidden="true" />
             </tr>
           </thead>
@@ -185,6 +224,15 @@ export function CasesTable({
               const caseNo = courtCaseNo(m.case_type, detail);
               const tier = typeof detail.tier === "string" && detail.tier.trim() ? detail.tier.trim() : null;
               const urg = hearingUrgency(eff, today);
+              // WO-331: disposed is the one status worth a chip inline (matches case-detail-drawer's
+              // substring convention so the two surfaces never disagree on what counts as disposed).
+              const isDisposed = (m.status ?? "").toUpperCase().includes("DISPOSED");
+              // Synced dot — real freshness off `last_synced_at`; never synced reads as not-fresh,
+              // honestly labelled rather than defaulting to a false-fresh green.
+              const fresh = m.last_synced_at != null && !stalenessState(m.last_synced_at, SYNCED_FRESH_SLO_HOURS).stale;
+              const syncedTitle = m.last_synced_at
+                ? t("th.syncedTitle", { source: m.source ?? t("th.manualSource"), ago: relativeAge(m.last_synced_at) })
+                : t("th.neverSynced");
               return (
                 <tr
                   key={m.id}
@@ -197,23 +245,27 @@ export function CasesTable({
                     <RowCheckbox checked={checked} onSelect={(shift) => sel.onRowClick(m.id, shift)} label={t("bulk.selectRow", { title: m.title })} />
                   </td>
                   <td className="px-5 py-3.5">
-                    <Link href={`/dashboard/cases/${m.id}`} className="font-display font-medium text-ec-ink group-hover:text-ec-brass-deep">
-                      {maskTitle(m.title, tcd("maskedTitle"))}
-                    </Link>
-                    {(caseNo || tier || m.cnr) && (
+                    <div className="flex items-center gap-2">
+                      <Link href={`/dashboard/cases/${m.id}`} className="font-display font-medium text-ec-ink group-hover:text-ec-brass-deep">
+                        {maskTitle(m.title, tcd("maskedTitle"))}
+                      </Link>
+                      {isDisposed && <span className="ec-chip shrink-0">{st(m.status!)}</span>}
+                    </div>
+                    {(caseNo || tier || m.stage || m.client?.name || m.cnr) && (
                       <div className="cases-subline mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[0.7rem] text-ec-ink-3">
                         {caseNo && <span className="num text-ec-ink-2">{caseNo}</span>}
                         {tier && <CourtChip tone="neutral">{tier}</CourtChip>}
+                        {m.stage && <span className="ec-chip" title={m.stage}>{cleanPurpose(m.stage)}</span>}
+                        {m.client?.name && <span>· {m.client.name}</span>}
                         {m.cnr && <span className="num">{m.cnr}</span>}
                       </div>
                     )}
+                    {/* Mobile fallback — court + next hearing collapse here once the dedicated columns hide. */}
+                    <div className="num mt-1 text-[11px] text-ec-ink-3 sm:hidden">
+                      {[m.court, eff ? (formatCourtDate(eff) ?? null) : t("noDate")].filter(Boolean).join(" · ")}
+                    </div>
                   </td>
-                  <td className="hidden px-5 py-3.5 text-ec-ink-2 lg:table-cell">{m.client?.name ?? <span className="text-ec-ink-3">—</span>}</td>
                   <td className="hidden px-5 py-3.5 text-ec-ink-2 md:table-cell">{m.court ?? "—"}</td>
-                  <td className="hidden px-5 py-3.5 sm:table-cell">{m.stage ? <span className="ec-chip" title={m.stage}>{cleanPurpose(m.stage)}</span> : <span className="text-ec-ink-3">—</span>}</td>
-                  <td className="hidden px-5 py-3.5 sm:table-cell">
-                    {m.status ? <span className={`ec-chip ${m.status === "disposed" ? "" : "ec-chip-hot"}`}>{st(m.status)}</span> : <span className="text-ec-ink-3">—</span>}
-                  </td>
                   <td className="num px-5 py-3.5">
                     {eff ? (
                       <span className="inline-flex flex-wrap items-center gap-1.5">
@@ -223,16 +275,47 @@ export function CasesTable({
                       </span>
                     ) : <span className="text-xs text-ec-ink-3">{t("noDate")}</span>}
                   </td>
-                  <td className="num hidden px-5 py-3.5 text-xs text-ec-ink-3 lg:table-cell">{m.source ?? "—"} · {fmtAgo(m.last_synced_at)}</td>
+                  <td className="hidden px-5 py-3.5 text-right sm:table-cell">
+                    <span
+                      title={syncedTitle}
+                      aria-label={syncedTitle}
+                      className={`inline-block h-2 w-2 rounded-full ${fresh ? "bg-ec-success" : "bg-ec-hair-strong"}`}
+                    />
+                  </td>
                   <td className="px-3 py-3.5 text-right">
-                    <button
-                      type="button"
-                      onClick={() => setDrawerRow(m)}
-                      aria-label={t("drawer.openAria", { title: m.title })}
-                      className="rounded-full p-1.5 text-ec-ink-3 opacity-70 transition hover:bg-ec-hair hover:text-ec-brass-deep focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ec-brass group-hover:opacity-100"
-                    >
-                      <Icon name="eye" className="h-4 w-4" />
-                    </button>
+                    {/* WO-331 · the reference's row-hover action cluster. "Open" is real (the existing
+                        drawer). "Cause list" is real — legaldriver already has /dashboard/cause-list;
+                        not deep-linked per row (no reliable court-id on the record to scope it), still
+                        a genuine destination. "Add note" has no backing capability anywhere in the app
+                        (checked actions.ts) — kept visible per the prototype but disabled/"soon" rather
+                        than faked, same treatment as the refresh controls. */}
+                    <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => setDrawerRow(m)}
+                        aria-label={t("drawer.openAria", { title: m.title })}
+                        className="rounded-full p-1.5 text-ec-ink-3 transition hover:bg-ec-hair hover:text-ec-brass-deep focus-visible:ring-2 focus-visible:ring-ec-brass"
+                      >
+                        <Icon name="eye" className="h-4 w-4" />
+                      </button>
+                      <Link
+                        href="/dashboard/cause-list"
+                        aria-label={t("row.causeList")}
+                        title={t("row.causeList")}
+                        className="rounded-full p-1.5 text-ec-ink-3 transition hover:bg-ec-hair hover:text-ec-brass-deep focus-visible:ring-2 focus-visible:ring-ec-brass"
+                      >
+                        <Icon name="calendar" className="h-4 w-4" />
+                      </Link>
+                      <button
+                        type="button"
+                        disabled
+                        aria-label={t("row.addNote")}
+                        title={t("row.addNoteTitle")}
+                        className="rounded-full p-1.5 text-ec-ink-3 opacity-40"
+                      >
+                        <Icon name="edit" className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -240,6 +323,45 @@ export function CasesTable({
           </tbody>
         </table>
       </div>
+      ) : (
+        <div className="stagger space-y-6">
+          {agenda.map((g) => (
+            <section key={g.day}>
+              <div className="flex items-baseline gap-3 border-b border-ec-hair pb-2">
+                <h2 className="display text-[19px] text-ec-ink">
+                  {dow(g.day)} {formatCourtDate(g.day) ?? g.day}
+                </h2>
+                <span className="num font-mono text-[11px] uppercase tracking-[0.1em] text-ec-ink-3">
+                  {t("agenda.count", { n: g.items.length })}
+                </span>
+              </div>
+              <div className="divide-y divide-ec-hair">
+                {g.items.map((r) => {
+                  const rDetail = (r.detail ?? {}) as Record<string, unknown>;
+                  const rCaseNo = courtCaseNo(r.case_type, rDetail) ?? r.cnr;
+                  return (
+                    <Link
+                      key={r.id}
+                      href={`/dashboard/cases/${r.id}`}
+                      className="ec-row block py-3 transition-colors hover:bg-ec-bronze-tint/25"
+                    >
+                      <span className="display block truncate text-[15px] text-ec-ink hover:underline">
+                        {maskTitle(r.title, tcd("maskedTitle"))}
+                      </span>
+                      {(r.court || rCaseNo) && (
+                        <span className="num mt-0.5 block truncate font-mono text-[11px] text-ec-ink-3">
+                          {[r.court, rCaseNo].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+          {agenda.length === 0 && <p className="text-[13px] text-ec-ink-3">{t("agenda.empty")}</p>}
+        </div>
+      )}
 
       {/* Floating bulk-action bar — appears on selection (shared WO-43 primitive). */}
       <BulkBar count={sel.size} label={t("bulk.selected", { n: sel.size })} clearLabel={t("bulk.clear")} onClear={sel.clear}>
@@ -253,6 +375,12 @@ export function CasesTable({
           <option value="" className="text-ink">{t("bulk.setStage")}</option>
           {stages.map((s) => <option key={s} value={s} className="text-ink">{cleanPurpose(s)}</option>)}
         </select>
+        {/* WO-331 · kept visible per the prototype (bulk refresh is a designed control, not dropped) —
+            the ACTION stays deferred to WO-309: a synchronous per-selected-case fan-out is exactly the
+            live-fetch pattern that WO ruled out on measured BP-66 WAF evidence. */}
+        <button type="button" disabled title={t("bulk.refreshTitle")} aria-disabled="true" className={`${bulkBtn} opacity-40`}>
+          {t("bulk.refresh")}
+        </button>
         <button onClick={onExport} disabled={busy} className={bulkBtn}>{t("bulk.export")}</button>
         <button onClick={onDelete} disabled={busy} className={`${bulkBtn} text-red-300`}>{t("bulk.delete")}</button>
       </BulkBar>

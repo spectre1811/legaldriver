@@ -82,6 +82,27 @@
 
   .ec-card { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-m); box-shadow: var(--e1); }
 
+  /* WO-331 · ported verbatim from design-mockups/iteration3/console/styles.css (the Chambers
+     prototype's own motion vocabulary) — press = the chip/button active-state micro-animation,
+     stagger = a once-on-mount fade+rise for a section that just appeared. Both ride the existing
+     prefers-reduced-motion override below (transition/animation duration → ~0), so no extra work
+     is needed to make them respect it. */
+  .press { transition: transform .16s cubic-bezier(.2,.75,.25,1), background-color .2s ease, color .2s ease, border-color .2s ease; }
+  .press:active { transform: scale(0.96); }
+  @keyframes stagger-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .stagger { animation: stagger-in 0.45s ease-out both; }
+
+  /* WO-331 · ported from styles.css's `.shimmer` — the loading-skeleton gradient (a genuine
+     prototype gradient; "don't flatten to a solid" applies here, not just to a static colour).
+     Uses --paper-3 (our token equal to the prototype's own --band #F1ECE1), not our DIFFERENT
+     existing --band — see the tokens.css note on why that name isn't reused as-is. */
+  @keyframes mk-shimmer { from { background-position: -180% 0; } to { background-position: 180% 0; } }
+  .shimmer {
+    background-image: linear-gradient(90deg, var(--paper-3) 0%, color-mix(in oklab, var(--paper-3) 55%, #fff) 50%, var(--paper-3) 100%);
+    background-size: 180% 100%;
+    animation: mk-shimmer 1.6s linear infinite;
+  }
+
   /* stage / status pill */
   .ec-chip {
     display: inline-block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em;

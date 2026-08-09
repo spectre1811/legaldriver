@@ -1,32 +1,29 @@
 "use client";
 
-// WO-59 · The Cases "Attention" bar. Replaces the passive urgency tab-pills with an actionable
-// triage surface: the cases that need the advocate NOW (overdue · due this week · no hearing date),
-// each a card that states the count, the next action, and — on click — filters the list to exactly
-// those cases (toggling off when already active). Purely reads the bounded HEAD counts the page
-// already fetched (no new query). Only non-empty buckets render; when nothing is urgent (but cases
-// exist) it shows a calm "all caught up" line, so the bar is signal, never noise.
+// WO-59 · The Cases "Attention" strip. WO-331 (Daybreak reskin) restyles the WO-59 triage cards
+// into the reference's inline value+label chip row (design-mockups/iteration3/console/cases.tsx
+// AttentionSeg) — same real counts, same click-to-filter behaviour, just the visual language.
+// Purely reads the bounded HEAD counts the page already fetched (no new query beyond the
+// additive `stale` count in cases-query.ts). Only non-empty buckets render; when nothing needs
+// attention (but cases exist) it shows a calm "all caught up" line, so the strip is signal, never
+// noise. Honest framing: `stale` (sync freshness) is a DIFFERENT signal from `overdue` (hearing
+// urgency) — see the hint copy, never conflated.
 
 import { useTranslations } from "next-intl";
-import { Icon, type IconName } from "@/components/icons";
+import { Icon } from "@/components/icons";
 import { useCasesNav } from "./cases-nav";
 import type { ViewCounts } from "./cases-query";
 
-type Tone = "danger" | "warn" | "neutral";
-type Bucket = { key: "overdue" | "soon" | "noDate"; next: string; icon: IconName; tone: Tone };
+type Bucket = { key: "overdue" | "soon" | "noDate" | "stale"; next: string };
 
-// `next` mirrors the console/query urgency filter values so a card and the filter agree.
+// `next` mirrors the console/query urgency (or sync-freshness) filter values so a chip and the
+// filter always agree — `stale` routes through the same real `last_synced_at` cutoff as the count.
 const BUCKETS: Bucket[] = [
-  { key: "overdue", next: "overdue", icon: "alert", tone: "danger" },
-  { key: "soon", next: "7d", icon: "clock", tone: "warn" },
-  { key: "noDate", next: "none", icon: "calendar", tone: "neutral" },
+  { key: "overdue", next: "overdue" },
+  { key: "soon", next: "7d" },
+  { key: "noDate", next: "none" },
+  { key: "stale", next: "stale" },
 ];
-
-const TONE: Record<Tone, { chip: string; ring: string }> = {
-  danger: { chip: "bg-ec-danger-t text-ec-danger", ring: "ring-ec-danger/50 border-ec-danger/40" },
-  warn: { chip: "bg-ec-warn-t text-ec-warn", ring: "ring-ec-warn/50 border-ec-warn/40" },
-  neutral: { chip: "bg-ec-brass-tint text-ec-brass-deep", ring: "ring-ec-brass/50 border-ec-brass/40" },
-};
 
 export function CasesAttention({ counts }: { counts: ViewCounts }) {
   const t = useTranslations("cases.attention");
@@ -38,61 +35,48 @@ export function CasesAttention({ counts }: { counts: ViewCounts }) {
   const active = sp.get("next");
   const shown = BUCKETS.filter((b) => counts[b.key] > 0);
 
-  // Click the active card again → clear the filter. Routes through the shared soft-nav (no churn).
+  // Click the active chip again → clear the filter. Routes through the shared soft-nav (no churn).
   const toggle = (b: Bucket) => setParam("next", active === b.next ? "" : b.next);
 
   return (
-    <section aria-label={t("title")} data-testid="cases-attention" className="space-y-2">
-      <h2 className="flex items-center gap-1.5 px-1 text-xs font-medium uppercase tracking-wide text-ec-ink-3">
-        <Icon name="bell" className="h-3.5 w-3.5" /> {t("title")}
-      </h2>
-
+    <section
+      aria-label={t("title")}
+      data-testid="cases-attention"
+      className="stagger flex flex-wrap items-center gap-2 border-t border-ec-hair pt-3"
+    >
       {shown.length === 0 ? (
-        <div className="ec-card flex items-center gap-2.5 p-3.5 text-sm text-ec-ink-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-ec-m bg-ec-success-t text-ec-success">
-            <Icon name="check" className="h-4 w-4" />
-          </span>
+        <span className="inline-flex items-center gap-2 text-[13px] text-ec-ink-2">
+          <Icon name="check" className="h-4 w-4 text-ec-success" />
           {t("allClear")}
-        </div>
+        </span>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {shown.map((b) => {
-            const on = active === b.next;
-            const tone = TONE[b.tone];
-            return (
-              <button
-                key={b.key}
-                type="button"
-                onClick={() => toggle(b)}
-                aria-pressed={on}
-                data-testid={`attention-${b.key}`}
-                data-active={on ? "true" : "false"}
-                aria-label={t("filterAria", { label: t(`${b.key}.label`) })}
-                className={`ec-card group flex items-center gap-3 p-3.5 text-left transition motion-safe:hover:-translate-y-px ${
-                  on ? `ring-1 ${tone.ring}` : "hover:border-ec-hair-strong"
-                }`}
-              >
-                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-ec-m ${tone.chip}`}>
-                  <Icon name={b.icon} className="h-4 w-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline gap-1.5">
-                    {/* Serif display numeral (Fraunces), zero-padded to 2 to match the reference ("06/11/60"). */}
-                    <span className="font-display text-2xl font-medium leading-none tabular-nums text-ec-ink">{String(counts[b.key]).padStart(2, "0")}</span>
-                    <span className="text-sm font-medium text-ec-ink">{t(`${b.key}.label`)}</span>
-                  </span>
-                  <span className="mt-0.5 block truncate text-xs text-ec-ink-3">
-                    {on ? t("showingAll") : t(`${b.key}.hint`)}
-                  </span>
-                </span>
-                <Icon
-                  name={on ? "close" : "chevron"}
-                  className="ml-auto h-4 w-4 shrink-0 text-ec-ink-3 transition group-hover:text-ec-ink-2"
-                />
-              </button>
-            );
-          })}
-        </div>
+        shown.map((b) => {
+          const on = active === b.next;
+          return (
+            <button
+              key={b.key}
+              type="button"
+              onClick={() => toggle(b)}
+              title={b.key === "stale" ? t("stale.hint") : undefined}
+              aria-pressed={on}
+              data-testid={`attention-${b.key}`}
+              data-active={on ? "true" : "false"}
+              aria-label={t("filterAria", { label: t(`${b.key}.label`) })}
+              className={`press inline-flex items-baseline gap-1.5 rounded-ec-s border px-3 py-1.5 text-left transition ${
+                on
+                  ? "border-ec-honey bg-ec-honey/15 shadow-[inset_0_-2px_0_var(--honey)]"
+                  : "border-ec-hair bg-ec-paper hover:border-ec-hair-strong hover:bg-ec-paper-3"
+              }`}
+            >
+              <span className="font-display num text-[19px] leading-none text-ec-ink">
+                {counts[b.key]}
+              </span>
+              <span className={`text-[12.5px] ${on ? "font-medium text-ec-ink" : "text-ec-ink-2"}`}>
+                {t(`${b.key}.label`)}
+              </span>
+            </button>
+          );
+        })
       )}
     </section>
   );
