@@ -6,7 +6,9 @@ export type IconName =
   | "sparkles" | "upload" | "clip" | "external" | "chevron" | "logout" | "gmail" | "clock" | "dot" | "edit"
   | "menu" | "close" | "trash" | "eye"
   | "clients" | "invoice" | "bulb" | "chart" | "chat" | "mic" | "gauge" | "printer"
-  | "sunrise" | "judge" | "scroll";
+  | "sunrise" | "judge" | "scroll"
+  // WO-332 case-file console reskin — two glyphs the Chambers reference needs beyond the existing set.
+  | "copy" | "more";
 
 const P: Record<IconName, React.ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
@@ -50,6 +52,9 @@ const P: Record<IconName, React.ReactNode> = {
   sunrise: <><path d="M6 15a6 6 0 0 1 12 0" /><path d="M2 15h3M19 15h3M12 4v2M5 7l1.5 1.5M19 7l-1.5 1.5" /><path d="M3 20h18M6 22.5h12" /></>,
   judge: <><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20c.8-3.6 3.2-5.5 6.5-5.5s5.7 1.9 6.5 5.5" /></>,
   scroll: <><path d="M6.5 4h10a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7.5" /><path d="M6.5 4A2 2 0 0 0 4.5 6v2.5H9" /><path d="M9 10h6M9 13.5h6M9 17h3" /></>,
+  // WO-332 — copy-to-clipboard + kebab "more actions" trigger.
+  copy: <><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></>,
+  more: <><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></>,
 };
 
 export function Icon({ name, className = "h-5 w-5" }: IconProps) {

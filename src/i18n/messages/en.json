@@ -200,6 +200,85 @@
         "stamp": "COURT RECORD SYNCED",
         "never": "Not yet synced"
       }
+    },
+    "clients": {
+      "searchPlaceholder": "Search clients by name, phone or email…",
+      "searchAria": "Search clients",
+      "addClient": "Add client",
+      "addClientModalTitle": "New client",
+      "addClientModalHelper": "We'll flag any conflicts against existing clients and parties before you save.",
+      "close": "Close",
+      "noMatches": "No client matches “{q}”.",
+      "settled": "settled",
+      "contactHeading": "Contact",
+      "portalActiveDesc": "Active — they can see hearings and filed documents.",
+      "portalNotInvitedDesc": "Not invited yet.",
+      "billingHeading": "Billing",
+      "billed": "Billed",
+      "received": "Received",
+      "due": "Due",
+      "activityHeading": "Activity",
+      "activityEmpty": "No activity yet.",
+      "lastActivity": "Last activity",
+      "noActivity": "—",
+      "portalState": {
+        "notInvited": "Not invited",
+        "invited": "Invited",
+        "active": "Active"
+      },
+      "portalInvitedUntracked": "Not separately tracked — an invite grants access immediately, there's no pending state to show."
+    },
+    "caseFile": {
+      "back": "All cases",
+      "copyCnr": "Copy",
+      "copiedCnr": "Copied",
+      "stagePrefix": "Stage",
+      "moreActions": "More actions",
+      "soon": {
+        "calendar": "Add to calendar",
+        "share": "Share case file",
+        "export": "Export as PDF",
+        "badge": "Soon"
+      },
+      "next": {
+        "today": "today",
+        "tomorrow": "tomorrow",
+        "inDays": "{count, plural, one {in # day} other {in # days}}",
+        "past": "{count, plural, one {# day ago} other {# days ago}}"
+      },
+      "alert": {
+        "wasDue": "was due {date}",
+        "overdueDays": "{count, plural, one {# day overdue} other {# days overdue}}",
+        "reviewCount": "{count, plural, one {# inbox filing for this matter is unreviewed} other {# inbox filings for this matter are unreviewed}}",
+        "reviewLink": "Review filing"
+      },
+      "record": {
+        "title": "Court record",
+        "hide": "Hide",
+        "show": "Show",
+        "synced": "From the court record \u00b7 synced {time}"
+      },
+      "partiesTitle": "Parties & advocates",
+      "stamp": {
+        "synced": "Synced \u00b7 {date}"
+      },
+      "client": {
+        "view": "View client"
+      },
+      "notify": {
+        "title": "Notifications",
+        "empty": "No notifications sent for this case yet.",
+        "lastSent": "Last sent {date}"
+      },
+      "allDocuments": "All documents",
+      "inbox": {
+        "title": "From the inbox",
+        "empty": "No inbound mail matched to this case yet.",
+        "review": "Review"
+      },
+      "billing": {
+        "outstanding": "Outstanding"
+      }
     }
   },
   "causeList": {
@@ -1380,35 +1459,6 @@
       "save": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel"
-    }
-  },
-  "dashboard": {
-    "clients": {
-      "searchPlaceholder": "Search clients by name, phone or email…",
-      "searchAria": "Search clients",
-      "addClient": "Add client",
-      "addClientModalTitle": "New client",
-      "addClientModalHelper": "We'll flag any conflicts against existing clients and parties before you save.",
-      "close": "Close",
-      "noMatches": "No client matches “{q}”.",
-      "settled": "settled",
-      "contactHeading": "Contact",
-      "portalActiveDesc": "Active — they can see hearings and filed documents.",
-      "portalNotInvitedDesc": "Not invited yet.",
-      "billingHeading": "Billing",
-      "billed": "Billed",
-      "received": "Received",
-      "due": "Due",
-      "activityHeading": "Activity",
-      "activityEmpty": "No activity yet.",
-      "lastActivity": "Last activity",
-      "noActivity": "—",
-      "portalState": {
-        "notInvited": "Not invited",
-        "invited": "Invited",
-        "active": "Active"
-      },
-      "portalInvitedUntracked": "Not separately tracked — an invite grants access immediately, there's no pending state to show."
     }
   },
   "notices": {
