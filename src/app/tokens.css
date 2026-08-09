@@ -113,4 +113,11 @@
   --gradient-hero-wash: radial-gradient(1200px 520px at 76% -220px, rgba(232, 181, 99, .24), transparent 60%);
   --gradient-quote-wash: linear-gradient(120deg, var(--bronze-tint), transparent);
   --gradient-records-wash: radial-gradient(700px 300px at 82% 8%, rgba(232, 181, 99, .14), transparent 60%);
+
+  /* ── WO-334 · FLAGGED — founder directive 2026-08-10 (FAITHFUL-TO-PROTOTYPE BAR item 2):
+     the Documents Notes/zoom viewer's recessed canvas backdrop (`bg-[#EFEDE8]` in the prototype's
+     app.documents.tsx DocViewer). Audited against every existing var above — genuinely NOT a
+     duplicate: sits between --paper-3/--band (#F1ECE1) and --hair (#DDD5C6), a shade the palette
+     didn't have a name for yet. One new named token, consumed as `bg-ec-doc-well` — never inlined. */
+  --doc-well: #EFEDE8;
 }

@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
-import { DocPreview } from "@/components/doc-preview";
 import {
   useSelection, useUndo, BulkBar, bulkBtn, RowCheckbox, SelectAllCheckbox, UndoToast,
 } from "@/components/selection";
+import { Reveal } from "../motion";
+import { DocViewerPanel } from "./doc-viewer-panel";
 import {
   bulkDeleteDocuments, restoreDocuments, purgeDocuments, bulkFileToClient, bulkFileToCase,
 } from "./actions";
@@ -17,6 +18,9 @@ import {
 export type DocRow = {
   id: string; filename: string; docType: string | null; mime: string | null;
   primary: string | null; secondary: string | null;
+  // WO-334 · real fields the restored viewer panel's eyebrow/meta line binds to (matter cnr +
+  // case title) — resolved server-side in page.tsx's toRow(), same as primary/secondary.
+  caseLabel: string | null; cnr: string | null;
   sourceLabel: string; sizeLabel: string; dateLabel: string;
   matterId: string | null; clientId: string | null; shared: boolean;
   hasFile: boolean;
@@ -38,16 +42,8 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
   const { undo, show: showUndo, dismiss: dismissUndo } = useUndo();
   const [busy, setBusy] = useState(false);
   const [exportErr, setExportErr] = useState(false);
+  // WO-334: focus-into-dialog / restore-on-close now lives inside DocViewerPanel itself.
   const [preview, setPreview] = useState<DocRow | null>(null);
-  const closeBtnRef = useRef<HTMLButtonElement>(null);
-
-  // When the quick-look opens, move focus into the dialog (a11y) and restore it to the trigger on close.
-  useEffect(() => {
-    if (!preview) return;
-    const prev = document.activeElement as HTMLElement | null;
-    closeBtnRef.current?.focus();
-    return () => prev?.focus?.();
-  }, [preview]);
 
   const clear = sel.clear;
 
@@ -121,11 +117,14 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
   return (
     <>
       <div className="space-y-6 pb-16">
-        {sections.map((s) => {
+        {sections.map((s, idx) => {
           const sectionIds = s.rows.map((r) => r.id);
           const allInSection = sel.allSelected(sectionIds);
           return (
-            <div key={s.cat}>
+            // WO-334 · section reveal (ported motion.tsx `Reveal`), staggered per group — matches
+            // today-view.tsx's convention. Capped delay so a long document list doesn't keep the
+            // last sections invisible for a full second.
+            <Reveal key={s.cat} delay={Math.min(idx * 60, 240)}>
               {/* SectionLabel (Chambers): eyebrow row + thin hairline rule — the group divider
                   (category / client / case), not a filled band. */}
               <div className="flex items-end justify-between gap-3">
@@ -211,7 +210,7 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
               </table>
               </div>
               </div>
-            </div>
+            </Reveal>
           );
         })}
       </div>
@@ -266,37 +265,10 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
         </div>
       )}
 
-      {/* Quick-look preview modal — reuses the same viewer as the detail page. */}
-      {preview && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ec-ink/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={preview.filename}
-          onClick={() => setPreview(null)}
-        >
-          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-ec-m bg-ec-paper-2 shadow-ec-2" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between gap-3 border-b border-ec-hair bg-ec-paper-3 px-5 py-3.5">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <Icon name="documents" className="h-4 w-4 shrink-0 text-ec-ink-3" />
-                <span className="truncate font-medium text-ec-ink">{preview.filename}</span>
-              </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <Link href={`/dashboard/documents/${preview.id}`} className="ec-btn ec-btn-ghost inline-flex items-center gap-1.5 !px-3 !py-1.5 text-sm" title={t("preview.open")}>
-                  <Icon name="external" className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t("preview.open")}</span>
-                </Link>
-                <button ref={closeBtnRef} onClick={() => setPreview(null)} className="rounded-ec-s p-1.5 text-ec-ink-3 hover:bg-ec-paper-3 hover:text-ec-ink" aria-label={t("preview.close")}>
-                  <Icon name="close" className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 overflow-auto p-4">
-              <DocPreview documentId={preview.id} mime={preview.mime} filename={preview.filename} hasFile={preview.hasFile} className="h-[70vh]" />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* WO-334 · the restored Chambers Notes/zoom document viewer — was a plain centered
+          quick-look modal; now the reference's right-hand slide-over with zoom controls and
+          an (honestly-empty) Notes aside. Owns its own focus-management/entrance transition. */}
+      {preview && <DocViewerPanel doc={preview} onClose={() => setPreview(null)} />}
     </>
   );
 }

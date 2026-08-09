@@ -1773,6 +1773,14 @@
       "noCaseOption": "कोई मुकदमा नहीं",
       "deleteConfirm": "इस दस्तावेज़ और इसकी फ़ाइल को स्थायी रूप से हटाएँ?",
       "cancel": "रद्द करें"
+    },
+    "viewer": {
+      "zoomOut": "ज़ूम आउट",
+      "zoomIn": "ज़ूम इन",
+      "notes": "नोट्स",
+      "notesPlaceholder": "इस दस्तावेज़ के लिए एक छोटा नोट जोड़ें…",
+      "notesComingSoon": "नोट्स अभी सहेजे नहीं जाते — यह जल्द आ रहा है।",
+      "pagesUnavailable": "पेज थंबनेल अभी उपलब्ध नहीं हैं"
     }
   },
   "notifications": {

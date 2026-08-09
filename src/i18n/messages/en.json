@@ -1773,6 +1773,14 @@
       "noCaseOption": "No case",
       "deleteConfirm": "Delete this document and its file permanently?",
       "cancel": "Cancel"
+    },
+    "viewer": {
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "notes": "Notes",
+      "notesPlaceholder": "Add a short note for this document…",
+      "notesComingSoon": "Notes aren't saved yet — this is coming soon.",
+      "pagesUnavailable": "Page thumbnails aren't available yet"
     }
   },
   "notifications": {
