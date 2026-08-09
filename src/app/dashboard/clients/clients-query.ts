@@ -34,13 +34,16 @@ export async function fetchClientsPage(
   supabase: SupabaseClient<Database>,
   page: number,
   per: number,
+  /** Optional name search (ilike). Tenant scoping still comes from RLS on `client`. */
+  q?: string,
 ): Promise<ClientsPageResult> {
   const { from, to } = rangeFor(page, per);
-  const { data, count, error } = await supabase
+  let query = supabase
     .from("client")
     .select("id, name, type, emails, phones, custom", { count: "exact" })
-    .order("name", { ascending: true })
-    .range(from, to);
+    .order("name", { ascending: true });
+  if (q) query = query.ilike("name", `%${q}%`);
+  const { data, count, error } = await query.range(from, to);
   if (error) throw new Error(`fetchClientsPage: ${error.message}`);
   const rows = (data ?? []) as RawClient[];
 
