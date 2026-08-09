@@ -173,6 +173,33 @@
       "whatsappNote": "WhatsApp cause-list alerts are coming soon — get your cases in now."
     }
   },
+  "dashboard": {
+    "overview": {
+      "tagline": "Tomorrow's hearings before you ask.",
+      "sectionHearings": "Next hearings",
+      "sectionDeadlines": "Deadlines open",
+      "deadlines": {
+        "overdueCount": "{count, plural, =0 {none overdue} one {# overdue} other {# overdue}}",
+        "overdue": "Overdue · {date}",
+        "due": "Due {date}",
+        "empty": "No open deadlines."
+      },
+      "inbox": {
+        "eyebrow": "Inbox needs review",
+        "cta": "Review filings"
+      },
+      "practice": {
+        "title": "Your practice this week",
+        "hearings": "Hearings",
+        "orders": "Orders on your cases"
+      },
+      "lastSync": {
+        "title": "Last sync",
+        "stamp": "COURT RECORD SYNCED",
+        "never": "Not yet synced"
+      }
+    }
+  },
   "causeList": {
     "page": {
       "title": "Cause lists",

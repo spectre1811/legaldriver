@@ -173,6 +173,33 @@
       "whatsappNote": "WhatsApp कॉज़-लिस्ट अलर्ट जल्द आ रहे हैं — अभी अपने मुकदमे जोड़ें।"
     }
   },
+  "dashboard": {
+    "overview": {
+      "tagline": "आपके पूछने से पहले कल की पेशियाँ तैयार।",
+      "sectionHearings": "आगामी पेशियाँ",
+      "sectionDeadlines": "खुली समय-सीमाएँ",
+      "deadlines": {
+        "overdueCount": "{count, plural, =0 {कोई विलंबित नहीं} one {# विलंबित} other {# विलंबित}}",
+        "overdue": "विलंबित · {date}",
+        "due": "नियत तिथि {date}",
+        "empty": "कोई खुली समय-सीमा नहीं।"
+      },
+      "inbox": {
+        "eyebrow": "इनबॉक्स समीक्षा हेतु",
+        "cta": "फाइलिंग समीक्षा करें"
+      },
+      "practice": {
+        "title": "इस सप्ताह आपकी प्रैक्टिस",
+        "hearings": "पेशियाँ",
+        "orders": "आपके मुकदमों के आदेश"
+      },
+      "lastSync": {
+        "title": "अंतिम सिंक",
+        "stamp": "कोर्ट रिकॉर्ड सिंक हुआ",
+        "never": "अभी तक सिंक नहीं हुआ"
+      }
+    }
+  },
   "causeList": {
     "page": {
       "title": "पेशी सूची",
