@@ -5,6 +5,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { HeroSearch } from "@/components/landing/hero-search";
+import { CountUp, ScrollReveals } from "@/components/landing/motion";
 import { links, pricing, grievanceOfficer, hasGrievanceOfficer } from "@/lib/site-config";
 
 // Public marketing landing — WO-324 "Daybreak" reskin, rebuilt section-for-section
@@ -65,7 +66,8 @@ export async function Landing() {
   const t = await getTranslations("landing");
 
   return (
-    <div className="min-h-screen bg-ec-paper text-ec-ink">
+    <div className="mk-hero-wash min-h-screen bg-ec-paper text-ec-ink">
+      <ScrollReveals />
       {/* nav */}
       <header className="sticky top-0 z-50 border-b border-ec-hair bg-ec-paper/85 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3.5">
@@ -92,11 +94,13 @@ export async function Landing() {
       {/* hero */}
       <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-12 lg:grid-cols-[1.02fr_.98fr] lg:py-16">
         <div>
-          <p className="mk-eyebrow mb-5">{t("hero.eyebrow")}</p>
+          <p className="mk-eyebrow mb-5 mk-anim-eyebrow">{t("hero.eyebrow")}</p>
           <h1 className="font-display text-[clamp(2.5rem,5.4vw,4.25rem)] font-normal leading-[1.02] tracking-tight">
-            {t("hero.title1")}<br />{t("hero.title2")}<br /><em className="italic text-ec-bronze-deep">{t("hero.title3")}</em>
+            <span className="mk-word">{t("hero.title1")}</span>
+            <span className="mk-word">{t("hero.title2")}</span>
+            <span className="mk-word"><em className="italic text-ec-bronze-deep">{t("hero.title3")}</em></span>
           </h1>
-          <p className="mt-5 max-w-md text-[16.5px] leading-relaxed text-ec-ink-2">{t("hero.sub")}</p>
+          <p className="mt-5 max-w-md text-[16.5px] leading-relaxed text-ec-ink-2 mk-anim-sub">{t("hero.sub")}</p>
           <HeroSearch
             searchHost={links.publicSearch}
             tabs={{ cases: t("search.tabCases"), people: t("search.tabPeople"), judgments: t("search.tabJudgments") }}
@@ -107,15 +111,15 @@ export async function Landing() {
         </div>
 
         {/* live "Today's matters" card — static shape; WO-326 wires the real read */}
-        <div className="overflow-hidden rounded-2xl border border-ec-hair bg-ec-paper-2 shadow-ec-2">
+        <div className="mk-anim-card overflow-hidden rounded-2xl border border-ec-hair bg-ec-paper-2 shadow-ec-2">
           <div className="flex items-center justify-between border-b border-ec-hair px-5 py-4">
             <h3 className="font-display text-lg font-medium">{t("live.title")}</h3>
             <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-medium text-ec-success">
               <span className="h-1.5 w-1.5 rounded-full bg-ec-success" /> {t("live.status")}
             </span>
           </div>
-          {LIVE_ROWS.map((row) => (
-            <div key={row.title} className="flex items-center gap-3.5 border-b border-ec-hair px-5 py-3.5 last:border-0">
+          {LIVE_ROWS.map((row, i) => (
+            <div key={row.title} style={{ animationDelay: `${0.55 + i * 0.15}s` }} className="mk-anim-row flex items-center gap-3.5 border-b border-ec-hair px-5 py-3.5 last:border-0">
               <span className="num w-11 flex-none text-[12.5px] font-medium text-ec-bronze-deep">{row.time}</span>
               <div className="min-w-0 flex-1">
                 <b className="block truncate text-sm font-semibold">{row.title}</b>
@@ -135,7 +139,7 @@ export async function Landing() {
 
       {/* what mukadma brings together — editorial capability tiles (no console mocks) */}
       <section id="brings" className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-        <div className="max-w-xl">
+        <div className="mk-reveal max-w-xl">
           <p className="mk-eyebrow">{t("brings.eyebrow")}</p>
           <h2 className="mt-3 font-display text-[clamp(1.75rem,4vw,2.75rem)] font-normal leading-tight tracking-tight">
             {t("brings.title1")} <em className="italic text-ec-bronze-deep">{t("brings.titleEm")}</em>
@@ -148,7 +152,7 @@ export async function Landing() {
             const inner = (
               <>
                 <span className="absolute right-6 top-6 font-display text-xl italic text-ec-hair-strong">{`0${i + 1}`}</span>
-                <Icon name={tile.icon} className="mb-4 h-9 w-9 text-ec-ink" />
+                <Icon name={tile.icon} className="mk-icon mb-4 h-9 w-9 text-ec-ink" />
                 <h3 className="mb-2 max-w-[20ch] font-display text-xl font-medium leading-snug">{t(`brings.tiles.${tile.key}.title`)}</h3>
                 <p className="max-w-[46ch] text-sm leading-relaxed text-ec-ink-2">{t(`brings.tiles.${tile.key}.body`)}</p>
                 <div className={`mt-5 border-t border-ec-hair pt-4 font-mono text-[11.5px] tracking-[0.04em] text-ec-ink-3 ${isLink ? "inline-flex items-center gap-2 text-ec-bronze-deep" : ""}`}>
@@ -157,10 +161,11 @@ export async function Landing() {
                 </div>
               </>
             );
+            const style = { transitionDelay: `${(i % 4) * 70}ms` };
             return isLink ? (
-              <a key={tile.key} href={tile.href} className="relative block rounded-2xl border border-ec-hair bg-ec-paper-2 p-7 transition hover:border-ec-hair-strong hover:shadow-ec-2">{inner}</a>
+              <a key={tile.key} href={tile.href} style={style} className="group mk-reveal relative block rounded-2xl border border-ec-hair bg-ec-paper-2 p-7 transition hover:border-ec-hair-strong hover:shadow-ec-2">{inner}</a>
             ) : (
-              <div key={tile.key} className="relative rounded-2xl border border-ec-hair bg-ec-paper-2 p-7 transition hover:border-ec-hair-strong hover:shadow-ec-2">{inner}</div>
+              <div key={tile.key} style={style} className="group mk-reveal relative rounded-2xl border border-ec-hair bg-ec-paper-2 p-7 transition hover:border-ec-hair-strong hover:shadow-ec-2">{inner}</div>
             );
           })}
         </div>
@@ -169,20 +174,20 @@ export async function Landing() {
       {/* a better way to start — day timeline + pull-quote */}
       <section className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
         <div className="grid gap-10 lg:grid-cols-[.9fr_1.1fr] lg:gap-14">
-          <div className="lg:sticky lg:top-24 lg:self-start">
+          <div className="mk-reveal lg:sticky lg:top-24 lg:self-start">
             <p className="mk-eyebrow">{t("day.eyebrow")}</p>
             <h2 className="mt-3 max-w-sm font-display text-[clamp(1.75rem,4vw,2.5rem)] font-normal leading-tight tracking-tight">
               {t("day.title1")} <em className="italic text-ec-bronze-deep">{t("day.titleEm")}</em>
             </h2>
             <p className="mt-3.5 max-w-[36ch] text-[15px] leading-relaxed text-ec-ink-2">{t("day.sub")}</p>
-            <blockquote className="mt-6 rounded-r-xl border-l-[3px] border-ec-honey bg-ec-bronze-tint/40 py-5 pl-6 pr-5">
+            <blockquote className="mk-quote-wash mt-6 rounded-r-xl border-l-[3px] border-ec-honey py-5 pl-6 pr-5">
               <p className="font-display text-lg italic leading-snug">{t("day.quote")}</p>
               <cite className="mt-3 block font-mono text-[10.5px] font-medium not-italic uppercase tracking-[0.16em] text-ec-bronze-deep">{t("day.quoteBy")}</cite>
             </blockquote>
           </div>
           <div>
-            {MOMENTS.map((m) => (
-              <div key={m} className="grid grid-cols-[80px_1fr] gap-4 border-t border-ec-hair py-6 first:border-t-0">
+            {MOMENTS.map((m, i) => (
+              <div key={m} style={{ transitionDelay: `${(i % 4) * 70}ms` }} className="mk-reveal grid grid-cols-[80px_1fr] gap-4 border-t border-ec-hair py-6 first:border-t-0">
                 <span className="num pt-0.5 text-[12.5px] font-medium text-ec-bronze-deep">{t(`day.moments.${m}.time`)}</span>
                 <div>
                   <h3 className="mb-1 font-display text-[19px] font-medium">{t(`day.moments.${m}.title`)}</h3>
@@ -197,19 +202,19 @@ export async function Landing() {
       {/* coverage — living stats. The count is a static placeholder shape until WO-326
           binds it to /api/public/stats; the cadence cells are always true, no frozen date. */}
       <section className="mx-auto max-w-6xl px-6 pb-16 sm:pb-20">
-        <p className="mk-eyebrow mb-9">{t("stats.eyebrow")}</p>
+        <p className="mk-eyebrow mb-9 mk-reveal">{t("stats.eyebrow")}</p>
         <div className="grid gap-3.5 sm:grid-cols-3">
-          <div className="rounded-2xl border border-ec-hair bg-ec-paper-2 p-6">
+          <div className="mk-reveal rounded-2xl border border-ec-hair bg-ec-paper-2 p-6">
             <b className="num block text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-tight">
-              55 <em className="not-italic text-ec-bronze-deep">{t("stats.unit")}</em>
+              <CountUp value={55} /> <em className="not-italic text-ec-bronze-deep">{t("stats.unit")}</em>
             </b>
             <span className="mt-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-ec-ink-2">{t("stats.cases")}</span>
           </div>
-          <div className="rounded-2xl border border-ec-hair bg-ec-paper-2 p-6">
+          <div style={{ transitionDelay: "70ms" }} className="mk-reveal rounded-2xl border border-ec-hair bg-ec-paper-2 p-6">
             <b className="num block text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-tight">{t("stats.morning")}</b>
             <span className="mt-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-ec-ink-2">{t("stats.morningCaption")}</span>
           </div>
-          <div className="rounded-2xl border border-ec-hair bg-ec-paper-2 p-6">
+          <div style={{ transitionDelay: "140ms" }} className="mk-reveal rounded-2xl border border-ec-hair bg-ec-paper-2 p-6">
             <b className="num block text-[clamp(1.75rem,3vw,2.25rem)] font-medium tracking-tight">{t("stats.night")}</b>
             <span className="mt-2 block font-mono text-[10.5px] uppercase tracking-[0.14em] text-ec-ink-2">{t("stats.nightCaption")}</span>
           </div>
@@ -217,9 +222,9 @@ export async function Landing() {
       </section>
 
       {/* public records — dark section, every card routes to search.mukadma.in */}
-      <section id="records" className="relative overflow-hidden bg-ec-ink py-16 text-ec-paper sm:py-20">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="max-w-xl">
+      <section id="records" className="mk-records-wash relative overflow-hidden bg-ec-ink py-16 text-ec-paper sm:py-20">
+        <div className="relative z-[1] mx-auto max-w-6xl px-6">
+          <div className="mk-reveal max-w-xl">
             <p className="mk-eyebrow !text-ec-honey">{t("records.eyebrow")}</p>
             <h2 className="mt-3 font-display text-[clamp(1.75rem,4vw,2.75rem)] font-normal leading-tight tracking-tight text-ec-paper">
               {t("records.title1")} <em className="italic text-ec-honey">{t("records.titleEm")}</em>
@@ -227,9 +232,9 @@ export async function Landing() {
             <p className="mt-3 text-[15.5px] leading-relaxed text-white/60">{t("records.sub")}</p>
           </div>
           <div className="mt-10 grid gap-px overflow-hidden rounded-2xl border border-white/10 sm:grid-cols-3 lg:grid-cols-5">
-            {RECORD_CARDS.map((card) => (
-              <a key={card.key} href={card.href} className="bg-ec-ink p-6 transition hover:bg-white/[0.04]">
-                <Icon name={card.icon} className="mb-4 h-7 w-7 text-ec-honey" />
+            {RECORD_CARDS.map((card, i) => (
+              <a key={card.key} href={card.href} style={{ transitionDelay: `${(i % 4) * 70}ms` }} className="group mk-reveal bg-ec-ink p-6 transition hover:bg-white/[0.04]">
+                <Icon name={card.icon} className="mk-icon mb-4 h-7 w-7 text-ec-honey" />
                 <h3 className="mb-1.5 font-display text-lg font-medium">{t(`records.cards.${card.key}.title`)}</h3>
                 <p className="min-h-[3.2em] text-[12.5px] leading-relaxed text-white/50">{t(`records.cards.${card.key}.body`)}</p>
                 <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-medium text-ec-honey">{t("records.go")} <Icon name="chevron" className="h-3 w-3" /></span>
@@ -243,7 +248,7 @@ export async function Landing() {
           STRUCTURE always ships; NUMBERS gate behind pricing.public (FOUNDER-ACTIONS #11).
           Every CTA lands on /request-access — no checkout this WO. */}
       <section id="pricing" className="mk-cycle mx-auto max-w-6xl px-6 py-16 sm:py-20">
-        <div className="mx-auto max-w-2xl text-center">
+        <div className="mk-reveal mx-auto max-w-2xl text-center">
           <p className="mk-eyebrow justify-center">{t("pricing.eyebrow")}</p>
           <h2 className="mt-3 font-display text-[clamp(1.75rem,4vw,2.75rem)] font-normal leading-tight tracking-tight">
             {t("pricing.title1")} <em className="italic text-ec-bronze-deep">{t("pricing.titleEm")}</em>
@@ -252,7 +257,7 @@ export async function Landing() {
         </div>
 
         {pricing.public && (
-          <div className="mb-8 mt-7 flex justify-center">
+          <div className="mk-reveal mb-8 mt-7 flex justify-center">
             <div className="inline-flex gap-0.5 rounded-full border border-ec-hair bg-ec-paper-3 p-1">
               <input type="radio" id="mk-cyc-m" name="mk-cyc" defaultChecked className="sr-only" />
               <label htmlFor="mk-cyc-m" className="mk-cyc-label cursor-pointer rounded-full px-4 py-2 text-[13px] font-medium text-ec-ink-3 transition">{t("pricing.billing.monthly")}</label>
@@ -266,7 +271,7 @@ export async function Landing() {
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           {/* Free */}
-          <div className="flex flex-col rounded-2xl border border-ec-hair bg-ec-paper-2 p-7">
+          <div className="mk-reveal flex flex-col rounded-2xl border border-ec-hair bg-ec-paper-2 p-7">
             <p className="ec-label">{t("pricing.tier.free.name")}</p>
             <p className="mt-1 text-[13px] text-ec-ink-3">{t("pricing.tier.free.desc")}</p>
             {pricing.public ? (
@@ -292,7 +297,7 @@ export async function Landing() {
           </div>
 
           {/* Pro */}
-          <div className="relative flex flex-col rounded-2xl border border-ec-honey bg-ec-paper-2 p-7 shadow-ec-2">
+          <div style={{ transitionDelay: "70ms" }} className="mk-reveal relative flex flex-col rounded-2xl border border-ec-honey bg-ec-paper-2 p-7 shadow-ec-2">
             <span className="absolute -top-3 left-7 rounded-full bg-ec-honey px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-ec-on-honey">{t("pricing.tier.pro.ribbon")}</span>
             <p className="ec-label mt-1">{t("pricing.tier.pro.name")}</p>
             <p className="mt-1 text-[13px] text-ec-ink-3">{t("pricing.tier.pro.desc")}</p>
@@ -331,7 +336,7 @@ export async function Landing() {
 
       {/* closing band */}
       <section className="bg-ec-paper-3">
-        <div className="mx-auto grid max-w-6xl items-center gap-6 px-6 py-14 sm:grid-cols-[1fr_auto] sm:py-20">
+        <div className="mk-reveal mx-auto grid max-w-6xl items-center gap-6 px-6 py-14 sm:grid-cols-[1fr_auto] sm:py-20">
           <div>
             <p className="mk-eyebrow mb-3.5">{t("band.eyebrow")}</p>
             <h2 className="font-display text-[clamp(1.75rem,3.8vw,2.75rem)] font-normal leading-tight tracking-tight">{t("band.title")}</h2>
