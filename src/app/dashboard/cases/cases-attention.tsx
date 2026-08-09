@@ -42,7 +42,7 @@ export function CasesAttention({ counts }: { counts: ViewCounts }) {
     <section
       aria-label={t("title")}
       data-testid="cases-attention"
-      className="flex flex-wrap items-center gap-2 border-t border-ec-hair pt-3"
+      className="stagger flex flex-wrap items-center gap-2 border-t border-ec-hair pt-3"
     >
       {shown.length === 0 ? (
         <span className="inline-flex items-center gap-2 text-[13px] text-ec-ink-2">
@@ -62,7 +62,7 @@ export function CasesAttention({ counts }: { counts: ViewCounts }) {
               data-testid={`attention-${b.key}`}
               data-active={on ? "true" : "false"}
               aria-label={t("filterAria", { label: t(`${b.key}.label`) })}
-              className={`inline-flex items-baseline gap-1.5 rounded-ec-s border px-3 py-1.5 text-left transition ${
+              className={`press inline-flex items-baseline gap-1.5 rounded-ec-s border px-3 py-1.5 text-left transition ${
                 on
                   ? "border-ec-honey bg-ec-honey/15 shadow-[inset_0_-2px_0_var(--honey)]"
                   : "border-ec-hair bg-ec-paper hover:border-ec-hair-strong hover:bg-ec-paper-3"

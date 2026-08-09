@@ -81,4 +81,23 @@
   --motion-fast: 120ms;
   --motion-base: 150ms;
   --ease: cubic-bezier(.2, 0, 0, 1);
+
+  /* ── WO-331 · FLAGGED — founder directive 2026-08-10 (WO-331 file, "FAITHFUL-TO-PROTOTYPE BAR"):
+     tokens-only/no-new-tokens is explicitly lifted for genuine prototype colors. These are NOT new
+     colours — audited design-mockups/iteration3/console/styles.css line-by-line against the vars
+     above and every single value already exists verbatim (just under a different name there); these
+     are pure aliases under the PROTOTYPE's own names, added so its literal token names exist on disk
+     for this + the rest of the Wave-2 program, with zero value drift (each points at the var above).
+     `--band` is deliberately NOT aliased: the prototype's "band" (#F1ECE1) collides in NAME with our
+     EXISTING, different `--band` (#EAE3D5, already in wide use) — aliasing it would silently retone
+     every current `bg-ec-band` consumer app-wide, far outside this WO. Its true equivalent is
+     `--paper-3` (already exact), consumed as such, name collision flagged instead of overwritten. */
+  --card:        var(--paper-2);
+  --line:        var(--hair);
+  --line-strong: var(--hair-strong);
+  --muted-ink:   var(--ink-3);
+  --honey-ink:   var(--on-honey);
+  --success-bg:  var(--success-t);
+  --warn-bg:     var(--warn-t);
+  --danger-bg:   var(--danger-t);
 }

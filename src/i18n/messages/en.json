@@ -294,6 +294,8 @@
       "selectAll": "Select all",
       "selectRow": "Select {title}",
       "setStage": "Change stage…",
+      "refresh": "Refresh selected",
+      "refreshTitle": "Queued for WO-309's bulk-refresh lane — not live yet",
       "export": "Export CSV",
       "exportFilename": "cases-export.csv",
       "delete": "Delete",
@@ -351,7 +353,19 @@
     "past": "past",
     "noDate": "no date",
     "row": {
-      "aria": "Case {title} — press Enter for details, arrow keys to move"
+      "aria": "Case {title} — press Enter for details, arrow keys to move",
+      "causeList": "View cause list",
+      "addNote": "Add note",
+      "addNoteTitle": "Coming soon"
+    },
+    "view": {
+      "aria": "List or agenda view",
+      "list": "List",
+      "agenda": "Agenda"
+    },
+    "agenda": {
+      "count": "{n, plural, one {# hearing} other {# hearings}}",
+      "empty": "No upcoming hearings in this view."
     },
     "density": {
       "aria": "Row density",
@@ -410,7 +424,10 @@
       "saveView": "Save this view",
       "sheetTitle": "Filters",
       "sheetSubtitle": "Narrow the case list. Results update instantly.",
-      "done": "Done"
+      "done": "Done",
+      "refreshAll": "Refresh all cases",
+      "refreshAllTitle": "Queued for WO-309's bulk-refresh lane — not live yet",
+      "refreshSoon": "Soon"
     },
     "console": {
       "searchPlaceholder": "Search cases — title, CNR, court, parties…",

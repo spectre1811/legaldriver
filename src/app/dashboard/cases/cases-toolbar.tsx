@@ -126,6 +126,21 @@ export function CasesToolbar(props: Props) {
           )}
         </button>
 
+        {/* WO-331 Daybreak reskin — the reference's "Refresh all cases" control, kept visible per the
+            prototype (never dropped), but the ACTION stays deferred: a synchronous fan-out over every
+            matter is exactly what WO-309 ruled out on measured WAF evidence (BP-66). Disabled + a
+            "Soon" badge is the honest affordance until WO-309's queue+poll lane lands. */}
+        <button
+          type="button"
+          disabled
+          title={t("refreshAllTitle")}
+          aria-disabled="true"
+          className="ec-btn ec-btn-ghost press px-3 py-2 text-xs"
+        >
+          <Icon name="refresh" className="h-3.5 w-3.5" /> {t("refreshAll")}
+          <span className="num rounded-full bg-ec-paper-3 px-1.5 py-0.5 text-[0.6rem] text-ec-ink-3">{t("refreshSoon")}</span>
+        </button>
+
         <SortMenu value={sort} options={sortOpts} label={tc("sort")} onChange={(v) => setParam("sort", v)} />
 
         <SaveViewButton label={t("saveView")} placeholder={tc("viewName")} save={tc("save")} cancel={tc("cancel")} />
