@@ -1636,6 +1636,7 @@
     "filter": {
       "searchPlaceholder": "Search documents (filename + contents)…",
       "searchAria": "Search documents",
+      "fullText": "full-text",
       "clientAria": "Client",
       "allClients": "All clients",
       "categoryAria": "Category",

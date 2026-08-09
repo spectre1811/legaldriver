@@ -165,15 +165,19 @@ export default async function DocumentsPage({
       {!isTrash && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="ec-label">{t("group.by")}</span>
-          {(["category", "client", "case"] as const).map((g) => (
-            <Link
-              key={g}
-              href={g === "category" ? "/dashboard/documents" : `/dashboard/documents?group=${g}`}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${groupBy === g ? "bg-ec-ink text-ec-paper" : "border border-ec-hair text-ec-ink-2 hover:bg-ec-paper-3"}`}
-            >
-              {t(`group.${g}`)}
-            </Link>
-          ))}
+          <div className="inline-flex items-center gap-[3px] rounded-ec-s border border-ec-hair bg-ec-paper-2 p-[3px]">
+            {(["category", "client", "case"] as const).map((g) => (
+              <Link
+                key={g}
+                href={g === "category" ? "/dashboard/documents" : `/dashboard/documents?group=${g}`}
+                role="tab"
+                aria-selected={groupBy === g}
+                className={`rounded-[4px] px-2.5 py-1 text-xs font-medium transition-colors ${groupBy === g ? "bg-ec-bronze-tint text-ec-bronze-deep" : "text-ec-ink-3 hover:bg-ec-paper-3 hover:text-ec-ink-2"}`}
+              >
+                {t(`group.${g}`)}
+              </Link>
+            ))}
+          </div>
         </div>
       )}
       {!isTrash && <FilterBar types={types} clients={clientOpts} />}

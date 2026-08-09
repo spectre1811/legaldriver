@@ -42,7 +42,11 @@ export function FilterBar({ types, clients }: { types: string[]; clients: Opt[] 
         className="relative min-w-[14rem] flex-1"
       >
         <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ec-ink-3" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("filter.searchPlaceholder")} className="input pl-9" aria-label={t("filter.searchAria")} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("filter.searchPlaceholder")} className="input truncate pl-9 pr-20" aria-label={t("filter.searchAria")} />
+        {/* Real capability signal, not decoration — the query above runs Postgres full-text search. */}
+        <span className="ec-label pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded bg-ec-band px-1.5 py-0.5 !text-[10px]">
+          {t("filter.fullText")}
+        </span>
       </form>
       {combo("client", t("filter.clientAria"), t("filter.allClients"), clients.map((c) => ({ value: c.id, label: c.label })), "min-w-[10rem] max-w-[13rem]")}
       {combo("category", t("filter.categoryAria"), t("filter.allCategories"), CATEGORIES.map((c) => ({ value: c.key, label: t(`filter.category.${c.key}`) })), "min-w-[10rem] max-w-[12rem]")}
