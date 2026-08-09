@@ -173,6 +173,35 @@
       "whatsappNote": "WhatsApp cause-list alerts are coming soon — get your cases in now."
     }
   },
+  "dashboard": {
+    "overview": {
+      "tagline": "Tomorrow's hearings before you ask.",
+      "sectionHearings": "Next hearings",
+      "sectionDeadlines": "Deadlines open",
+      "deadlines": {
+        "overdueCount": "{count, plural, =0 {none overdue} one {# overdue} other {# overdue}}",
+        "overdue": "Overdue · {date}",
+        "due": "Due {date}",
+        "empty": "No open deadlines."
+      },
+      "inbox": {
+        "eyebrow": "Inbox needs review",
+        "cta": "Review filings"
+      },
+      "practice": {
+        "title": "Your practice this week",
+        "hearings": "Hearings",
+        "filings": "Filings made",
+        "notTracked": "Not yet tracked",
+        "orders": "Orders on your cases"
+      },
+      "lastSync": {
+        "title": "Last sync",
+        "stamp": "COURT RECORD SYNCED",
+        "never": "Not yet synced"
+      }
+    }
+  },
   "causeList": {
     "page": {
       "title": "Cause lists",
@@ -1345,6 +1374,35 @@
       "cancel": "Cancel"
     }
   },
+  "dashboard": {
+    "clients": {
+      "searchPlaceholder": "Search clients by name, phone or email…",
+      "searchAria": "Search clients",
+      "addClient": "Add client",
+      "addClientModalTitle": "New client",
+      "addClientModalHelper": "We'll flag any conflicts against existing clients and parties before you save.",
+      "close": "Close",
+      "noMatches": "No client matches “{q}”.",
+      "settled": "settled",
+      "contactHeading": "Contact",
+      "portalActiveDesc": "Active — they can see hearings and filed documents.",
+      "portalNotInvitedDesc": "Not invited yet.",
+      "billingHeading": "Billing",
+      "billed": "Billed",
+      "received": "Received",
+      "due": "Due",
+      "activityHeading": "Activity",
+      "activityEmpty": "No activity yet.",
+      "lastActivity": "Last activity",
+      "noActivity": "—",
+      "portalState": {
+        "notInvited": "Not invited",
+        "invited": "Invited",
+        "active": "Active"
+      },
+      "portalInvitedUntracked": "Not separately tracked — an invite grants access immediately, there's no pending state to show."
+    }
+  },
   "notices": {
     "title": "Notices",
     "subtitle": "Create a notice, set a response-due date, and let the escalation timer advance it automatically.",
@@ -1658,6 +1716,7 @@
     "filter": {
       "searchPlaceholder": "Search documents (filename + contents)…",
       "searchAria": "Search documents",
+      "fullText": "full-text",
       "clientAria": "Client",
       "allClients": "All clients",
       "categoryAria": "Category",

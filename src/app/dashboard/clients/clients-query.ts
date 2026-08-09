@@ -23,6 +23,10 @@ export interface ClientRow extends RawClient {
    *  cancelled=void; no partial-payment tracking exists). */
   outstandingMinor: number;
   practiceArea: string | null;
+  /** Latest activity_event across this client's matters, batched per PAGE (one bounded
+   *  probe query over this page's matter ids, not a query per row). Null = genuinely none
+   *  yet — rendered as an honest "—", never fabricated. */
+  lastActivity: { summary: string; at: string } | null;
 }
 
 export interface ClientsPageResult {
@@ -34,13 +38,16 @@ export async function fetchClientsPage(
   supabase: SupabaseClient<Database>,
   page: number,
   per: number,
+  /** Optional name search (ilike). Tenant scoping still comes from RLS on `client`. */
+  q?: string,
 ): Promise<ClientsPageResult> {
   const { from, to } = rangeFor(page, per);
-  const { data, count, error } = await supabase
+  let query = supabase
     .from("client")
     .select("id, name, type, emails, phones, custom", { count: "exact" })
-    .order("name", { ascending: true })
-    .range(from, to);
+    .order("name", { ascending: true });
+  if (q) query = query.ilike("name", `%${q}%`);
+  const { data, count, error } = await query.range(from, to);
   if (error) throw new Error(`fetchClientsPage: ${error.message}`);
   const rows = (data ?? []) as RawClient[];
 
@@ -48,16 +55,38 @@ export async function fetchClientsPage(
   const counts = new Map<string, number>();
   const outstanding = new Map<string, number>();
   const areaNames = new Map<string, string>();
+  const lastActivity = new Map<string, { summary: string; at: string }>();
   if (ids.length) {
     // All per-page enrichment is IN over just this page's client ids (cost scales with
     // page size, not the corpus) and stays RLS/tenant-scoped — no admin client.
     const [{ data: matters }, { data: invoices }] = await Promise.all([
-      supabase.from("matter").select("client_id").in("client_id", ids),
+      supabase.from("matter").select("id, client_id").in("client_id", ids),
       // Outstanding = unpaid-issued invoices only (status='sent'). draft/paid/cancelled excluded.
       supabase.from("invoice").select("client_id, total_minor").eq("status", "sent").in("client_id", ids),
     ]);
     for (const m of matters ?? []) if (m.client_id) counts.set(m.client_id, (counts.get(m.client_id) ?? 0) + 1);
     for (const inv of invoices ?? []) if (inv.client_id) outstanding.set(inv.client_id, (outstanding.get(inv.client_id) ?? 0) + Number(inv.total_minor ?? 0));
+
+    // "Last activity" per client, batched: ONE probe query over this page's matter ids
+    // (ordered newest-first), reduced to the first hit per client in JS — not a query per
+    // row. ponytail: the 1000-row probe cap means a client whose OWN matters are quiet
+    // could theoretically be starved by very chatty siblings on the same page before its
+    // one event is reached; a real per-client aggregate (view/RPC) is the upgrade if that
+    // ever shows up in practice — at this page's size (<=100 clients) it won't.
+    const matterIds = (matters ?? []).map((m) => m.id);
+    const matterClient = new Map((matters ?? []).map((m) => [m.id, m.client_id]));
+    if (matterIds.length) {
+      const { data: events } = await supabase
+        .from("activity_event")
+        .select("matter_id, summary, created_at")
+        .in("matter_id", matterIds)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      for (const e of events ?? []) {
+        const cid = e.matter_id ? matterClient.get(e.matter_id) : null;
+        if (cid && !lastActivity.has(cid)) lastActivity.set(cid, { summary: e.summary, at: e.created_at });
+      }
+    }
 
     // Resolve practice-area names for the ids buried in each client's custom jsonb.
     const areaIds = [...new Set(rows.map((r) => (r.custom as { practice_area_id?: string })?.practice_area_id).filter((v): v is string => !!v))];
@@ -75,6 +104,7 @@ export async function fetchClientsPage(
         caseCount: counts.get(r.id) ?? 0,
         outstandingMinor: outstanding.get(r.id) ?? 0,
         practiceArea: areaId ? areaNames.get(areaId) ?? null : null,
+        lastActivity: lastActivity.get(r.id) ?? null,
       };
     }),
     total: count ?? 0,

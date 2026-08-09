@@ -125,13 +125,18 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
           const sectionIds = s.rows.map((r) => r.id);
           const allInSection = sel.allSelected(sectionIds);
           return (
-            <div key={s.cat} className="ec-card overflow-hidden">
-              {/* Sand section band — the group divider (category / client / case). */}
-              <div className="flex items-center gap-2.5 border-b border-ec-hair bg-ec-paper-3 px-5 py-3">
-                <Icon name={(s.icon as IconName) ?? "documents"} className="h-4 w-4 text-ec-bronze" />
-                <h2 className="ec-label !tracking-normal text-[13px] normal-case text-ec-ink">{s.label}</h2>
+            <div key={s.cat}>
+              {/* SectionLabel (Chambers): eyebrow row + thin hairline rule — the group divider
+                  (category / client / case), not a filled band. */}
+              <div className="flex items-end justify-between gap-3">
+                <span className="flex items-center gap-2">
+                  <Icon name={(s.icon as IconName) ?? "documents"} className="h-3.5 w-3.5 text-ec-bronze" />
+                  <h2 className="ec-label !tracking-normal normal-case text-ec-ink">{s.label}</h2>
+                </span>
                 <span className="num text-xs text-ec-ink-3">{s.rows.length}</span>
               </div>
+              <div className="mt-1.5 h-[3px] border-y border-ec-hair" />
+              <div className="ec-card mt-3 overflow-hidden">
               <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -204,6 +209,7 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
                   })}
                 </tbody>
               </table>
+              </div>
               </div>
             </div>
           );
