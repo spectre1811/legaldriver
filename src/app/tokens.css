@@ -81,4 +81,36 @@
   --motion-fast: 120ms;
   --motion-base: 150ms;
   --ease: cubic-bezier(.2, 0, 0, 1);
+
+  /* ── WO-331 · FLAGGED — founder directive 2026-08-10 (WO-331 file, "FAITHFUL-TO-PROTOTYPE BAR"):
+     tokens-only/no-new-tokens is explicitly lifted for genuine prototype colors. These are NOT new
+     colours — audited design-mockups/iteration3/console/styles.css line-by-line against the vars
+     above and every single value already exists verbatim (just under a different name there); these
+     are pure aliases under the PROTOTYPE's own names, added so its literal token names exist on disk
+     for this + the rest of the Wave-2 program, with zero value drift (each points at the var above).
+     `--band` is deliberately NOT aliased: the prototype's "band" (#F1ECE1) collides in NAME with our
+     EXISTING, different `--band` (#EAE3D5, already in wide use) — aliasing it would silently retone
+     every current `bg-ec-band` consumer app-wide, far outside this WO. Its true equivalent is
+     `--paper-3` (already exact), consumed as such, name collision flagged instead of overwritten. */
+  --card:        var(--paper-2);
+  --line:        var(--hair);
+  --line-strong: var(--hair-strong);
+  --muted-ink:   var(--ink-3);
+  --honey-ink:   var(--on-honey);
+  --success-bg:  var(--success-t);
+  --warn-bg:     var(--warn-t);
+  --danger-bg:   var(--danger-t);
+  /* WO-324 W2 — honey gradient + atmospheric washes (founder directive 2026-08-10:
+     restore the prototype's color depth; earlier "tokens-only / no gradient" constraint
+     LIFTED for this WO). Hex ported from the founder-approved Daybreak reference
+     (design-mockups/iteration3/landing-v6-daybreak.html — the file the shipped
+     landing.tsx's own header comment already cites as its source of truth). NAMED
+     tokens, never inlined raw hex in components. Landing-only consumer today
+     (.ec-btn-brass + the landing sections) — every future honey CTA follows these. */
+  --honey-grad-1: #F0C57C;
+  --honey-grad-2: #D9A64F;
+  --gradient-honey: linear-gradient(180deg, var(--honey-grad-1), var(--honey) 60%, var(--honey-grad-2));
+  --gradient-hero-wash: radial-gradient(1200px 520px at 76% -220px, rgba(232, 181, 99, .24), transparent 60%);
+  --gradient-quote-wash: linear-gradient(120deg, var(--bronze-tint), transparent);
+  --gradient-records-wash: radial-gradient(700px 300px at 82% 8%, rgba(232, 181, 99, .14), transparent 60%);
 }

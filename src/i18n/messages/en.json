@@ -323,6 +323,8 @@
       "selectAll": "Select all",
       "selectRow": "Select {title}",
       "setStage": "Change stage…",
+      "refresh": "Refresh selected",
+      "refreshTitle": "Queued for WO-309's bulk-refresh lane — not live yet",
       "export": "Export CSV",
       "exportFilename": "cases-export.csv",
       "delete": "Delete",
@@ -356,6 +358,10 @@
       "noDate": {
         "label": "No hearing date",
         "hint": "Set a diary date"
+      },
+      "stale": {
+        "label": "Stale records",
+        "hint": "Not refreshed in 30+ days — different from an overdue hearing."
       }
     },
     "title": "Cases",
@@ -365,18 +371,30 @@
     "clearFilters": "Clear filters",
     "th": {
       "case": "Case",
-      "client": "Client",
       "court": "Court",
-      "stage": "Stage",
-      "status": "Status",
       "next": "Next hearing",
-      "source": "Source"
+      "synced": "Synced",
+      "syncedTitle": "Source {source} · updated {ago}",
+      "neverSynced": "Not yet synced from the court record",
+      "manualSource": "manual entry"
     },
     "diary": "diary",
     "past": "past",
     "noDate": "no date",
     "row": {
-      "aria": "Case {title} — press Enter for details, arrow keys to move"
+      "aria": "Case {title} — press Enter for details, arrow keys to move",
+      "causeList": "View cause list",
+      "addNote": "Add note",
+      "addNoteTitle": "Coming soon"
+    },
+    "view": {
+      "aria": "List or agenda view",
+      "list": "List",
+      "agenda": "Agenda"
+    },
+    "agenda": {
+      "count": "{n, plural, one {# hearing} other {# hearings}}",
+      "empty": "No upcoming hearings in this view."
     },
     "density": {
       "aria": "Row density",
@@ -435,7 +453,10 @@
       "saveView": "Save this view",
       "sheetTitle": "Filters",
       "sheetSubtitle": "Narrow the case list. Results update instantly.",
-      "done": "Done"
+      "done": "Done",
+      "refreshAll": "Refresh all cases",
+      "refreshAllTitle": "Queued for WO-309's bulk-refresh lane — not live yet",
+      "refreshSoon": "Soon"
     },
     "console": {
       "searchPlaceholder": "Search cases — title, CNR, court, parties…",
@@ -462,6 +483,7 @@
       "next7": "Next 7 days",
       "next30": "Next 30 days",
       "noHearing": "No hearing set",
+      "staleFilter": "Stale sync (30+ days)",
       "sort": "Sort",
       "sortNext": "Next hearing ↑",
       "sortRecent": "Recently added",
@@ -1351,6 +1373,35 @@
       "save": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel"
+    }
+  },
+  "dashboard": {
+    "clients": {
+      "searchPlaceholder": "Search clients by name, phone or email…",
+      "searchAria": "Search clients",
+      "addClient": "Add client",
+      "addClientModalTitle": "New client",
+      "addClientModalHelper": "We'll flag any conflicts against existing clients and parties before you save.",
+      "close": "Close",
+      "noMatches": "No client matches “{q}”.",
+      "settled": "settled",
+      "contactHeading": "Contact",
+      "portalActiveDesc": "Active — they can see hearings and filed documents.",
+      "portalNotInvitedDesc": "Not invited yet.",
+      "billingHeading": "Billing",
+      "billed": "Billed",
+      "received": "Received",
+      "due": "Due",
+      "activityHeading": "Activity",
+      "activityEmpty": "No activity yet.",
+      "lastActivity": "Last activity",
+      "noActivity": "—",
+      "portalState": {
+        "notInvited": "Not invited",
+        "invited": "Invited",
+        "active": "Active"
+      },
+      "portalInvitedUntracked": "Not separately tracked — an invite grants access immediately, there's no pending state to show."
     }
   },
   "notices": {

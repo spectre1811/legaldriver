@@ -75,8 +75,16 @@
   .ec-btn-ink:hover { background: var(--n800); box-shadow: var(--e1); }
   .ec-btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--hair-strong); }
   .ec-btn-ghost:hover { background: var(--paper-3); }
-  .ec-btn-brass { background: var(--brass); color: #fff; }
-  .ec-btn-brass:hover { background: var(--brass-deep); }
+  /* WO-324 W2: honey gradient CTA (was a flat solid brass fill — founder-flagged
+     regression). Only consumer today is the landing page's search-submit + pricing
+     "Choose Pro" buttons (grep-verified); every future honey CTA inherits this. */
+  .ec-btn-brass {
+    background: var(--gradient-honey); color: var(--on-honey);
+    box-shadow: 0 10px 26px -12px rgba(232, 181, 99, .5);
+    transition: background var(--motion-base) var(--ease), box-shadow var(--motion-base) var(--ease),
+      transform var(--motion-fast) var(--ease), filter var(--motion-fast) var(--ease);
+  }
+  .ec-btn-brass:hover { filter: brightness(1.04); transform: translateY(-1px); box-shadow: 0 14px 30px -12px rgba(232, 181, 99, .55); }
 
   .ec-card { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-m); box-shadow: var(--e1); }
 
@@ -84,6 +92,26 @@
      console/styles.css) — bronze left-rule + tint wash emphasis block, used for the
      request-access "sent" confirmation. Existing tokens only (--bronze/--bronze-tint). */
   .ec-rule-left { border-left: 2px solid var(--bronze); background: color-mix(in oklab, var(--bronze-tint) 55%, transparent); }
+  /* WO-331 · ported verbatim from design-mockups/iteration3/console/styles.css (the Chambers
+     prototype's own motion vocabulary) — press = the chip/button active-state micro-animation,
+     stagger = a once-on-mount fade+rise for a section that just appeared. Both ride the existing
+     prefers-reduced-motion override below (transition/animation duration → ~0), so no extra work
+     is needed to make them respect it. */
+  .press { transition: transform .16s cubic-bezier(.2,.75,.25,1), background-color .2s ease, color .2s ease, border-color .2s ease; }
+  .press:active { transform: scale(0.96); }
+  @keyframes stagger-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .stagger { animation: stagger-in 0.45s ease-out both; }
+
+  /* WO-331 · ported from styles.css's `.shimmer` — the loading-skeleton gradient (a genuine
+     prototype gradient; "don't flatten to a solid" applies here, not just to a static colour).
+     Uses --paper-3 (our token equal to the prototype's own --band #F1ECE1), not our DIFFERENT
+     existing --band — see the tokens.css note on why that name isn't reused as-is. */
+  @keyframes mk-shimmer { from { background-position: -180% 0; } to { background-position: 180% 0; } }
+  .shimmer {
+    background-image: linear-gradient(90deg, var(--paper-3) 0%, color-mix(in oklab, var(--paper-3) 55%, #fff) 50%, var(--paper-3) 100%);
+    background-size: 180% 100%;
+    animation: mk-shimmer 1.6s linear infinite;
+  }
 
   /* stage / status pill */
   .ec-chip {
@@ -169,6 +197,66 @@ html[lang="hi"] .ec-chip {
    Applied precisely to numeric/identifier spans; not layer-scoped so it's always available. */
 .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
 
+/* ============================================================
+   WO-324 W2 — Daybreak landing motion (founder-flagged regression:
+   "no animations, search bar animation lost"). Ported from
+   design-mockups/iteration3/console/motion.tsx + styles.css. Two kinds:
+   (1) on-load hero stagger — pure CSS, plays once on mount, no JS;
+   (2) scroll reveals (.mk-reveal) — driven by the ScrollReveals client
+   component (src/components/landing/motion.tsx) toggling .is-in via
+   IntersectionObserver. Both fully neutralised under reduced-motion below.
+   ============================================================ */
+@keyframes mk-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mk-up { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+@keyframes mk-card-in { from { opacity: 0; transform: translateY(24px) scale(.99); } to { opacity: 1; transform: none; } }
+@keyframes mk-row-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes mk-draw { from { stroke-dasharray: 120; stroke-dashoffset: 120; } to { stroke-dasharray: 120; stroke-dashoffset: 0; } }
+
+.mk-anim-eyebrow { opacity: 0; animation: mk-fade .7s .05s var(--ease) forwards; }
+.mk-word { display: block; opacity: 0; transform: translateY(22px); animation: mk-up .75s var(--ease) forwards; }
+.mk-word:nth-child(2) { animation-delay: .1s; }
+.mk-word:nth-child(3) { animation-delay: .2s; }
+.mk-anim-sub { opacity: 0; animation: mk-fade .8s .45s var(--ease) forwards; }
+.mk-anim-search { opacity: 0; animation: mk-fade .8s .7s var(--ease) forwards; }
+.mk-anim-card { opacity: 0; animation: mk-card-in .9s .3s var(--ease) forwards; }
+.mk-anim-row { opacity: 0; animation: mk-row-in .4s var(--ease) forwards; }
+
+/* scroll reveal — gentle fade-up, triggered once by ScrollReveals. Several .mk-reveal
+   hosts also carry Tailwind's `transition` utility for their own hover state (border/
+   shadow) — the `transition` shorthand doesn't merge across rules, so border-color/
+   box-shadow are listed here too or hover would stop animating on those hosts. */
+.mk-reveal {
+  opacity: 0; transform: translateY(20px);
+  transition: opacity .7s var(--ease), transform .7s var(--ease),
+    border-color .2s ease, box-shadow .2s ease;
+}
+.mk-reveal.is-in { opacity: 1; transform: none; }
+
+/* icon stroke draw-on when hovering an ancestor .group (tile/record-card icons) */
+.mk-icon path, .mk-icon circle, .mk-icon rect, .mk-icon line {
+  transition: stroke-dashoffset .85s var(--ease);
+}
+.group:hover .mk-icon path, .group:hover .mk-icon circle, .group:hover .mk-icon rect, .group:hover .mk-icon line,
+.group:focus-visible .mk-icon path, .group:focus-visible .mk-icon circle, .group:focus-visible .mk-icon rect, .group:focus-visible .mk-icon line {
+  animation: mk-draw .9s var(--ease) both;
+}
+
+/* honey focus bloom for the hero search field */
+.mk-search-bloom { transition: box-shadow .35s var(--ease), border-color .25s var(--ease), transform .25s var(--ease); }
+.mk-search-bloom:focus-within {
+  border-color: var(--honey); transform: translateY(-1px);
+  box-shadow: 0 0 0 5px rgba(232, 181, 99, .15), 0 30px 70px -30px rgba(138, 100, 48, .42);
+}
+
+/* atmospheric washes — landing-scoped, never global body (dashboard stays untouched) */
+.mk-hero-wash { background-image: var(--gradient-hero-wash); background-repeat: no-repeat; }
+.mk-records-wash { position: relative; }
+.mk-records-wash::before {
+  content: ""; position: absolute; inset: 0; background-image: var(--gradient-records-wash);
+  pointer-events: none;
+}
+.mk-quote-wash { background-image: var(--gradient-quote-wash); }
+
 /* Accessibility floor: respect reduced-motion. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -176,5 +264,8 @@ html[lang="hi"] .ec-chip {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  .mk-reveal, .mk-word, .mk-anim-eyebrow, .mk-anim-sub, .mk-anim-search, .mk-anim-card, .mk-anim-row {
+    opacity: 1; transform: none;
   }
 }
