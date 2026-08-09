@@ -823,7 +823,8 @@
     "backToLogin": "← Back to sign in",
     "errors": {
       "email": "Enter a valid email address.",
-      "failed": "Something went wrong — please try again in a minute."
+      "failed": "Something went wrong — please try again in a minute.",
+      "challenge": "Please complete the verification below and submit again."
     }
   },
   "invoices": {

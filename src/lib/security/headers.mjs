@@ -48,7 +48,11 @@ export function supabaseOrigin(url) {
  */
 export function contentSecurityPolicy(supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL) {
   const origin = supabaseOrigin(supabaseUrl);
-  const connect = ["'self'", "https://*.supabase.co", "wss://*.supabase.co"];
+  // WO-323 · Cloudflare Turnstile (step-up on /request-access) loads its widget script + iframe from
+  // challenges.cloudflare.com and posts the token verify there — so it must be allowed in
+  // script-src + frame-src + connect-src or the challenge silently breaks under an enforced CSP.
+  const TURNSTILE = "https://challenges.cloudflare.com";
+  const connect = ["'self'", "https://*.supabase.co", "wss://*.supabase.co", TURNSTILE];
   if (origin && !connect.includes(origin)) {
     connect.push(origin, origin.replace(/^https:/, "wss:"));
   }
@@ -57,14 +61,16 @@ export function contentSecurityPolicy(supabaseUrl = process.env.NEXT_PUBLIC_SUPA
     "base-uri 'self'",
     "object-src 'none'",
     "form-action 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${TURNSTILE}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     `connect-src ${connect.join(" ")}`,
     "media-src 'self' blob:",
     "worker-src 'self' blob:",
-    "frame-src 'self' blob: https://*.supabase.co",
+    `frame-src 'self' blob: https://*.supabase.co ${TURNSTILE}`,
+    // Report-only needs a sink to actually observe (design §11): violations POST here as JSON.
+    "report-uri /api/csp-report",
   ].join("; ");
 }
 

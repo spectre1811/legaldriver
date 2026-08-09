@@ -11,15 +11,17 @@ export const dynamic = "force-dynamic"; // read runtime env every hit; never ser
 // Intentionally public + secret-free: a 40-char commit hash of a private repo is not sensitive, and a
 // health/version probe must be reachable by an uptime monitor without a key. NOTHING secret is echoed.
 export function GET() {
-  const sha = process.env.VERCEL_GIT_COMMIT_SHA?.trim() || null;
+  // WO-323 · Off Vercel `VERCEL_GIT_COMMIT_SHA` is null, which blinds deploy-freshness + the canary.
+  // The build pipeline injects `BUILD_SHA` (+ optional `BUILD_REF`) so this stays truthful on the box.
+  const sha = process.env.VERCEL_GIT_COMMIT_SHA?.trim() || process.env.BUILD_SHA?.trim() || null;
   return NextResponse.json({
     ok: true,
     service: "legaldriver",
     sha,
     shaShort: sha ? sha.slice(0, 7) : null,
-    ref: process.env.VERCEL_GIT_COMMIT_REF || null, // deployed branch (production = "main")
+    ref: process.env.VERCEL_GIT_COMMIT_REF || process.env.BUILD_REF || null, // deployed branch (production = "main")
     message: process.env.VERCEL_GIT_COMMIT_MESSAGE?.split("\n")[0]?.slice(0, 120) || null,
-    env: process.env.VERCEL_ENV || "development", // production | preview | development
+    env: process.env.APP_ENV || process.env.VERCEL_ENV || "development", // production | preview | development
     region: process.env.VERCEL_REGION || null,
     time: new Date().toISOString(),
   });

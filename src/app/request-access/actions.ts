@@ -1,9 +1,11 @@
 "use server";
 
+import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMailer, type SendResult } from "@/lib/notify/mailer";
 import { logOutboundEmail } from "@/lib/notify/log";
 import { isValidEmail, normalizeEmail, capText, NAME_MAX, NOTE_MAX } from "@/lib/access/validate";
+import { stepUp } from "@/lib/security/step-up";
 
 // WO-272 — invite-only intake. Mukadma no longer lets the public self-serve an
 // account (Supabase disable_signup + UI). Interested people leave their email
@@ -12,7 +14,7 @@ import { isValidEmail, normalizeEmail, capText, NAME_MAX, NOTE_MAX } from "@/lib
 // deny-all for anon/authenticated — nobody can read/write it from the browser.
 
 export type RequestAccessState = {
-  error?: "email" | "failed";
+  error?: "email" | "failed" | "challenge";
   ok?: boolean;
   /** Echo for the "we'll be in touch at {email}" screen. */
   email?: string;
@@ -40,6 +42,22 @@ export async function requestAccess(_prev: RequestAccessState, formData: FormDat
 
   const email = normalizeEmail(field(formData, "email"));
   if (!isValidEmail(email)) return { error: "email" };
+
+  // WO-323 · Per-IP rate-limit + Turnstile step-up. The per-email dedupe below bounds a single
+  // address; this bounds an attacker CYCLING addresses. Behind Cloudflare the trusted IP is the
+  // unforgeable CF header. Dormant (existing honeypot/dedupe/caps remain the backstop) until
+  // TURNSTILE_SECRET_KEY is wired; then a tripped IP must clear a Turnstile challenge.
+  let ip = "";
+  try {
+    const h = headers();
+    ip = h.get("cf-connecting-ip") ?? h.get("x-real-ip") ?? (h.get("x-forwarded-for") ?? "").split(",")[0].trim();
+  } catch {
+    // Called outside a request scope (e.g. a direct unit-test invocation) — no IP; the limiter falls
+    // back to a shared bucket, and the honeypot/dedupe/caps remain the real backstop.
+  }
+  const gate = await stepUp({ ip, action: "request-access", token: field(formData, "cf-turnstile-response") || null });
+  if (!gate.ok) return { error: "challenge", email };
+
   // Bounded free text — see capText: a public write with unbounded fields is a
   // storage amplifier, so cap before the row is ever built.
   const name = capText(field(formData, "name"), NAME_MAX);

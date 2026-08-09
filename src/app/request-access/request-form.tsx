@@ -4,12 +4,17 @@
 // optional note, plus a hidden honeypot. Mirrors the login panel's pending/error
 // idioms and design-system classes.
 
+import Script from "next/script";
 import { useFormState, useFormStatus } from "react-dom";
 import { useTranslations } from "next-intl";
 import { NAME_MAX, NOTE_MAX } from "@/lib/access/validate";
 import { requestAccess, type RequestAccessState } from "./actions";
 
 const initial: RequestAccessState = {};
+
+// WO-323 · Turnstile step-up. Inlined at build; unset → the widget never renders (the challenge
+// only appears once the founder wires the site key AND an IP trips the limiter — dormant otherwise).
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -65,6 +70,14 @@ export function RequestAccessForm() {
           <p role="alert" className="rounded-ec-s bg-ec-danger-t px-3.5 py-2.5 text-sm text-ec-danger">
             {t(`errors.${state.error}`)}
           </p>
+        )}
+        {state.error === "challenge" && TURNSTILE_SITE_KEY && (
+          <>
+            <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
+            {/* Turnstile injects a hidden `cf-turnstile-response` input into this form on solve; the
+                server action reads it. */}
+            <div className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} />
+          </>
         )}
         <Submit />
         <a href="/login" className="block text-sm font-medium text-ec-ink-2 underline-offset-2 hover:text-ec-brass-deep hover:underline">
