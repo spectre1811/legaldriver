@@ -106,6 +106,7 @@ const OFFLINE = [
   "wo290_reminder_feeder",
   "wo311_webhook_tenant",
   "profile_error_states",
+  "wo326_public_proxy",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the
