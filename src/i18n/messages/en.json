@@ -1341,7 +1341,15 @@
       "received": "Received",
       "due": "Due",
       "activityHeading": "Activity",
-      "activityEmpty": "No activity yet."
+      "activityEmpty": "No activity yet.",
+      "lastActivity": "Last activity",
+      "noActivity": "—",
+      "portalState": {
+        "notInvited": "Not invited",
+        "invited": "Invited",
+        "active": "Active"
+      },
+      "portalInvitedUntracked": "Not separately tracked — an invite grants access immediately, there's no pending state to show."
     }
   },
   "notices": {

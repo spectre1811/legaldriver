@@ -183,6 +183,29 @@ export default async function ClientDetailPage({
             <Icon name="inbox" className="h-4 w-4 text-ec-bronze" />
             <p className="ec-label">{t("clientPortal")}</p>
           </div>
+          {/* All 3 states the prototype shows — "Invited" (pending, not yet signed in) has no
+              backing row in `portal_user` (inviteToPortal creates an ACTIVE row directly, there's
+              no pending state to read), so it renders permanently dim/disabled with a note rather
+              than being dropped or faked as reachable. */}
+          <div className="mb-2 inline-flex items-center gap-1 rounded-ec-s border border-ec-hair bg-ec-paper p-[3px]">
+            {(["notInvited", "invited", "active"] as const).map((s) => {
+              const real = portal?.id ? "active" : "notInvited";
+              const isCurrent = s === real;
+              const isTracked = s !== "invited";
+              return (
+                <span
+                  key={s}
+                  title={!isTracked ? td("portalInvitedUntracked") : undefined}
+                  className={
+                    "rounded-[4px] px-2 py-1 text-[11px] font-medium transition-colors " +
+                    (isCurrent ? "bg-ec-bronze-tint text-ec-bronze-deep" : isTracked ? "text-ec-ink-3" : "cursor-help text-ec-ink-3/50")
+                  }
+                >
+                  {td(`portalState.${s}`)}
+                </span>
+              );
+            })}
+          </div>
           <p className="text-[13px] text-ec-ink-2">{portal?.id ? td("portalActiveDesc") : td("portalNotInvitedDesc")}</p>
           <div className="mt-3">
             <PortalInvite clientId={client.id} portalUserId={portal?.id ?? null} />
@@ -243,6 +266,7 @@ export default async function ClientDetailPage({
                   <h3 className="ec-label">{CATEGORY_LABEL[g.key]}</h3>
                   <span className="text-xs text-ec-ink-3">({g.docs.length})</span>
                 </div>
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-ec-hair text-left">
@@ -277,6 +301,7 @@ export default async function ClientDetailPage({
                     })}
                   </tbody>
                 </table>
+                </div>
               </section>
             ))}
           </div>

@@ -1341,7 +1341,15 @@
       "received": "प्राप्त",
       "due": "शेष",
       "activityHeading": "गतिविधि",
-      "activityEmpty": "अभी तक कोई गतिविधि नहीं।"
+      "activityEmpty": "अभी तक कोई गतिविधि नहीं।",
+      "lastActivity": "अंतिम गतिविधि",
+      "noActivity": "—",
+      "portalState": {
+        "notInvited": "आमंत्रित नहीं",
+        "invited": "आमंत्रित",
+        "active": "सक्रिय"
+      },
+      "portalInvitedUntracked": "अलग से दर्ज नहीं — आमंत्रण मिलते ही पहुँच तुरंत मिल जाती है, कोई प्रतीक्षारत स्थिति नहीं दिखाई जाती।"
     }
   },
   "notices": {

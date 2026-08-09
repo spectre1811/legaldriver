@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { fmtMoney } from "@/components/ui";
+import { fmtMoney, fmtAgo } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { AddClientButton } from "./add-client-modal";
 import { ClientsSearch } from "./clients-search";
@@ -50,13 +50,14 @@ export default async function ClientsPage({ searchParams }: { searchParams: { pa
       {showRoster ? (
         <>
           <div className="ec-card overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-ec-hair text-left">
                   <th className="ec-label px-5 py-3">{t("colClient")}</th>
-                  <th className="ec-label hidden px-5 py-3 sm:table-cell">{t("colType")}</th>
                   <th className="ec-label hidden px-5 py-3 md:table-cell">{t("colContact")}</th>
                   <th className="ec-label px-5 py-3">{t("colCases")}</th>
+                  <th className="ec-label hidden px-5 py-3 lg:table-cell">{td("lastActivity")}</th>
                   <th className="ec-label px-5 py-3 text-right">{t("colOutstanding")}</th>
                 </tr>
               </thead>
@@ -67,15 +68,24 @@ export default async function ClientsPage({ searchParams }: { searchParams: { pa
                       <Link href={`/dashboard/clients/${c.id}`} className="font-display text-ec-ink hover:text-ec-bronze">
                         {c.name}
                       </Link>
-                      {c.practiceArea && <div className="text-[11.5px] text-ec-ink-3">{c.practiceArea}</div>}
-                    </td>
-                    <td className="hidden px-5 py-3.5 sm:table-cell">
-                      <span className="ec-chip">{c.type === "org" ? t("intake.typeOrg") : t("intake.typeIndividual")}</span>
+                      <div className="mt-0.5 flex items-center gap-1.5">
+                        <span className="ec-chip">{c.type === "org" ? t("intake.typeOrg") : t("intake.typeIndividual")}</span>
+                        {c.practiceArea && <span className="text-[11.5px] text-ec-ink-3">{c.practiceArea}</span>}
+                      </div>
                     </td>
                     <td className="hidden px-5 py-3.5 text-ec-ink-2 md:table-cell">
                       <span className="num">{c.phones?.[0] ?? c.emails?.[0] ?? "—"}</span>
                     </td>
                     <td className="num px-5 py-3.5 text-ec-ink-2">{c.caseCount}</td>
+                    <td className="hidden px-5 py-3.5 text-ec-ink-3 lg:table-cell">
+                      {c.lastActivity ? (
+                        <span title={c.lastActivity.summary} className="block max-w-[220px] truncate">
+                          {c.lastActivity.summary} · <span className="num">{fmtAgo(c.lastActivity.at)}</span>
+                        </span>
+                      ) : (
+                        <span className="text-ec-ink-3">{td("noActivity")}</span>
+                      )}
+                    </td>
                     <td className="num px-5 py-3.5 text-right">
                       {c.outstandingMinor > 0 ? (
                         <span className="text-ec-ink">{fmtMoney(c.outstandingMinor)}</span>
@@ -87,6 +97,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: { pa
                 ))}
               </tbody>
             </table>
+            </div>
             {clients.length === 0 && (
               <p className="px-5 py-10 text-center text-sm text-ec-ink-3">{td("noMatches", { q })}</p>
             )}
