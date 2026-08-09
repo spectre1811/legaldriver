@@ -1409,6 +1409,23 @@
         "active": "Active"
       },
       "portalInvitedUntracked": "Not separately tracked — an invite grants access immediately, there's no pending state to show."
+    },
+    "onboarding": {
+      "eyebrow": "Setup",
+      "addEyebrow": "Add an advocate",
+      "rosterEmpty": "No advocates yet.",
+      "viewMatters": "View matters",
+      "sidebar": {
+        "title": "What you get",
+        "calendarLabel": "Calendar",
+        "calendarCount": "{n, plural, one {# hearing this month} other {# hearings this month}}",
+        "calendarEmpty": "No hearings on file yet",
+        "weekdays": ["M", "T", "W", "T", "F", "S", "S"],
+        "briefHeader": "{brand} · morning brief",
+        "briefNext": "Next on your calendar: {title} — {court}, {date}",
+        "briefEmpty": "Once your practice is assembled, your morning brief appears here.",
+        "briefNote": "WhatsApp delivery is coming soon — for now, check here each morning."
+      }
     }
   },
   "notices": {
