@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Icon, type IconName } from "@/components/icons";
 import { BrandMark } from "@/components/brand-mark";
@@ -15,6 +16,9 @@ const TRUST: [IconName, string][] = [
 // WO-50 — method-first auth, two explicit modes. Deep-link params:
 //   ?mode=signup|forgot  ?next=/path  ?track=<CNR>  ?error=<code>
 //   ?notice=confirmEmail|passwordChanged
+// WO-339 — Daybreak/Chambers reskin (restyle only — see
+// design-mockups/iteration3/console/login.tsx). Every searchParams/redirect
+// branch below is untouched; only the JSX/classNames changed.
 export default async function LoginPage({
   searchParams,
 }: {
@@ -47,25 +51,29 @@ export default async function LoginPage({
   const track = sanitizeTrack(searchParams.track) ?? undefined;
 
   return (
-    <main className="grid min-h-screen bg-ec-paper lg:grid-cols-[1.1fr_1fr]">
-      {/* Brand panel — ink plate, one line of brass. No gradients. */}
-      <section className="relative hidden flex-col justify-between overflow-hidden bg-ec-ink p-12 text-ec-paper lg:flex">
-        <div className="relative flex items-center gap-2.5">
+    <main className="grid min-h-screen bg-ec-paper lg:grid-cols-2">
+      {/* Brand plate — engraved ink plate, honey eyebrow + a divided trust list
+          (design-mockups/iteration3/console/login.tsx). */}
+      <section className="mk-engraved relative hidden flex-col justify-between overflow-hidden bg-ec-ink px-10 py-12 text-ec-paper lg:flex">
+        <Link href="/" className="relative flex items-center gap-2.5">
           <BrandMark size={30} tone="light" />
-          <span className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight text-ec-paper">{brand.name}</span>
-        </div>
+          <span className="leading-tight">
+            <b className="block font-display text-xl font-medium lowercase tracking-tight text-ec-paper">{brand.name}</b>
+            <span className="block text-[11px] text-ec-hair-strong">{brand.nameDevanagari}</span>
+          </span>
+        </Link>
 
-        <div className="relative max-w-md">
-          <p lang="gu" className="mb-3 font-display text-7xl font-medium leading-none text-ec-paper/10">{brand.nameGujarati}</p>
-          <h1 className="font-display text-4xl font-medium leading-[1.15] text-ec-paper">{t("brand.headline")}</h1>
-          <p className="mt-4 text-ec-paper/70">{t("brand.sub")}</p>
-          <ul className="mt-8 space-y-3">
+        <div className="relative max-w-md py-10">
+          <p className="ec-label font-mono !text-ec-honey">{t("brand.eyebrow")}</p>
+          <h1 className="mt-3 font-display text-[30px] font-medium leading-[1.08] text-ec-paper sm:text-[38px]">
+            {t("brand.headline")}
+          </h1>
+          <p className="mt-3 text-[13.5px] leading-relaxed text-ec-paper/70">{t("brand.sub")}</p>
+          <ul className="mt-8 divide-y divide-white/10 border-y border-white/10">
             {TRUST.map(([icon, key]) => (
-              <li key={key} className="flex items-center gap-3 text-sm text-ec-paper/85">
-                <span className="flex h-8 w-8 items-center justify-center rounded-ec-s bg-ec-paper/10 text-ec-brass">
-                  <Icon name={icon} className="h-4 w-4" />
-                </span>
-                {t(`trust.${key}`)}
+              <li key={key} className="flex gap-3 py-4">
+                <Icon name={icon} className="mt-1 h-4 w-4 shrink-0 text-ec-honey" />
+                <p className="min-w-0 text-[13px] leading-snug text-ec-hair-strong">{t(`trust.${key}`)}</p>
               </li>
             ))}
           </ul>
@@ -79,7 +87,10 @@ export default async function LoginPage({
         <div className="w-full max-w-sm animate-fade-in">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
             <BrandMark size={30} tone="dark" />
-            <span className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink">{brand.name}</span>
+            <span className="leading-tight">
+              <b className="block font-display text-xl font-medium lowercase tracking-tight text-ec-ink">{brand.name}</b>
+              <span className="block text-[11px] text-ec-ink-3">{brand.nameDevanagari}</span>
+            </span>
           </div>
 
           <AuthPanel initialMode={mode} urlError={urlError} notice={notice} next={next} track={track} />

@@ -13,6 +13,7 @@
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useTranslations } from "next-intl";
+import { Icon } from "@/components/icons";
 import type { AuthErrorCode } from "@/lib/auth/errors";
 import {
   requestPasswordReset,
@@ -25,6 +26,27 @@ import {
 const initial: AuthFormState = {};
 
 type Mode = "signin" | "forgot";
+
+// WO-339 — Daybreak/Chambers field styling (design-mockups/iteration3/console/
+// login.tsx's <Field>): bronze-only focus border, no shared-`.input` glow.
+const fieldInputClass =
+  "mt-1.5 w-full rounded-md border border-ec-hair-strong bg-ec-paper-2 px-3.5 py-2.5 text-[13.5px] text-ec-ink outline-none transition-colors placeholder:text-ec-ink-3 focus:border-ec-bronze";
+
+// The registrar's stamp — hand-stamped provenance mark, ported from the
+// Chambers prototype's <Stamp lines={[...]}>. Purely decorative; copy stays
+// honest (no invented review-turnaround commitment).
+function InviteStamp() {
+  const t = useTranslations("auth");
+  return (
+    <div className="mt-10 flex justify-start">
+      <div className="relative -rotate-2 rounded-lg border-[1.5px] border-ec-bronze px-4 pb-2.5 pt-3 text-center text-ec-bronze opacity-75">
+        <span className="absolute left-1/2 top-[5px] h-[5px] w-[5px] -translate-x-1/2 rounded-full bg-ec-honey" />
+        <div className="mk-stamp-line">{t("invite.stamp.line1")}</div>
+        <div className="num mk-stamp-line">{t("invite.stamp.line2")}</div>
+      </div>
+    </div>
+  );
+}
 
 function Spinner() {
   return (
@@ -63,8 +85,8 @@ function ErrorNote({ code }: { code?: AuthErrorCode }) {
 function RequestAccessLink() {
   const t = useTranslations("auth");
   return (
-    <a href="/request-access" className="font-medium text-ec-brass-deep underline-offset-2 hover:underline">
-      {t("invite.cta")} →
+    <a href="/request-access" className="inline-flex items-center gap-1 font-medium text-ec-brass-deep underline-offset-2 hover:underline">
+      {t("invite.cta")} <Icon name="chevron" className="h-3 w-3" />
     </a>
   );
 }
@@ -111,8 +133,10 @@ function GoogleSubmit({ label, pendingLabel }: { label: string; pendingLabel: st
 function Divider() {
   const t = useTranslations("auth");
   return (
-    <div className="my-5 flex items-center gap-3 text-xs text-ec-ink-3">
-      <span className="h-px flex-1 bg-ec-hair" /> {t("or")} <span className="h-px flex-1 bg-ec-hair" />
+    <div className="my-5 flex items-center gap-3">
+      <span className="h-px flex-1 bg-ec-hair" />
+      <span className="ec-label font-mono">{t("or")}</span>
+      <span className="h-px flex-1 bg-ec-hair" />
     </div>
   );
 }
@@ -143,16 +167,18 @@ function SignInForm({
       <HiddenIntent next={next} track={track} />
       <div>
         <label className="ec-label" htmlFor="email">{t("email")}</label>
-        <input id="email" name="email" type="email" required autoComplete="email" className="input mt-1.5" placeholder={t("ph.email")} />
+        <input id="email" name="email" type="email" required autoComplete="email" className={fieldInputClass} placeholder={t("ph.email")} />
       </div>
       <div>
-        <div className="flex items-baseline justify-between">
-          <label className="ec-label" htmlFor="password">{t("password")}</label>
-          <button type="button" onClick={onForgot} className="text-xs font-medium text-ec-ink-2 underline-offset-2 hover:text-ec-brass-deep hover:underline">
-            {t("signin.forgot")}
-          </button>
-        </div>
-        <input id="password" name="password" type="password" required autoComplete="current-password" className="input mt-1.5" placeholder="••••••••" />
+        <label className="ec-label" htmlFor="password">{t("password")}</label>
+        <input id="password" name="password" type="password" required autoComplete="current-password" className={fieldInputClass} placeholder="••••••••" />
+        <button
+          type="button"
+          onClick={onForgot}
+          className="mt-2 block text-left text-[12.5px] text-ec-ink-3 underline-offset-4 hover:text-ec-bronze-deep hover:underline"
+        >
+          {t("signin.forgot")}
+        </button>
       </div>
       {/* WO-316 — sign-in has ONE failure code now: a bad password and an unknown
           email are indistinguishable. The branch that used to detect "this email has
@@ -231,11 +257,11 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
     <form action={formAction} className="space-y-4">
       <div>
         <label className="ec-label" htmlFor="email">{t("email")}</label>
-        <input id="email" name="email" type="email" required autoComplete="email" className="input mt-1.5" placeholder={t("ph.email")} />
+        <input id="email" name="email" type="email" required autoComplete="email" className={fieldInputClass} placeholder={t("ph.email")} />
       </div>
       <ErrorNote code={state.error} />
       <SubmitButton label={t("forgot.cta")} pendingLabel={t("forgot.pending")} />
-      <button type="button" onClick={onBack} className="text-sm font-medium text-ec-ink-2 underline-offset-2 hover:text-ec-brass-deep hover:underline">
+      <button type="button" onClick={onBack} className="text-[12.5px] font-medium text-ec-brass-deep hover:underline">
         ← {t("forgot.back")}
       </button>
     </form>
@@ -261,20 +287,24 @@ export function AuthPanel({
 
   if (confirmEmail) {
     return (
-      <ConfirmScreen
-        email={confirmEmail}
-        next={next}
-        track={track}
-        onChangeEmail={() => setConfirmEmail(null)}
-        onSignIn={() => { setConfirmEmail(null); setMode("signin"); }}
-      />
+      <>
+        <ConfirmScreen
+          email={confirmEmail}
+          next={next}
+          track={track}
+          onChangeEmail={() => setConfirmEmail(null)}
+          onSignIn={() => { setConfirmEmail(null); setMode("signin"); }}
+        />
+        <InviteStamp />
+      </>
     );
   }
 
   return (
     <div>
-      <h2 className="font-display text-2xl font-medium text-ec-ink">{t(`${mode}.title`)}</h2>
-      <p className="mt-1 text-sm text-ec-ink-3">{t(`${mode}.subtitle`)}</p>
+      <p className="ec-label font-mono">{t(`${mode}.eyebrow`)}</p>
+      <h2 className="mt-2 font-display text-[32px] font-medium leading-tight text-ec-ink">{t(`${mode}.title`)}</h2>
+      <p className="mt-2 text-[13px] text-ec-ink-2">{t(`${mode}.subtitle`)}</p>
 
       {urlError && (
         <p role="alert" className="mt-5 rounded-ec-s bg-ec-danger-t px-3.5 py-2.5 text-sm text-ec-danger">
@@ -326,6 +356,8 @@ export function AuthPanel({
           {t("invite.prompt")} <RequestAccessLink />
         </p>
       )}
+
+      <InviteStamp />
     </div>
   );
 }
