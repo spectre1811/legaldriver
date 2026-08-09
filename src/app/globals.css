@@ -131,13 +131,32 @@
     transition: opacity 0.7s cubic-bezier(0.2, 0.75, 0.25, 1), transform 0.7s cubic-bezier(0.2, 0.75, 0.25, 1);
   }
   .mk-reveal.is-in { opacity: 1; transform: none; }
+
+  /* WO-339 · ported verbatim from the Chambers prototype's `engraved` utility
+     (design-mockups/iteration3/console/styles.css) — the faint diagonal hatch
+     texture on the /login ink brand-plate. Colour-free (white-alpha overlay), so
+     no tokens.css change is needed for it. */
+  .mk-engraved {
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.04) 0px,
+      rgba(255, 255, 255, 0.04) 1px,
+      transparent 1px,
+      transparent 7px
+    );
+  }
+
+  /* WO-339 · the /login "registrar's stamp" provenance mark (ported from the
+     Chambers prototype's <Stamp>) — tracked mono caps, two lines. */
+  .mk-stamp-line { font-family: var(--f-mono); font-size: 10px; line-height: 1.6; letter-spacing: 0.18em; text-transform: uppercase; }
 }
 
 /* Devanagari is never letter-spaced (ui-frontend hard rule). Covers every tracked
    mono/uppercase label a translated string can land in. */
 html[lang="hi"] .mk-eyebrow,
 html[lang="hi"] .ec-label,
-html[lang="hi"] .ec-chip {
+html[lang="hi"] .ec-chip,
+html[lang="hi"] .mk-stamp-line {
   letter-spacing: normal;
 }
 

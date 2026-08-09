@@ -734,6 +734,7 @@
   },
   "auth": {
     "brand": {
+      "eyebrow": "Advocate console",
       "headline": "Every order read. Every date kept. Every evening.",
       "sub": "Track cases by CNR, surface your cause list and deadlines, escalate notices, and let your inbox file itself — built for advocates and firms.",
       "footnote": "Court data from the public court record · not legal advice · verify against the official record."
@@ -752,6 +753,7 @@
       "email": "you@firm.in"
     },
     "signin": {
+      "eyebrow": "Members",
       "title": "Welcome back",
       "subtitle": "Sign in to your workspace.",
       "cta": "Sign in",
@@ -780,6 +782,7 @@
       "signInInstead": "Already confirmed? Sign in"
     },
     "forgot": {
+      "eyebrow": "Reset",
       "title": "Reset your password",
       "subtitle": "Enter your email and we'll send you a reset link.",
       "cta": "Send reset link",
@@ -814,7 +817,11 @@
       "prompt": "New to Mukadma?",
       "cta": "Request access",
       "noticeTitle": "Mukadma is invite-only",
-      "noticeBody": "We're onboarding advocates by invitation right now. Leave your details and we'll be in touch."
+      "noticeBody": "We're onboarding advocates by invitation right now. Leave your details and we'll be in touch.",
+      "stamp": {
+        "line1": "Invite-only access",
+        "line2": "Reviewed by the team"
+      }
     },
     "errors": {
       "invalidCredentials": "Email or password is incorrect — or the account doesn't exist yet.",
