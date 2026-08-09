@@ -1461,6 +1461,52 @@
       "cancel": "Cancel"
     }
   },
+  "dashboard": {
+    "clients": {
+      "searchPlaceholder": "Search clients by name, phone or email…",
+      "searchAria": "Search clients",
+      "addClient": "Add client",
+      "addClientModalTitle": "New client",
+      "addClientModalHelper": "We'll flag any conflicts against existing clients and parties before you save.",
+      "close": "Close",
+      "noMatches": "No client matches “{q}”.",
+      "settled": "settled",
+      "contactHeading": "Contact",
+      "portalActiveDesc": "Active — they can see hearings and filed documents.",
+      "portalNotInvitedDesc": "Not invited yet.",
+      "billingHeading": "Billing",
+      "billed": "Billed",
+      "received": "Received",
+      "due": "Due",
+      "activityHeading": "Activity",
+      "activityEmpty": "No activity yet.",
+      "lastActivity": "Last activity",
+      "noActivity": "—",
+      "portalState": {
+        "notInvited": "Not invited",
+        "invited": "Invited",
+        "active": "Active"
+      },
+      "portalInvitedUntracked": "Not separately tracked — an invite grants access immediately, there's no pending state to show."
+    },
+    "onboarding": {
+      "eyebrow": "Setup",
+      "addEyebrow": "Add an advocate",
+      "rosterEmpty": "No advocates yet.",
+      "viewMatters": "View matters",
+      "sidebar": {
+        "title": "What you get",
+        "calendarLabel": "Calendar",
+        "calendarCount": "{n, plural, one {# hearing this month} other {# hearings this month}}",
+        "calendarEmpty": "No hearings on file yet",
+        "weekdays": ["M", "T", "W", "T", "F", "S", "S"],
+        "briefHeader": "{brand} · morning brief",
+        "briefNext": "Next on your calendar: {title} — {court}, {date}",
+        "briefEmpty": "Once your practice is assembled, your morning brief appears here.",
+        "briefNote": "WhatsApp delivery is coming soon — for now, check here each morning."
+      }
+    }
+  },
   "notices": {
     "title": "Notices",
     "subtitle": "Create a notice, set a response-due date, and let the escalation timer advance it automatically.",
@@ -1823,6 +1869,14 @@
       "noCaseOption": "No case",
       "deleteConfirm": "Delete this document and its file permanently?",
       "cancel": "Cancel"
+    },
+    "viewer": {
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "notes": "Notes",
+      "notesPlaceholder": "Add a short note for this document…",
+      "notesComingSoon": "Notes aren't saved yet — this is coming soon.",
+      "pagesUnavailable": "Page thumbnails aren't available yet"
     }
   },
   "notifications": {

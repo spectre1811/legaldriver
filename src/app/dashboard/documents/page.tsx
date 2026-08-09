@@ -10,6 +10,7 @@ import { DocumentsUpload } from "./documents-upload";
 import { DocumentsBrowser, type DocRow } from "./documents-browser";
 import { Pagination } from "@/components/pagination";
 import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
+import { Reveal } from "../motion";
 
 const CATEGORY_ICON: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.icon]));
 
@@ -33,8 +34,11 @@ export default async function DocumentsPage({
 
   // Matters carry client_id so we can resolve a document's client even when it's
   // only tagged to a case. Fetch this first — the client filter needs the map.
-  const { data: matters } = await supabase.from("matter").select("id, title, client_id");
+  // WO-334: also select `cnr` — the restored viewer panel's eyebrow binds to the matter's real
+  // case reference number (the prototype's dummy CNR), never a fabricated one.
+  const { data: matters } = await supabase.from("matter").select("id, title, client_id, cnr");
   const matterClient = new Map((matters ?? []).map((m) => [m.id, m.client_id]));
+  const matterCnr = new Map((matters ?? []).map((m) => [m.id, m.cnr]));
 
   // WO-56: numbered-page pagination (range + exact count) replaces the old .limit(300)
   // silent cap — the whole library is now reachable, one page at a time. Each page's
@@ -100,6 +104,7 @@ export default async function DocumentsPage({
     return {
       id: d.id, filename: d.filename ?? "—", docType: d.doc_type, mime: d.mime,
       primary: clientLabel ?? caseLabel, secondary: clientLabel ? caseLabel : null,
+      caseLabel, cnr: d.matter_id ? matterCnr.get(d.matter_id) ?? null : null,
       sourceLabel: SOURCE[d.source] ?? d.source, sizeLabel: fmtSize(d.size_bytes), dateLabel: (formatCourtDate(d.created_at) ?? "—"),
       matterId: d.matter_id, clientId: d.client_id, shared: d.portal_shared,
       hasFile: Boolean(d.storage_path),
@@ -139,7 +144,10 @@ export default async function DocumentsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      {/* WO-334 · mount reveals (ported motion.tsx `Reveal`), staggered top-to-bottom like the
+          Overview page (WO-330) — the page's own chrome; DocumentsBrowser reveals its own
+          sections at a matching cadence. */}
+      <Reveal as="div" className="flex flex-wrap items-start justify-between gap-3">
         <header className="min-w-0">
           <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{isTrash ? t("trash.title") : t("title")}</h1>
           <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{isTrash ? t("trash.subtitle") : t("subtitle")}</p>
@@ -149,41 +157,43 @@ export default async function DocumentsPage({
             <Icon name="back" className="h-4 w-4" /> {t("trash.back")}
           </Link>
         )}
-      </div>
+      </Reveal>
 
       {/* Label-top attention cards (DS §6): the filing state at a glance — each click-to-filter.
           Encodes the product's promise (everything filed to the right matter), not decoration. */}
       {!isTrash && (
-        <div className="grid gap-4 sm:grid-cols-3">
+        <Reveal as="div" delay={60} className="grid gap-4 sm:grid-cols-3">
           <StatCard href="/dashboard/documents" label={t("stat.inFile")} value={String(filedTotal ?? 0)} hint={t("stat.inFileHint")} />
           <StatCard href="/dashboard/documents?filed=unfiled" label={t("stat.unfiled")} value={String(unfiledCount ?? 0)} hint={t("stat.unfiledHint")} tone={(unfiledCount ?? 0) > 0 ? "warn" : undefined} />
           <StatCard href="/dashboard/documents/review" label={t("stat.review")} value={String(reviewCount ?? 0)} hint={t("stat.reviewHint")} tone={(reviewCount ?? 0) > 0 ? "hot" : undefined} />
-        </div>
+        </Reveal>
       )}
 
-      {!isTrash && <DocumentsUpload />}
       {!isTrash && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="ec-label">{t("group.by")}</span>
-          <div className="inline-flex items-center gap-[3px] rounded-ec-s border border-ec-hair bg-ec-paper-2 p-[3px]">
-            {(["category", "client", "case"] as const).map((g) => (
-              <Link
-                key={g}
-                href={g === "category" ? "/dashboard/documents" : `/dashboard/documents?group=${g}`}
-                role="tab"
-                aria-selected={groupBy === g}
-                className={`rounded-[4px] px-2.5 py-1 text-xs font-medium transition-colors ${groupBy === g ? "bg-ec-bronze-tint text-ec-bronze-deep" : "text-ec-ink-3 hover:bg-ec-paper-3 hover:text-ec-ink-2"}`}
-              >
-                {t(`group.${g}`)}
-              </Link>
-            ))}
+        <Reveal as="div" delay={120} className="space-y-6">
+          <DocumentsUpload />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="ec-label">{t("group.by")}</span>
+            <div className="inline-flex items-center gap-[3px] rounded-ec-s border border-ec-hair bg-ec-paper-2 p-[3px]">
+              {(["category", "client", "case"] as const).map((g) => (
+                <Link
+                  key={g}
+                  href={g === "category" ? "/dashboard/documents" : `/dashboard/documents?group=${g}`}
+                  role="tab"
+                  aria-selected={groupBy === g}
+                  className={`rounded-[4px] px-2.5 py-1 text-xs font-medium transition-colors ${groupBy === g ? "bg-ec-bronze-tint text-ec-bronze-deep" : "text-ec-ink-3 hover:bg-ec-paper-3 hover:text-ec-ink-2"}`}
+                >
+                  {t(`group.${g}`)}
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+          <FilterBar types={types} clients={clientOpts} />
+        </Reveal>
       )}
-      {!isTrash && <FilterBar types={types} clients={clientOpts} />}
 
       {sectionData.length ? (
-        <>
+        <Reveal as="div" delay={180}>
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ec-ink-3">
             <span>
               {isTrash
@@ -199,16 +209,22 @@ export default async function DocumentsPage({
           </div>
           <DocumentsBrowser sections={sectionData} orderedIds={orderedIds} matterOpts={matterOpts} clientOpts={clientOpts} trash={isTrash} />
           <Pagination page={page} perPage={per} total={docsTotal ?? 0} />
-        </>
+        </Reveal>
       ) : (
-        <div className="ec-card flex flex-col items-center gap-3 px-6 py-16 text-center">
+        <Reveal as="div" delay={180} className="ec-card flex flex-col items-center gap-3 px-6 py-16 text-center">
           <span className="rounded-full bg-ec-paper-3 p-3 text-ec-ink-3"><Icon name={isTrash ? "trash" : "documents"} className="h-6 w-6" /></span>
           <p className="font-display text-lg text-ec-ink">{isTrash ? t("trash.emptyTitle") : activeFilters ? t("empty.filteredTitle") : t("empty.emptyTitle")}</p>
           <p className="max-w-sm text-sm text-ec-ink-3">{isTrash ? t("trash.emptyBody") : activeFilters ? t("empty.filteredBody") : t("empty.emptyBody")}</p>
-        </div>
+        </Reveal>
       )}
 
-      <p className="text-xs text-ec-ink-3">{t("storageNote")}</p>
+      {/* WO-334 · the reference's bottom trust-line bar (border-t + icon), real copy — the
+          prototype's own line here is a dummy Gmail-forwarding alias legaldriver doesn't have
+          (Gmail ingest is OAuth, not forward-to-address); matching the DESIGN, not the dummy
+          content, per the WO's binding rule. */}
+      <div className="flex flex-wrap items-center gap-1.5 border-t border-ec-line pt-4 text-xs text-ec-muted-ink">
+        <Icon name="documents" className="h-3.5 w-3.5" /> {t("storageNote")}
+      </div>
     </div>
   );
 }

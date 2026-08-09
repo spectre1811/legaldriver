@@ -9,6 +9,8 @@ export type IconName =
   | "sunrise" | "judge" | "scroll"
   // WO-332 case-file console reskin — two glyphs the Chambers reference needs beyond the existing set.
   | "copy" | "more";
+  // WO-334 Documents Notes/zoom viewer — glyphs the reference needs beyond the existing set.
+  | "note" | "minus" | "download";
 
 const P: Record<IconName, React.ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
@@ -55,6 +57,9 @@ const P: Record<IconName, React.ReactNode> = {
   // WO-332 — copy-to-clipboard + kebab "more actions" trigger.
   copy: <><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></>,
   more: <><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></>,
+  note: <><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10.5a2 2 0 0 0 2-2V8.5z" /><path d="M15 3v4a2 2 0 0 0 2 2h4" /><path d="M8 13h5M8 17h3" /></>,
+  minus: <><path d="M5 12h14" /></>,
+  download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 11l5 5 5-5M12 4v12" /></>,
 };
 
 export function Icon({ name, className = "h-5 w-5" }: IconProps) {

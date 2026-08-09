@@ -121,4 +121,10 @@
      alias of anything already on disk. Named per the FAITHFUL-TO-PROTOTYPE BAR (WO-332 file):
      the one border colour used for outlined controls sitting directly on --ink. */
   --ink-border: #3A3D40;
+  /* ── WO-334 · FLAGGED — founder directive 2026-08-10 (FAITHFUL-TO-PROTOTYPE BAR item 2):
+     the Documents Notes/zoom viewer's recessed canvas backdrop (`bg-[#EFEDE8]` in the prototype's
+     app.documents.tsx DocViewer). Audited against every existing var above — genuinely NOT a
+     duplicate: sits between --paper-3/--band (#F1ECE1) and --hair (#DDD5C6), a shade the palette
+     didn't have a name for yet. One new named token, consumed as `bg-ec-doc-well` — never inlined. */
+  --doc-well: #EFEDE8;
 }
