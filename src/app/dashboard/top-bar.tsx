@@ -5,7 +5,7 @@
 // Below md the sticky MobileNav takes over; this bar is hidden there.
 // Replaces the old sidebar-footer account block (avatar + language + sign out
 // now live in the profile menu). Avatar = the uploaded photo (signed URL) when
-// set, else initials on bronze tint — never a gray silhouette (honesty §7b).
+// set, else initials on honey tint — never a gray silhouette (honesty §7b).
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -17,7 +17,10 @@ import { NAV_TARGETS } from "./nav";
 
 type Props = { email: string; initial: string; fullName: string | null; designation: string | null; photoUrl?: string | null };
 
-function Avatar({ initial, photoUrl, name }: { initial: string; photoUrl?: string | null; name?: string }) {
+// Shared avatar — one primitive for the desktop top bar AND the mobile drawer (never fork this).
+// Daybreak signature: the initials fallback sits on the honey tint (the on-honey pairing from
+// tokens.css), not a generic gray or the bronze tint used elsewhere.
+export function Avatar({ initial, photoUrl, name }: { initial: string; photoUrl?: string | null; name?: string }) {
   if (photoUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- signed one-off URL, not a static asset
@@ -25,7 +28,7 @@ function Avatar({ initial, photoUrl, name }: { initial: string; photoUrl?: strin
     );
   }
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ec-bronze-tint text-sm font-semibold text-ec-ink ring-1 ring-ec-hair">
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ec-honey/25 text-sm font-semibold text-ec-on-honey ring-1 ring-ec-hair">
       {initial}
     </span>
   );
@@ -80,10 +83,63 @@ export function TopBar({ email, initial, fullName, designation, photoUrl }: Prop
   );
 }
 
-function ProfileMenu({ email, initial, fullName, designation, photoUrl }: Props) {
+// Shared account link list — Profile · Settings · Billing · Language · Sign out · Sign out
+// everywhere, exact order per the WO-328 spec. Reused verbatim by the desktop dropdown AND the
+// 390px drawer footer so the two surfaces can never drift apart (never inline-fork this).
+// `menu=false` (drawer context) drops the ARIA menuitem role, which only makes sense under an
+// ancestor with role="menu" (the dropdown has one; the drawer, role="dialog", does not).
+export function AccountLinks({ menu = true, showSettings = true }: { menu?: boolean; showSettings?: boolean }) {
   const t = useTranslations("shell");
   const tn = useTranslations("nav");
   const tl = useTranslations("common.language");
+  const role = menu ? "menuitem" : undefined;
+  const item =
+    "flex w-full items-center gap-2.5 rounded-ec-s px-2.5 py-2 text-left text-sm text-ec-ink-2 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey";
+  const ico = "h-4 w-4 shrink-0 text-ec-ink-3";
+  return (
+    <>
+      <Link role={role} href="/dashboard/settings#profile" className={item}>
+        <Icon name="clients" className={ico} />
+        {t("profile")}
+      </Link>
+      {/* Skippable: the mobile drawer already pins Settings as its own nav row above this block. */}
+      {showSettings && (
+        <Link role={role} href="/dashboard/settings" className={item}>
+          <Icon name="settings" className={ico} />
+          {tn("item.settings")}
+        </Link>
+      )}
+      <Link role={role} href="/dashboard/settings#billing" className={item}>
+        <Icon name="invoice" className={ico} />
+        {t("billing")}
+      </Link>
+      <div className="my-1 border-t border-ec-hair" />
+      <div className="flex items-center justify-between gap-2 px-2.5 py-2">
+        <span className="text-xs text-ec-ink-3">{tl("label")}</span>
+        <LanguageSwitcher />
+      </div>
+      <div className="my-1 border-t border-ec-hair" />
+      <form action="/auth/signout" method="post">
+        <button role={role} type="submit" className={item}>
+          <Icon name="logout" className={ico} />
+          {t("signOut")}
+        </button>
+      </form>
+      {/* WO-316 — opt-in global revocation: kills every session this account holds,
+          on every device. The only "I think I'm compromised" control we have. */}
+      <form action="/auth/signout" method="post">
+        <input type="hidden" name="scope" value="global" />
+        <button role={role} type="submit" className={item}>
+          <Icon name="logout" className={ico} />
+          {t("signOutEverywhere")}
+        </button>
+      </form>
+    </>
+  );
+}
+
+function ProfileMenu({ email, initial, fullName, designation, photoUrl }: Props) {
+  const t = useTranslations("shell");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -103,10 +159,6 @@ function ProfileMenu({ email, initial, fullName, designation, photoUrl }: Props)
       document.removeEventListener("mousedown", onDown);
     };
   }, [open]);
-
-  const item =
-    "flex w-full items-center gap-2.5 rounded-ec-s px-2.5 py-2 text-left text-sm text-ec-ink-2 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey";
-  const ico = "h-4 w-4 shrink-0 text-ec-ink-3";
 
   return (
     <div ref={ref} className="relative">
@@ -143,39 +195,7 @@ function ProfileMenu({ email, initial, fullName, designation, photoUrl }: Props)
             </span>
           </div>
           <div className="my-1 border-t border-ec-hair" />
-          <Link role="menuitem" href="/dashboard/settings#profile" className={item}>
-            <Icon name="clients" className={ico} />
-            {t("profile")}
-          </Link>
-          <Link role="menuitem" href="/dashboard/settings" className={item}>
-            <Icon name="settings" className={ico} />
-            {tn("item.settings")}
-          </Link>
-          <Link role="menuitem" href="/dashboard/settings#billing" className={item}>
-            <Icon name="invoice" className={ico} />
-            {t("billing")}
-          </Link>
-          <div className="my-1 border-t border-ec-hair" />
-          <div className="flex items-center justify-between gap-2 px-2.5 py-2">
-            <span className="text-xs text-ec-ink-3">{tl("label")}</span>
-            <LanguageSwitcher />
-          </div>
-          <div className="my-1 border-t border-ec-hair" />
-          <form action="/auth/signout" method="post">
-            <button role="menuitem" type="submit" className={item}>
-              <Icon name="logout" className={ico} />
-              {t("signOut")}
-            </button>
-          </form>
-          {/* WO-316 — opt-in global revocation: kills every session this account holds,
-              on every device. The only "I think I'm compromised" control we have. */}
-          <form action="/auth/signout" method="post">
-            <input type="hidden" name="scope" value="global" />
-            <button role="menuitem" type="submit" className={item}>
-              <Icon name="logout" className={ico} />
-              {t("signOutEverywhere")}
-            </button>
-          </form>
+          <AccountLinks />
         </div>
       )}
     </div>

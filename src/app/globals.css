@@ -87,6 +87,9 @@
 
   /* small-caps section label */
   .ec-label { font-size: 11px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-3); }
+  /* WO-328: Devanagari is never letter-spaced (charter) — .ec-label tracks at 0.13em for Latin
+     small-caps; every current+future user of the class gets the hi override from one place. */
+  html[lang="hi"] .ec-label { letter-spacing: normal; }
 
   /* ledger row hover — the brass-wash on the active line */
   .ec-row { transition: background var(--motion-fast) var(--ease); }
