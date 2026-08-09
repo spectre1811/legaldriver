@@ -81,4 +81,18 @@
   --motion-fast: 120ms;
   --motion-base: 150ms;
   --ease: cubic-bezier(.2, 0, 0, 1);
+
+  /* WO-324 W2 — honey gradient + atmospheric washes (founder directive 2026-08-10:
+     restore the prototype's color depth; earlier "tokens-only / no gradient" constraint
+     LIFTED for this WO). Hex ported from the founder-approved Daybreak reference
+     (design-mockups/iteration3/landing-v6-daybreak.html — the file the shipped
+     landing.tsx's own header comment already cites as its source of truth). NAMED
+     tokens, never inlined raw hex in components. Landing-only consumer today
+     (.ec-btn-brass + the landing sections) — every future honey CTA follows these. */
+  --honey-grad-1: #F0C57C;
+  --honey-grad-2: #D9A64F;
+  --gradient-honey: linear-gradient(180deg, var(--honey-grad-1), var(--honey) 60%, var(--honey-grad-2));
+  --gradient-hero-wash: radial-gradient(1200px 520px at 76% -220px, rgba(232, 181, 99, .24), transparent 60%);
+  --gradient-quote-wash: linear-gradient(120deg, var(--bronze-tint), transparent);
+  --gradient-records-wash: radial-gradient(700px 300px at 82% 8%, rgba(232, 181, 99, .14), transparent 60%);
 }
