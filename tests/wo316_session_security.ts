@@ -309,6 +309,10 @@ async function main() {
         "provider webhook, hard-gated by TELEPHONY_PROVIDER (unset) and a no-op without a DID→tenant mapping; signature verification lands when a provider is actually wired",
       [`${API_DIR}/csp-report/route.ts`]:
         "CSP violation sink (WO-323): browsers POST report-only violations here with no credential; it stores nothing and only logs a bounded, PII-free directive/URI summary, then 204s",
+      [`${API_DIR}/public/search/route.ts`]:
+        "WO-326: anonymous apex hero search — proxies the scraper's already-public, suppression-filtered /v1/public/search (no tenant/session data in scope); per-IP rate-limited + input-capped, SCRAPER_API_BASE stays server-only",
+      [`${API_DIR}/public/stats/route.ts`]:
+        "WO-326: anonymous apex coverage strip — proxies the scraper's public /v1/public/stats (aggregate corpus counts, no PII); per-IP rate-limited, SCRAPER_API_BASE stays server-only",
     };
 
     ok("inventory: routes were found (the walker is not silently empty)", routes.length > 10);
