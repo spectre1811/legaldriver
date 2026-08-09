@@ -82,8 +82,13 @@ function row(o: Partial<JudgmentRow>): JudgmentRow {
   // Callers must thread storage-path presence through.
   const detail = src("src/app/dashboard/documents/[id]/page.tsx");
   ok("N2/N3: detail page passes hasFile from storage_path", /hasFile=\{Boolean\(doc\.storage_path\)\}/.test(detail));
+  // WO-334: the quick-look modal was replaced by the restored Notes/zoom DocViewerPanel — the
+  // hasFile thread now runs documents-browser.tsx (passes the whole DocRow) → doc-viewer-panel.tsx
+  // (passes doc.hasFile to DocPreview), so the invariant is checked at its new location.
   const browser = src("src/app/dashboard/documents/documents-browser.tsx");
-  ok("N2/N3: quick-look modal passes hasFile", /hasFile=\{preview\.hasFile\}/.test(browser));
+  ok("N2/N3: quick-look trigger passes the full row (incl. hasFile) to the viewer", /doc=\{preview\}/.test(browser));
+  const viewer = src("src/app/dashboard/documents/doc-viewer-panel.tsx");
+  ok("N2/N3: viewer panel passes hasFile", /hasFile=\{doc\.hasFile\}/.test(viewer));
   const listPage = src("src/app/dashboard/documents/page.tsx");
   ok("N2/N3: list rows carry hasFile from storage_path", /hasFile: Boolean\(d\.storage_path\)/.test(listPage));
   const en = JSON.parse(src("src/i18n/messages/en.json"));
