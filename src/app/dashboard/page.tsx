@@ -26,7 +26,10 @@ export default async function OverviewPage() {
     return isoDay(d);
   });
 
-  const [upcoming, weekRows, deadlines, review, lastSync, advocateCount, matterCount] = await Promise.all([
+  // Exclusive upper bound (day after Saturday) for the current-week window below.
+  const weekEndExclusive = isoDay(new Date(new Date(days[5]).getTime() + 86400000));
+
+  const [upcoming, weekRows, deadlines, review, lastSync, advocateCount, matterCount, ordersThisWeek] = await Promise.all([
     supabase
       .from("hearing")
       .select("id, date, purpose, court_no, judge, matter:matter_id (id, title, cnr, court)")
@@ -44,6 +47,14 @@ export default async function OverviewPage() {
     supabase.from("matter").select("last_synced_at").order("last_synced_at", { ascending: false, nullsFirst: false }).limit(1).maybeSingle(),
     supabase.from("advocate").select("id", { count: "exact", head: true }),
     supabase.from("matter").select("id", { count: "exact", head: true }),
+    // Practice-stat rail: orders synced this week on the tenant's own matters.
+    // RLS on court_order (tenant_id = current_tenant_id()) scopes this like every
+    // query above — head:true keeps it a cheap count, no rows fetched.
+    supabase
+      .from("court_order")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", days[0])
+      .lt("created_at", weekEndExclusive),
   ]);
 
   const hearings: TodayHearing[] = (upcoming.data ?? []).map((h) => ({
@@ -79,6 +90,7 @@ export default async function OverviewPage() {
         syncedAt={lastSync.data?.last_synced_at ?? null}
         filings={filings}
         inboxReview={review.count ?? 0}
+        ordersThisWeek={ordersThisWeek.count ?? 0}
         firstRun={(advocateCount.count ?? 0) === 0 && (matterCount.count ?? 0) === 0}
         activation={{
           hasAdvocate: (advocateCount.count ?? 0) > 0,

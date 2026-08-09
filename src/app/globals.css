@@ -118,6 +118,19 @@
     letter-spacing: 0.24em; text-transform: uppercase; color: var(--bronze-deep);
   }
   .mk-eyebrow::before { content: ""; width: 34px; height: 1px; background: var(--bronze); display: inline-block; }
+
+  /* WO-330 · ported verbatim (timing + curve) from the Chambers prototype's
+     design-mockups/iteration3/console/styles.css — the scroll/mount reveal every
+     Overview section uses (src/app/dashboard/motion.tsx's <Reveal>). Colour-free
+     (opacity/transform only), so no tokens.css change is needed for it. The
+     site-wide `@media (prefers-reduced-motion: reduce)` block below already zeroes
+     every transition-duration, so reduced motion is covered without duplicating it. */
+  .mk-reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 0.7s cubic-bezier(0.2, 0.75, 0.25, 1), transform 0.7s cubic-bezier(0.2, 0.75, 0.25, 1);
+  }
+  .mk-reveal.is-in { opacity: 1; transform: none; }
 }
 
 /* Devanagari is never letter-spaced (ui-frontend hard rule). Covers every tracked
