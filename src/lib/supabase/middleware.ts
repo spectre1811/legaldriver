@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/db/database.types";
-import { postAuthPath } from "@/lib/auth/redirects";
+import { postAuthPath, requestOrigin } from "@/lib/auth/redirects";
 
 // Refreshes the auth session on every request and gates protected routes.
 export async function updateSession(request: NextRequest) {
@@ -43,9 +43,10 @@ export async function updateSession(request: NextRequest) {
   if ((isProtected || isPortalRoute) && !confirmed) {
     // Remember where they were headed so /login can send them back (?next= — WO-50).
     const dest = request.nextUrl.pathname + request.nextUrl.search;
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.search = "";
+    // WO-329: build off the request's PUBLIC origin (forwarded host/proto), never
+    // request's own cloned URL — behind the self-hosted Caddy/cloudflared edge the
+    // request's own host is the internal localhost:3000, which leaked into Location.
+    const url = new URL("/login", requestOrigin(request.headers));
     if (dest !== "/dashboard") url.searchParams.set("next", dest);
     // i18n code, not prose — the login page renders translated copy (EN+HI).
     if (user && !confirmed) url.searchParams.set("notice", "confirmEmail");
@@ -56,12 +57,7 @@ export async function updateSession(request: NextRequest) {
   if (confirmed && user) {
     const { data: portal } = await supabase.from("portal_user").select("id").eq("id", user.id).maybeSingle();
     const isPortal = Boolean(portal);
-    const go = (p: string) => {
-      const url = request.nextUrl.clone();
-      url.pathname = p;
-      url.search = "";
-      return NextResponse.redirect(url);
-    };
+    const go = (p: string) => NextResponse.redirect(new URL(p, requestOrigin(request.headers)));
     if (isPortal && (isProtected || path === "/login" || path === "/")) return go("/portal");
     if (!isPortal && path === "/login") {
       // Already signed in at the front door: honour the deep-link intent
@@ -70,7 +66,7 @@ export async function updateSession(request: NextRequest) {
         request.nextUrl.searchParams.get("next"),
         request.nextUrl.searchParams.get("track"),
       );
-      return NextResponse.redirect(new URL(dest, request.url));
+      return NextResponse.redirect(new URL(dest, requestOrigin(request.headers)));
     }
     if (!isPortal && isPortalRoute) return go("/dashboard");
   }
