@@ -82,7 +82,9 @@ export function evaluateFreshness(input: FreshnessInput): FreshnessOutcome {
 // ---- network shell (the cron calls this) -------------------------------------------------------
 
 export function runningProdSha(): string | null {
-  const s = process.env.VERCEL_GIT_COMMIT_SHA;
+  // WO-323 · off Vercel there is no VERCEL_GIT_COMMIT_SHA; the build pipeline injects BUILD_SHA so the
+  // freshness cron isn't permanently "unknown". Same source as /api/health.
+  const s = process.env.VERCEL_GIT_COMMIT_SHA || process.env.BUILD_SHA;
   return s && s.trim() ? s.trim() : null;
 }
 

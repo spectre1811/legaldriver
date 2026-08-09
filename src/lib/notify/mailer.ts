@@ -82,7 +82,11 @@ class FailMailer implements Mailer {
   }
 }
 
-const isProd = () => process.env.VERCEL_ENV === "production";
+// WO-323 · Off Vercel there is no VERCEL_ENV, so prefer an app-owned APP_ENV flag (set to
+// "production" in the box's SSM env); fall back to VERCEL_ENV so the Vercel path is unchanged during
+// the transition. Without this the mailer would pick ConsoleMailer on the box and silently drop real
+// prod email when RESEND_API_KEY is momentarily absent.
+const isProd = () => (process.env.APP_ENV ?? process.env.VERCEL_ENV) === "production";
 
 // WO-288 (c): NO module cache — the old cache let a DEMO_MODE toggle pin a
 // ConsoleMailer past an env fix. Construction is trivial; resolve fresh per call.

@@ -160,6 +160,14 @@ async function main() {
     ok("csp: no frame-ancestors while report-only", !csp.includes("frame-ancestors"));
     ok("csp: survives a missing/garbage Supabase URL", contentSecurityPolicy(undefined).includes("default-src 'self'") && contentSecurityPolicy("not a url").includes("default-src 'self'"));
     ok("csp: supabaseOrigin rejects junk", supabaseOrigin("nonsense") === null && supabaseOrigin(undefined) === null);
+    // WO-323: Turnstile step-up must be allowed in script/frame/connect-src, and report-only needs a sink.
+    ok(
+      "csp: allows Cloudflare Turnstile (script/frame/connect-src)",
+      /script-src[^;]*https:\/\/challenges\.cloudflare\.com/.test(csp) &&
+        /frame-src[^;]*https:\/\/challenges\.cloudflare\.com/.test(csp) &&
+        /connect-src[^;]*https:\/\/challenges\.cloudflare\.com/.test(csp),
+    );
+    ok("csp: report-uri sink so report-only actually observes", csp.includes("report-uri /api/csp-report"));
 
     // next.config.mjs must actually serve them, on every path.
     const cfg = src("next.config.mjs");
@@ -299,6 +307,8 @@ async function main() {
         "public build-identity probe (WO-63): echoes a commit SHA and nothing secret, and an uptime monitor must reach it without a credential",
       [`${API_DIR}/voice/telephony/route.ts`]:
         "provider webhook, hard-gated by TELEPHONY_PROVIDER (unset) and a no-op without a DID→tenant mapping; signature verification lands when a provider is actually wired",
+      [`${API_DIR}/csp-report/route.ts`]:
+        "CSP violation sink (WO-323): browsers POST report-only violations here with no credential; it stores nothing and only logs a bounded, PII-free directive/URI summary, then 204s",
     };
 
     ok("inventory: routes were found (the walker is not silently empty)", routes.length > 10);
