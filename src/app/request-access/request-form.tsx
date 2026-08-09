@@ -31,11 +31,16 @@ export function RequestAccessForm() {
   const [state, action] = useFormState(requestAccess, initial);
 
   if (state.ok) {
+    // WO-340 — ported the prototype's `rule-left` confirmation treatment (bronze rule +
+    // tint wash). sentTitle carries the mk-eyebrow style on an actual <h1> so the view
+    // keeps one real heading (the prototype splits eyebrow/heading into two copy strings;
+    // this catalog only has one, so it takes the eyebrow's visual weight, not two lines
+    // of fabricated copy).
     return (
-      <div className="space-y-4">
-        <h1 className="font-display text-2xl font-medium text-ec-ink">{t("sentTitle")}</h1>
-        <p className="text-sm text-ec-ink-2">{t("sentBody", { email: state.email ?? "" })}</p>
-        <a href="/login" className="inline-block text-sm font-medium text-ec-brass-deep underline-offset-2 hover:underline">
+      <div className="ec-rule-left p-5">
+        <h1 className="mk-eyebrow">{t("sentTitle")}</h1>
+        <p className="mt-2 text-[13px] leading-relaxed text-ec-ink-2">{t("sentBody", { email: state.email ?? "" })}</p>
+        <a href="/login" className="mt-3 inline-block text-sm font-medium text-ec-bronze-deep underline-offset-2 hover:underline">
           {t("backToLogin")}
         </a>
       </div>
@@ -44,18 +49,25 @@ export function RequestAccessForm() {
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-medium text-ec-ink">{t("title")}</h1>
-      <p className="mt-1 text-sm text-ec-ink-3">{t("subtitle")}</p>
+      <h1 className="font-display text-[22px] font-medium leading-tight text-ec-ink">{t("title")}</h1>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-ec-ink-2">{t("subtitle")}</p>
       <form action={action} className="mt-6 space-y-4">
-        <div>
-          <label className="ec-label" htmlFor="name">{t("name")}</label>
-          {/* WO-316 — maxLength mirrors the server cap so the browser stops at the
-              same boundary instead of the server silently truncating. */}
-          <input id="name" name="name" type="text" maxLength={NAME_MAX} autoComplete="name" className="input mt-1.5" placeholder={t("ph.name")} />
-        </div>
-        <div>
-          <label className="ec-label" htmlFor="email">{t("email")}</label>
-          <input id="email" name="email" type="email" required autoComplete="email" className="input mt-1.5" placeholder={t("ph.email")} />
+        {/* WO-340 — 2-col name/email like the prototype's non-compact Field grid; note
+            stays full-width below (the prototype's mobile-number row has no field here —
+            the intake schema doesn't collect one, see actions.ts). */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="ec-label" htmlFor="name">{t("name")}</label>
+            {/* WO-316 — maxLength mirrors the server cap so the browser stops at the
+                same boundary instead of the server silently truncating. */}
+            <input id="name" name="name" type="text" maxLength={NAME_MAX} autoComplete="name" className="input mt-1.5" placeholder={t("ph.name")} />
+          </div>
+          <div>
+            <label className="ec-label" htmlFor="email">
+              {t("email")} <span className="text-ec-bronze">*</span>
+            </label>
+            <input id="email" name="email" type="email" required autoComplete="email" className="input mt-1.5" placeholder={t("ph.email")} />
+          </div>
         </div>
         <div>
           <label className="ec-label" htmlFor="note">{t("note")}</label>
@@ -79,8 +91,9 @@ export function RequestAccessForm() {
             <div className="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY} />
           </>
         )}
+        <p className="text-xs text-ec-ink-3">{t("requiredHint")}</p>
         <Submit />
-        <a href="/login" className="block text-sm font-medium text-ec-ink-2 underline-offset-2 hover:text-ec-brass-deep hover:underline">
+        <a href="/login" className="block text-sm font-medium text-ec-ink-2 underline-offset-2 hover:text-ec-bronze-deep hover:underline">
           {t("backToLogin")}
         </a>
       </form>

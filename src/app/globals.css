@@ -29,8 +29,14 @@
   .input {
     @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink
            placeholder:text-ink-faint outline-none transition
-           focus:border-brand-500 focus:shadow-focus;
+           focus:border-ec-honey focus:shadow-ec-2;
   }
+  /* WO-340: the old focus:border-brand-500/focus:shadow-focus paired a bronze border with a
+     hardcoded indigo-tinted box-shadow (`rgba(74,79,214,…)`, a pre-V-A leftover — this palette
+     has no blue, tokens.css §V-A). Repointed to the honey-border + ec-2-elevation focus pattern
+     already used by hero-search.tsx, so every .input surface (not just request-access) re-tones
+     off the SAME shared primitive instead of a one-off override — flagged per WO-340's colour-
+     fidelity bar. Values are existing named tokens only; nothing hardcoded. */
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium
            transition disabled:opacity-50 disabled:pointer-events-none;
@@ -82,6 +88,10 @@
 
   .ec-card { background: var(--paper-2); border: 1px solid var(--hair); border-radius: var(--r-m); box-shadow: var(--e1); }
 
+  /* WO-340 · ported from the Chambers prototype's `rule-left` (design-mockups/iteration3/
+     console/styles.css) — bronze left-rule + tint wash emphasis block, used for the
+     request-access "sent" confirmation. Existing tokens only (--bronze/--bronze-tint). */
+  .ec-rule-left { border-left: 2px solid var(--bronze); background: color-mix(in oklab, var(--bronze-tint) 55%, transparent); }
   /* WO-331 · ported verbatim from design-mockups/iteration3/console/styles.css (the Chambers
      prototype's own motion vocabulary) — press = the chip/button active-state micro-animation,
      stagger = a once-on-mount fade+rise for a section that just appeared. Both ride the existing
