@@ -61,6 +61,19 @@ function isoDay(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+// WO-331 Daybreak reskin · "stale records" — a matter whose court record hasn't been refreshed
+// recently, distinct from an overdue HEARING (that's urgency; this is sync freshness). No founder
+// SLO exists yet for this bucket (FG-8 open) — 30 days is our own defensible default, reused by
+// both the count below and the `next=stale` filter so the attention chip and the filtered list can
+// never disagree. Real column (`last_synced_at`), no fabrication; never-synced counts as stale too.
+export const STALE_SYNC_DAYS = 30;
+
+function staleCutoffIso(now = new Date()): string {
+  const d = new Date(now);
+  d.setDate(d.getDate() - STALE_SYNC_DAYS);
+  return d.toISOString();
+}
+
 // Status semantics (WO-59). eCourts stores `matter.status` as a free-text string ("Pending" /
 // "Disposed" / NULL / …), never a clean enum — so the old exact `.eq("status","open")` matched
 // almost nothing while the tab still showed a count (the founder's "Open shows cases that don't
@@ -143,6 +156,10 @@ export function buildCasesQuery(supabase: SupabaseClient<Database>, f: CasesFilt
     const end = new Date();
     end.setDate(end.getDate() + 30);
     query = query.gte("next_hearing_date", today).lte("next_hearing_date", isoDay(end));
+  } else if (f.next === "stale") {
+    // Mirrors the `stale` count in fetchViewCounts below — same cutoff, same "never synced counts
+    // as stale" rule, so the attention chip's number always matches what clicking it shows.
+    query = query.or(`last_synced_at.is.null,last_synced_at.lt.${staleCutoffIso()}`);
   }
 
   applySort(query, f.sort);
@@ -192,6 +209,7 @@ export interface ViewCounts {
   overdue: number;
   soon: number; // next hearing within 7 days
   noDate: number;
+  stale: number; // WO-331: not synced in STALE_SYNC_DAYS+ (or never) — sync freshness, not urgency
 }
 
 export async function fetchViewCounts(supabase: SupabaseClient<Database>): Promise<ViewCounts> {
@@ -201,14 +219,16 @@ export async function fetchViewCounts(supabase: SupabaseClient<Database>): Promi
   const head = () => supabase.from("matter").select("id", { count: "exact", head: true });
   // Status counts go through the SAME `applyStatusFilter` as the list query, so a tab count always
   // matches the rows the tab shows (WO-59). Urgency counts (overdue/soon/no-date) feed the
-  // Attention bar (WO-59 W3), not the tabs.
-  const [all, open, disposed, overdue, soonC, noDate] = await Promise.all([
+  // Attention bar (WO-59 W3), not the tabs. `stale` is the same additive HEAD-count pattern, keyed
+  // off the real `last_synced_at` column (WO-331) — never a fabricated figure.
+  const [all, open, disposed, overdue, soonC, noDate, stale] = await Promise.all([
     head(),
     applyStatusFilter(head(), "open"),
     applyStatusFilter(head(), "disposed"),
     head().lt("next_hearing_date", today),
     head().gte("next_hearing_date", today).lte("next_hearing_date", isoDay(soon)),
     head().is("next_hearing_date", null),
+    head().or(`last_synced_at.is.null,last_synced_at.lt.${staleCutoffIso()}`),
   ]);
   return {
     all: all.count ?? 0,
@@ -217,6 +237,7 @@ export async function fetchViewCounts(supabase: SupabaseClient<Database>): Promi
     overdue: overdue.count ?? 0,
     soon: soonC.count ?? 0,
     noDate: noDate.count ?? 0,
+    stale: stale.count ?? 0,
   };
 }
 

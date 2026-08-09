@@ -67,6 +67,15 @@ const config: Config = {
           n600: "var(--n600)", n500: "var(--n500)", n400: "var(--n400)",
           n300: "var(--n300)", n200: "var(--n200)", n100: "var(--n100)",
           n050: "var(--n050)",
+          // WO-331 · prototype-named aliases (see tokens.css for why + the flagged `--band` skip).
+          card: "var(--card)",
+          line: "var(--line)",
+          "line-strong": "var(--line-strong)",
+          "muted-ink": "var(--muted-ink)",
+          "honey-ink": "var(--honey-ink)",
+          "success-bg": "var(--success-bg)",
+          "warn-bg": "var(--warn-bg)",
+          "danger-bg": "var(--danger-bg)",
         },
       },
       fontFamily: {
