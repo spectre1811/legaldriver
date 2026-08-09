@@ -327,6 +327,10 @@
       "noDate": {
         "label": "No hearing date",
         "hint": "Set a diary date"
+      },
+      "stale": {
+        "label": "Stale records",
+        "hint": "Not refreshed in 30+ days — different from an overdue hearing."
       }
     },
     "title": "Cases",
@@ -336,12 +340,12 @@
     "clearFilters": "Clear filters",
     "th": {
       "case": "Case",
-      "client": "Client",
       "court": "Court",
-      "stage": "Stage",
-      "status": "Status",
       "next": "Next hearing",
-      "source": "Source"
+      "synced": "Synced",
+      "syncedTitle": "Source {source} · updated {ago}",
+      "neverSynced": "Not yet synced from the court record",
+      "manualSource": "manual entry"
     },
     "diary": "diary",
     "past": "past",
@@ -433,6 +437,7 @@
       "next7": "Next 7 days",
       "next30": "Next 30 days",
       "noHearing": "No hearing set",
+      "staleFilter": "Stale sync (30+ days)",
       "sort": "Sort",
       "sortNext": "Next hearing ↑",
       "sortRecent": "Recently added",

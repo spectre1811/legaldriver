@@ -45,6 +45,20 @@ export function CasesToolbar(props: Props) {
   const [q, setQ] = useState(qParam);
   useEffect(() => setQ(qParam), [qParam]);
 
+  // WO-331 Daybreak reskin · the reference's "/" jump-to-search shortcut. Skips when focus is
+  // already inside an input/textarea/select so it never steals a "/" a user is typing elsewhere.
+  const searchRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tgt = e.target as HTMLElement | null;
+      if (e.key !== "/" || (tgt && /input|textarea|select/i.test(tgt.tagName))) return;
+      e.preventDefault();
+      searchRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const tier = sp.get("tier") ?? "";
   const status = sp.get("status") ?? "";
   const sort = sp.get("sort") ?? "";
@@ -79,14 +93,21 @@ export function CasesToolbar(props: Props) {
         >
           <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ec-ink-3" />
           <input
+            ref={searchRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onBlur={() => { if ((sp.get("q") ?? "") !== q.trim()) setParam("q", q.trim()); }}
             placeholder={tc("searchPlaceholder")}
             aria-label={tc("searchAria")}
-            className="input pl-9"
+            className="input pl-9 pr-9"
             type="search"
           />
+          <span
+            aria-hidden="true"
+            className="num pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-ec-hair px-1.5 text-[10px] text-ec-ink-3"
+          >
+            /
+          </span>
         </form>
 
         <Segmented label={tt("label")} value={tier} options={tierOpts} onChange={(v) => setParam("tier", v)} />
@@ -254,7 +275,7 @@ function ChipRow(props: Props) {
   if (status) chips.push({ label: `${tc("status")}: ${tv(status)}`, onRemove: () => setParam("status", "") });
   const next = sp.get("next");
   if (next) {
-    const nextLabel: Record<string, string> = { overdue: tc("overdue"), "7d": tc("next7"), "30d": tc("next30"), none: tc("noHearing") };
+    const nextLabel: Record<string, string> = { overdue: tc("overdue"), "7d": tc("next7"), "30d": tc("next30"), none: tc("noHearing"), stale: tc("staleFilter") };
     chips.push({ label: `${tc("nextHearing")}: ${nextLabel[next] ?? next}`, onRemove: () => setParam("next", "") });
   }
   const facetLabel: Record<string, string> = {
@@ -353,6 +374,7 @@ function FiltersSheet({
                 { value: "7d", label: tc("next7") },
                 { value: "30d", label: tc("next30") },
                 { value: "none", label: tc("noHearing") },
+                { value: "stale", label: tc("staleFilter") },
               ]}
               value={sp.get("next") ?? null}
               onChange={(v) => setParam("next", v ?? "")}

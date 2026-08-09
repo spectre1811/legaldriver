@@ -10,10 +10,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
-import { fmtAgo } from "@/components/ui";
 import { cleanPurpose } from "@/lib/court/code-labels";
 import { maskTitle } from "@/lib/court/mask";
-import { CourtChip, formatCourtDate } from "@/components/court";
+import { CourtChip, formatCourtDate, stalenessState, relativeAge } from "@/components/court";
 import {
   useSelection, useUndo, BulkBar, bulkBtn, RowCheckbox, SelectAllCheckbox, UndoToast,
 } from "@/components/selection";
@@ -28,6 +27,12 @@ import {
 
 // A sortable column: `key` is the `sort` param key resolved by cases-query's allowlist.
 type SortKey = "title" | "court" | "stage" | "status" | "next";
+
+// WO-331 Daybreak reskin · the per-row "Synced" dot's freshness bar. The product already promises
+// "refreshed nightly" (cases.subtitle) — real, so past 48h the sync is honestly no longer "fresh".
+// A SEPARATE, longer bar (STALE_SYNC_DAYS in cases-query.ts) gates the attention-strip's "stale
+// records" bucket — the dot flags routine lag; that strip flags "this needs you".
+const SYNCED_FRESH_SLO_HOURS = 48;
 
 export function CasesTable({
   rows, today, stages, initialDensity = "cozy",
@@ -166,12 +171,9 @@ export function CasesTable({
                 />
               </th>
               <SortHeader label={t("th.case")} col="title" active={active} onSort={setSort} />
-              <th className="ec-label hidden px-5 py-3 lg:table-cell">{t("th.client")}</th>
               <SortHeader label={t("th.court")} col="court" active={active} onSort={setSort} className="hidden md:table-cell" />
-              <SortHeader label={t("th.stage")} col="stage" active={active} onSort={setSort} className="hidden sm:table-cell" />
-              <SortHeader label={t("th.status")} col="status" active={active} onSort={setSort} className="hidden sm:table-cell" />
-              <SortHeader label={t("th.next")} col="next" active={active} onSort={setSort} />
-              <th className="ec-label hidden px-5 py-3 lg:table-cell">{t("th.source")}</th>
+              <SortHeader label={t("th.next")} col="next" active={active} onSort={setSort} className="w-44" />
+              <th className="ec-label hidden w-20 px-5 py-3 text-right sm:table-cell">{t("th.synced")}</th>
               <th className="w-10 px-3 py-3" aria-hidden="true" />
             </tr>
           </thead>
@@ -185,6 +187,15 @@ export function CasesTable({
               const caseNo = courtCaseNo(m.case_type, detail);
               const tier = typeof detail.tier === "string" && detail.tier.trim() ? detail.tier.trim() : null;
               const urg = hearingUrgency(eff, today);
+              // WO-331: disposed is the one status worth a chip inline (matches case-detail-drawer's
+              // substring convention so the two surfaces never disagree on what counts as disposed).
+              const isDisposed = (m.status ?? "").toUpperCase().includes("DISPOSED");
+              // Synced dot — real freshness off `last_synced_at`; never synced reads as not-fresh,
+              // honestly labelled rather than defaulting to a false-fresh green.
+              const fresh = m.last_synced_at != null && !stalenessState(m.last_synced_at, SYNCED_FRESH_SLO_HOURS).stale;
+              const syncedTitle = m.last_synced_at
+                ? t("th.syncedTitle", { source: m.source ?? t("th.manualSource"), ago: relativeAge(m.last_synced_at) })
+                : t("th.neverSynced");
               return (
                 <tr
                   key={m.id}
@@ -197,23 +208,27 @@ export function CasesTable({
                     <RowCheckbox checked={checked} onSelect={(shift) => sel.onRowClick(m.id, shift)} label={t("bulk.selectRow", { title: m.title })} />
                   </td>
                   <td className="px-5 py-3.5">
-                    <Link href={`/dashboard/cases/${m.id}`} className="font-display font-medium text-ec-ink group-hover:text-ec-brass-deep">
-                      {maskTitle(m.title, tcd("maskedTitle"))}
-                    </Link>
-                    {(caseNo || tier || m.cnr) && (
+                    <div className="flex items-center gap-2">
+                      <Link href={`/dashboard/cases/${m.id}`} className="font-display font-medium text-ec-ink group-hover:text-ec-brass-deep">
+                        {maskTitle(m.title, tcd("maskedTitle"))}
+                      </Link>
+                      {isDisposed && <span className="ec-chip shrink-0">{st(m.status!)}</span>}
+                    </div>
+                    {(caseNo || tier || m.stage || m.client?.name || m.cnr) && (
                       <div className="cases-subline mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[0.7rem] text-ec-ink-3">
                         {caseNo && <span className="num text-ec-ink-2">{caseNo}</span>}
                         {tier && <CourtChip tone="neutral">{tier}</CourtChip>}
+                        {m.stage && <span className="ec-chip" title={m.stage}>{cleanPurpose(m.stage)}</span>}
+                        {m.client?.name && <span>· {m.client.name}</span>}
                         {m.cnr && <span className="num">{m.cnr}</span>}
                       </div>
                     )}
+                    {/* Mobile fallback — court + next hearing collapse here once the dedicated columns hide. */}
+                    <div className="num mt-1 text-[11px] text-ec-ink-3 sm:hidden">
+                      {[m.court, eff ? (formatCourtDate(eff) ?? null) : t("noDate")].filter(Boolean).join(" · ")}
+                    </div>
                   </td>
-                  <td className="hidden px-5 py-3.5 text-ec-ink-2 lg:table-cell">{m.client?.name ?? <span className="text-ec-ink-3">—</span>}</td>
                   <td className="hidden px-5 py-3.5 text-ec-ink-2 md:table-cell">{m.court ?? "—"}</td>
-                  <td className="hidden px-5 py-3.5 sm:table-cell">{m.stage ? <span className="ec-chip" title={m.stage}>{cleanPurpose(m.stage)}</span> : <span className="text-ec-ink-3">—</span>}</td>
-                  <td className="hidden px-5 py-3.5 sm:table-cell">
-                    {m.status ? <span className={`ec-chip ${m.status === "disposed" ? "" : "ec-chip-hot"}`}>{st(m.status)}</span> : <span className="text-ec-ink-3">—</span>}
-                  </td>
                   <td className="num px-5 py-3.5">
                     {eff ? (
                       <span className="inline-flex flex-wrap items-center gap-1.5">
@@ -223,7 +238,13 @@ export function CasesTable({
                       </span>
                     ) : <span className="text-xs text-ec-ink-3">{t("noDate")}</span>}
                   </td>
-                  <td className="num hidden px-5 py-3.5 text-xs text-ec-ink-3 lg:table-cell">{m.source ?? "—"} · {fmtAgo(m.last_synced_at)}</td>
+                  <td className="hidden px-5 py-3.5 text-right sm:table-cell">
+                    <span
+                      title={syncedTitle}
+                      aria-label={syncedTitle}
+                      className={`inline-block h-2 w-2 rounded-full ${fresh ? "bg-ec-success" : "bg-ec-hair-strong"}`}
+                    />
+                  </td>
                   <td className="px-3 py-3.5 text-right">
                     <button
                       type="button"
