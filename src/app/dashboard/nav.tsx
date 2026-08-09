@@ -84,20 +84,23 @@ function useIsActive() {
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 }
 
+// Daybreak signature (WO-328): honey is the ONE accent for the active row — a tinted honey
+// pill + a honey rail, never a solid ink fill. Icon on active uses bronze-deep (the AA-safe
+// honey-family text colour, per tokens.css) so it stays legible on the light tint.
 function NavItem({ item, active, t }: { item: NavEntry; active: boolean; t: (k: string) => string }) {
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`group flex items-center gap-3 rounded-ec-s px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo ${
+      className={`group flex items-center gap-3 rounded-ec-s border-l-2 py-2 pl-[10px] pr-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo ${
         active
-          ? "bg-ec-ink font-medium text-ec-paper"
-          : "text-ec-ink-2 hover:bg-ec-paper-3 hover:text-ec-ink"
+          ? "border-ec-honey bg-ec-honey/15 font-medium text-ec-ink"
+          : "border-transparent text-ec-ink-2 hover:bg-ec-paper-3 hover:text-ec-ink"
       }`}
     >
       <Icon
         name={item.icon}
-        className={`h-[1.15rem] w-[1.15rem] ${active ? "text-ec-paper" : "text-ec-ink-3 group-hover:text-ec-brass-deep"}`}
+        className={`h-[1.15rem] w-[1.15rem] ${active ? "text-ec-bronze-deep" : "text-ec-ink-3 group-hover:text-ec-brass-deep"}`}
       />
       {t(`item.${item.label}`)}
     </Link>
@@ -112,7 +115,9 @@ export function NavLinks({ isAdmin = false }: { isAdmin?: boolean }) {
     <nav className="flex flex-col gap-6" aria-label={t("ariaMain")}>
       {VISIBLE_SECTIONS.map((section) => (
         <div key={section.heading}>
-          <p className="ec-label mb-2 px-3">{t(`heading.${section.heading}`)}</p>
+          {/* Daybreak "mono section label" — scoped to this element (not the shared .ec-label
+              rule other surfaces use) so ledger/table headers elsewhere are untouched. */}
+          <p className="ec-label mb-2 px-3 font-mono">{t(`heading.${section.heading}`)}</p>
           <div className="flex flex-col gap-0.5">
             {section.items.map((item) => (
               <NavItem key={item.href} item={item} active={isActive(item.href)} t={t} />
@@ -122,7 +127,7 @@ export function NavLinks({ isAdmin = false }: { isAdmin?: boolean }) {
       ))}
       {isAdmin && (
         <div>
-          <p className="ec-label mb-2 px-3">{t("heading.admin")}</p>
+          <p className="ec-label mb-2 px-3 font-mono">{t("heading.admin")}</p>
           <div className="flex flex-col gap-0.5">
             {ADMIN_ITEMS.map((item) => (
               <NavItem key={item.href} item={item} active={isActive(item.href)} t={t} />

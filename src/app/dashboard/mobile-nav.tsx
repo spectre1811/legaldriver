@@ -8,11 +8,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { NavLinks, AccountNav } from "./nav";
+import { Avatar, AccountLinks } from "./top-bar";
 import { Icon } from "@/components/icons";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { brand } from "@/lib/brand";
 
-export function MobileNav({ email, tenantName, initial, isAdmin = false }: { email: string; tenantName: string; initial: string; isAdmin?: boolean }) {
+type Props = {
+  email: string;
+  tenantName: string;
+  initial: string;
+  isAdmin?: boolean;
+  fullName?: string | null;
+  designation?: string | null;
+  photoUrl?: string | null;
+};
+
+export function MobileNav({ email, tenantName, initial, isAdmin = false, fullName = null, designation = null, photoUrl = null }: Props) {
   const [open, setOpen] = useState(false);
   const t = useTranslations("shell");
   const pathname = usePathname();
@@ -44,6 +54,15 @@ export function MobileNav({ email, tenantName, initial, isAdmin = false }: { ema
           <Icon name="menu" className="h-5 w-5" />
         </button>
         <Link href="/dashboard" aria-label={t("home")} className="ec-underline font-display text-xl font-semibold lowercase tracking-tight text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo">{brand.name}</Link>
+        {/* WO-328: the ONE "+ New case" action needs a path below md too — the desktop top bar
+            (with its button) is hidden here, and no nav item covers "add a case". */}
+        <Link
+          href="/dashboard/cases?add=1"
+          aria-label={t("newCase")}
+          className="ml-auto flex h-9 w-9 items-center justify-center rounded-ec-s bg-ec-ink text-ec-paper transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
+        >
+          <Icon name="plus" className="h-4 w-4" />
+        </Link>
       </header>
 
       {open && (
@@ -62,18 +81,23 @@ export function MobileNav({ email, tenantName, initial, isAdmin = false }: { ema
             </div>
             <p className="mt-1.5 truncate px-2 text-xs text-ec-ink-3" title={tenantName}>{tenantName}</p>
             <div className="mt-6 flex-1 overflow-y-auto"><NavLinks isAdmin={isAdmin} /></div>
-            <div className="mt-4 border-t border-ec-hair pt-4">
-              <div className="mb-3"><AccountNav /></div>
-              <div className="mb-3 px-1"><LanguageSwitcher /></div>
-              <div className="flex items-center gap-3 px-1">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ec-indigo text-sm font-semibold text-white">{initial}</span>
-                <p className="min-w-0 flex-1 truncate text-xs text-ec-ink-2" title={email}>{email}</p>
-                <form action="/auth/signout" method="post">
-                  <button className="flex h-8 w-8 items-center justify-center rounded-ec-s text-ec-ink-3 transition hover:bg-ec-paper-3 hover:text-ec-ink" title={t("signOut")} aria-label={t("signOut")}>
-                    <Icon name="logout" className="h-4 w-4" />
-                  </button>
-                </form>
+            {/* Settings pinned at the foot, same as desktop (WO-328) — outside the scroll region. */}
+            <div className="mt-4 border-t border-ec-hair pt-3"><AccountNav /></div>
+            {/* Full account block — parity with the desktop profile dropdown (same order:
+                header · Profile · Settings · Billing · Language · Sign out · Sign out everywhere). */}
+            <div className="mt-3 border-t border-ec-hair pt-3">
+              <div className="flex items-center gap-2.5 px-1 pb-2">
+                <Avatar initial={initial} photoUrl={photoUrl} name={fullName ?? email} />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-ec-ink">{fullName || email}</span>
+                  {designation ? (
+                    <span className="block truncate text-xs text-ec-ink-3">{designation}</span>
+                  ) : (
+                    <span className="block truncate text-xs text-ec-ink-3" title={email}>{email}</span>
+                  )}
+                </span>
               </div>
+              <AccountLinks menu={false} showSettings={false} />
             </div>
           </div>
         </div>
