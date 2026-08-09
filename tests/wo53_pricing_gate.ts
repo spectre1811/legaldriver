@@ -18,11 +18,15 @@ const flatten = (o: unknown): string => JSON.stringify(o);
 check("pricing gate is CLOSED by default (numbers hidden until #11 is ruled)", pricing.public === false);
 
 // --- tier STRUCTURE is complete and stable (this part IS safe to ship: names only) ---
+// WO-324 (founder 2026-08-04): pricing collapsed from the old INPUTS-backed 4-tier
+// Free/Basic/Pro/Enterprise structure to Free + Pro (one plan, two billing cycles),
+// matching design-mockups/iteration3/landing-v6-daybreak.html — supersedes the pin below.
 const ids = pricing.tiers.map((t) => t.id);
-check("all four INPUTS-confirmed tiers present, in order", JSON.stringify(ids) === JSON.stringify(["free", "basic", "pro", "enterprise"]));
+check("both WO-324 tiers present, in order", JSON.stringify(ids) === JSON.stringify(["free", "pro"]));
 check("exactly one tier is emphasised (hot)", pricing.tiers.filter((t) => t.hot).length === 1);
-check("every tier declares a CTA verb", pricing.tiers.every((t) => ["start", "choose", "talk"].includes(t.cta)));
+check("every tier declares a CTA verb", pricing.tiers.every((t) => ["start", "choose"].includes(t.cta)));
 check("every tier carries feature keys (rendered only when public)", pricing.tiers.every((t) => t.features.length > 0));
+check("Pro declares both billing-cycle prices", pricing.tiers.find((t) => t.id === "pro")?.yearlyPrice != null);
 
 // --- the cross-product link points at the free public search (mukadma-search), over https ---
 // Env-driven since WO-162 (NEXT_PUBLIC_SEARCH_URL); CI sets no env, so the shipped default applies.
@@ -46,12 +50,20 @@ for (const [name, catalog] of [["en", en], ["hi", hi]] as const) {
   // the numeric feature rows live under pricing.tier.<id>.f — must vanish from the client copy
   check(`${name}: gated feature rows present in raw catalog`, /"f":\{/.test(raw));
   check(`${name}: client catalog drops the numeric feature rows (.f) while gated`, !/"f":\{/.test(stripped));
+  // WO-324: the monthly/yearly billing toggle names a price-derived number ("Save 16%")
+  // that's meaningless — and misleading — without the prices it discounts; must vanish too.
+  // Scoped to landing.pricing.billing specifically — `billing` also exists (correctly,
+  // unrelated) under shell/caseDetail/analytics/settings for the authed dashboard.
+  const landingPricing = (catalog as { landing: { pricing: Record<string, unknown> } }).landing.pricing;
+  const strippedLandingPricing = (stripGatedPricing(catalog as never) as { landing: { pricing: Record<string, unknown> } }).landing.pricing;
+  check(`${name}: billing-cycle toggle present in raw landing.pricing`, "billing" in landingPricing);
+  check(`${name}: client catalog drops landing.pricing.billing while gated`, !("billing" in strippedLandingPricing));
   // number-free structure survives (tier names + summaries still translate client-side if needed)
   check(`${name}: tier summaries survive stripping (structure intact)`, stripped.includes("summary"));
 }
-// EN carries the ₹ founding line + fromSeat in the raw catalog; both must be gone once stripped.
-check("en: ₹ price strings exist in raw catalog", flatten(en).includes("₹399") && flatten(en).includes("₹2,000"));
-check("en: client catalog carries NO ₹ price strings while gated", !flatten(stripGatedPricing(en as never)).includes("₹399") && !flatten(stripGatedPricing(en as never)).includes("₹2,000"));
+// EN carries the Pro yearly-billing sentence's derived ₹ amount in the raw catalog; must be gone once stripped.
+check("en: ₹ price strings exist in raw catalog", flatten(en).includes("₹417"));
+check("en: client catalog carries NO ₹ price strings while gated", !flatten(stripGatedPricing(en as never)).includes("₹417"));
 
 // The numbers themselves stay in config, never leaked to the page while the gate is
 // closed — the landing guards every price/limit/founding-note behind `pricing.public`.

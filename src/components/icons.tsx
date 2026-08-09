@@ -5,7 +5,8 @@ export type IconName =
   | "settings" | "scale" | "plus" | "refresh" | "back" | "search" | "check" | "alert"
   | "sparkles" | "upload" | "clip" | "external" | "chevron" | "logout" | "gmail" | "clock" | "dot" | "edit"
   | "menu" | "close" | "trash" | "eye"
-  | "clients" | "invoice" | "bulb" | "chart" | "chat" | "mic" | "gauge" | "printer";
+  | "clients" | "invoice" | "bulb" | "chart" | "chat" | "mic" | "gauge" | "printer"
+  | "sunrise" | "judge" | "scroll";
 
 const P: Record<IconName, React.ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
@@ -45,6 +46,10 @@ const P: Record<IconName, React.ReactNode> = {
   mic: <><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8.5 21h7" /></>,
   gauge: <><path d="M4 18a8 8 0 1 1 16 0" /><path d="M12 14a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6zM13.3 11 17 7" /></>,
   printer: <><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v7H6z" /></>,
+  // WO-324 Daybreak landing — three glyphs the reference needs beyond the existing set.
+  sunrise: <><path d="M6 15a6 6 0 0 1 12 0" /><path d="M2 15h3M19 15h3M12 4v2M5 7l1.5 1.5M19 7l-1.5 1.5" /><path d="M3 20h18M6 22.5h12" /></>,
+  judge: <><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20c.8-3.6 3.2-5.5 6.5-5.5s5.7 1.9 6.5 5.5" /></>,
+  scroll: <><path d="M6.5 4h10a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7.5" /><path d="M6.5 4A2 2 0 0 0 4.5 6v2.5H9" /><path d="M9 10h6M9 13.5h6M9 17h3" /></>,
 };
 
 export function Icon({ name, className = "h-5 w-5" }: IconProps) {

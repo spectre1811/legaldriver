@@ -6,18 +6,21 @@
 // TWO founder switches live here:
 //   1) pricing.public — the pricing GATE (FOUNDER-ACTIONS #11). While false, the
 //      landing ships the pricing STRUCTURE (tier names + a number-free value line)
-//      but renders NO unconfirmed number — not a price, not "25 cases", not
-//      "500 credits". Flip to true ONLY after every price + limit below is
-//      confirmed against INPUTS §C.7. That is the one flag that makes numbers go
-//      live. (Guardrail: no invented numbers reach the public page.)
+//      but renders NO unconfirmed number — not a price, not "5 matters", not a
+//      billing-cycle sentence with a derived amount. Flip to true ONLY after every
+//      price below is confirmed against INPUTS §C.7. (Guardrail: no invented
+//      numbers reach the public page — src/lib/i18n-gate.ts strips the matching
+//      i18n keys from the client message catalog too, not just the render path.)
 //   2) grievanceOfficer — fill name/email when the officer is appointed
 //      (IT Rules 2021 §3(2) requires an intermediary to publish this). Until
 //      filled, the footer shows an honest "being appointed" line, never a fake name.
 //
-// The tier NAMES (Free → Basic → Pro → Enterprise) and the founding-member offer
-// (Pro at ₹399/mo for the first 12 months) ARE INPUTS-backed (§C.7 / §Page-6 /
-// M3-MRR note) — but the *list* prices and per-tier limits are design-concept
-// placeholders and stay gated until #11 is ruled.
+// WO-324 (Daybreak reskin, founder 2026-08-04): pricing collapses to Free + Pro,
+// one plan two billing cycles (₹499/mo · ₹4,999/yr, "Save 16%"), replacing the
+// old 4-tier Free/Basic/Pro/Enterprise structure — matches
+// design-mockups/iteration3/landing-v6-daybreak.html exactly. PUBLICATION GUARD
+// carried over from that mockup: these are a proposed launch configuration, NOT
+// approved live prices, until pricing.public is flipped per INPUTS §C.7.
 
 /** External product links (the free public case search lives in mukadma-search). */
 export const links = {
@@ -27,21 +30,20 @@ export const links = {
   publicSearch: process.env.NEXT_PUBLIC_SEARCH_URL ?? "https://search.mukadma.in",
 } as const;
 
-/** A single pricing tier. `price`/`per`/`features` are UNCONFIRMED placeholders
- *  and MUST NOT render while `pricing.public` is false. `id`/`name`/`cta` (the
- *  structure) are safe to show. `features` are i18n keys resolved by the landing. */
+/** A single pricing tier. `monthlyPrice`/`yearlyPrice`/`features` are UNCONFIRMED
+ *  placeholders and MUST NOT render while `pricing.public` is false. `id`/`name`/
+ *  `cta` (the structure) are safe to show. `features` are i18n keys resolved by
+ *  the landing (under landing.pricing.tier.<id>.f.*). */
 export type PricingTier = {
-  id: "free" | "basic" | "pro" | "enterprise";
-  /** Placeholder price string. Rendered only when pricing.public === true. */
-  price: string;
-  /** Whether `price` is a per-lawyer/month figure (adds "/mo"). */
-  per: boolean;
-  /** Emphasised ("most chosen") tier. */
+  id: "free" | "pro";
+  /** Placeholder price string, billed monthly. Rendered only when pricing.public. */
+  monthlyPrice: string;
+  /** Placeholder price string, billed yearly (Pro only — Free has no cycle). */
+  yearlyPrice?: string;
+  /** Emphasised ("for practising advocates") tier. */
   hot: boolean;
-  /** CTA verb key (start | choose | talk). */
-  cta: "start" | "choose" | "talk";
-  /** i18n feature-row keys under landing.pricing.tier.<id>.f.* — contain numbers,
-   *  so they render only when pricing.public === true. */
+  /** CTA verb key (start | choose). Both land on /request-access — no checkout. */
+  cta: "start" | "choose";
   features: readonly string[];
 };
 
@@ -52,14 +54,10 @@ export const pricing = {
   public:
     (process.env.NEXT_PUBLIC_PRICING_PUBLIC ?? "").toLowerCase() === "1" ||
     (process.env.NEXT_PUBLIC_PRICING_PUBLIC ?? "").toLowerCase() === "true",
-  /** INPUTS-backed: founding cohort gets Pro at ₹399/mo for 12 months. Shown only
-   *  once pricing goes public (it names a number, so it rides the same gate). */
-  showFoundingOffer: true,
   tiers: [
-    { id: "free", price: "₹0", per: false, hot: false, cta: "start", features: ["cases", "digest", "clients", "search"] },
-    { id: "basic", price: "₹399", per: true, hot: false, cta: "choose", features: ["cases", "alerts", "invoicing", "credits"] },
-    { id: "pro", price: "₹999", per: true, hot: true, cta: "choose", features: ["cases", "credits", "portal", "marketplace"] },
-    { id: "enterprise", price: "Custom", per: false, hot: false, cta: "talk", features: ["tenants", "audit", "pooled", "support"] },
+    // Feature keys (t1..) resolve against landing.pricing.tier.<id>.f.* in the i18n catalog.
+    { id: "free", monthlyPrice: "₹0", hot: false, cta: "start", features: ["t1", "t2", "t3", "t4", "t5"] },
+    { id: "pro", monthlyPrice: "₹499", yearlyPrice: "₹4,999", hot: true, cta: "choose", features: ["t1", "t2", "t3", "t4", "t5", "t6", "t7"] },
   ] as readonly PricingTier[],
 } as const;
 

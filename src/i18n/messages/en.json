@@ -950,112 +950,193 @@
   },
   "landing": {
     "nav": {
-      "features": "Features",
-      "pricing": "Pricing",
-      "login": "Login",
-      "startFree": "Start free",
       "products": "Products",
-      "search": "Free search"
+      "records": "Public records",
+      "pricing": "Pricing",
+      "login": "Log in",
+      "requestAccess": "Request access"
     },
     "hero": {
-      "overline": "आज की पेशी, कल की तैयारी।",
-      "title1": "Every order read. Every date kept.",
-      "title2": "Every evening.",
-      "sub": "Mukadma is the AI that keeps your practice from the court record itself — cases synced by CNR, new orders read and briefed, emails filed to the right matter, and tomorrow's board ready by 8 pm.",
-      "ctaStart": "Put 25 cases on watch — free",
-      "ctaSearch": "Look up a case first — no login",
-      "note": "No card. No clerk calls. Cancel anytime.",
-      "oneCnr": "One CNR is enough.",
-      "ctaPricing": "See pricing",
-      "overline2": "आज की पेशी",
-      "miniFoot": "Tomorrow's list, ready before 8 pm"
+      "eyebrow": "Intelligent litigation system",
+      "title1": "Every matter.",
+      "title2": "Every update.",
+      "title3": "One clear view.",
+      "sub": "Mukadma brings your hearings, cause lists, orders and case history together, so you know what changed and what to do next."
     },
-    "proof": {
-      "judgments": "18.6M judgments indexed",
-      "cnr": "synced from the court record by CNR",
-      "board": "tomorrow's board by 8 pm",
-      "gujarat": "Gujarat first, expanding"
+    "live": {
+      "title": "Today's matters",
+      "status": "Up to date",
+      "source": "From the court record",
+      "openOverview": "Open overview",
+      "chip": {
+        "review": "Review order",
+        "listed": "Listed",
+        "next": "Next"
+      }
     },
-    "features": {
-      "sync": {
-        "eyebrow": "Sync",
-        "title": "The record comes to you.",
-        "body": "Cases by CNR, cause lists nightly, orders the moment they upload."
-      },
-      "read": {
-        "eyebrow": "Read",
-        "title": "Every order, understood.",
-        "body": "Plain-language briefs, what changed, what's next — before you ask."
-      },
-      "file": {
-        "eyebrow": "File",
-        "title": "Everything in its matter.",
-        "body": "Emails, orders, drafts — filed to the right case, confirmed by you."
-      },
-      "bill": {
-        "eyebrow": "Bill",
-        "title": "Hours become invoices.",
-        "body": "GST-ready, UPI-paid, the fee book that keeps itself."
+    "search": {
+      "tabCases": "Cases",
+      "tabPeople": "Judges & advocates",
+      "tabJudgments": "Judgments",
+      "placeholder": "Search by CNR, case number, party or advocate",
+      "ariaLabel": "Search the court record",
+      "button": "Search"
+    },
+    "brings": {
+      "eyebrow": "What Mukadma brings together",
+      "title1": "The whole matter,",
+      "titleEm": "without the running around.",
+      "sub": "Right now it lives in a dozen places — cause lists, inboxes, order PDFs, old files, a note somewhere. Mukadma gathers it around the work in front of you.",
+      "tiles": {
+        "day": {
+          "title": "Know where you stand before the day starts.",
+          "body": "Your listed hearings — the court, the item number, and what each one needs — waiting for you, instead of a scramble through the boards.",
+          "tag": "Cause lists · hearings · what needs action"
+        },
+        "folder": {
+          "title": "Every case keeps its whole story.",
+          "body": "History, next dates, orders, documents and your own notes stay with the matter — not scattered across folders, drives and chat threads.",
+          "tag": "History · orders · documents · notes"
+        },
+        "inbox": {
+          "title": "Orders find their own case.",
+          "body": "A court email arrives, and the order is matched to the right matter for you to confirm. No renaming, no hunting for where it belongs.",
+          "tag": "Email · order · the right file"
+        },
+        "search": {
+          "title": "The public record, one search away.",
+          "body": "Cases, cause lists, judges, advocates, orders and judgments — read before you walk into court or take on a new brief.",
+          "tag": "Search the public record"
+        }
+      }
+    },
+    "day": {
+      "eyebrow": "A better way to start",
+      "title1": "You should not have to",
+      "titleEm": "piece together your morning.",
+      "sub": "The day is busy enough. Mukadma helps you see what changed, what is due and what to do next.",
+      "quote": "The record should help you work, not make you search for it.",
+      "quoteBy": "The Mukadma standard",
+      "moments": {
+        "m1": {
+          "time": "8:04 PM",
+          "title": "Tomorrow's board is ready.",
+          "body": "See your listed matters, courtrooms, item numbers and purpose before the morning gets busy."
+        },
+        "m2": {
+          "time": "6:30 AM",
+          "title": "A change does not get lost.",
+          "body": "If a matter moves or a new listing appears, it is easy to see what changed."
+        },
+        "m3": {
+          "time": "11:47 AM",
+          "title": "An order goes to the right matter.",
+          "body": "Review the document, check the suggested case and keep it with the rest of the file."
+        },
+        "m4": {
+          "time": "1:15 PM",
+          "title": "Walk into the next hearing prepared.",
+          "body": "Open the matter for recent dates, the latest order and the work still to be done."
+        }
+      }
+    },
+    "stats": {
+      "eyebrow": "The record, kept current",
+      "unit": "million+",
+      "cases": "cases searchable across india",
+      "morning": "Every morning",
+      "morningCaption": "cause lists read and matched to your cases",
+      "night": "Every night",
+      "nightCaption": "your matters brought up to date from the record"
+    },
+    "records": {
+      "eyebrow": "Public records",
+      "title1": "Start with the case,",
+      "titleEm": "not a blank screen.",
+      "sub": "Search the public court record before you walk into court or take on a new matter. Find the case, the people and the documents connected to it.",
+      "go": "Search the record",
+      "cards": {
+        "cases": {
+          "title": "Cases",
+          "body": "Find a matter by CNR, case number, party or advocate."
+        },
+        "judges": {
+          "title": "Judges",
+          "body": "See publicly available court and listing context."
+        },
+        "advocates": {
+          "title": "Advocates",
+          "body": "Explore an advocate's public court-record presence."
+        },
+        "orders": {
+          "title": "Orders",
+          "body": "Find available orders connected to a case."
+        },
+        "judgments": {
+          "title": "Judgments",
+          "body": "Search judgments by case or phrase."
+        }
       }
     },
     "pricing": {
-      "title": "Priced like one consultation.",
-      "note": "Per lawyer / month, billed annually · monthly +25%",
-      "founding": "Founding members: Pro at ₹399/mo for your first 12 months.",
-      "fromSeat": "from ₹2,000/seat",
-      "mostChosen": "Most chosen",
+      "eyebrow": "Simple, clear pricing",
+      "title1": "Free to follow a case.",
+      "titleEm": "Paid when it's your practice.",
+      "sub": "Two plans, no feature maze. Track a few matters for nothing, for as long as you like — and pay only when Mukadma is carrying your working day.",
+      "billing": {
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "save": "save 16%"
+      },
       "tier": {
         "free": {
           "name": "Free",
+          "desc": "For following a handful of matters — your own, or a client's.",
+          "billNote": "No card. No expiry.",
           "f": {
-            "cases": "25 tracked cases",
-            "digest": "Daily cause-list digest",
-            "clients": "10 clients & matters",
-            "search": "Search 18.6M judgments"
+            "t1": "Track up to 5 matters, updated daily from the record",
+            "t2": "Hearing dates and cause-list listings for them",
+            "t3": "Case history and orders, kept together",
+            "t4": "Email reminders before a hearing",
+            "t5": "Unlimited public court-record search"
           },
-          "summary": "Track 25 cases, evening list included."
-        },
-        "basic": {
-          "name": "Basic",
-          "f": {
-            "cases": "200 tracked cases",
-            "alerts": "Per-case cause-list alerts",
-            "invoicing": "Invoicing + UPI collection",
-            "credits": "100 AI credits / mo"
-          },
-          "summary": "For a growing solo practice."
+          "summary": "Track a handful of matters, always free — no card, no expiry."
         },
         "pro": {
           "name": "Pro",
+          "ribbon": "For practising advocates",
+          "desc": "The whole practice, assembled and kept current for you.",
+          "monthlyUnit": "/ month",
+          "yearlyUnit": "/ year",
+          "billMonthly": "Billed monthly. Cancel before your next billing date.",
+          "billYearly": "Billed once a year — about ₹417 a month.",
+          "save": "Save 16%",
+          "featHead": "Everything in Free, and then the practice —",
           "f": {
-            "cases": "Unlimited cases + escalations",
-            "credits": "500 AI credits / mo",
-            "portal": "Client portal, unlimited seats",
-            "marketplace": "Marketplace inquiry priority"
+            "t1": "Your whole practice assembled from your Bar ID",
+            "t2": "Unlimited matters, refreshed daily",
+            "t3": "An inbox that files court mail to the right case",
+            "t4": "Documents with full-text search and a viewer",
+            "t5": "Clients, conflict checks and linked matters",
+            "t6": "A briefing before the hearing, with its sources",
+            "t7": "WhatsApp and email alerts, with delivery receipts"
           },
-          "summary": "For busy advocates who want the lot."
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "f": {
-            "tenants": "Multi-lawyer tenants, SSO",
-            "audit": "Audit logs & custom rules",
-            "pooled": "Pooled AI credits",
-            "support": "Dedicated support, SLA"
-          },
-          "summary": "For firms and chambers — SSO, seats, dedicated support."
+          "summary": "The whole practice, assembled and kept current — unlimited matters, inbox filing, documents and alerts."
         }
       },
       "cta": {
-        "start": "Start free",
-        "choose": "Choose plan",
-        "talk": "Talk to us"
+        "start": "Start on Free",
+        "choose": "Choose Pro"
       },
-      "soon": "Plans and limits are being finalised — full pricing goes live shortly. Every tier starts with a free way in.",
+      "soon": "Pricing will be shared when access opens. Every plan starts with a free way in.",
       "tbd": "Coming soon"
     },
+    "band": {
+      "eyebrow": "For your practice",
+      "title": "Spend less time chasing the record.",
+      "sub": "Mukadma keeps the moving parts of litigation in view, so you can spend more time on the matter itself."
+    },
     "footer": {
-      "tagline": "Built on the court record.",
       "col": {
         "product": {
           "h": "Product",
@@ -1079,31 +1160,12 @@
         }
       },
       "compliance": "Case data is sourced from public court records and refreshed daily. Mukadma is practice software and a neutral directory; it does not rank, recommend or endorse advocates. © 2026 Mukadma.",
-      "publicSearch": "Free public case search",
       "grievance": {
         "label": "Grievance Officer",
         "pending": "being appointed — reach us via Contact until then"
-      }
-    },
-    "family": {
-      "eyebrow": "one workflow, three ways in",
-      "title": "Everything a case touches — one Mukadma.",
-      "sub": "Run a whole practice, look up a single case, or just get tomorrow's board delivered. Same court data, three ways to use it.",
-      "app": {
-        "title": "Mukadma for advocates",
-        "body": "Track every case by CNR, keep your cause list and diary current, and bill clients — a whole litigation practice, kept from the record.",
-        "cta": "Start free"
       },
-      "search": {
-        "title": "Free public case search",
-        "body": "Look up any case, judge or advocate across 18.6M judgments — no account, no cost. Built on the same court record.",
-        "cta": "Search a case"
-      },
-      "alerts": {
-        "title": "WhatsApp alerts",
-        "body": "Tomorrow's cause list — court, item number, stage — straight to your WhatsApp. Add your cases now; delivery activates once the messaging provider is live.",
-        "cta": "Get alerts"
-      }
+      "tagline": "The court record, working for your practice.",
+      "publicSearch": "Open public search"
     }
   },
   "pages": {

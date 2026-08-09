@@ -105,7 +105,38 @@
   /* the "date underline" motif — the one honey accent line that overshoots its text (spec §4) */
   .ec-underline { position: relative; }
   .ec-underline::after { content: ""; position: absolute; left: 1px; right: -8px; bottom: -4px; height: 2px; background: var(--honey); }
+
+  /* WO-324 Daybreak landing · shared "kicker" eyebrow (mono, tracked, leading rule).
+     ONE primitive reused across every section so no surface inline-forks its own
+     eyebrow style. Devanagari never letter-spaced — see html[lang="hi"] override below. */
+  .mk-eyebrow {
+    display: inline-flex; align-items: center; gap: 12px;
+    font-family: var(--f-mono); font-weight: 500; font-size: 11px;
+    letter-spacing: 0.24em; text-transform: uppercase; color: var(--bronze-deep);
+  }
+  .mk-eyebrow::before { content: ""; width: 34px; height: 1px; background: var(--bronze); display: inline-block; }
 }
+
+/* Devanagari is never letter-spaced (ui-frontend hard rule). Covers every tracked
+   mono/uppercase label a translated string can land in. */
+html[lang="hi"] .mk-eyebrow,
+html[lang="hi"] .ec-label,
+html[lang="hi"] .ec-chip {
+  letter-spacing: normal;
+}
+
+/* WO-324 pricing monthly/yearly toggle — native radios + CSS :has(), zero JS
+   (the amount + billing-cycle sentence swap; the mockup's client-side toggle
+   isn't needed, this is a pure state-selector). Ids are set in landing.tsx. */
+.mk-cycle:has(#mk-cyc-y:checked) .mk-amt-m,
+.mk-cycle:has(#mk-cyc-y:checked) .mk-bill-m { display: none; }
+.mk-cycle:not(:has(#mk-cyc-y:checked)) .mk-amt-y,
+.mk-cycle:not(:has(#mk-cyc-y:checked)) .mk-bill-y { display: none; }
+.mk-cycle label[for="mk-cyc-m"] { background: var(--paper-2); color: var(--ink); box-shadow: var(--e1); }
+.mk-cycle:has(#mk-cyc-y:checked) label[for="mk-cyc-m"] { background: transparent; box-shadow: none; color: var(--ink-3); }
+.mk-cycle:has(#mk-cyc-y:checked) label[for="mk-cyc-y"] { background: var(--paper-2); color: var(--ink); box-shadow: var(--e1); }
+.mk-cyc-label:focus-within,
+.mk-cycle input:focus-visible + label { outline: 2px solid var(--honey); outline-offset: 2px; }
 
 /* CNRs / case numbers / dates / ₹ amounts / serials — mono (IBM Plex) + tabular-nums (spec §3).
    Applied precisely to numeric/identifier spans; not layer-scoped so it's always available. */
