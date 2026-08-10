@@ -12,7 +12,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { cleanPurpose } from "@/lib/court/code-labels";
 import { maskTitle } from "@/lib/court/mask";
-import { CourtChip, formatCourtDate, stalenessState, relativeAge } from "@/components/court";
+import { formatCourtDate, stalenessState, relativeAge } from "@/components/court";
 import {
   useSelection, useUndo, BulkBar, bulkBtn, RowCheckbox, SelectAllCheckbox, UndoToast,
 } from "@/components/selection";
@@ -259,13 +259,14 @@ export function CasesTable({
                       </Link>
                       {isDisposed && <span className="ec-chip shrink-0">{st(m.status!)}</span>}
                     </div>
+                    {/* WO-346: the reference's row subline is one continuous mono string
+                        ("FA/5053/2022 · HIGH · GJHC240820012022") — matched here (was a row of
+                        separate chip pills); same real fields, just joined as plain text. */}
                     {(caseNo || tier || m.stage || m.client?.name || m.cnr) && (
-                      <div className="cases-subline mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[0.7rem] text-ec-ink-3">
-                        {caseNo && <span className="num text-ec-ink-2">{caseNo}</span>}
-                        {tier && <CourtChip tone="neutral">{tier}</CourtChip>}
-                        {m.stage && <span className="ec-chip" title={m.stage}>{cleanPurpose(m.stage)}</span>}
-                        {m.client?.name && <span>· {m.client.name}</span>}
-                        {m.cnr && <span className="num">{m.cnr}</span>}
+                      <div className="cases-subline num mt-0.5 truncate font-mono text-[11px] text-ec-ink-3">
+                        {[caseNo, tier, m.stage ? cleanPurpose(m.stage) : null, m.client?.name, m.cnr]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </div>
                     )}
                     {/* Mobile fallback — court + next hearing collapse here once the dedicated columns hide. */}
@@ -339,7 +340,7 @@ export function CasesTable({
           {agenda.map((g) => (
             <section key={g.day}>
               <div className="flex items-baseline gap-3 border-b border-ec-hair pb-2">
-                <h2 className="display text-[19px] text-ec-ink">
+                <h2 className="display text-[19px] uppercase text-ec-ink">
                   {dow(g.day)} {formatCourtDate(g.day) ?? g.day}
                 </h2>
                 <span className="num font-mono text-[11px] uppercase tracking-[0.1em] text-ec-ink-3">
