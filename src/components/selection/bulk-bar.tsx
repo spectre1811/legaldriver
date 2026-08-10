@@ -1,17 +1,23 @@
 "use client";
 
 // WO-43 Wave 1 — the shared bulk-action bar + selection checkboxes, extracted from the WO-27
-// Documents UX. The bar is presentational: it renders the floating pill (count + a divider +
+// Documents UX. The bar is presentational: it renders the floating bar (count + a divider +
 // the caller's action buttons + a clear ✕) and hides itself when nothing is selected. Each list
 // passes its own action buttons as children (styled with `bulkBtn`), so the chrome is shared
 // but the actions stay list-specific. Copy is passed in (already i18n-resolved) — the primitive
 // holds no strings.
+//
+// WO-331 EXACT-FIDELITY (Cases reskin): retoned from the old dark ink pill to the Chambers
+// reference's own bulk bar (design-mockups/iteration3/console/cases.tsx) — a light card with plain
+// text buttons, not a rounded-full dark pill. This is a SHARED primitive (also used by Documents) —
+// per the "never fork a shared primitive" rule the fix lands here once, so every caller re-tones
+// together instead of Cases forking its own copy.
 
 import type { ReactNode } from "react";
+import { Icon } from "@/components/icons";
 
 // The action-button class used inside the bar, exported so callers style their buttons to match.
-export const bulkBtn =
-  "rounded-full px-3 py-1 text-sm font-medium hover:bg-paper/20 disabled:opacity-50";
+export const bulkBtn = "rounded-ec-s px-2.5 py-1 text-[12.5px] font-medium text-ec-ink-2 hover:bg-ec-paper-3 disabled:opacity-50";
 
 export function BulkBar({
   count,
@@ -24,7 +30,7 @@ export function BulkBar({
   count: number;
   /** Already-formatted "N selected" label. */
   label: string;
-  /** Accessible label for the clear button. */
+  /** Accessible label AND visible text for the clear button. */
   clearLabel: string;
   onClear: () => void;
   /** The list's action buttons/selects. */
@@ -32,12 +38,12 @@ export function BulkBar({
 }) {
   if (count <= 0) return null;
   return (
-    <div className="fixed inset-x-0 bottom-6 z-40 mx-auto flex w-fit items-center gap-1.5 rounded-full border border-ink/10 bg-ink px-4 py-2.5 text-paper shadow-xl">
-      <span className="px-1 text-sm font-semibold">{label}</span>
-      <div className="mx-1 h-5 w-px bg-paper/25" />
+    <div className="fixed inset-x-0 bottom-6 z-40 mx-auto flex w-fit flex-wrap items-center gap-3 rounded-ec-m border border-ec-line-strong bg-ec-card px-4 py-2.5 shadow-ec-2">
+      <span className="num font-mono text-[12px] text-ec-ink">{label}</span>
+      <span className="h-4 w-px bg-ec-line" />
       {children}
-      <button onClick={onClear} className={bulkBtn} aria-label={clearLabel}>
-        ✕
+      <button onClick={onClear} className="flex items-center gap-1 text-[12.5px] text-ec-muted-ink hover:text-ec-ink" aria-label={clearLabel}>
+        <Icon name="close" className="h-3.5 w-3.5" /> {clearLabel}
       </button>
     </div>
   );

@@ -3,8 +3,15 @@
 //   (1) the normalizer merges surface-only variants (honorific/punctuation/whitespace/case) of one
 //       advocate/act into a single group, and NEVER merges initial↔fullname (that needs BP-03);
 //   (2) each group carries every raw variant so `.overlaps` (any-of) returns the whole entity;
-//   (3) the facet is wired end-to-end: page groups the raw arrays; console renders grouped options
-//       and expands the selection back to raw variants (query builder unchanged — still overlaps).
+//   (3) the query builder still filters via array overlap (any-of), unchanged.
+//
+// WO-331 EXACT-FIDELITY RECONCILE: the Advocate/Act facet EDITING UI (page.tsx's grouped-facet
+// wiring, cases-toolbar.tsx's grouped multi-select) was deliberately dropped — the reference
+// (design-mockups/iteration3/console/cases.tsx) has no slot for it. The pure normalizer above is
+// unaffected (kept — it's real, tested, reusable logic) and still exercised directly here; only the
+// page/toolbar "wiring" assertions below changed, from asserting the UI exists to asserting it
+// doesn't quietly come back without a deliberate test update. See cases-toolbar.tsx's file-level
+// trade-off note.
 //
 // Run: npx tsx tests/wo57_advocate_facet_dedup.ts
 
@@ -48,20 +55,17 @@ ok("blanks/whitespace-only raw values are skipped", groupFacet(["", "   ", "A B"
 ok("groups are sorted by label", advGroups.map((g) => g.label).join("|") === [...advGroups.map((g) => g.label)].sort().join("|"));
 ok("GROUP_SEP is a control char (never occurs in a name/act)", GROUP_SEP.charCodeAt(0) === 0x1f);
 
-// ── wiring: page.tsx builds grouped facets ───────────────────────────────────────────────────
+// ── WO-331: page.tsx no longer builds grouped facets (no UI consumes them) ──────────────────
 const page = src("src/app/dashboard/cases/page.tsx");
-ok("page imports the normalizer", /from "\.\/facet-normalize"/.test(page));
-ok("page groups advocate_names with advocateKey", /groupFacet\(distinctArray\("advocate_names"\), advocateKey\)/.test(page));
-ok("page groups act_names with actKey", /groupFacet\(distinctArray\("act_names"\), actKey\)/.test(page));
-ok("page passes advocateGroups/actGroups to the toolbar", /advocateGroups=\{advocateGroups\}/.test(page) && /actGroups=\{actGroups\}/.test(page));
+ok("page no longer imports the normalizer (no consumer left)", !/from "\.\/facet-normalize"/.test(page));
+ok("page no longer groups advocate_names/act_names (dropped with the UI)", !/groupFacet\(distinctArray\(/.test(page));
 
-// ── wiring: the Filters sheet renders grouped options + expands selection back to raw variants ─
+// ── WO-331: the Filters sheet no longer renders the grouped advocate/act multi-select ────────
 const toolbar = src("src/app/dashboard/cases/cases-toolbar.tsx");
 const nav = src("src/app/dashboard/cases/cases-nav.ts");
-ok("toolbar takes FacetGroup props", /advocateGroups: FacetGroup\[\]/.test(toolbar) && /actGroups: FacetGroup\[\]/.test(toolbar));
-ok("advocate/act use the grouped multi-select", /multiGrouped\("advocate"/.test(toolbar) && /multiGrouped\("act"/.test(toolbar));
-ok("selecting a group expands to every raw variant (flatMap split on GROUP_SEP)", /setMulti\(key, vals\.flatMap\(\(v\) => v\.split\(GROUP_SEP\)\)\)/.test(toolbar));
-ok("advocate/act stay MULTI keys (repeated URL params, unchanged)", /CASE_MULTI = new Set<string>\(\[[^\]]*"advocate"[^\]]*"act"/.test(nav));
+ok("toolbar does not (re)introduce FacetGroup props", !/FacetGroup\[\]/.test(toolbar));
+ok("toolbar does not (re)introduce the grouped multi-select", !/multiGrouped\(/.test(toolbar));
+ok("advocate/act stay MULTI keys at the nav layer (existing saved views still apply them)", /CASE_MULTI = new Set<string>\(\[[^\]]*"advocate"[^\]]*"act"/.test(nav));
 
 // ── wiring: the query builder still filters via array overlap (any-of) — unchanged ───────────
 const query = src("src/app/dashboard/cases/cases-query.ts");

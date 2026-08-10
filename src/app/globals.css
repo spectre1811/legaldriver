@@ -143,12 +143,13 @@
   /* WO-54 W4 · Cases-list density (per-user, cookie-persisted). Container-scoped via [data-density]
      so ONE attribute reflows every row without threading padding through each cell; the attribute
      selector out-specifies Tailwind's py-* on the tds. Row text stays ≥13px and the interactive
-     controls keep their own padding, so Compact still meets the WCAG 2.2 §2.5.8 target size. */
+     controls keep their own padding, so Compact still meets the WCAG 2.2 §2.5.8 target size.
+     WO-331 EXACT-FIDELITY: two states only (reference's `pad = compact ? "py-2" : "py-3.5"`), values
+     matched to those exact Tailwind spacings (0.5rem / 0.875rem); compact no longer hides the
+     subline — the reference tightens padding only, it never drops row content. */
   .cases-table tbody td { transition: padding var(--motion-fast) var(--ease); }
-  .cases-table[data-density="comfortable"] tbody td { padding-top: 0.85rem; padding-bottom: 0.85rem; }
-  .cases-table[data-density="cozy"] tbody td { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-  .cases-table[data-density="compact"] tbody td { padding-top: 0.3rem; padding-bottom: 0.3rem; }
-  .cases-table[data-density="compact"] .cases-subline { display: none; }
+  .cases-table[data-density="comfortable"] tbody td { padding-top: 0.875rem; padding-bottom: 0.875rem; }
+  .cases-table[data-density="compact"] tbody td { padding-top: 0.5rem; padding-bottom: 0.5rem; }
 
   /* the "date underline" motif — the one honey accent line that overshoots its text (spec §4) */
   .ec-underline { position: relative; }

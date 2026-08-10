@@ -15,7 +15,10 @@ export type IconName =
   | "shield"
   // WO-336 Notifications Chambers reskin — "in-app" channel glyph (console + bell), the one
   // shape the existing set (gmail=envelope for Email, chat=speech-bubble for WhatsApp) lacks.
-  | "monitor";
+  | "monitor"
+  // WO-331 Cases Daybreak reskin — the Filters drawer's "Saved views" trigger (the reference's
+  // lucide Bookmark), the one shape the existing set lacks.
+  | "bookmark";
 
 const P: Record<IconName, React.ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
@@ -67,6 +70,7 @@ const P: Record<IconName, React.ReactNode> = {
   download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 11l5 5 5-5M12 4v12" /></>,
   shield: <><path d="M12 3 4.5 6v6c0 4.4 3 7.5 7.5 9 4.5-1.5 7.5-4.6 7.5-9V6z" /><path d="m8.5 12 2.4 2.4L16 9.5" /></>,
   monitor: <><rect x="2.5" y="4" width="19" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></>,
+  bookmark: <><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" /></>,
 };
 
 export function Icon({ name, className = "h-5 w-5" }: IconProps) {

@@ -2,10 +2,12 @@ import { test, expect, expectHealthy } from "./fixtures";
 import { HAS_CREDS, NO_CREDS_REASON } from "./env";
 
 // WO-39 · Scale / pagination gate. Proves the thing the build env can NOT click-test (no demo
-// login there): that the numbered-page control actually pages through the list — Next advances the
-// page and the slice changes — and that "showing X–Y of N" + rows-per-page work, with nothing
-// erroring. Keys off the `<Pagination>` test hooks (`data-testid="pagination"` + `data-page` /
-// `data-per-page` / `data-total` / `data-total-pages`, `page-next`/`page-prev`, `per-page-select`).
+// login there): that the pager actually pages through the list — Next advances the page and the
+// slice changes — and that "showing X–Y of N" + rows-per-page work, with nothing erroring. Keys off
+// the SHARED test-id/data-* contract (`data-testid="pagination"` + `data-page` / `data-per-page` /
+// `data-total` / `data-total-pages`, `page-next`/`page-prev`, `per-page-select`) — carried by both
+// the numbered-page `<Pagination>` (clients/notices/voice) AND, since WO-331, Cases' own
+// reference-matched Prev/Go-to/Next control (cases-pagination.tsx): same contract, different shape.
 //
 // Data-volume-safe: a surface with only one page (or none) is NOT a failure — the multi-page
 // assertions run only when the demo tenant actually has a second page.
@@ -40,8 +42,16 @@ for (const surface of SURFACES) {
     const next = page.locator('[data-testid="page-next"]');
 
     if (totalPages <= 1) {
-      // Single page: no Prev/Next nav is rendered (nothing to page through).
-      await expect(next).toHaveCount(0);
+      // WO-331: Cases' own pager (matching the reference) always renders Prev/Next, just disabled
+      // at the bounds — the other surfaces' numbered <Pagination> omits them entirely when there's
+      // nothing to page through. Same test-id contract, two intentionally different single-page
+      // treatments.
+      if (surface.name === "cases") {
+        await expect(next).toBeVisible();
+        await expect(next).toBeDisabled();
+      } else {
+        await expect(next).toHaveCount(0);
+      }
       test.info().annotations.push({ type: "note", description: `${surface.name}: single page (${total} rows)` });
       return;
     }

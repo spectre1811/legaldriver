@@ -6,9 +6,8 @@ import { CasesToolbar } from "./cases-toolbar";
 import { CasesTable } from "./cases-table";
 import { CasesAttention } from "./cases-attention";
 import { CasesNavProvider, PendingDim } from "./cases-nav-provider";
-import { Pagination } from "@/components/pagination";
+import { CasesPagination } from "./cases-pagination";
 import { fetchCasesPage, fetchViewCounts, fetchTierCounts, type CasesFilters } from "./cases-query";
-import { groupFacet, advocateKey, actKey } from "./facet-normalize";
 import type { SavedView } from "./cases-nav";
 import { parseDensity, DENSITY_COOKIE } from "./density";
 import { parsePage, clampPerPage } from "@/lib/paginate";
@@ -25,7 +24,12 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const t = await getTranslations("cases");
   const tc = await getTranslations("common");
   const { q, tier, court, case_type, stage, status, statuses, advocate, act, judge, next, sort } = searchParams;
-  const filters: CasesFilters = { q, tier, court, case_type, stage, status, statuses, advocate, act, judge, next, sort };
+  // WO-331 EXACT-FIDELITY: the reference's status segment starts on "Open" and the list is
+  // ACTUALLY filtered to it (not just the segmented control's active pixel) — an absent `status`
+  // param now defaults the real query to "open" too, so a fresh /dashboard/cases visit shows the
+  // same open-only list the reference does. `activeFilters` below still reads the RAW `status` so
+  // this default is never counted as a user-applied filter for the empty-state copy.
+  const filters: CasesFilters = { q, tier, court, case_type, stage, status: status ?? "open", statuses, advocate, act, judge, next, sort };
   const page = parsePage(searchParams.page);
   const per = clampPerPage(searchParams.per);
   const today = isoDay(new Date());
@@ -33,8 +37,12 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const density = parseDensity(cookies().get(DENSITY_COOKIE)?.value);
 
   // WO-54 W2b: the facet option lists are scoped to the ACTIVE TIER (uses matter_tier_idx) so the
-  // dropdowns adapt per tier — on the High Court tab you only see HC courts/case-types/judges, etc.
-  let facetQuery = supabase.from("matter").select("court, case_type, stage, status, advocate_names, act_names, judge_names").limit(1000);
+  // dropdowns adapt per tier — on the High Court tab you only see HC courts/case-types, etc.
+  // WO-331 EXACT-FIDELITY: trimmed to the 3 facets the reference's Filters drawer actually has
+  // (Court / Case type / Stage) — advocate_names/act_names/judge_names/status are no longer
+  // surfaced as editable facets (see cases-toolbar.tsx's file-level trade-off note); dropping them
+  // from the SELECT too so this stays a real, not just cosmetic, simplification.
+  let facetQuery = supabase.from("matter").select("court, case_type, stage").limit(1000);
   if (tier) facetQuery = facetQuery.eq("tier", tier);
   const [{ rows: matters, total }, { data: facetRows }, { data: viewRows }, viewCounts, tierCounts] = await Promise.all([
     fetchCasesPage(supabase, filters, page, per),
@@ -48,22 +56,11 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
     fetchTierCounts(supabase),
   ]);
 
-  const distinct = (key: "court" | "case_type" | "stage" | "status") =>
+  const distinct = (key: "court" | "case_type" | "stage") =>
     [...new Set((facetRows ?? []).map((r) => r[key]).filter(Boolean) as string[])].sort();
   const courts = distinct("court");
   const caseTypes = distinct("case_type");
   const stages = distinct("stage");
-  // Real distinct status strings as stored ("Pending"/"Disposed"/…) — the "according to cases"
-  // status filter (WO-59), separate from the Open/Disposed semantic segment.
-  const statusValues = distinct("status");
-
-  const distinctArray = (key: "advocate_names" | "act_names" | "judge_names") =>
-    [...new Set((facetRows ?? []).flatMap((r) => (r[key] ?? []) as string[]).filter(Boolean))].sort();
-  // WO-57: collapse surface-only spelling variants of one advocate/act into a single facet option
-  // that expands back to every raw variant on match (query builder unchanged — still overlaps).
-  const advocateGroups = groupFacet(distinctArray("advocate_names"), advocateKey);
-  const actGroups = groupFacet(distinctArray("act_names"), actKey);
-  const judges = distinctArray("judge_names"); // WO-54 W2b: Judge facet (tier-scoped like the rest)
 
   const views: SavedView[] = (viewRows ?? []).map((v) => ({
     id: v.id,
@@ -78,9 +75,12 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   return (
     <div className="space-y-6">
       <header>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-baseline gap-2.5">
           <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
-          {total > 0 && <span className="num rounded-ec-s bg-ec-paper-3 px-2 py-0.5 text-sm text-ec-ink-3">{total}</span>}
+          {/* WO-331: the reference renders the count as a honey mono numeral beside the title
+              (Masthead's own title slot), not a neutral pill — matched here (same header/AppShell
+              convention every other dashboard page shares, unchanged). */}
+          {total > 0 && <span className="num font-mono text-[13px] tracking-[0.08em] text-ec-honey">{total}</span>}
         </div>
         <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("subtitle")}</p>
       </header>
@@ -96,12 +96,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
           courts={courts}
           caseTypes={caseTypes}
           stages={stages}
-          statuses={statusValues}
-          advocateGroups={advocateGroups}
-          actGroups={actGroups}
-          judges={judges}
           tierCounts={tierCounts}
-          viewCounts={viewCounts}
           views={views}
           autoCnr={sanitizeTrack(searchParams.track) ?? undefined}
           autoOpen={searchParams.add === "1"}
@@ -111,7 +106,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
           {total > 0 ? (
             <div className="space-y-6">
               <CasesTable rows={matters} today={today} stages={stages} initialDensity={density} />
-              <Pagination page={page} perPage={per} total={total} />
+              <CasesPagination page={page} perPage={per} total={total} />
             </div>
           ) : (
             <div className="ec-card flex flex-col items-center justify-center px-6 py-14 text-center">

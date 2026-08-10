@@ -588,11 +588,11 @@
       "showingAll": "Showing these — tap to clear",
       "filterAria": "Show {label} cases",
       "overdue": {
-        "label": "Overdue",
-        "hint": "Reschedule or follow up"
+        "label": "need follow-up",
+        "hint": "A hearing date has already passed without a new court update — needs your follow-up."
       },
       "soon": {
-        "label": "Due this week",
+        "label": "hearings this week",
         "hint": "Prepare & confirm the hearing"
       },
       "noDate": {
@@ -600,9 +600,11 @@
         "hint": "Set a diary date"
       },
       "stale": {
-        "label": "Stale records",
+        "label": "stale records",
         "hint": "Not refreshed in 30+ days — different from an overdue hearing."
-      }
+      },
+      "lastSynced": "Last synced {ago}",
+      "neverSynced": "Not yet synced"
     },
     "title": "Cases",
     "subtitle": "Your running file — synced by CNR from the court record, refreshed nightly.",
@@ -649,7 +651,9 @@
       "HC": "High Court",
       "DISTRICT": "District & Sessions",
       "TRIBUNAL": "Tribunals",
-      "SC": "Supreme Court"
+      "SC": "Supreme Court",
+      "shortHC": "High",
+      "shortDISTRICT": "District"
     },
     "urgency": {
       "today": "Today",
@@ -696,7 +700,12 @@
       "done": "Done",
       "refreshAll": "Refresh all cases",
       "refreshAllTitle": "Queued for WO-309's bulk-refresh lane — not live yet",
-      "refreshSoon": "Soon"
+      "refreshSoon": "Soon",
+      "savedViews": "Saved views",
+      "savedViewsClose": "Hide saved views",
+      "refreshModalTitle": "Refresh all cases?",
+      "refreshModalBody": "Bulk refresh across every matter isn’t live yet — queued for a future release. Refresh one case at a time from its case page today.",
+      "refreshModalClose": "Close"
     },
     "console": {
       "searchPlaceholder": "Search cases — title, CNR, court, parties…",
@@ -750,6 +759,16 @@
       "nextLabel": "Next hearing (optional)",
       "cta": "Create case",
       "creating": "Creating…"
+    },
+    "pageNav": {
+      "rows": "Rows",
+      "rowsAria": "Rows per page",
+      "showing": "Showing {from}–{to} of {total, plural, one {# case} other {# cases}}",
+      "pageOf": "Page {page} of {total}",
+      "prev": "Prev",
+      "next": "Next",
+      "goTo": "Go to",
+      "goToAria": "Jump to page"
     }
   },
   "caseDetail": {

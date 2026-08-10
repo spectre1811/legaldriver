@@ -210,6 +210,10 @@ export interface ViewCounts {
   soon: number; // next hearing within 7 days
   noDate: number;
   stale: number; // WO-331: not synced in STALE_SYNC_DAYS+ (or never) — sync freshness, not urgency
+  /** Most recent `last_synced_at` across the tenant's matters, or null if nothing's ever synced —
+   *  the real value behind the attention strip's "Last synced …" line (reference: cases.tsx's
+   *  static "Last synced 07:42 IST"). Never a fabricated clock stamp. */
+  lastSyncedAt: string | null;
 }
 
 export async function fetchViewCounts(supabase: SupabaseClient<Database>): Promise<ViewCounts> {
@@ -221,7 +225,7 @@ export async function fetchViewCounts(supabase: SupabaseClient<Database>): Promi
   // matches the rows the tab shows (WO-59). Urgency counts (overdue/soon/no-date) feed the
   // Attention bar (WO-59 W3), not the tabs. `stale` is the same additive HEAD-count pattern, keyed
   // off the real `last_synced_at` column (WO-331) — never a fabricated figure.
-  const [all, open, disposed, overdue, soonC, noDate, stale] = await Promise.all([
+  const [all, open, disposed, overdue, soonC, noDate, stale, latest] = await Promise.all([
     head(),
     applyStatusFilter(head(), "open"),
     applyStatusFilter(head(), "disposed"),
@@ -229,6 +233,7 @@ export async function fetchViewCounts(supabase: SupabaseClient<Database>): Promi
     head().gte("next_hearing_date", today).lte("next_hearing_date", isoDay(soon)),
     head().is("next_hearing_date", null),
     head().or(`last_synced_at.is.null,last_synced_at.lt.${staleCutoffIso()}`),
+    supabase.from("matter").select("last_synced_at").not("last_synced_at", "is", null).order("last_synced_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   return {
     all: all.count ?? 0,
@@ -238,6 +243,7 @@ export async function fetchViewCounts(supabase: SupabaseClient<Database>): Promi
     soon: soonC.count ?? 0,
     noDate: noDate.count ?? 0,
     stale: stale.count ?? 0,
+    lastSyncedAt: latest.data?.last_synced_at ?? null,
   };
 }
 
