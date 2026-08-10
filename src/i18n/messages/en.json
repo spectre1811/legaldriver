@@ -134,7 +134,6 @@
     },
     "hearingFallback": "Hearing",
     "openFile": "Open file",
-    "summary": "{count, plural, =0 {No listings today} one {# listing} other {# listings}} · {courts, plural, =0 {no courts} one {# court} other {# courts}}",
     "syncedAt": "synced from the court record at {time}",
     "empty": {
       "title": "No hearings today",
@@ -175,6 +174,7 @@
   },
   "dashboard": {
     "overview": {
+      "title": "Overview",
       "tagline": "Tomorrow's hearings before you ask.",
       "sectionHearings": "Next hearings",
       "sectionDeadlines": "Deadlines open",
@@ -197,7 +197,7 @@
       },
       "lastSync": {
         "title": "Last sync",
-        "stamp": "COURT RECORD SYNCED",
+        "at": "Synced {date} · {time}",
         "never": "Not yet synced"
       }
     },
@@ -399,10 +399,42 @@
       }
     },
     "directory": {
+      "title": "Judge & advocate search",
+      "subtitle": "Know the bench before you argue.",
+      "searchPlaceholder": "Judge, advocate, or party name…",
+      "searchAria": "Judge, advocate, or party name",
+      "searchButton": "Search",
+      "notConfigured": "Live court API not configured (LD_API_KEY).",
+      "coverage": "Searching {total} cases across Gujarat ({district} district · {high} High Court).",
+      "browseTitle": "Search the live court corpus",
+      "browseBody": "Type a name above to find advocates, judges, and parties. Every advocate and judge links to a full dossier — caseload, side split, disposal patterns and cross-links.",
+      "examplesLabel": "Try a name:",
+      "caseNumberTitle": "Case number lookup",
+      "caseNumberTypeAria": "Case type",
+      "caseNumberTypePlaceholder": "Type",
+      "caseNumberNumberAria": "Case number",
+      "caseNumberNumberPlaceholder": "Number",
+      "caseNumberYearAria": "Case year",
+      "caseNumberYearPlaceholder": "Year",
+      "caseNumberSearch": "Look up",
+      "caseNumberNoResults": "No case matched",
+      "caseNumberNoResultsBody": "Check the type, number and year against the filing receipt, or search by CNR above.",
+      "advocates": "Advocates",
+      "judges": "Judges",
+      "parties": "Parties",
+      "advocateMatters": "{n, plural, one {# matter} other {# matters}}",
       "resultsCount": "{count, plural, one {# result} other {# results}}",
       "resultsShown": "{shown} of {total}",
       "barLabel": "bar {id}",
-      "noBarLabel": "no bar id"
+      "noBarLabel": "no bar id",
+      "noAdvocates": "No advocates found",
+      "noJudges": "No judges found",
+      "noParties": "No parties found",
+      "noPartiesBody": "Try a surname (fuzzy match across litigants).",
+      "typeMore": "Type at least 2 characters to search.",
+      "searchErrorTitle": "Search temporarily unavailable",
+      "searchErrorBody": "This search is too heavy for the current engine right now — try a more specific query, or try again shortly.",
+      "footer": "Source: Mukadma / public court records (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record."
     },
     "notifications": {
       "header": {
@@ -450,12 +482,12 @@
         },
         "notTracked": "Not tracked yet",
         "defaultsRow": "Defaults for every case",
-        "defaultsHint": "Applies on sync"
+        "defaultsHint": "Applies on sync",
+        "defaultsCourt": "Every matter added from the court record"
       },
       "ledger": {
         "title": "Delivery ledger",
         "receipts": "{n, plural, one {# receipt} other {# receipts}}",
-        "note": "“Delivered” and “read” aren't confirmed anywhere yet — sent is as far as we can verify.",
         "filter": {
           "all": "All",
           "whatsapp": "WhatsApp",
@@ -474,11 +506,15 @@
       },
       "brief": {
         "title": "Evening brief & quiet hours",
+        "eveningBrief": "Evening brief",
+        "eveningBriefBody": "Tomorrow's hearings, deadlines and unread mail — in one message.",
         "briefAt": "Brief at",
         "ist": "IST",
         "digest": "Digest",
         "instant": "Instant",
         "instantSoon": "Instant delivery isn't available yet",
+        "quietHours": "Quiet hours",
+        "quietHoursBody": "Your do-not-disturb window for automated sends.",
         "quietFrom": "Quiet hours from",
         "quietTo": "to",
         "save": "Save",
@@ -487,8 +523,6 @@
         "chipChannels": "{n, plural, one {# channel on} other {# channels on}}"
       },
       "footer": {
-        "stampLine1": "Delivery ledger",
-        "stampLine2": "Updated {date}",
         "link": "Manage channels in Settings →"
       }
     }
@@ -2162,46 +2196,6 @@
     "never": "never",
     "caseFallback": "case",
     "footer": "Risk signals are computed from tracked cases + court data — indicative, not legal advice. Verify against the official record."
-  },
-  "lookup": {
-    "title": "Judges, advocates & parties",
-    "directoryTitle": "Judges & Lawyers",
-    "directorySubtitle": "Look up any advocate’s bar-wise caseload, a judge’s dossier and disposal patterns, or a party’s cases — across the live court corpus.",
-    "browseTitle": "Search the live court corpus",
-    "browseBody": "Type a name above to find advocates, judges, and parties. Every advocate and judge links to a full dossier — caseload, side split, disposal patterns and cross-links.",
-    "examplesLabel": "Try a name:",
-    "subtitle": "Search the live court corpus for any advocate (bar-wise caseload), judge (dossier + disposal patterns), or party (their cases + the side they're on).",
-    "placeholder": "Advocate, judge, or party name — e.g. Prajapati, Pinto, Patel…",
-    "search": "Search",
-    "notConfigured": "Live court API not configured (LD_API_KEY).",
-    "coverage": "Searching {total} cases across Gujarat ({district} district · {high} High Court).",
-    "advocates": "Advocates",
-    "judges": "Judges",
-    "parties": "Parties / litigants",
-    "casesCount": "{n} cases",
-    "barSuffix": " · bar {id}",
-    "noBar": " · no bar id",
-    "noAdvocates": "No advocates found",
-    "noJudges": "No judges found",
-    "noParties": "No parties found",
-    "noPartiesBody": "Try a surname (fuzzy match across litigants).",
-    "footer": "Source: Mukadma / public court records (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record.",
-    "caseNumber": {
-      "title": "Find a case by number",
-      "subtitle": "Registration number, not CNR — e.g. type C.S., number 1234, year 2022.",
-      "typeLabel": "Type",
-      "typePlaceholder": "C.S.",
-      "numberLabel": "Number",
-      "numberPlaceholder": "1234",
-      "yearLabel": "Year",
-      "yearPlaceholder": "2022",
-      "search": "Find case",
-      "noResults": "No case matched",
-      "noResultsBody": "Check the type, number and year against the filing receipt, or search by CNR above."
-    },
-    "typeMore": "Type at least 2 characters to search.",
-    "searchErrorTitle": "Search temporarily unavailable",
-    "searchErrorBody": "This search is too heavy for the current engine right now — try a more specific query, or try again shortly."
   },
   "analytics": {
     "title": "Analytics",

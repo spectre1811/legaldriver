@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Icon, type IconName } from "@/components/icons";
@@ -14,17 +15,34 @@ export const dynamic = "force-dynamic";
 // (nav.tsx). Search a name → advocates (bar-wise caseload), judges (dossier + disposal
 // patterns), and parties/litigants; or look a case up by registration number. Every
 // advocate/judge links to its full dossier, every listed case to its details (WO-83).
-// The old /dashboard/search/directory route redirects here (query preserved).
 //
-// WO-337 · Chambers/Daybreak reskin — faithful to design-mockups/iteration3/console/
-// app.directory.tsx (layout/hierarchy/typography/motion via ../motion's Reveal), bound to
-// the SAME real search calls above; the reference's dummy advocates/judges/parties become
-// real results. Two things the reference shows per-row that the real search payload doesn't
-// carry (an advocate's district, a judge's home court + "sitting today") render an honest
-// pending state instead of being fabricated or the row dropped — see the inline comments.
-// The reference's main search field has no submit button (client-side dummy filter, no
-// navigation); this is a real server GET search, so the existing visible "Search" button is
-// kept alongside the reference's icon-in-field treatment — a flagged, reasoned deviation.
+// WO-337 WAVE-2 · exact-fidelity reconcile vs design-mockups/iteration3/console/app.directory.tsx
+// (+ ui.tsx's AppMasthead/SectionLabel) — node-for-node: ink masthead, the max-w-5xl reading
+// column, the icon-in-field search well, the case-number lookup row, and all three result
+// sections rebuilt to the reference's own layout/typography/copy, on the SAME real search calls
+// above. Flagged, reasoned deviations only (ui-pipeline.md — none are decorative additions):
+//   1. The reference's search field has no submit (a client-side dummy filter, `q` pre-seeded to
+//      "Patel"); this is a real server GET search, so the visible "Search" button stays alongside
+//      the icon-in-field look.
+//   2. A pre-query "browse" card and the honest 1-char/error states have no reference counterpart
+//      (the mockup's `q` is always pre-filled, so it never needed one) — never a dead blank.
+//   3. Two fields the reference shows per advocate/judge row (district, home court) aren't in the
+//      real search payload (AdvocateSearchResult/JudgeSearchResult carry no such field) — rendered
+//      as the shared "not on the court record" placeholder, never dropped or invented. The judge
+//      row's "sitting today" pill and case count are the reference's own conditional/absent slot —
+//      honestly never rendered (real data covers neither), not a dropped node.
+//   4. The reference's Parties row is a non-interactive aggregate ("appears in N", no drill-down
+//      target — there's no per-party profile in this product). Our real payload is one real
+//      case-match per row (PartyCaseResult), so the row keeps its Link to that case, with the real
+//      CNR standing in the count's slot rather than a fabricated "appears in 1".
+//   5. Case-number lookup results have no reference UI at all (the mockup's "Look up" is inert) —
+//      the results list is a necessary, undecorated addition (case row + view-details, the same
+//      pattern every case list in the app already uses).
+//   6. The disclaimer footer is a hard repo rule (CLAUDE.md §3: provenance + "not legal advice" on
+//      all court data) — the reference has none; ours is required regardless.
+//   7. The masthead subtitle drops the reference's literal "55,000,000+ case records, All India" —
+//      the live corpus is Gujarat-scoped (see the real, dynamic `coverage` line below the search
+//      field), so that clause would be a fabricated figure over the wrong scope.
 
 const EXAMPLES = ["Patel", "Shah", "Mehta", "Desai", "Trivedi"];
 const SLICE = { advocates: 25, judges: 25, parties: 30, caseNumber: 25 } as const;
@@ -34,8 +52,7 @@ export default async function DirectoryPage({
 }: {
   searchParams: { q?: string; ct?: string; cn?: string; cy?: string };
 }) {
-  const t = await getTranslations("lookup");
-  const td = await getTranslations("dashboard.directory");
+  const t = await getTranslations("dashboard.directory");
   const tc = await getTranslations("codeLabels");
   const tp = await getTranslations("casePreview");
   const tCommon = await getTranslations("common.states");
@@ -81,255 +98,270 @@ export default async function DirectoryPage({
   // length, never a fabricated corpus-wide total. When the array is longer than the render cap
   // this is an honest "N shown of M returned"; otherwise a plain result count.
   const shownCaption = (n: number, cap: number) =>
-    n > cap
-      ? td("resultsShown", { shown: cap.toLocaleString("en-IN"), total: n.toLocaleString("en-IN") })
-      : td("resultsCount", { count: n });
+    n > cap ? t("resultsShown", { shown: cap.toLocaleString("en-IN"), total: n.toLocaleString("en-IN") }) : t("resultsCount", { count: n });
 
   return (
-    <div className="space-y-6">
-      <Reveal as="header" className="border-b border-ec-hair pb-5">
-        <h1 className="font-display text-[1.7rem] font-medium leading-tight tracking-tight text-ec-ink">{t("directoryTitle")}</h1>
-        <p className="mt-1.5 max-w-2xl text-sm text-ec-ink-3">{t("directorySubtitle")}</p>
+    <div className="space-y-8">
+      <Reveal as="div" className="mk-engraved rounded-xl bg-ec-ink px-5 py-7 text-ec-paper sm:px-8">
+        <h1 className="font-display text-[28px] leading-tight text-ec-paper sm:text-[32px]">{t("title")}</h1>
+        <p className="mt-1.5 text-[13px] text-ec-line-strong">{t("subtitle")}</p>
       </Reveal>
 
-      <Reveal delay={60}>
-        <form method="get" className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative min-w-0 flex-1">
-            <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ec-ink-3" />
-            <input
-              name="q"
-              defaultValue={q}
-              placeholder={t("placeholder")}
-              aria-label={t("placeholder")}
-              autoFocus
-              className="input w-full rounded-lg py-3.5 pl-11 pr-4 text-[15px]"
-            />
-          </div>
-          <button type="submit" className="ec-btn ec-btn-ink shrink-0">{t("search")}</button>
-        </form>
-        {!enabled ? (
-          <p className="mt-3 text-xs text-ec-warn">{t("notConfigured")}</p>
-        ) : coverage ? (
-          <p className="num mt-3 text-xs text-ec-ink-3">{coverage}</p>
-        ) : null}
-      </Reveal>
+      <div className="mx-auto max-w-5xl space-y-6">
+        <Reveal delay={60}>
+          <form method="get" className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative min-w-0 flex-1">
+              <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-ec-muted-ink" />
+              <input
+                name="q"
+                defaultValue={q}
+                placeholder={t("searchPlaceholder")}
+                aria-label={t("searchAria")}
+                autoFocus
+                className="input w-full rounded-lg py-3.5 pl-11 pr-4 text-[15px]"
+              />
+            </div>
+            <button type="submit" className="ec-btn ec-btn-ink shrink-0">{t("searchButton")}</button>
+          </form>
+          {!enabled ? (
+            <p className="mt-3 text-xs text-ec-warn">{t("notConfigured")}</p>
+          ) : coverage ? (
+            <p className="num mt-3 text-xs text-ec-muted-ink">{coverage}</p>
+          ) : null}
+        </Reveal>
 
-      {/* Honest starting point (charter: never a dead blank), not a bare page. */}
-      {enabled && q.length < 2 && !cnActive && (
-        <Reveal delay={100} className="ec-card px-6 py-6">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 rounded-ec-m bg-ec-bronze-tint p-2 text-ec-bronze-deep">
-              <Icon name="scale" className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="font-display text-base font-medium text-ec-ink">{t("browseTitle")}</h2>
-              <p className="mt-1 text-sm text-ec-ink-3">{t("browseBody")}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-ec-ink-3">{t("examplesLabel")}</span>
-                {EXAMPLES.map((name) => (
-                  <Link
-                    key={name}
-                    href={`/dashboard/directory?q=${encodeURIComponent(name)}`}
-                    className="press rounded-full border border-ec-hair px-3 py-1 text-xs text-ec-bronze-deep transition-colors hover:bg-ec-bronze-tint"
-                  >
-                    {name}
-                  </Link>
-                ))}
+        {/* Honest starting point (charter: never a dead blank) — the reference's `q` is always
+            pre-seeded so it never needed this state; see deviation #2 above. */}
+        {enabled && q.length < 2 && !cnActive && (
+          <Reveal delay={100} className="ec-card px-6 py-6">
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 rounded-ec-m bg-ec-bronze-tint p-2 text-ec-bronze-deep">
+                <Icon name="scale" className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="font-display text-base font-medium text-ec-ink">{t("browseTitle")}</h2>
+                <p className="mt-1 text-sm text-ec-muted-ink">{t("browseBody")}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-ec-muted-ink">{t("examplesLabel")}</span>
+                  {EXAMPLES.map((name) => (
+                    <Link
+                      key={name}
+                      href={`/dashboard/directory?q=${encodeURIComponent(name)}`}
+                      className="press rounded-full border border-ec-line px-3 py-1 text-xs text-ec-bronze-deep transition-colors hover:bg-ec-bronze-tint"
+                    >
+                      {name}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        </Reveal>
-      )}
+          </Reveal>
+        )}
 
-      {enabled && (
-        <Reveal delay={120}>
-          <form method="get" className="flex flex-wrap items-end gap-2">
-            <span className="ec-label mb-2 mr-1">{t("caseNumber.title")}</span>
-            <span className="sr-only">{t("caseNumber.subtitle")}</span>
-            <label className="flex flex-col gap-1">
-              <span className="sr-only">{t("caseNumber.typeLabel")}</span>
-              <input
-                name="ct"
-                defaultValue={cnType}
-                placeholder={t("caseNumber.typePlaceholder")}
-                className="num w-20 rounded-ec-s border border-ec-hair bg-ec-paper-2 px-2.5 py-1.5 font-mono text-[12.5px] uppercase text-ec-ink outline-none transition-colors focus:border-ec-bronze"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="sr-only">{t("caseNumber.numberLabel")}</span>
-              <input
-                name="cn"
-                defaultValue={cnNumber}
-                required
-                placeholder={t("caseNumber.numberPlaceholder")}
-                className="num w-24 rounded-ec-s border border-ec-hair bg-ec-paper-2 px-2.5 py-1.5 font-mono text-[12.5px] text-ec-ink outline-none transition-colors focus:border-ec-bronze"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="sr-only">{t("caseNumber.yearLabel")}</span>
-              <input
-                name="cy"
-                defaultValue={cnYear}
-                required
-                inputMode="numeric"
-                placeholder={t("caseNumber.yearPlaceholder")}
-                className="num w-20 rounded-ec-s border border-ec-hair bg-ec-paper-2 px-2.5 py-1.5 font-mono text-[12.5px] text-ec-ink outline-none transition-colors focus:border-ec-bronze"
-              />
-            </label>
-            <button
-              type="submit"
-              className="rounded-ec-s border border-ec-hair-strong px-3 py-1.5 text-[12.5px] text-ec-ink-2 transition-colors hover:border-ec-bronze hover:text-ec-bronze-deep"
-            >
-              {t("caseNumber.search")}
-            </button>
-          </form>
+        {enabled && (
+          <Reveal delay={120}>
+            <form method="get" className="flex flex-wrap items-end gap-2">
+              <span className="ec-label mb-2 mr-1">{t("caseNumberTitle")}</span>
+              <label className="flex flex-col gap-1">
+                <span className="sr-only">{t("caseNumberTypeAria")}</span>
+                <input
+                  name="ct"
+                  defaultValue={cnType}
+                  placeholder={t("caseNumberTypePlaceholder")}
+                  className="num w-20 rounded-md border border-ec-line bg-ec-card px-2.5 py-1.5 font-mono text-[12.5px] uppercase text-ec-ink outline-none transition-colors focus:border-ec-bronze"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="sr-only">{t("caseNumberNumberAria")}</span>
+                <input
+                  name="cn"
+                  defaultValue={cnNumber}
+                  required
+                  placeholder={t("caseNumberNumberPlaceholder")}
+                  className="num w-24 rounded-md border border-ec-line bg-ec-card px-2.5 py-1.5 font-mono text-[12.5px] text-ec-ink outline-none transition-colors focus:border-ec-bronze"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="sr-only">{t("caseNumberYearAria")}</span>
+                <input
+                  name="cy"
+                  defaultValue={cnYear}
+                  required
+                  inputMode="numeric"
+                  placeholder={t("caseNumberYearPlaceholder")}
+                  className="num w-20 rounded-md border border-ec-line bg-ec-card px-2.5 py-1.5 font-mono text-[12.5px] text-ec-ink outline-none transition-colors focus:border-ec-bronze"
+                />
+              </label>
+              <button
+                type="submit"
+                className="rounded-md border border-ec-line-strong px-3 py-1.5 text-[12.5px] text-ec-ink-2 transition-colors hover:border-ec-bronze hover:text-ec-bronze-deep"
+              >
+                {t("caseNumberSearch")}
+              </button>
+            </form>
 
-          {cnActive && (
-            <div className="mt-4 border-t border-ec-hair pt-4">
-              {cnResults.length ? (
-                <ul className="divide-y divide-ec-hair">
-                  {cnResults.slice(0, SLICE.caseNumber).map((p, i) => (
-                    <li key={`${p.cnr}-${i}`} className="ec-row flex items-center justify-between gap-3 px-1 py-2.5 text-sm">
-                      <Link href={caseDetailHref(p.cnr)} className="group min-w-0 flex-1 truncate">
-                        <span className="font-medium text-ec-ink group-hover:text-ec-bronze-deep group-hover:underline">{p.name || p.cnr}</span>
-                        <span className="num ml-2 font-mono text-[0.7rem] text-ec-ink-3">{p.cnr}</span>
-                      </Link>
-                      <span className="flex shrink-0 items-center gap-2">
-                        {p.side && (
-                          <span className={`ec-chip ${/pet|appl|compl/i.test(p.side) ? "ec-chip-success" : ""}`}>{p.side.toLowerCase()}</span>
-                        )}
-                        <CodeLabel value={expandCaseType(p.case_type, p.tier)} showCode={false} className="hidden text-xs text-ec-ink-3 sm:inline" fallback="" />
-                        <Link href={caseDetailHref(p.cnr)} className="whitespace-nowrap text-xs font-medium text-ec-bronze-deep hover:underline">{tp("viewDetails")}</Link>
+            {cnActive && (
+              <div className="mt-4 border-t border-ec-line pt-4">
+                {cnResults.length ? (
+                  <ul className="divide-y divide-ec-line">
+                    {cnResults.slice(0, SLICE.caseNumber).map((p, i) => (
+                      <li key={`${p.cnr}-${i}`} className="ec-row flex items-center justify-between gap-3 px-1 py-2.5 text-sm">
+                        <Link href={caseDetailHref(p.cnr)} className="group min-w-0 flex-1 truncate">
+                          <span className="font-medium text-ec-ink group-hover:text-ec-bronze-deep group-hover:underline">{p.name || p.cnr}</span>
+                          <span className="num ml-2 font-mono text-[0.7rem] text-ec-muted-ink">{p.cnr}</span>
+                        </Link>
+                        <span className="flex shrink-0 items-center gap-2">
+                          {p.side && (
+                            <span className={`ec-chip ${/pet|appl|compl/i.test(p.side) ? "ec-chip-success" : ""}`}>{p.side.toLowerCase()}</span>
+                          )}
+                          <CodeLabel value={expandCaseType(p.case_type, p.tier)} showCode={false} className="hidden text-xs text-ec-muted-ink sm:inline" fallback="" />
+                          <Link href={caseDetailHref(p.cnr)} className="whitespace-nowrap text-xs font-medium text-ec-bronze-deep hover:underline">{tp("viewDetails")}</Link>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : cnSafe.error ? (
+                  <SectionNotice icon="alert" tone="error" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
+                ) : (
+                  <SectionNotice icon="search" title={t("caseNumberNoResults")} body={t("caseNumberNoResultsBody")} />
+                )}
+              </div>
+            )}
+          </Reveal>
+        )}
+
+        {q.length >= 2 && (
+          <Reveal delay={180} className="space-y-9">
+            <section>
+              <SectionLabel right={<span className="ec-label">{shownCaption(advocates.length, SLICE.advocates)}</span>}>
+                {t("advocates")}
+              </SectionLabel>
+              {advocates.length ? (
+                <ul className="divide-y divide-ec-line">
+                  {advocates.slice(0, SLICE.advocates).map((a, i) => {
+                    // Role-as-entity flag (WO-32): APP/PP/AGP etc. are court roles, not individual
+                    // advocates — label + don't link them as if they were a person.
+                    const role = advocateRole(a.name_raw);
+                    const linkable = Boolean(a.bar_id) && !role.isRole;
+                    const nameEl = (
+                      <span
+                        className={`font-display block truncate text-[16px] text-ec-ink ${linkable ? "hover:text-ec-bronze" : ""}`}
+                        title={role.isRole ? tc("roleAria") : undefined}
+                      >
+                        {role.isRole ? (role.full ?? a.name_raw) : a.name_raw}
                       </span>
+                    );
+                    const metaEl = (
+                      <div className="num mt-0.5 flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ec-muted-ink">
+                        <span className="truncate">
+                          {a.bar_id ? t("barLabel", { id: a.bar_id }) : t("noBarLabel")}
+                          {!role.isRole && <> · {tCommon("notOnRecord")}</>}
+                        </span>
+                        {role.isRole && <span className="ec-chip ec-chip-hot shrink-0 !text-[9px]">{tc("role")}</span>}
+                      </div>
+                    );
+                    const countEl = <span className="num shrink-0 font-mono text-[12px] text-ec-ink-2">{t("advocateMatters", { n: a.cases })}</span>;
+                    return (
+                      <li key={(a.bar_id ?? "") + i} className="ec-row py-3">
+                        {linkable ? (
+                          <Link href={`/dashboard/advocate/${a.bar_id}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3">
+                            <div className="min-w-0">{nameEl}{metaEl}</div>
+                            {countEl}
+                          </Link>
+                        ) : (
+                          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3">
+                            <div className="min-w-0">{nameEl}{metaEl}</div>
+                            {countEl}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : advSafe.error ? (
+                <SectionNotice icon="alert" tone="error" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
+              ) : (
+                <p className="py-3 text-sm text-ec-muted-ink">{t("noAdvocates")}</p>
+              )}
+            </section>
+
+            <section>
+              <SectionLabel right={<span className="ec-label">{shownCaption(judges.length, SLICE.judges)}</span>}>
+                {t("judges")}
+              </SectionLabel>
+              {judges.length ? (
+                <ul className="divide-y divide-ec-line">
+                  {judges.slice(0, SLICE.judges).map((j) => (
+                    <li key={j.judge_id} className="ec-row py-3">
+                      <Link href={`/dashboard/judge/${j.judge_id}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3">
+                        <div className="min-w-0">
+                          <span className="font-display block truncate text-[16px] text-ec-ink hover:text-ec-bronze">{j.name_raw}</span>
+                          {/* The reference shows this judge's home court + a conditional "sitting
+                              today" pill; the search-result payload carries neither (only the full
+                              /judge/{id} dossier does) — honest-pending here, never fabricated. The
+                              pill is never rendered for the same reason (real data doesn't cover
+                              it) — the reference's own conditional false-branch, honestly kept. */}
+                          <div className="mt-0.5 truncate text-[12.5px] text-ec-ink-2">{tCommon("notOnRecord")}</div>
+                        </div>
+                      </Link>
                     </li>
                   ))}
                 </ul>
-              ) : cnSafe.error ? (
+              ) : judSafe.error ? (
                 <SectionNotice icon="alert" tone="error" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
               ) : (
-                <SectionNotice icon="search" title={t("caseNumber.noResults")} body={t("caseNumber.noResultsBody")} />
+                <p className="py-3 text-sm text-ec-muted-ink">{t("noJudges")}</p>
               )}
-            </div>
-          )}
-        </Reveal>
-      )}
+            </section>
 
-      {q.length >= 2 && (
-        <Reveal delay={180} className="space-y-9">
-          <section>
-            <div className="mb-1.5 flex items-end justify-between gap-3">
-              <div className="ec-label">{t("advocates")}</div>
-              <span className="ec-label">{shownCaption(advocates.length, SLICE.advocates)}</span>
-            </div>
-            <div className="mb-1 h-[3px] border-y border-ec-hair" />
-            {advocates.length ? (
-              <ul className="divide-y divide-ec-hair">
-                {advocates.slice(0, SLICE.advocates).map((a, i) => {
-                  // Role-as-entity flag (WO-32): APP/PP/AGP etc. are court roles, not individual
-                  // advocates — label + don't link them as if they were a person.
-                  const role = advocateRole(a.name_raw);
-                  return (
-                    <li key={(a.bar_id ?? "") + i} className="ec-row grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3 px-1 py-3">
-                      <div className="min-w-0">
-                        {role.isRole ? (
-                          <span className="font-display block truncate text-[16px] text-ec-ink" title={tc("roleAria")}>{role.full ?? a.name_raw}</span>
-                        ) : a.bar_id ? (
-                          <Link href={`/dashboard/advocate/${a.bar_id}`} className="font-display block truncate text-[16px] text-ec-ink hover:text-ec-bronze-deep">
-                            {a.name_raw}
-                          </Link>
-                        ) : (
-                          <span className="font-display block truncate text-[16px] text-ec-ink">{a.name_raw}</span>
-                        )}
-                        <div className="num mt-0.5 flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ec-ink-3">
-                          <span className="truncate">{a.bar_id ? td("barLabel", { id: a.bar_id }) : td("noBarLabel")}</span>
-                          {role.isRole && <span className="ec-chip ec-chip-hot shrink-0 !text-[9px]">{tc("role")}</span>}
-                        </div>
-                      </div>
-                      <span className="num shrink-0 font-mono text-[12px] text-ec-ink-2">{t("casesCount", { n: a.cases })}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : advSafe.error ? (
-              <SectionNotice icon="alert" tone="error" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
-            ) : (
-              <p className="py-3 text-sm text-ec-ink-3">{t("noAdvocates")}</p>
-            )}
-          </section>
-
-          <section>
-            <div className="mb-1.5 flex items-end justify-between gap-3">
-              <div className="ec-label">{t("judges")}</div>
-              <span className="ec-label">{shownCaption(judges.length, SLICE.judges)}</span>
-            </div>
-            <div className="mb-1 h-[3px] border-y border-ec-hair" />
-            {judges.length ? (
-              <ul className="divide-y divide-ec-hair">
-                {judges.slice(0, SLICE.judges).map((j) => (
-                  <li key={j.judge_id} className="ec-row grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3 px-1 py-3">
-                    <div className="min-w-0">
-                      <Link href={`/dashboard/judge/${j.judge_id}`} className="font-display block truncate text-[16px] text-ec-ink hover:text-ec-bronze-deep">
-                        {j.name_raw}
+            <section>
+              <SectionLabel right={<span className="ec-label">{shownCaption(parties.length, SLICE.parties)}</span>}>
+                {t("parties")}
+              </SectionLabel>
+              {parties.length ? (
+                <ul className="divide-y divide-ec-line">
+                  {parties.slice(0, SLICE.parties).map((p, i) => (
+                    <li key={p.cnr + i} className="flex items-baseline justify-between gap-3 py-3">
+                      {/* The reference's party row is a non-interactive aggregate ("appears in N",
+                          no drill-down target — there's no per-party profile here). Our real
+                          payload is one real case match per row, so it keeps a Link to that case,
+                          with the real CNR standing in for the fabricated count (deviation #4). */}
+                      <Link href={caseDetailHref(p.cnr)} className="group min-w-0 flex-1 truncate">
+                        <span className="truncate text-[14px] text-ec-ink group-hover:text-ec-bronze">{p.name}</span>
                       </Link>
-                      {/* The reference shows this judge's home court + a "sitting today" pill; the
-                          search-result payload carries neither (only the full /judge/{id} dossier
-                          does) — honest-pending here rather than fabricated or dropped. No "sitting
-                          today" pill is rendered for the same reason: it's a true/false claim we
-                          can't verify, so it's never shown (the reference itself renders it only
-                          conditionally — this is that same false-branch, exercised honestly). */}
-                      <div className="num mt-0.5 truncate font-mono text-[10.5px] uppercase tracking-[0.08em] text-ec-ink-3">
-                        {tCommon("notOnRecord")}
-                      </div>
-                    </div>
-                    <span className="num shrink-0 font-mono text-[12px] text-ec-ink-2">{t("casesCount", { n: j.cases })}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : judSafe.error ? (
-              <SectionNotice icon="alert" tone="error" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
-            ) : (
-              <p className="py-3 text-sm text-ec-ink-3">{t("noJudges")}</p>
-            )}
-          </section>
+                      <span className="num shrink-0 font-mono text-[12px] text-ec-muted-ink">{p.cnr}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : partySafe.error ? (
+                <SectionNotice icon="alert" tone="error" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
+              ) : (
+                <div className="py-3">
+                  <p className="text-sm text-ec-ink">{t("noParties")}</p>
+                  <p className="mt-0.5 text-xs text-ec-muted-ink">{t("noPartiesBody")}</p>
+                </div>
+              )}
+            </section>
+          </Reveal>
+        )}
 
-          <section>
-            <div className="mb-1.5 flex items-end justify-between gap-3">
-              <div className="ec-label">{t("parties")}</div>
-              <span className="ec-label">{shownCaption(parties.length, SLICE.parties)}</span>
-            </div>
-            <div className="mb-1 h-[3px] border-y border-ec-hair" />
-            {parties.length ? (
-              <ul className="divide-y divide-ec-hair">
-                {parties.slice(0, SLICE.parties).map((p, i) => (
-                  <li key={p.cnr + i} className="ec-row flex items-baseline justify-between gap-3 px-1 py-3">
-                    <Link href={caseDetailHref(p.cnr)} className="group min-w-0 flex-1 truncate">
-                      <span className="font-display truncate text-[15px] text-ec-ink group-hover:text-ec-bronze-deep">{p.name}</span>
-                      <span className="num ml-2 font-mono text-[0.68rem] text-ec-ink-3">{p.cnr}</span>
-                    </Link>
-                    <span className="flex shrink-0 items-center gap-2">
-                      {p.side && (
-                        <span className={`ec-chip ${/pet|appl|compl/i.test(p.side) ? "ec-chip-success" : ""}`}>{p.side.toLowerCase()}</span>
-                      )}
-                      <CodeLabel value={expandCaseType(p.case_type, p.tier)} showCode={false} className="hidden text-xs text-ec-ink-3 sm:inline" fallback="" />
-                      <Link href={caseDetailHref(p.cnr)} className="whitespace-nowrap text-xs font-medium text-ec-bronze-deep hover:underline">{tp("viewDetails")}</Link>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : partySafe.error ? (
-              <SectionNotice icon="alert" tone="error" title={t("searchErrorTitle")} body={t("searchErrorBody")} />
-            ) : (
-              <div className="py-3">
-                <p className="text-sm text-ec-ink">{t("noParties")}</p>
-                <p className="mt-0.5 text-xs text-ec-ink-3">{t("noPartiesBody")}</p>
-              </div>
-            )}
-          </section>
-        </Reveal>
-      )}
+        {enabled && q.length === 1 && <p className="text-xs text-ec-muted-ink">{t("typeMore")}</p>}
+        {q.length >= 2 && <p className="border-t border-ec-line pt-4 text-xs text-ec-muted-ink">{t("footer")}</p>}
+      </div>
+    </div>
+  );
+}
 
-      {enabled && q.length === 1 && <p className="text-xs text-ec-ink-3">{t("typeMore")}</p>}
-      {q.length >= 2 && <p className="border-t border-ec-hair pt-4 text-xs text-ec-ink-3">{t("footer")}</p>}
+// Small-caps section label + the double-hairline rule beneath it (ui.tsx's SectionLabel) — kept
+// local (not shared) like notifications/parts.tsx's copy; promote if a third page needs it.
+function SectionLabel({ children, right }: { children: ReactNode; right?: ReactNode }) {
+  return (
+    <div className="mb-3">
+      <div className="flex items-end justify-between gap-3">
+        <div className="ec-label">{children}</div>
+        {right}
+      </div>
+      <div className="mt-1.5 h-[3px] border-y border-ec-line" />
     </div>
   );
 }
@@ -338,14 +370,14 @@ export default async function DirectoryPage({
 // card treatment used elsewhere in the reskin (Documents/Cases empties) — reserved for states
 // worth the advocate's eye; routine zero-result sections stay a plain inline line (see above).
 function SectionNotice({ icon, title, body, tone = "empty" }: { icon: IconName; title: string; body?: string; tone?: "empty" | "error" }) {
-  const wrap = tone === "error" ? "bg-ec-danger-t text-ec-danger" : "bg-ec-paper-3 text-ec-ink-3";
+  const wrap = tone === "error" ? "bg-ec-danger-t text-ec-danger" : "bg-ec-paper-3 text-ec-muted-ink";
   return (
     <div className="ec-card flex flex-col items-center gap-2 px-6 py-10 text-center">
       <span className={`rounded-full p-2.5 ${wrap}`}>
         <Icon name={icon} className="h-5 w-5" />
       </span>
       <p className="font-display text-base text-ec-ink">{title}</p>
-      {body && <p className="max-w-sm text-sm text-ec-ink-3">{body}</p>}
+      {body && <p className="max-w-sm text-sm text-ec-muted-ink">{body}</p>}
     </div>
   );
 }
