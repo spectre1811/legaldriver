@@ -11,6 +11,7 @@ import { useInboxSelection } from "./use-inbox-selection";
 import { BulkBar, UndoToast, SelectBox } from "./bulk-ui";
 import { Ticks } from "./ticks";
 import { AttachmentPreview, type MailAttachment } from "./attachment-preview";
+import { previewKind } from "@/lib/docs/preview-kind";
 
 type Opt = { id: string; label: string };
 export type WorkspaceEmail = {
@@ -479,7 +480,12 @@ function MailDetail({
                   <Icon name="documents" className="h-4 w-4 shrink-0 text-ec-bronze" />
                   <span className="min-w-0">
                     <span className="block truncate text-[12.5px] text-ec-ink">{a.filename}</span>
-                    <span className="ec-mono-label block">{a.sizeLabel}</span>
+                    <span className="ec-mono-label block">
+                      {(() => {
+                        const kind = previewKind(a.mime, a.filename);
+                        return kind === "pdf" ? "PDF" : kind === "image" ? td("attachments.image") : td("attachments.file");
+                      })()} · {a.sizeLabel}
+                    </span>
                   </span>
                 </button>
               ))}

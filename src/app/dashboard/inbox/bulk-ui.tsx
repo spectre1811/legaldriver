@@ -46,7 +46,7 @@ export function BulkBar({ count, busy, onArchive, onDelete, onClear }: {
         {t("bulk.delete")}
       </button>
       <button onClick={onClear} className="ml-auto inline-flex items-center gap-1 text-[12.5px] text-ec-muted-ink hover:text-ec-ink-2">
-        <Icon name="close" className="h-3.5 w-3.5" /> {t("bulk.cancel")}
+        <Icon name="close" className="h-3.5 w-3.5" /> {t("bulk.clearAll")}
       </button>
     </div>
   );

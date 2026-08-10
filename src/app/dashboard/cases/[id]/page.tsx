@@ -103,6 +103,11 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   // is "not on record at eCourts" the honest empty state; a manual case has no eCourts record to
   // compare against, so we don't render a 16-field "not on record" mirror for it (BP-24).
   const isCourtSourced = !!matter.source && matter.source !== "manual";
+  // WO-348 · the registrar Stamp reads "Public court record" — a narrower claim than
+  // isCourtSourced above (which also covers "mock"/demo-provider matters, honestly disclosed
+  // elsewhere on this page as "demo data · not a real court record"). Stamping a demo case as a
+  // public record would contradict that disclosure right above it, so this excludes "mock".
+  const isPublicRecord = isCourtSourced && matter.source !== "mock";
   // Product voice (WO-132): the user never sees the internal pipeline name ("legaldriver") — a
   // court-synced case reads as "the court record", a hand-entered one as "added manually", the demo
   // seed as "demo data". Founder 2026-07-22: the raw "via legaldriver" leaked here.
@@ -385,6 +390,19 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 <div className="ec-card px-5 py-8 text-center text-sm text-ec-ink-3">{t("parties.empty")}</div>
               )}
             </Reveal>
+
+            {/* registrar "Stamp" (WO-348 restore) — the prototype's own bronze/honey provenance
+                mark, right after Parties. Court-sourced + actually synced matters only: it reads
+                "Public court record", which would be a false claim for a manually-entered case. */}
+            {isPublicRecord && matter.last_synced_at && (
+              <div className="flex justify-start">
+                <div className="relative -rotate-2 rounded-[8px] border-[1.5px] border-ec-bronze px-4 pb-2.5 pt-3 text-center text-ec-bronze opacity-75">
+                  <span className="absolute left-1/2 top-[5px] h-[5px] w-[5px] -translate-x-1/2 rounded-full bg-ec-honey" />
+                  <div className="mk-stamp-line">{tf("stamp.title")}</div>
+                  <div className="num mk-stamp-line">{tf("stamp.synced", { date: refreshed })}</div>
+                </div>
+              </div>
+            )}
 
             {/* AI briefing — hideable + persisted (founder ask), see AiBriefingSection */}
             <Reveal as="section" id="ai-briefing" delay={160} className="scroll-mt-28">

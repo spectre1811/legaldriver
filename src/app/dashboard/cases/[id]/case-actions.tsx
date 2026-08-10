@@ -77,7 +77,7 @@ export function MatterDiaryDate({ matterId, synced, override }: { matterId: stri
   const t = useTranslations("caseDetail");
   if (!editing) {
     return (
-      <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1.5 text-xs text-brand-600 hover:underline">
+      <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1.5 text-xs text-ec-bronze-deep hover:underline">
         <Icon name="calendar" className="h-3.5 w-3.5" />
         {override ? t("actions.diaryDateOverride", { date: override, synced: synced ?? "—" }) : t("actions.setDiaryDate")}
       </button>
@@ -91,7 +91,7 @@ export function MatterDiaryDate({ matterId, synced, override }: { matterId: stri
           const v = (document.getElementById(`diary-${matterId}`) as HTMLInputElement)?.value ?? "";
           await setDiaryDate(matterId, v); setEditing(false); router.refresh();
         })}
-        disabled={pending} className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700"
+        disabled={pending} className="rounded-lg bg-ec-ink px-2.5 py-1 text-xs font-medium text-ec-paper transition-opacity hover:opacity-90 disabled:opacity-50"
       >{t("actions.save")}</button>
       {override && <button onClick={() => start(async () => { await setDiaryDate(matterId, ""); setEditing(false); router.refresh(); })} className="text-xs text-ink-faint hover:text-red-600">{t("actions.clear")}</button>}
       <button onClick={() => setEditing(false)} className="text-xs text-ink-faint">{t("actions.cancel")}</button>
@@ -106,10 +106,10 @@ export function ProposedDeadlineActions({ deadlineId }: { deadlineId: string }) 
   const t = useTranslations("caseDetail");
   return (
     <span className="flex items-center gap-2">
-      <button onClick={() => start(async () => { await confirmDeadline(deadlineId); router.refresh(); })} disabled={pending} className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+      <button onClick={() => start(async () => { await confirmDeadline(deadlineId); router.refresh(); })} disabled={pending} className="rounded-lg bg-ec-ink px-2.5 py-1 text-xs font-medium text-ec-paper transition-opacity hover:opacity-90 disabled:opacity-50">
         {t("actions.confirm")}
       </button>
-      <button onClick={() => start(async () => { await dismissDeadline(deadlineId); router.refresh(); })} disabled={pending} className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted hover:text-red-600 disabled:opacity-50">
+      <button onClick={() => start(async () => { await dismissDeadline(deadlineId); router.refresh(); })} disabled={pending} className="rounded-lg border border-line px-2.5 py-1 text-xs text-ink-muted transition-colors hover:bg-ec-paper-3 hover:text-ec-ink-2 disabled:opacity-50">
         {t("actions.dismiss")}
       </button>
     </span>
@@ -274,7 +274,7 @@ export function AddDocumentForm({ matterId }: { matterId: string }) {
       }}
       className="flex flex-wrap items-center gap-3"
     >
-      <input type="file" name="file" required className="block max-w-xs text-sm text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100" />
+      <input type="file" name="file" required className="block max-w-xs text-sm text-ink-soft file:mr-3 file:rounded-lg file:border-0 file:bg-ec-bronze-tint file:px-3 file:py-2 file:text-sm file:font-medium file:text-ec-bronze-deep hover:file:bg-ec-paper-3" />
       <button type="submit" disabled={pending} className="btn-secondary">
         <Icon name="upload" className="h-4 w-4" /> {pending ? t("actions.uploading") : t("actions.upload")}
       </button>
