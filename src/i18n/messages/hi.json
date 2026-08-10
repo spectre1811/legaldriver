@@ -53,6 +53,11 @@
     "profileMenu": "खाता मेन्यू",
     "profile": "प्रोफ़ाइल",
     "billing": "बिलिंग",
+    "bell": {
+      "heading": "नवीनतम अलर्ट",
+      "empty": "अभी कोई अलर्ट नहीं।",
+      "viewAll": "सभी सूचनाएँ →"
+    },
     "commandPalette": {
       "placeholder": "खोजें या जाएँ… मुकदमे, मुवक्किल, क्रियाएँ",
       "hint": "अपनी प्रैक्टिस में खोजने के लिए टाइप करें।",
@@ -87,6 +92,7 @@
   "nav": {
     "ariaMain": "मुख्य नेविगेशन",
     "heading": {
+      "console": "कंसोल",
       "practice": "प्रैक्टिस",
       "workflow": "कार्यप्रवाह",
       "communication": "संवाद",
@@ -97,7 +103,7 @@
     },
     "item": {
       "overview": "अवलोकन",
-      "onboarding": "अधिवक्ता ऑनबोर्डिंग",
+      "onboarding": "ऑनबोर्डिंग",
       "clients": "मुवक्किल",
       "cases": "मुकदमे",
       "calendar": "कैलेंडर",

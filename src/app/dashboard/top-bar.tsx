@@ -1,11 +1,12 @@
 "use client";
 
-// Desktop top bar (≥md) — WO-147 design-system-v2 §5 shell.
-// Breadcrumb · ⌘K search · + New · notifications · profile menu.
+// Desktop top bar (≥md) — WO-147 design-system-v2 §5 shell, reskinned WO-345 for prototype
+// fidelity (design-mockups/iteration3/console/app-shell.tsx:337-373).
+// Breadcrumb ("Home › X", literal "›" glyph) · ⌘K search · outlined "+ New case" · notification
+// bell DROPDOWN (real recent alerts) · profile menu.
 // Below md the sticky MobileNav takes over; this bar is hidden there.
-// Replaces the old sidebar-footer account block (avatar + language + sign out
-// now live in the profile menu). Avatar = the uploaded photo (signed URL) when
-// set, else initials on honey tint — never a gray silhouette (honesty §7b).
+// Avatar = the uploaded photo (signed URL) when set, else initials on the bronze tint (never a
+// gray silhouette — honesty §7b).
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,11 +16,19 @@ import { CommandPalette } from "@/components/command-palette";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { NAV_TARGETS } from "./nav";
 
-type Props = { email: string; initial: string; fullName: string | null; designation: string | null; photoUrl?: string | null };
+type AlertItem = { id: string; label: string; title: string | null; when: string };
+type Props = {
+  email: string;
+  initial: string;
+  fullName: string | null;
+  designation: string | null;
+  photoUrl?: string | null;
+  alerts: AlertItem[];
+};
 
 // Shared avatar — one primitive for the desktop top bar AND the mobile drawer (never fork this).
-// Daybreak signature: the initials fallback sits on the honey tint (the on-honey pairing from
-// tokens.css), not a generic gray or the bronze tint used elsewhere.
+// WO-345: bronze-tint/bronze-deep + serif initial (app-shell.tsx:167-169), replacing the old
+// honey-tint pairing.
 export function Avatar({ initial, photoUrl, name }: { initial: string; photoUrl?: string | null; name?: string }) {
   if (photoUrl) {
     return (
@@ -28,13 +37,13 @@ export function Avatar({ initial, photoUrl, name }: { initial: string; photoUrl?
     );
   }
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ec-honey/25 text-sm font-semibold text-ec-on-honey ring-1 ring-ec-hair">
+    <span className="display flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ec-bronze-tint text-sm text-ec-bronze-deep">
       {initial}
     </span>
   );
 }
 
-export function TopBar({ email, initial, fullName, designation, photoUrl }: Props) {
+export function TopBar({ email, initial, fullName, designation, photoUrl, alerts }: Props) {
   const t = useTranslations("shell");
   const tn = useTranslations("nav");
   const pathname = usePathname();
@@ -49,14 +58,14 @@ export function TopBar({ email, initial, fullName, designation, photoUrl }: Prop
       <nav aria-label={t("breadcrumb")} className="flex min-w-0 items-center gap-1.5 text-sm">
         <Link
           href="/dashboard"
-          className="shrink-0 rounded-ec-s text-ec-ink-3 transition hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
+          className="shrink-0 rounded-ec-s text-ec-muted-ink transition hover:text-ec-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
         >
           {t("home")}
         </Link>
         {section && (
           <>
-            <Icon name="chevron" className="h-3.5 w-3.5 shrink-0 text-ec-ink-3" />
-            <span className="truncate font-medium text-ec-ink">{tn(`item.${section.label}`)}</span>
+            <span className="mx-0.5 text-ec-line-strong">›</span>
+            <span className="truncate text-ec-ink-2">{tn(`item.${section.label}`)}</span>
           </>
         )}
       </nav>
@@ -65,32 +74,115 @@ export function TopBar({ email, initial, fullName, designation, photoUrl }: Prop
         <CommandPalette compact />
         <Link
           href="/dashboard/cases?add=1"
-          className="inline-flex h-9 items-center gap-1.5 rounded-ec-s bg-ec-ink px-3 text-sm font-medium text-ec-paper transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
+          className="inline-flex h-9 items-center gap-1.5 rounded-ec-s border border-ec-line bg-ec-card px-2.5 text-[12.5px] text-ec-ink-2 transition hover:border-ec-line-strong hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
         >
-          <Icon name="plus" className="h-4 w-4" />
-          <span className="hidden sm:inline">{t("newCase")}</span>
+          <Icon name="plus" className="h-3.5 w-3.5" />
+          {t("newCase")}
         </Link>
-        <Link
-          href="/dashboard/notifications"
-          aria-label={tn("item.notifications")}
-          className="flex h-9 w-9 items-center justify-center rounded-ec-s text-ec-ink-3 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
-        >
-          <Icon name="bell" className="h-[1.15rem] w-[1.15rem]" />
-        </Link>
+        <BellMenu alerts={alerts} />
         <ProfileMenu email={email} initial={initial} fullName={fullName} designation={designation} photoUrl={photoUrl} />
       </div>
     </header>
   );
 }
 
-// Shared account link list — Profile · Settings · Billing · Language · Sign out · Sign out
-// everywhere, exact order per the WO-328 spec. Reused verbatim by the desktop dropdown AND the
-// 390px drawer footer so the two surfaces can never drift apart (never inline-fork this).
-// `menu=false` (drawer context) drops the ARIA menuitem role, which only makes sense under an
-// ancestor with role="menu" (the dropdown has one; the drawer, role="dialog", does not).
-export function AccountLinks({ menu = true }: { menu?: boolean }) {
+// Notification bell dropdown (app-shell.tsx:47-122) — "Latest alerts": real recent `notification`
+// rows (resolved + i18n'd server-side in layout.tsx), a honey unread dot ONLY when there's
+// something to show (honest — never a decorative dot on an empty feed), and a footer link to the
+// full Notifications page. Never a dead link.
+function BellMenu({ alerts }: { alerts: AlertItem[] }) {
   const t = useTranslations("shell");
   const tn = useTranslations("nav");
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={tn("item.notifications")}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={`relative flex h-9 w-9 items-center justify-center rounded-ec-s text-ec-ink-2 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey ${open ? "bg-ec-paper-3" : ""}`}
+      >
+        <Icon name="bell" className="h-[1.15rem] w-[1.15rem]" />
+        {alerts.length > 0 && <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-ec-honey" />}
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label={t("bell.heading")}
+          className="absolute right-0 top-full z-40 mt-1.5 w-[min(20rem,calc(100vw-2rem))] rounded-ec-m border border-ec-line bg-ec-card p-1.5 shadow-ec-2"
+        >
+          <div className="flex items-baseline justify-between px-2.5 py-1.5">
+            <span className="eyebrow">{t("bell.heading")}</span>
+            {alerts.length > 0 && <span className="num font-mono text-[10.5px] text-ec-muted-ink">{alerts.length}</span>}
+          </div>
+          <div className="my-1 h-px bg-ec-line" />
+          {alerts.length === 0 ? (
+            <p className="px-2.5 py-4 text-center text-[12.5px] text-ec-muted-ink">{t("bell.empty")}</p>
+          ) : (
+            <ul className="max-h-[19rem] overflow-y-auto">
+              {alerts.map((a) => (
+                <li key={a.id}>
+                  <Link
+                    href="/dashboard/notifications"
+                    onClick={() => setOpen(false)}
+                    className="block rounded-ec-s px-2.5 py-2 transition hover:bg-ec-paper-3"
+                  >
+                    <div className="text-[12.5px] leading-snug text-ec-ink">{a.label}</div>
+                    <div className="mt-0.5 flex items-baseline justify-between gap-2">
+                      <span className="display truncate text-[12.5px] text-ec-ink-2">{a.title ?? "—"}</span>
+                      <span className="num shrink-0 font-mono text-[10.5px] text-ec-muted-ink">{a.when}</span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="my-1 h-px bg-ec-line" />
+          <Link
+            href="/dashboard/notifications"
+            onClick={() => setOpen(false)}
+            className="block rounded-ec-s px-2.5 py-1.5 text-[12.5px] text-ec-bronze transition hover:bg-ec-bronze-tint"
+          >
+            {t("bell.viewAll")}
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Shared account link list — Profile · Billing · Language · Sign out · Sign out everywhere.
+// WO-345: Settings REMOVED from here (it now lives only in the sidebar footer, nav.tsx
+// SidebarFooter — the founder's "2 settings" fix), and Profile/Language rows now carry icons
+// matching app-shell.tsx's ProfileMenu (UserRound→person, Languages→language). Reused verbatim
+// by the desktop dropdown AND the 390px drawer footer so the two surfaces can never drift apart
+// (never inline-fork this). `menu=false` (drawer context) drops the ARIA menuitem role, which
+// only makes sense under an ancestor with role="menu" (the dropdown has one; the drawer,
+// role="dialog", does not).
+export function AccountLinks({ menu = true }: { menu?: boolean }) {
+  const t = useTranslations("shell");
   const tl = useTranslations("common.language");
   const role = menu ? "menuitem" : undefined;
   const item =
@@ -99,12 +191,8 @@ export function AccountLinks({ menu = true }: { menu?: boolean }) {
   return (
     <>
       <Link role={role} href="/dashboard/settings#profile" className={item}>
-        <Icon name="clients" className={ico} />
+        <Icon name="person" className={ico} />
         {t("profile")}
-      </Link>
-      <Link role={role} href="/dashboard/settings" className={item}>
-        <Icon name="settings" className={ico} />
-        {tn("item.settings")}
       </Link>
       <Link role={role} href="/dashboard/settings#billing" className={item}>
         <Icon name="invoice" className={ico} />
@@ -112,8 +200,11 @@ export function AccountLinks({ menu = true }: { menu?: boolean }) {
       </Link>
       <div className="my-1 border-t border-ec-hair" />
       <div className="flex items-center justify-between gap-2 px-2.5 py-2">
-        <span className="text-xs text-ec-ink-3">{tl("label")}</span>
-        <LanguageSwitcher />
+        <span className="flex items-center gap-2.5 text-xs text-ec-ink-3">
+          <Icon name="language" className={ico} />
+          {tl("label")}
+        </span>
+        <LanguageSwitcher tone="bronze" />
       </div>
       <div className="my-1 border-t border-ec-hair" />
       <form action="/auth/signout" method="post">
@@ -126,8 +217,7 @@ export function AccountLinks({ menu = true }: { menu?: boolean }) {
           on every device. The only "I think I'm compromised" control we have. */}
       <form action="/auth/signout" method="post">
         <input type="hidden" name="scope" value="global" />
-        <button role={role} type="submit" className={item}>
-          <Icon name="logout" className={ico} />
+        <button role={role} type="submit" className="w-full rounded-ec-s px-2.5 py-1.5 pl-[38px] text-left text-[11.5px] text-ec-muted-ink transition hover:bg-ec-paper-3 hover:text-ec-ink-2">
           {t("signOutEverywhere")}
         </button>
       </form>
@@ -135,7 +225,7 @@ export function AccountLinks({ menu = true }: { menu?: boolean }) {
   );
 }
 
-function ProfileMenu({ email, initial, fullName, designation, photoUrl }: Props) {
+function ProfileMenu({ email, initial, fullName, designation, photoUrl }: Omit<Props, "alerts">) {
   const t = useTranslations("shell");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);

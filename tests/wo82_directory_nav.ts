@@ -10,11 +10,10 @@ const read = (p: string) => readFileSync(p, "utf8");
 let ok = true;
 const fail = (m: string) => { ok = false; console.log("FAIL:", m); };
 
-// 1. Nav: the "directory" item lives in the Practice section (not Insight), pointing at the new route.
+// 1. Nav: the "directory" item lives in the flat Console list (WO-345 flattened the old
+// Practice/Workflow/Communication/Insight/Assistant sections), pointing at the new route.
 const nav = read("src/app/dashboard/nav.tsx");
-const practiceBlock = nav.slice(nav.indexOf('heading: "practice"'), nav.indexOf('heading: "workflow"'));
-if (!practiceBlock.includes('href: "/dashboard/directory"')) fail("nav Practice section missing /dashboard/directory");
-if (!practiceBlock.includes('label: "directory"')) fail("nav Practice section missing the directory label");
+if (!/href:\s*"\/dashboard\/directory",\s*label:\s*"directory"/.test(nav)) fail("nav is missing the directory entry (href + label)");
 
 // 2. The new Practice-level directory page exists (a real page, not a redirect).
 const dir = read("src/app/dashboard/directory/page.tsx");

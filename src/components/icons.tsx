@@ -22,7 +22,10 @@ export type IconName =
   // WO-333 Wave 2 Clients EXACT-FIDELITY reconcile — the roster row's org-vs-individual glyph
   // (the reference's lucide Building2 / User); "clients"/"judge" above are both two-person or
   // court-specific shapes, neither fits a single generic person/organisation mark.
-  | "building" | "person";
+  | "building" | "person"
+  // WO-345 Console shell fidelity — the profile dropdown's Language row (the reference's
+  // lucide Languages); no existing glyph in this set reads as "language/locale".
+  | "language";
 
 const P: Record<IconName, React.ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
@@ -77,6 +80,7 @@ const P: Record<IconName, React.ReactNode> = {
   bookmark: <><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" /></>,
   building: <><path d="M6 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16" /><path d="M14 21V9.5l6 2.5v9" /><path d="M9 8h1M9 12h1M9 16h1" /><path d="M17.5 15.5h1M17.5 18.5h1" /><path d="M3 21h18" /></>,
   person: <><circle cx="12" cy="8" r="4" /><path d="M4.5 21c1-4.7 3.9-7 7.5-7s6.5 2.3 7.5 7" /></>,
+  language: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.6 2.6 2.6 15.4 0 18M12 3c-2.6 2.6-2.6 15.4 0 18" /></>,
 };
 
 export function Icon({ name, className = "h-5 w-5" }: IconProps) {

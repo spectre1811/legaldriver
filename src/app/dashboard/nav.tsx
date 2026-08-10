@@ -6,136 +6,121 @@ import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "@/components/icons";
 import { isDisabled } from "./modules"; // WO-206: hide voice/messages/portfolio/notices behind one flag.
 
-type NavEntry = { href: string; label: string; icon: IconName };
+type NavEntry = { href: string; label: string; icon: IconName; badgeKey?: "inbox" };
 
-// Scrollable nav sections. "Advocate Onboarding" is the activation entry point, pinned to the
-// top of the practice group (founder 2026-07-05); the four comms surfaces
-// (inbox/messages/voice/notifications) are consolidated under "communication"; every item
-// carries a distinct icon.
-const SECTIONS: { heading: string; items: NavEntry[] }[] = [
-  {
-    heading: "practice",
-    items: [
-      { href: "/dashboard/onboarding", label: "onboarding", icon: "sparkles" },
-      { href: "/dashboard", label: "overview", icon: "overview" },
-      { href: "/dashboard/cases", label: "cases", icon: "cases" },
-      { href: "/dashboard/clients", label: "clients", icon: "clients" },
-      { href: "/dashboard/calendar", label: "calendar", icon: "calendar" },
-      // WO-82: Judges & Lawyers — the live-corpus people directory, promoted out of the
-      // buried Insight→Search tab shell to a first-class Practice surface (not hidden).
-      { href: "/dashboard/directory", label: "directory", icon: "scale" },
-    ],
-  },
-  {
-    heading: "workflow",
-    items: [
-      { href: "/dashboard/cause-list", label: "causeList", icon: "clock" },
-      { href: "/dashboard/notices", label: "notices", icon: "notices" },
-      { href: "/dashboard/documents", label: "documents", icon: "documents" },
-      { href: "/dashboard/invoices", label: "invoices", icon: "invoice" },
-      { href: "/dashboard/ip", label: "ip", icon: "bulb" },
-      { href: "/dashboard/portfolio", label: "portfolio", icon: "alert" },
-    ],
-  },
-  {
-    heading: "communication",
-    items: [
-      { href: "/dashboard/inbox", label: "inbox", icon: "gmail" },
-      { href: "/dashboard/messages", label: "messages", icon: "chat" },
-      { href: "/dashboard/voice", label: "voice", icon: "mic" },
-      { href: "/dashboard/notifications", label: "notifications", icon: "bell" },
-    ],
-  },
-  {
-    heading: "insight",
-    items: [
-      { href: "/dashboard/search", label: "search", icon: "search" },
-      { href: "/dashboard/analytics", label: "analytics", icon: "chart" },
-    ],
-  },
-  {
-    heading: "assistant",
-    items: [
-      { href: "/dashboard/assistant", label: "assistant", icon: "sparkles" },
-      { href: "/dashboard/ai-usage", label: "aiUsage", icon: "gauge" },
-    ],
-  },
+// WO-345 — prototype fidelity (design-mockups/iteration3/console/app-shell.tsx:28-37,280-308):
+// ONE flat "Console" list, exact order Overview→Onboarding. Supersedes WO-328's "onboarding
+// pinned first" note (this order is the founder-approved one now). WO-206 module-hiding still
+// applies below (none of these 8 are currently disabled, but the flag stays live so a future
+// "have it later" module still hides cleanly without touching this order).
+const NAV_ALL: NavEntry[] = [
+  { href: "/dashboard", label: "overview", icon: "overview" },
+  { href: "/dashboard/cases", label: "cases", icon: "cases" },
+  { href: "/dashboard/clients", label: "clients", icon: "clients" },
+  { href: "/dashboard/documents", label: "documents", icon: "documents" },
+  { href: "/dashboard/inbox", label: "inbox", icon: "gmail", badgeKey: "inbox" },
+  { href: "/dashboard/notifications", label: "notifications", icon: "bell" },
+  { href: "/dashboard/directory", label: "directory", icon: "scale" },
+  { href: "/dashboard/onboarding", label: "onboarding", icon: "sparkles" },
 ];
+export const NAV: NavEntry[] = NAV_ALL.filter((i) => !isDisabled(i.href));
 
-// Settings lives in the profile dropdown (top-bar.tsx AccountLinks), not the sidebar — kept here
-// only so it still surfaces as a ⌘K jump-to target (NAV_TARGETS below).
+// Settings now lives ONLY in the sidebar footer (SidebarFooter below) — kept here too so it
+// still surfaces as a ⌘K jump-to target (NAV_TARGETS), even though it's off the visible list.
 const ACCOUNT_ITEMS: NavEntry[] = [{ href: "/dashboard/settings", label: "settings", icon: "settings" }];
 
-// WO-272 — founder-only. Rendered ONLY when the layout passes isAdmin (ADMIN_EMAILS
-// gate). Deliberately NOT in NAV_TARGETS, so it never leaks into the ⌘K palette for
-// non-admins (that list is static/client-side and can't be gated per-user).
+// WO-272 — founder-only. Appended to the SAME flat Console list (WO-345 kills every group
+// header, including the old ADMIN one) when the layout passes isAdmin (ADMIN_EMAILS gate).
+// Deliberately NOT in NAV_TARGETS, so it never leaks into the ⌘K palette for non-admins.
 const ADMIN_ITEMS: NavEntry[] = [{ href: "/dashboard/access-requests", label: "accessRequests", icon: "inbox" }];
 
-// Sections with disabled modules filtered out; sections that empty out are dropped entirely.
-const VISIBLE_SECTIONS = SECTIONS.map((s) => ({ ...s, items: s.items.filter((i) => !isDisabled(i.href)) })).filter(
-  (s) => s.items.length > 0,
-);
-
 // Flattened jump-to targets (single source of truth) — reused by the ⌘K command palette.
-export const NAV_TARGETS: NavEntry[] = [...VISIBLE_SECTIONS.flatMap((s) => s.items), ...ACCOUNT_ITEMS];
+export const NAV_TARGETS: NavEntry[] = [...NAV, ...ACCOUNT_ITEMS];
 
-function useIsActive() {
+export function useIsActive() {
   const pathname = usePathname();
   return (href: string) =>
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 }
 
-// Daybreak signature (WO-328): honey is the ONE accent for the active row — a tinted honey
-// pill + a honey rail, never a solid ink fill. Icon on active uses bronze-deep (the AA-safe
-// honey-family text colour, per tokens.css) so it stays legible on the light tint.
-function NavItem({ item, active, t }: { item: NavEntry; active: boolean; t: (k: string) => string }) {
+// Daybreak two-tone active row (app-shell.tsx:290-297): a tinted honey-family pill
+// (bronze-tint bg + bronze-deep text, never a solid fill) PLUS a honey left rail —
+// replacing the old one-tone honey border-l treatment.
+function NavItem({
+  item,
+  active,
+  badge,
+  t,
+}: {
+  item: NavEntry;
+  active: boolean;
+  badge?: number;
+  t: (k: string) => string;
+}) {
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`group flex items-center gap-3 rounded-ec-s border-l-2 py-2 pl-[10px] pr-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo ${
-        active
-          ? "border-ec-honey bg-ec-honey/15 font-medium text-ec-ink"
-          : "border-transparent text-ec-ink-2 hover:bg-ec-paper-3 hover:text-ec-ink"
+      className={`group relative flex items-center gap-2.5 rounded-ec-s py-2 pl-3 pr-2 text-[13px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo ${
+        active ? "bg-ec-bronze-tint font-medium text-ec-bronze-deep" : "text-ec-ink-2 hover:bg-ec-paper-3"
       }`}
     >
+      {active && <span className="absolute left-0 h-4 w-[3px] rounded-r-full bg-ec-honey" />}
       <Icon
         name={item.icon}
-        className={`h-[1.15rem] w-[1.15rem] ${active ? "text-ec-bronze-deep" : "text-ec-ink-3 group-hover:text-ec-brass-deep"}`}
+        className={`h-[1.15rem] w-[1.15rem] shrink-0 ${active ? "text-ec-bronze-deep" : "text-ec-ink-3 group-hover:text-ec-brass-deep"}`}
       />
-      {t(`item.${item.label}`)}
+      <span className="min-w-0 flex-1 truncate">{t(`item.${item.label}`)}</span>
+      {!!badge && (
+        <span className="num shrink-0 rounded bg-ec-honey px-1.5 font-mono text-[10px] text-ec-honey-ink">
+          {badge}
+        </span>
+      )}
     </Link>
   );
 }
 
-export function NavLinks({ isAdmin = false }: { isAdmin?: boolean }) {
+export function NavLinks({ isAdmin = false, inboxCount = 0 }: { isAdmin?: boolean; inboxCount?: number }) {
   const t = useTranslations("nav");
   const isActive = useIsActive();
+  const items = isAdmin ? [...NAV, ...ADMIN_ITEMS] : NAV;
 
   return (
-    <nav className="flex flex-col gap-6" aria-label={t("ariaMain")}>
-      {VISIBLE_SECTIONS.map((section) => (
-        <div key={section.heading}>
-          {/* Daybreak "mono section label" — scoped to this element (not the shared .ec-label
-              rule other surfaces use) so ledger/table headers elsewhere are untouched. */}
-          <p className="ec-label mb-2 px-3 font-mono">{t(`heading.${section.heading}`)}</p>
-          <div className="flex flex-col gap-0.5">
-            {section.items.map((item) => (
-              <NavItem key={item.href} item={item} active={isActive(item.href)} t={t} />
-            ))}
-          </div>
-        </div>
-      ))}
-      {isAdmin && (
-        <div>
-          <p className="ec-label mb-2 px-3 font-mono">{t("heading.admin")}</p>
-          <div className="flex flex-col gap-0.5">
-            {ADMIN_ITEMS.map((item) => (
-              <NavItem key={item.href} item={item} active={isActive(item.href)} t={t} />
-            ))}
-          </div>
-        </div>
-      )}
-    </nav>
+    <>
+      {/* Mono "Console" eyebrow + hairline (app-shell.tsx:280-281) — replaces the old
+          PRACTICE/WORKFLOW/COMMUNICATION/INSIGHT/ASSISTANT/ADMIN group headers entirely. */}
+      <div className="eyebrow">{t("heading.console")}</div>
+      <div className="mt-1.5 h-[3px] border-y border-ec-line" />
+      <nav aria-label={t("ariaMain")} className="mt-2 flex flex-col gap-0.5">
+        {items.map((item) => (
+          <NavItem
+            key={item.href}
+            item={item}
+            active={isActive(item.href)}
+            badge={item.badgeKey === "inbox" ? inboxCount : undefined}
+            t={t}
+          />
+        ))}
+      </nav>
+    </>
+  );
+}
+
+// Sidebar-bottom pinned Settings (app-shell.tsx:310-318) — the ONE Settings entry point now
+// (top-bar.tsx AccountLinks no longer has its own copy, so it appears exactly once per the
+// founder's "2 settings" fix). Shared by the desktop aside AND the mobile drawer — never
+// inline-fork this into two copies.
+export function SidebarFooter() {
+  const t = useTranslations("nav");
+  return (
+    <div className="mt-auto border-t border-ec-line pt-3">
+      <Link
+        href="/dashboard/settings"
+        className="flex items-center gap-2.5 rounded-ec-s px-3 py-2 text-[13px] text-ec-muted-ink transition hover:bg-ec-paper-3 hover:text-ec-ink-2"
+      >
+        <Icon name="settings" className="h-[1.15rem] w-[1.15rem] shrink-0" />
+        {t("item.settings")}
+      </Link>
+    </div>
   );
 }
