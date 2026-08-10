@@ -3,7 +3,7 @@
 export default function Loading() {
   return (
     <div className="animate-pulse space-y-8" aria-busy="true" aria-live="polite">
-      <div className="h-28 w-full rounded-xl bg-ec-ink/90" />
+      <div className="-mx-5 h-28 rounded-[14px] bg-ec-ink/90 sm:-mx-8" />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="h-28 rounded-ec-m bg-black/5" />
