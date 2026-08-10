@@ -148,7 +148,9 @@ export function CommandPalette({ compact = false }: { compact?: boolean } = {}) 
 
 function CommandTrigger({ onClick, compact = false }: { onClick: () => void; compact?: boolean }) {
   const t = useTranslations("shell");
-  // Compact = top-bar shell (icon only <lg, icon+label+kbd ≥lg); default = sidebar full-width.
+  // Compact = top-bar shell. WO-345: label+kbd visible from md: — the compact trigger only
+  // ever renders inside the top bar (itself `hidden md:flex`), so "no hidden lg: gate" IS
+  // "visible from md". Default (below) = sidebar full-width.
   if (compact) {
     return (
       <button
@@ -157,8 +159,8 @@ function CommandTrigger({ onClick, compact = false }: { onClick: () => void; com
         className="flex h-9 items-center gap-2 rounded-ec-s border border-ec-hair bg-ec-paper px-2.5 text-sm text-ec-ink-3 transition hover:border-ec-hair-strong hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
       >
         <Icon name="search" className="h-4 w-4" />
-        <span className="hidden text-left lg:inline">{t("commandPalette.trigger")}</span>
-        <kbd className="ml-1 hidden rounded border border-ec-hair px-1.5 py-0.5 text-[0.65rem] lg:inline">⌘K</kbd>
+        <span className="text-left">{t("commandPalette.trigger")}</span>
+        <kbd className="ml-1 rounded border border-ec-hair px-1.5 py-0.5 text-[0.65rem]">⌘K</kbd>
       </button>
     );
   }

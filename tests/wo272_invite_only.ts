@@ -151,7 +151,10 @@ ok("admin: missing email denies", !isAllowedAdmin(null, "yash@mukadma.in"));
 // ── W3 admin nav link: gated to admins, and NOT leaked into the ⌘K palette ──
 {
   const nav = src("src/app/dashboard/nav.tsx");
-  ok("nav: access-requests link exists + is admin-gated", nav.includes("/dashboard/access-requests") && /isAdmin\s*&&[\s\S]*ADMIN_ITEMS/.test(nav));
+  // WO-345 flattened the nav: the admin item is now folded into the SAME Console list via
+  // `isAdmin ? [...NAV, ...ADMIN_ITEMS] : NAV` rather than a separate `{isAdmin && <div>…}` JSX
+  // block — still isAdmin-gated, just a ternary instead of `&&`.
+  ok("nav: access-requests link exists + is admin-gated", nav.includes("/dashboard/access-requests") && /isAdmin\s*(?:&&|\?)[\s\S]*ADMIN_ITEMS/.test(nav));
   const navTargets = nav.split("\n").find((l) => l.includes("export const NAV_TARGETS")) ?? "";
   ok("nav: admin link NOT in NAV_TARGETS (no ⌘K leak to non-admins)", navTargets !== "" && !navTargets.includes("ADMIN_ITEMS"));
   const layout = src("src/app/dashboard/layout.tsx");
