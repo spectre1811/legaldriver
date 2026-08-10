@@ -29,8 +29,8 @@ export function LogTimeExpense({ matterId }: { matterId: string }) {
   return (
     <div className="px-5 py-4">
       <div className="mb-3 inline-flex rounded-lg border border-line p-0.5 text-sm">
-        <button onClick={() => setTab("time")} className={`rounded-md px-3 py-1 ${tab === "time" ? "bg-brand-600 text-white" : "text-ink-soft"}`}>{t("timeExpense.logTime")}</button>
-        <button onClick={() => setTab("expense")} className={`rounded-md px-3 py-1 ${tab === "expense" ? "bg-brand-600 text-white" : "text-ink-soft"}`}>{t("timeExpense.logExpense")}</button>
+        <button onClick={() => setTab("time")} className={`rounded-md px-3 py-1 ${tab === "time" ? "bg-ec-ink text-ec-paper" : "text-ink-soft"}`}>{t("timeExpense.logTime")}</button>
+        <button onClick={() => setTab("expense")} className={`rounded-md px-3 py-1 ${tab === "expense" ? "bg-ec-ink text-ec-paper" : "text-ink-soft"}`}>{t("timeExpense.logExpense")}</button>
       </div>
 
       {tab === "time" ? (

@@ -268,6 +268,7 @@
       },
       "partiesTitle": "Parties & advocates",
       "stamp": {
+        "title": "Public court record",
         "synced": "Synced · {date}"
       },
       "client": {
@@ -369,7 +370,7 @@
       "disconnected": {
         "eyebrow": "Gmail not connected",
         "title": "Connect Gmail and case mail files itself.",
-        "point1": "We read only what you forward or label — nothing else.",
+        "point1": "We read only what you forward or label Mukadma — nothing else.",
         "point2": "Attachments land in Documents against the matched case; you approve each match.",
         "point3": "Disconnect at any time — filed copies stay with your case files."
       },
@@ -1813,8 +1814,8 @@
       "confirmAndFile": "Confirm & file"
     },
     "bulk": {
-      "selectAll": "Select all",
-      "clearAll": "Clear selection",
+      "selectAll": "Select all on this page",
+      "clearAll": "Clear",
       "selectOne": "Select email",
       "nSelected": "{n} selected",
       "archive": "Archive",
@@ -1861,7 +1862,7 @@
       "closeAria": "Close email"
     },
     "dock": {
-      "title": "File this email",
+      "title": "File this",
       "client": "Client",
       "case": "Case",
       "clientPlaceholder": "Search clients",
@@ -1924,7 +1925,7 @@
   },
   "documents": {
     "title": "Documents",
-    "subtitle": "Filed, findable, full-text — every document from your uploads and the court record, grouped by case or by client.",
+    "subtitle": "Filed, findable, full-text — pulled from court copies, your uploads and forwarded email.",
     "reviewBanner": "{count, plural, one {document needs filing review} other {documents need filing review}}",
     "stat": {
       "inFile": "In the file",
@@ -1935,7 +1936,7 @@
       "reviewHint": "We read these but weren't sure where they go"
     },
     "upload": {
-      "cta": "Upload documents",
+      "cta": "Upload a document",
       "short": "Upload",
       "hint": "Drop files here or click — we read, type, and file each one to the right case.",
       "uploading": "Uploading & filing…"
@@ -2015,9 +2016,9 @@
     "unfiled": "unfiled",
     "empty": {
       "filteredTitle": "No matching documents",
-      "emptyTitle": "No documents yet",
+      "emptyTitle": "Nothing filed yet",
       "filteredBody": "Try a different search or clear the filters.",
-      "emptyBody": "Connect Gmail or upload to a case — everything is parsed and searchable here."
+      "emptyBody": "Connect Gmail and forward or label mail Mukadma, or upload your first document."
     },
     "storageNote": "Files are stored in a private bucket; downloads use short-lived signed URLs scoped to your tenant.",
     "source": {
@@ -2056,7 +2057,7 @@
       "added": "added"
     },
     "filter": {
-      "searchPlaceholder": "Search documents (filename + contents)…",
+      "searchPlaceholder": "Search inside every document…",
       "searchAria": "Search documents",
       "fullText": "full-text",
       "clientAria": "Client",
