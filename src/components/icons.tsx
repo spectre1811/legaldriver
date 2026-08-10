@@ -8,7 +8,7 @@ export type IconName =
   | "clients" | "invoice" | "bulb" | "chart" | "chat" | "mic" | "gauge" | "printer"
   | "sunrise" | "judge" | "scroll"
   // WO-332 case-file console reskin — two glyphs the Chambers reference needs beyond the existing set.
-  | "copy" | "more";
+  | "copy" | "more"
   // WO-334 Documents Notes/zoom viewer — glyphs the reference needs beyond the existing set.
   | "note" | "minus" | "download";
 
