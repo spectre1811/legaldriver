@@ -88,7 +88,7 @@ export function TopBar({ email, initial, fullName, designation, photoUrl }: Prop
 // 390px drawer footer so the two surfaces can never drift apart (never inline-fork this).
 // `menu=false` (drawer context) drops the ARIA menuitem role, which only makes sense under an
 // ancestor with role="menu" (the dropdown has one; the drawer, role="dialog", does not).
-export function AccountLinks({ menu = true, showSettings = true }: { menu?: boolean; showSettings?: boolean }) {
+export function AccountLinks({ menu = true }: { menu?: boolean }) {
   const t = useTranslations("shell");
   const tn = useTranslations("nav");
   const tl = useTranslations("common.language");
@@ -102,13 +102,10 @@ export function AccountLinks({ menu = true, showSettings = true }: { menu?: bool
         <Icon name="clients" className={ico} />
         {t("profile")}
       </Link>
-      {/* Skippable: the mobile drawer already pins Settings as its own nav row above this block. */}
-      {showSettings && (
-        <Link role={role} href="/dashboard/settings" className={item}>
-          <Icon name="settings" className={ico} />
-          {tn("item.settings")}
-        </Link>
-      )}
+      <Link role={role} href="/dashboard/settings" className={item}>
+        <Icon name="settings" className={ico} />
+        {tn("item.settings")}
+      </Link>
       <Link role={role} href="/dashboard/settings#billing" className={item}>
         <Icon name="invoice" className={ico} />
         {t("billing")}
