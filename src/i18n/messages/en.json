@@ -256,11 +256,11 @@
         "title": "Court record",
         "hide": "Hide",
         "show": "Show",
-        "synced": "From the court record \u00b7 synced {time}"
+        "synced": "From the court record · synced {time}"
       },
       "partiesTitle": "Parties & advocates",
       "stamp": {
-        "synced": "Synced \u00b7 {date}"
+        "synced": "Synced · {date}"
       },
       "client": {
         "view": "View client"
@@ -278,6 +278,73 @@
       },
       "billing": {
         "outstanding": "Outstanding"
+      }
+    },
+    "onboarding": {
+      "eyebrow": "Setup",
+      "addEyebrow": "Add an advocate",
+      "rosterEmpty": "No advocates yet.",
+      "viewMatters": "View matters",
+      "sidebar": {
+        "title": "What you get",
+        "calendarLabel": "Calendar",
+        "calendarCount": "{n, plural, one {# hearing this month} other {# hearings this month}}",
+        "calendarEmpty": "No hearings on file yet",
+        "weekdays": [
+          "M",
+          "T",
+          "W",
+          "T",
+          "F",
+          "S",
+          "S"
+        ],
+        "briefHeader": "{brand} · morning brief",
+        "briefNext": "Next on your calendar: {title} — {court}, {date}",
+        "briefEmpty": "Once your practice is assembled, your morning brief appears here.",
+        "briefNote": "WhatsApp delivery is coming soon — for now, check here each morning."
+      }
+    },
+    "inbox": {
+      "toReview": "{count} to review",
+      "connectedPill": "Connected",
+      "upToDate": "Up to date",
+      "scope": {
+        "anyMail": "All mail (minus spam/promotions)"
+      },
+      "ingesting": "Ingesting…",
+      "demoIngest": "Demo ingest",
+      "disconnected": {
+        "eyebrow": "Gmail not connected",
+        "title": "Connect Gmail and case mail files itself.",
+        "point1": "We read only what you forward or label — nothing else.",
+        "point2": "Attachments land in Documents against the matched case; you approve each match.",
+        "point3": "Disconnect at any time — filed copies stay with your case files."
+      },
+      "searchPlaceholder": "Search these emails…",
+      "searchAria": "Search these emails",
+      "sort": {
+        "date": "Date",
+        "sender": "Sender"
+      },
+      "noSearchResults": "Nothing here for “{q}”.",
+      "toLine": "to {account}",
+      "noPreview": "No preview available.",
+      "previewOnlyNote": "Showing Gmail's short preview — the full message text isn't stored.",
+      "attachments": {
+        "heading": "Attachments · {n}",
+        "image": "Image",
+        "file": "File"
+      },
+      "ticks": {
+        "high": "High match",
+        "medium": "Medium match",
+        "low": "Low match"
+      },
+      "bulk": {
+        "fileAll": "File all",
+        "fileAllPending": "Bulk filing is coming soon — file one at a time from the preview.",
+        "ignore": "Ignore"
       }
     }
   },
@@ -1459,52 +1526,6 @@
       "save": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel"
-    }
-  },
-  "dashboard": {
-    "clients": {
-      "searchPlaceholder": "Search clients by name, phone or email…",
-      "searchAria": "Search clients",
-      "addClient": "Add client",
-      "addClientModalTitle": "New client",
-      "addClientModalHelper": "We'll flag any conflicts against existing clients and parties before you save.",
-      "close": "Close",
-      "noMatches": "No client matches “{q}”.",
-      "settled": "settled",
-      "contactHeading": "Contact",
-      "portalActiveDesc": "Active — they can see hearings and filed documents.",
-      "portalNotInvitedDesc": "Not invited yet.",
-      "billingHeading": "Billing",
-      "billed": "Billed",
-      "received": "Received",
-      "due": "Due",
-      "activityHeading": "Activity",
-      "activityEmpty": "No activity yet.",
-      "lastActivity": "Last activity",
-      "noActivity": "—",
-      "portalState": {
-        "notInvited": "Not invited",
-        "invited": "Invited",
-        "active": "Active"
-      },
-      "portalInvitedUntracked": "Not separately tracked — an invite grants access immediately, there's no pending state to show."
-    },
-    "onboarding": {
-      "eyebrow": "Setup",
-      "addEyebrow": "Add an advocate",
-      "rosterEmpty": "No advocates yet.",
-      "viewMatters": "View matters",
-      "sidebar": {
-        "title": "What you get",
-        "calendarLabel": "Calendar",
-        "calendarCount": "{n, plural, one {# hearing this month} other {# hearings this month}}",
-        "calendarEmpty": "No hearings on file yet",
-        "weekdays": ["M", "T", "W", "T", "F", "S", "S"],
-        "briefHeader": "{brand} · morning brief",
-        "briefNext": "Next on your calendar: {title} — {court}, {date}",
-        "briefEmpty": "Once your practice is assembled, your morning brief appears here.",
-        "briefNote": "WhatsApp delivery is coming soon — for now, check here each morning."
-      }
     }
   },
   "notices": {
