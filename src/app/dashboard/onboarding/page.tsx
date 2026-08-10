@@ -1,31 +1,29 @@
-import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Icon, type IconName } from "@/components/icons";
+import { Icon } from "@/components/icons";
 import { formatCourtDate } from "@/components/court";
 import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
-import { enabledAdvocateProviders } from "@/lib/court/advocate-cases";
 import { brand } from "@/lib/brand";
+import { stateBarCouncil } from "@/lib/court/bar-number";
+import { onboardingProgress, ONBOARDING_STAGES } from "@/lib/services/onboarding/progress";
 import { AdvocateOnboarding } from "./onboarding-ui";
-import { AdvocateForm } from "../settings/advocate-form";
-import { Stepper } from "./stepper";
-import { onboardingStep } from "./step-state";
+import { OnboardingLead, type ActiveAssembling, type LeadChecklistItem } from "./lead";
 
 export const dynamic = "force-dynamic";
 // BP-71: onboarding runs multi-stage server-side (fetch → enrich per-CNR → …). Give the server action
 // room so it isn't killed mid-run (Vercel's short default would leave a stuck "running" run + 0 counts).
 export const maxDuration = 60;
 
-// WO-338 · Onboarding console page → Daybreak/Chambers. Reskins the page onto the reference
-// design-mockups/iteration3/console/onboarding.tsx: the "add advocate" card leads at the top,
-// the roster ("Already added") follows, then the honest disclosure — with a real "what you get"
-// rail (this month's hearings, from the tenant's OWN data — never the reference's dummy names).
-// The live per-advocate lifecycle (assembling/gathering/stalled/complete/error) is unchanged
-// (WO-84/WO-100/WO-120) — only <AdvocateOnboarding>'s JSX skin moved, not its state machine.
-// AdvocateForm + the Bar-ID progress rail (<Stepper>) are reused unmodified — shared primitives,
-// not forked for this page.
-
-const STEP_ICONS: IconName[] = ["edit", "search", "calendar"];
+// WO-338 EXACT-FIDELITY RECONCILE · this page now reproduces design-mockups/iteration3/console/
+// onboarding.tsx node-for-node: the dark masthead band, the lead slot (AddAdvocateCard ↔
+// GatheringCard, real-data-driven via <OnboardingLead>), the roster ("Already added", real
+// per-advocate live status via <AdvocateOnboarding>), the honest disclosure, and the "what you
+// get" rail (real month calendar + morning-brief preview — never the reference's dummy names).
+// The ONLY reference element deliberately omitted is the <Stamp> bar (founder override). Two prior
+// additions that were NOT in the reference are removed here (the Stepper progress rail + a
+// "practice" payoff panel) — see the WO-338 PR description for the full section-by-section diff
+// against the reference and the discovered capability gap it leaves (per-row Remove / notify-enable).
+// The Bar-ID fetch/enrich flow itself (WO-84/WO-100/WO-120) is untouched — restyle only.
 
 function isoDay(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -36,41 +34,50 @@ function one<T>(v: T | T[] | null): T | null {
 
 export default async function OnboardingPage() {
   const supabase = createClient();
-  const t = await getTranslations("onboarding");
   const td = await getTranslations("dashboard.onboarding");
+  const tStage = await getTranslations("dashboard.onboarding.lead.stage");
   const locale = await getLocale();
   const tenantId = await getTenantId(supabase);
   const today = new Date();
 
-  const [{ data: advocates }, { data: runs }, { data: matters, count: matterCount }, { data: hearingRows }] = tenantId
+  const [{ data: advocates }, { data: runs }, { data: hearingRows }] = tenantId
     ? await Promise.all([
         supabase.from("advocate").select("id, name, bar_registration_number, state_code").order("created_at", { ascending: true }),
         supabase.from("onboarding_run").select("id, advocate_id, stage, status, counts, message, updated_at, cursor").order("updated_at", { ascending: false }).limit(10),
-        supabase.from("matter").select("id, title, cnr, court, next_hearing_date, status", { count: "exact" }).is("deleted_at", null).order("created_at", { ascending: false }).limit(5),
         // "What you get" rail — the tenant's own nearest upcoming hearings (real data, never the
         // reference's dummy "FA/5053"). Same table + shape Overview already reads (today-view.tsx).
         supabase.from("hearing").select("id, date, matter:matter_id (title, cnr, court)").gte("date", isoDay(today)).order("date", { ascending: true }).limit(60),
       ])
-    : [{ data: [] }, { data: [] }, { data: [], count: 0 }, { data: [] }];
+    : [{ data: [] }, { data: [] }, { data: [] }];
 
   const latestByAdvocate = new Map<string, NonNullable<typeof runs>[number]>();
   for (const r of runs ?? []) if (r.advocate_id && !latestByAdvocate.has(r.advocate_id)) latestByAdvocate.set(r.advocate_id, r);
 
-  const providers = enabledAdvocateProviders();
-  const providerStr = providers.map((p) => (t.has(`provider.${p}`) ? t(`provider.${p}`) : p)).join(", ") || t("providersNone");
-  const b = (c: React.ReactNode) => <strong>{c}</strong>;
   const hasAdvocates = !!advocates && advocates.length > 0;
-  const cases = (matterCount ?? 0) > 0 ? matterCount ?? 0 : (matters?.length ?? 0);
-  const stepKeys = ["one", "two", "three"] as const;
 
-  // Onboarding progress, derived from real state (never fabricated): no advocate yet → step 1
-  // (Bar ID); advocate added but no synced cases → step 2 (Fetch & verify); cases on file → step 3
-  // (Practice assembled). Feeds the stepper's gold current-step dot.
-  const currentStep = onboardingStep(hasAdvocates, cases);
-  const steps: { label: string; icon: IconName }[] = stepKeys.map((k, i) => ({
-    label: t(`steps.${k}.label`),
-    icon: STEP_ICONS[i],
-  }));
+  // ── page-top lead slot — reference: `gathering ? <GatheringCard/> : <AddAdvocateCard/>`, driven by
+  // the real most-recently-updated run that's still actively draining (`status: "running"`), not a
+  // demo boolean. Server-computed from the SAME `runs` query the roster already reads — no new fetch.
+  const activeRun = (runs ?? []).find((r) => r.status === "running") ?? null;
+  const activeAdvocate = activeRun ? (advocates ?? []).find((a) => a.id === activeRun.advocate_id) ?? null : null;
+  let activeAssembling: ActiveAssembling | null = null;
+  if (activeRun && activeAdvocate) {
+    const progress = onboardingProgress(activeRun.stage, activeRun.status);
+    // The real stage checklist (never the reference's fabricated "87 cases found" specifics) —
+    // ONBOARDING_STAGES is the single source both this card and the roster's live meter derive from.
+    const checklist: LeadChecklistItem[] = ONBOARDING_STAGES.filter((s) => s !== "done").map((key, i) => ({
+      key,
+      label: tStage.has(key) ? tStage(key) : key,
+      state: i < progress.index ? "done" : i === progress.index ? "running" : "todo",
+    }));
+    activeAssembling = {
+      runId: activeRun.id,
+      bar: activeAdvocate.bar_registration_number || activeAdvocate.name,
+      councilLabel: stateBarCouncil(activeAdvocate.state_code)?.label ?? null,
+      percent: progress.percent,
+      checklist,
+    };
+  }
 
   // ── "what you get" rail — real upcoming hearings, honest empty when there are none. ──────────
   const upcomingHearings = (hearingRows ?? []).map((h) => ({
@@ -88,130 +95,67 @@ export default async function OnboardingPage() {
   const firstWeekday = (new Date(today.getFullYear(), today.getMonth(), 1).getDay() + 6) % 7; // Monday-first
   const weekdayLabels = td.raw("sidebar.weekdays") as string[];
 
-  // The honest "how it works" disclosure — a wall of prose the first time, so it collapses out of the way
-  // once the user has advocates (reference), but leads the hero when they're deciding whether to trust us.
-  const howItWorks = (
-    <details className="group ec-card px-5 py-4 text-sm">
-      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-ec-ink-2 hover:text-ec-bronze-deep">
-        <Icon name="chevron" className="h-3.5 w-3.5 shrink-0 transition group-open:rotate-90 motion-reduce:transition-none" />
-        {t("howHeading")}
-      </summary>
-      <p className="mt-3 pl-5 text-ec-ink-2">{t.rich("intro1", { b, providers: providerStr })}</p>
-      <p className="mt-1.5 pl-5 text-ec-ink-3">{t.rich("intro2", { b, i: (c) => <em>{c}</em> })}</p>
-    </details>
-  );
-
-  // The top "add an advocate" card — always leads the page (reference's AddAdvocateCard sits above
-  // the roster, not buried below it). Centered/bigger framing for the true cold start; compact once a
-  // roster already exists. AdvocateForm itself is the SAME shared component used by Settings — reused
-  // unmodified, never forked.
-  const addAdvocateCard = (
-    <div className={`ec-card p-6 ${!hasAdvocates ? "mx-auto max-w-lg text-center" : ""}`}>
-      <div className="ec-label">{td("addEyebrow")}</div>
-      <h2 className="font-display mt-2 text-[22px] leading-snug text-ec-ink">{t("hero.title")}</h2>
-      <p className={`mt-2 text-[13px] text-ec-ink-3 ${!hasAdvocates ? "" : "max-w-xl"}`}>{t("hero.body")}</p>
-      <div className={`mt-5 ${!hasAdvocates ? "text-left" : ""}`}>
-        <AdvocateForm />
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-6">
-      <div>
-        <div className="ec-label">{td("eyebrow")}</div>
-        <h1 className="font-display mt-1 text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
-        <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("subtitle")}</p>
-      </div>
-
-      <div className="ec-card px-6 py-5 sm:px-8">
-        <Stepper steps={steps} current={currentStep} />
+      {/* masthead — reference: <Masthead slim eyebrow="Setup" title="Advocate onboarding" meta="…"/>,
+          the per-page dark "engraved" band established by WO-328/WO-339 (not shell chrome). */}
+      <div className="mk-engraved -mx-5 rounded-[14px] bg-ec-ink px-5 py-7 sm:-mx-8 sm:px-7">
+        <div className="ec-label font-mono !text-ec-honey">{td("eyebrow")}</div>
+        <h1 className="font-display mt-2 text-[30px] leading-[1.05] text-ec-paper sm:text-[34px]">{td("masthead.title")}</h1>
+        <p className="mt-3 text-[14px] text-ec-line-strong">{td("masthead.meta")}</p>
       </div>
 
       <div className="grid gap-9 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="min-w-0 space-y-8">
-          {addAdvocateCard}
+        <div className="min-w-0">
+          <OnboardingLead centered={!hasAdvocates} activeAssembling={activeAssembling} />
 
           {hasAdvocates && (
-            <>
-              {/* The payoff — show the practice we built (WO-61 W3), before the roster mechanics. */}
-              {matters && matters.length > 0 && (
-                <div className="ec-card overflow-hidden">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ec-hair px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-ec-m bg-ec-success-bg text-ec-success">
-                        <Icon name="check" className="h-5 w-5" />
-                      </span>
-                      <div>
-                        <p className="font-display text-ec-ink">{t("practice.title")}</p>
-                        <p className="num text-sm text-ec-ink-3">{t("practice.count", { n: cases })}</p>
-                      </div>
-                    </div>
-                    <Link href="/dashboard/cases" className="ec-btn ec-btn-ghost text-sm">
-                      {t("practice.viewAll")} <Icon name="chevron" className="h-4 w-4" />
-                    </Link>
-                  </div>
-                  <ul className="divide-y divide-ec-hair">
-                    {matters.map((m) => (
-                      <li key={m.id}>
-                        <Link href={`/dashboard/cases/${m.id}`} className="ec-row flex items-center justify-between gap-3 px-5 py-3">
-                          <div className="min-w-0">
-                            <p className="font-display truncate text-ec-ink">{m.title}</p>
-                            <p className="num truncate text-xs text-ec-ink-3">{m.court || m.cnr || ""}</p>
-                          </div>
-                          <span className="num shrink-0 text-xs text-ec-ink-3">
-                            {m.next_hearing_date ? t("practice.nextHearing", { date: (formatCourtDate(m.next_hearing_date) ?? "—") }) : t("practice.noHearing")}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <section>
-                <div className="flex items-end justify-between gap-3">
-                  <div className="ec-label">{t("yourAdvocates")}</div>
-                </div>
-                <div className="mt-1.5 h-[3px] border-y border-ec-hair" />
-                <ul className="divide-y divide-ec-hair">
-                  {advocates.map((a) => {
-                    const run = latestByAdvocate.get(a.id);
-                    const initialRun = run
-                      ? {
-                          id: run.id,
-                          stage: run.stage, status: run.status,
-                          counts: (run.counts ?? {}) as Record<string, number>,
-                          message: run.message, updatedAt: run.updated_at,
-                          cursor: (run.cursor ?? null) as Record<string, unknown> | null,
-                        }
-                      : null;
-                    return (
-                      <AdvocateOnboarding
-                        key={a.id}
-                        advocate={{ id: a.id, name: a.name, bar: a.bar_registration_number, stateCode: a.state_code ? String(a.state_code) : null }}
-                        initialRun={initialRun}
-                      />
-                    );
-                  })}
-                </ul>
-              </section>
-            </>
+            <section className="mt-10">
+              <div className="flex items-end justify-between gap-3">
+                <div className="ec-label">{td("roster.heading")}</div>
+              </div>
+              <div className="mt-1.5 h-[3px] border-y border-ec-hair" />
+              <ul className="divide-y divide-ec-hair">
+                {advocates!.map((a) => {
+                  const run = latestByAdvocate.get(a.id);
+                  const initialRun = run
+                    ? {
+                        id: run.id,
+                        stage: run.stage, status: run.status,
+                        counts: (run.counts ?? {}) as Record<string, number>,
+                        message: run.message, updatedAt: run.updated_at,
+                        cursor: (run.cursor ?? null) as Record<string, unknown> | null,
+                      }
+                    : null;
+                  return (
+                    <AdvocateOnboarding
+                      key={a.id}
+                      advocate={{ id: a.id, name: a.name, bar: a.bar_registration_number, stateCode: a.state_code ? String(a.state_code) : null }}
+                      initialRun={initialRun}
+                    />
+                  );
+                })}
+              </ul>
+            </section>
           )}
 
           {!hasAdvocates && (
-            <p className="text-center text-[12.5px] text-ec-ink-3">{td("rosterEmpty")}</p>
+            <p className="mt-8 text-center text-[12.5px] text-ec-ink-3">{td("rosterEmpty")}</p>
           )}
 
-          {howItWorks}
-
-          <p className="text-xs text-ec-ink-3">
-            {t.rich("footer", {
-              calendar: (c) => <Link href="/dashboard/calendar" className="text-ec-bronze-deep hover:underline">{c}</Link>,
-              cases: (c) => <Link href="/dashboard/cases" className="text-ec-bronze-deep hover:underline">{c}</Link>,
-              research: (c) => <Link href="/dashboard/search/judgments" className="text-ec-bronze-deep hover:underline">{c}</Link>,
-            })}
-          </p>
+          {/* Disclosure — reference uses a JS-state button/ChevronDown-ChevronRight swap; the native
+              <details>/<summary> disclosure widget (already this repo's established pattern) gives the
+              identical collapse/rotate visual with no client JS required — a platform-primitive
+              substitution, not a structural addition. */}
+          <details className="group ec-card mt-8 p-5">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[13px] text-ec-ink-2 hover:text-ec-bronze">
+              <Icon name="chevron" className="h-3.5 w-3.5 shrink-0 transition group-open:rotate-90 motion-reduce:transition-none" />
+              {td("disclosure.heading")}
+            </summary>
+            <div className="mt-3 pl-5">
+              <p className="text-[13px] text-ec-ink-2">{td("disclosure.body")}</p>
+            </div>
+          </details>
         </div>
 
         {/* "What you get" rail — real data (this month's hearings on file), honest empty otherwise. */}
