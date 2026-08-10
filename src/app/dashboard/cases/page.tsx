@@ -12,6 +12,7 @@ import type { SavedView } from "./cases-nav";
 import { parseDensity, DENSITY_COOKIE } from "./density";
 import { parsePage, clampPerPage } from "@/lib/paginate";
 import { sanitizeTrack } from "@/lib/auth/redirects";
+import { Reveal } from "../motion";
 
 function isoDay(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -74,16 +75,19 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
 
   return (
     <div className="space-y-6">
-      <header>
-        <div className="flex flex-wrap items-baseline gap-2.5">
-          <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
-          {/* WO-331: the reference renders the count as a honey mono numeral beside the title
-              (Masthead's own title slot), not a neutral pill — matched here (same header/AppShell
-              convention every other dashboard page shares, unchanged). */}
-          {total > 0 && <span className="num font-mono text-[13px] tracking-[0.08em] text-ec-honey">{total}</span>}
+      {/* WO-342: dark ink engraved masthead — matches Overview/Directory's shipped treatment
+          (today-view.tsx) instead of forking a light header; count moves into the honey mono
+          pill on the ink-chip token (AppMasthead's title-slot count, design-mockups/iteration3/
+          console/app-shell.tsx). */}
+      <Reveal as="div" className="mk-engraved rounded-xl bg-ec-ink px-5 py-7 text-ec-paper sm:px-8">
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h1 className="font-display text-[28px] leading-tight text-ec-paper sm:text-[32px]">{t("title")}</h1>
+          {total > 0 && (
+            <span className="num rounded-md bg-ec-ink-chip px-2 py-0.5 font-mono text-[12px] text-ec-honey">{total}</span>
+          )}
         </div>
-        <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("subtitle")}</p>
-      </header>
+        <p className="mt-1.5 text-[13px] text-ec-line-strong">{t("subtitle")}</p>
+      </Reveal>
 
       {/* One shared filter-nav transition for every control below → PendingDim can dim the whole
           results region while a filter change refetches (slice-2 "shared pending"). */}

@@ -140,6 +140,12 @@
   .ec-mono-label { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-ink); font-variant-numeric: tabular-nums; }
   html[lang="hi"] .ec-mono-label { letter-spacing: normal; }
 
+  /* WO-342 · the Chambers prototype's `eyebrow` utility (design-mockups/iteration3/console/styles.css)
+     — .ec-label's mono sibling (same small-caps intent, tracked mono instead of sans-bold). Defined
+     once so the prototype's raw `eyebrow` class name renders styled instead of plain text wherever
+     markup is ported verbatim. Devanagari override lives in the shared hi-letter-spacing list below. */
+  .eyebrow { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted-ink); }
+
   /* ledger row hover — the brass-wash on the active line */
   .ec-row { transition: background var(--motion-fast) var(--ease); }
   .ec-row:hover { background: color-mix(in srgb, var(--brass-tint) 40%, transparent); }
@@ -212,6 +218,7 @@ html[lang="hi"] .mk-eyebrow,
 html[lang="hi"] .ec-label,
 html[lang="hi"] .ec-chip,
 html[lang="hi"] .mk-stamp-line,
+html[lang="hi"] .eyebrow,
 html[lang="hi"] .tracking-\[0\.08em\] {
   letter-spacing: normal;
 }

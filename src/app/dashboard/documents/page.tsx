@@ -174,18 +174,23 @@ export default async function DocumentsPage({
 
   return (
     <div className="space-y-6">
-      <Reveal as="div" className="flex flex-wrap items-start justify-between gap-3">
+      {/* WO-342: dark ink engraved masthead — matches Overview/Directory's shipped treatment
+          (today-view.tsx) instead of forking a light header; count moves into the honey mono
+          pill on the ink-chip token (AppMasthead's title-slot count, design-mockups/iteration3/
+          console/app-shell.tsx). Trash's "back" link restyles for the dark surface with the
+          case-actions.tsx ink-border pattern rather than the light .ec-btn-ghost. */}
+      <Reveal as="div" className="mk-engraved flex flex-wrap items-start justify-between gap-3 rounded-xl bg-ec-ink px-5 py-7 text-ec-paper sm:px-8">
         <header className="min-w-0">
-          <div className="flex flex-wrap items-baseline gap-2.5">
-            <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{isTrash ? t("trash.title") : t("title")}</h1>
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h1 className="font-display text-[28px] leading-tight text-ec-paper sm:text-[32px]">{isTrash ? t("trash.title") : t("title")}</h1>
             {!isTrash && (grandTotal ?? 0) > 0 && (
-              <span className="num font-mono text-[13px] tracking-[0.08em] text-ec-honey">{grandTotal}</span>
+              <span className="num rounded-md bg-ec-ink-chip px-2 py-0.5 font-mono text-[12px] text-ec-honey">{grandTotal}</span>
             )}
           </div>
-          <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{isTrash ? t("trash.subtitle") : t("subtitle")}</p>
+          <p className="mt-1.5 text-[13px] text-ec-line-strong">{isTrash ? t("trash.subtitle") : t("subtitle")}</p>
         </header>
         {isTrash && (
-          <Link href="/dashboard/documents" className="ec-btn ec-btn-ghost text-sm">
+          <Link href="/dashboard/documents" className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-ec-ink-border px-3 py-1.5 text-[12.5px] text-ec-paper transition-colors hover:border-ec-honey hover:text-ec-honey">
             <Icon name="back" className="h-4 w-4" /> {t("trash.back")}
           </Link>
         )}
