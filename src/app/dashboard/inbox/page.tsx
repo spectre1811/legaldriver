@@ -58,7 +58,7 @@ export default async function InboxPage({
     supabase.auth.getUser(),
     supabase.from("oauth_connection").select("id, status, gmail_query").eq("provider", "google").eq("status", "active").maybeSingle(),
     supabase.from("client").select("id, name").order("name"),
-    supabase.from("matter").select("id, title").order("title"),
+    supabase.from("matter").select("id, title, cnr").order("title"),
     tab === "ignored" ? listQuery.in("status", ["archived", "deleted"]) : listQuery.eq("status", tab),
     head().eq("status", "needs_review"),
     head().eq("status", "filed"),
@@ -74,20 +74,24 @@ export default async function InboxPage({
   const matterOpts = (matters ?? []).map((m) => ({ id: m.id, label: m.title }));
   const clientName = new Map((clients ?? []).map((c) => [c.id, c.name]));
   const matterName = new Map((matters ?? []).map((m) => [m.id, m.title]));
+  const matterCnr = new Map((matters ?? []).map((m) => [m.id, m.cnr]));
 
   const list = rows ?? [];
   const listIds = list.map((e) => e.id);
-  // WO-335: also select mime + size_bytes (already-existing `document` columns, no schema change) —
-  // the Chambers reference's attachment chips show a kind·size caption and the inline preview needs
-  // the mime to pick pdf/image/download-only, same as the Documents viewer (WO-334).
+  // WO-335 Wave 2: also select mime + size_bytes + doc_type (already-existing `document` columns,
+  // no schema change) — the Chambers reference's attachment chips show a kind·size caption, the
+  // inline preview needs the mime to pick pdf/image/download-only (same as the Documents viewer,
+  // WO-334), and doc_type backs the reference's "Document type" field with the SAME controlled
+  // vocabulary the classifier already writes at ingest (src/lib/docs/categories.ts) — shown
+  // read-only (not re-editable from here, restyle-only scope) rather than dropped.
   const { data: attachRows } = listIds.length
-    ? await supabase.from("document").select("id, filename, mime, size_bytes, email_message_id").in("email_message_id", listIds)
-    : { data: [] as { id: string; filename: string | null; mime: string | null; size_bytes: number | null; email_message_id: string | null }[] };
+    ? await supabase.from("document").select("id, filename, mime, size_bytes, email_message_id, doc_type").in("email_message_id", listIds)
+    : { data: [] as { id: string; filename: string | null; mime: string | null; size_bytes: number | null; email_message_id: string | null; doc_type: string | null }[] };
   const attachByEmail = new Map<string, WorkspaceEmail["attachments"]>();
   for (const d of attachRows ?? []) {
     if (!d.email_message_id) continue;
     const arr = attachByEmail.get(d.email_message_id) ?? attachByEmail.set(d.email_message_id, []).get(d.email_message_id)!;
-    arr.push({ id: d.id, filename: d.filename ?? "attachment", mime: d.mime, sizeLabel: fmtSize(d.size_bytes) });
+    arr.push({ id: d.id, filename: d.filename ?? "attachment", mime: d.mime, sizeLabel: fmtSize(d.size_bytes), docType: d.doc_type });
   }
 
   const emails: WorkspaceEmail[] = list.map((e) => ({
@@ -100,6 +104,7 @@ export default async function InboxPage({
     clientId: e.classified_client_id,
     matterId: e.classified_matter_id,
     suggestion: e.classified_matter_id ? matterName.get(e.classified_matter_id) ?? null : e.classified_client_id ? clientName.get(e.classified_client_id) ?? null : null,
+    matterCnr: e.classified_matter_id ? matterCnr.get(e.classified_matter_id) ?? null : null,
     attachments: attachByEmail.get(e.id) ?? [],
   }));
 
