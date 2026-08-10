@@ -4,13 +4,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { exchangeCode, GMAIL_SCOPE } from "@/lib/mail/oauth";
 import { getTenantId } from "@/lib/court/sync";
 import { storeSecret } from "@/lib/mail/vault";
+import { requestOrigin } from "@/lib/auth/redirects";
 
 export const dynamic = "force-dynamic";
 
 // Google redirects here after consent. Exchange the code, store the refresh
 // token encrypted in Vault, and record the oauth_connection.
+// WO-341: origin from requestOrigin(), never new URL(request.url).origin (resolves
+// to internal localhost:3000 behind the WO-323 self-host edge).
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = requestOrigin(request.headers);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
   const cookieState = request.cookies.get("g_oauth_state")?.value;

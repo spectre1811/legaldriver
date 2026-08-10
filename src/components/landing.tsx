@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { HeroSearch } from "@/components/landing/hero-search";
 import { CountUp, ScrollReveals } from "@/components/landing/motion";
+import { RequestAccessNavCta } from "@/components/landing/request-access-nav-cta";
 import { links, pricing, grievanceOfficer, hasGrievanceOfficer } from "@/lib/site-config";
 
 // Public marketing landing — WO-324 "Daybreak" reskin, rebuilt section-for-section
@@ -86,7 +87,7 @@ export async function Landing() {
           <div className="ml-auto flex items-center gap-2">
             <LanguageSwitcher className="hidden sm:inline-flex" />
             <Link href="/login" className="rounded-ec-s px-3 py-1.5 text-sm font-medium text-ec-ink-2 hover:bg-ec-paper-3">{t("nav.login")}</Link>
-            <Link href="/request-access" className="ec-btn ec-btn-ink">{t("nav.requestAccess")} <Icon name="chevron" className="h-3.5 w-3.5" /></Link>
+            <RequestAccessNavCta />
           </div>
         </nav>
       </header>

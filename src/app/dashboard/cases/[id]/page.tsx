@@ -5,11 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fmtAgo, fmtMoney, fmtHours } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { LogTimeToggle, RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm, ProposedDeadlineActions, MatterDiaryDate, CopyCnrButton, CaseMenu } from "./case-actions";
-import { LogTimeExpense } from "./time-expense";
-import { CreateInvoiceButton } from "../../invoices/invoices-ui";
-import { Communications } from "@/components/communications";
 import { DeadlineRuleForm } from "./deadline-rules";
-import { OrdersPanel } from "./orders-panel";
 import { CaseTimeline } from "./case-timeline";
 import { CaseRecord } from "./case-record";
 import { SectionLabel } from "./case-section";
@@ -21,17 +17,11 @@ import { isMaskedName, maskTitle } from "@/lib/court/mask";
 import { selectCaseDetailRows, extractCaseDetailValues, type CaseDetailFieldId } from "@/lib/court/case-detail-fields";
 import type { CaseSummary } from "@/lib/docs/case-summary";
 import { confidenceBand } from "@/lib/docs/case-summary";
-import { findSimilarCases } from "@/lib/court/similar";
+import { Reveal } from "../../motion";
 
 type Party = { name?: string; side?: string; advocate?: string; masked?: boolean };
 
-const STATUS_TONE: Record<string, string> = { active: "green", disposed: "neutral" };
-// tone → ec chip class
-const chip = (tone: string) =>
-  `ec-chip ${({ green: "ec-chip-success", amber: "ec-chip-warn", red: "ec-chip-danger", brand: "ec-chip-hot", neutral: "" } as Record<string, string>)[tone] ?? ""}`;
-
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
-const truncate = (s: string, n = 32) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 // short "02 Jul" from the shared day-first formatter (drop the year for the compact aside lists).
 const shortDate = (v: string | null | undefined) => formatCourtDate(v)?.replace(/ \d{4}$/, "") ?? null;
 const NOTIFY_CHANNEL_LABEL: Record<string, string> = { whatsapp: "WA", email: "EM", sms: "SMS", inapp: "IN", in_app: "IN" };
@@ -57,26 +47,17 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const matterOpts = (allMatters ?? []).map((m) => ({ id: m.id, label: m.title }));
   const clientOpts = (allClients ?? []).map((c) => ({ id: c.id, label: c.name }));
 
-  const [{ data: timeEntries }, { data: expenses }, { data: caseInvoices }, { data: caseNotices }] = await Promise.all([
+  const [{ data: timeEntries }, { data: expenses }] = await Promise.all([
     supabase.from("time_entry").select("id, entry_date, minutes, billable, rate_minor, narrative").eq("matter_id", matter.id).order("entry_date", { ascending: false }),
     supabase.from("expense").select("id, entry_date, category, amount_minor, billable, notes").eq("matter_id", matter.id).order("entry_date", { ascending: false }),
-    supabase.from("invoice").select("id, number, status, issue_date, total_minor").eq("matter_id", matter.id).order("created_at", { ascending: false }),
-    supabase.from("notice").select("id, type, escalation_state, response_due").eq("matter_id", matter.id).order("created_at", { ascending: false }),
   ]);
   const totalMinutes = (timeEntries ?? []).reduce((s, t2) => s + t2.minutes, 0);
   const billableTime = (timeEntries ?? []).filter((t2) => t2.billable).reduce((s, t2) => s + Math.round((t2.minutes / 60) * t2.rate_minor), 0);
   const billableExp = (expenses ?? []).filter((e) => e.billable).reduce((s, e) => s + e.amount_minor, 0);
   const wip = billableTime + billableExp;
 
-  const [{ data: orders }, similar, { data: deadlines }, { data: deadlineRules }, timelineEvents] = await Promise.all([
+  const [{ data: orders }, { data: deadlines }, { data: deadlineRules }, timelineEvents] = await Promise.all([
     supabase.from("court_order").select("id, order_date, title, url, raw").eq("matter_id", matter.id).order("order_date", { ascending: false, nullsFirst: false }),
-    findSimilarCases(supabase, {
-      id: matter.id,
-      party_names: matter.party_names ?? [],
-      advocate_names: matter.advocate_names ?? [],
-      judge_names: matter.judge_names ?? [],
-      act_names: matter.act_names ?? [],
-    }, 6),
     supabase.from("deadline").select("id, kind, due_date, jurisdiction_rule, status, basis").eq("matter_id", matter.id).order("due_date", { ascending: true }),
     supabase.from("deadline_rule").select("id, kind, days, jurisdiction, description").order("jurisdiction"),
     matter.cnr ? getTimeline(matter.cnr).catch(() => []) : Promise.resolve([]),
@@ -152,12 +133,15 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       : ev,
   );
   const effectiveTimeline = timelineEvents.length ? liveTimeline : dbTimeline;
-
-  const processes = (Array.isArray(detail.processes) ? detail.processes : []) as { process_id?: string; process_date?: string; title?: string }[];
-  const courtFilings = (Array.isArray(detail.documents) ? detail.documents : []) as { docNo?: number | string; document?: string | null; filedBy?: string | null; advocate?: string | null; filedDate?: string | null }[];
-  const objections = (Array.isArray(detail.objections) ? detail.objections : []) as { srNo?: string | null; objection?: string | null; scrutinyDate?: string | null; receiptDate?: string | null; complianceDate?: string | null }[];
-  const advocateBars = (detail.advocateBars ?? {}) as Record<string, string>;
-  const regional = (detail.regional ?? {}) as { pet_name?: string | null; res_name?: string | null };
+  // WO-332 FIDELITY RECONCILE: the reference has ONE combined "Hearings & orders" list — union in
+  // any real `court_order` row the live/DB timeline branch above didn't surface (e.g. the live feed
+  // omitted it), so merging OrdersPanel's separate card into this one list never silently drops an
+  // order that used to have its own row.
+  const timelineOrderIds = new Set(effectiveTimeline.filter((e) => e.type === "order" && e.order_id != null).map((e) => String(e.order_id)));
+  const missingOrders: TimelineEvent[] = (orders ?? [])
+    .filter((o) => o.order_date && !timelineOrderIds.has(String(o.id)))
+    .map((o) => ({ date: o.order_date as string, type: "order" as const, detail: o.title ?? undefined, order_id: o.id }));
+  const mainTimeline = [...effectiveTimeline, ...missingOrders];
 
   const ct = expandCaseType(matter.case_type);
   const caseTypeLabel = ct.full
@@ -165,11 +149,18 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     : null;
   const stageLabel = cleanPurpose(matter.stage) || null;
   const judgeOnRecord = hearings?.find((h) => h.judge)?.judge ?? null;
+  const courtNo = hearings?.find((h) => h.court_no)?.court_no ?? null;
   const emptyOnRecord = isCourtSourced ? t("empty.onRecord") : t("empty.notSet");
   // Case type (matter.case_type, expanded) is a separate real field from the eCourts detail.category
   // row already inside caseDetails — kept as its own leading row in the Court record card rather
-  // than dropped (it was a standalone "Case type" info row before this reskin).
-  const recordRows = [{ label: t("info.caseType"), value: caseTypeLabel, emptyReason: "not-on-record" as const, emptyLabel: emptyOnRecord }, ...caseDetails];
+  // than dropped (it was a standalone "Case type" info row before this reskin). Coram is appended as
+  // the record's last row — the reference's own RECORD array ends on Coram, plain text like every
+  // other row (see case-record.tsx).
+  const recordRows = [
+    { label: t("info.caseType"), value: caseTypeLabel, emptyReason: "not-on-record" as const, emptyLabel: emptyOnRecord },
+    ...caseDetails,
+    { label: t("detail.coram"), value: coramName, emptyReason: "not-on-record" as const, emptyLabel: emptyOnRecord },
+  ];
   const refreshed = matter.last_synced_at ? new Date(matter.last_synced_at).toLocaleString("en-IN") : t("source.never");
 
   // Parties grouped by side (real data may carry any number of sides/labels — never hard-locked
@@ -227,7 +218,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     <div className="text-ec-ink">
       {/* header — the page's own dark "engraved" masthead panel (not shell chrome; WO-328's
           shell/top-bar/nav are untouched above this) */}
-      <div className="mk-engraved -mx-5 rounded-[14px] bg-ec-ink px-5 py-6 sm:-mx-8 sm:px-7 sm:py-7">
+      <Reveal as="div" className="mk-engraved -mx-5 rounded-[14px] bg-ec-ink px-5 py-6 sm:-mx-8 sm:px-7 sm:py-7">
         <Link href="/dashboard/cases" className="inline-flex items-center gap-1.5 text-[12px] text-ec-line-strong transition-colors hover:text-ec-honey">
           <Icon name="back" className="h-3.5 w-3.5" /> {tf("back")}
         </Link>
@@ -242,11 +233,12 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                   <CopyCnrButton cnr={matter.cnr} label={tf("copyCnr")} copiedLabel={tf("copiedCnr")} />
                 </>
               )}
-              <span className="ec-chip !border-transparent bg-ec-n800 text-ec-honey">{st(matter.status)}</span>
-              {stageLabel && <span className="ec-chip !border-transparent bg-ec-n800 text-ec-line-strong">{tf("stagePrefix")} · {stageLabel}</span>}
+              <span className="ec-chip !border-transparent bg-ec-ink-chip text-ec-honey">{st(matter.status)}</span>
+              {stageLabel && <span className="ec-chip !border-transparent bg-ec-ink-chip text-ec-line-strong">{tf("stagePrefix")} · {stageLabel}</span>}
             </div>
             <p className="mt-2.5 text-[13px] text-ec-line-strong">
               <CourtField value={matter.court} emptyLabel={emptyOnRecord} maskedLabel={t("masked")} field={t("info.court")} className="text-ec-line-strong" />
+              {courtNo && <> · {tf("courtNo", { no: courtNo })}</>}
               {judgeOnRecord && !isMaskedName(judgeOnRecord) && (
                 <> · <Link href={`/dashboard/search/directory?q=${encodeURIComponent(judgeOnRecord)}`} className="text-ec-honey hover:underline">{judgeOnRecord}</Link></>
               )}
@@ -280,22 +272,22 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             />
           </div>
         </div>
-      </div>
+      </Reveal>
 
       <div className="pt-7">
         {matter.source === "mock" && (
-          <div role="status" className="ec-rule-left mb-6 flex items-start gap-2.5 rounded-r-md px-4 py-3 text-sm text-ec-warn">
+          <Reveal as="div" delay={40} role="status" className="ec-rule-left mb-6 flex items-start gap-2.5 rounded-r-md px-4 py-3 text-sm text-ec-warn">
             <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
               <p className="font-medium">{t("demoBanner.title")}</p>
               <p className="mt-0.5 text-xs text-ec-warn/90">{t("demoBanner.body")}</p>
             </div>
-          </div>
+          </Reveal>
         )}
 
         {/* alert strip — real overdue deadline + this matter's own unreviewed inbox filings */}
         {showAlert && (
-          <div className="ec-rule-left mb-6 flex flex-col gap-2 rounded-r-md px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <Reveal as="div" delay={60} className="ec-rule-left mb-6 flex flex-col gap-2 rounded-r-md px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="flex items-start gap-2 text-[13px] text-ec-ink">
               <Icon name="alert" className="mt-[2px] h-3.5 w-3.5 shrink-0 text-ec-danger" />
               <span>
@@ -311,25 +303,27 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 {tf("alert.reviewLink")} →
               </Link>
             )}
-          </div>
+          </Reveal>
         )}
 
-        <div className="mb-7 flex flex-wrap items-center justify-between gap-3 ec-card px-5 py-3">
+        {/* provenance/freshness — non-negotiable on every court-data surface (repo CLAUDE.md §3);
+            the reference is dummy content with no such disclosure, but this stays: never optional. */}
+        <Reveal as="div" delay={80} className="mb-7 flex flex-wrap items-center justify-between gap-3 ec-card px-5 py-3">
           <p className="num text-sm text-ec-ink-3">{t("source.line", { source: sourceLabel, time: refreshed })}</p>
           <MatterDiaryDate matterId={matter.id} synced={matter.next_hearing_date} override={matter.next_hearing_override ?? null} />
-        </div>
+        </Reveal>
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           {/* main */}
           <div className="min-w-0 space-y-9">
             {/* AI briefing */}
-            <section>
+            <Reveal as="section" delay={120}>
               <SectionLabel right={<GenerateSummaryButton matterId={matter.id} has={!!ai} />}>{t("ai.title")}</SectionLabel>
               <div className="ec-card p-5">
                 {ai ? (
                   <>
                     <div className="flex flex-wrap items-center gap-2">
-                      {ai.generated_at && <span className="ec-chip ec-chip-hot"><Icon name="sparkles" className="mr-1 inline h-3 w-3" />{fmtAgo(ai.generated_at)}</span>}
+                      {ai.generated_at && <span className="ec-chip ec-chip-hot"><Icon name="sparkles" className="mr-1 inline h-3 w-3" />{t("ai.generated", { time: fmtAgo(ai.generated_at) })}</span>}
                       {aiBand && (
                         <span title={t("ai.confidenceHint", { pct: Math.round((aiConf as number) * 100) })} className={`ec-chip ${aiBand === "high" ? "ec-chip-success" : aiBand === "medium" ? "ec-chip-hot" : "ec-chip-warn"}`}>
                           {t("ai.confidence")} · {t(`ai.confidence_${aiBand}`)}
@@ -374,6 +368,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                         </div>
                       </div>
                     )}
+                    {/* real briefing fields beyond the mockup's illustrative 2-column layout — the
+                        WO's hard constraint is explicit: match the reference's DESIGN, not its dummy
+                        CONTENT shape. These extend the same card, never fabricated. */}
                     {ai.posture && (
                       <div className="mt-4 rounded-ec-m bg-ec-paper-3 px-4 py-3">
                         <p className="ec-label mb-1">{t("ai.posture")}</p>
@@ -408,235 +405,67 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                   <p className="text-sm text-ec-ink-3">{t("ai.empty")}</p>
                 )}
               </div>
-            </section>
+            </Reveal>
 
-            {/* hearings & orders — shared court-kit components (also used by the CNR preview page;
-                left byte-identical rather than forked, per the non-goal against touching other pages) */}
-            <CaseTimeline events={effectiveTimeline} hasCnr={!!matter.cnr} />
-            <OrdersPanel orders={orders ?? []} />
+            {/* hearings & orders — one combined, reverse-chronological list (reference's own
+                shape); an order's document link opens the real streamed PDF. */}
+            <Reveal as="section" delay={160}>
+              <SectionLabel>{tf("hearingsOrders")}</SectionLabel>
+              <CaseTimeline events={mainTimeline} hasCnr={!!matter.cnr} />
+            </Reveal>
 
             {/* court record (collapsible) */}
-            <CaseRecord
-              title={tf("record.title")}
-              hideLabel={tf("record.hide")}
-              showLabel={tf("record.show")}
-              rows={recordRows}
-              coramLabel={t("detail.coram")}
-              coramName={coramName}
-              actsTitle={t("acts.title")}
-              acts={acts}
-              maskedLabel={t("masked")}
-              syncedNote={matter.last_synced_at ? tf("record.synced", { time: refreshed }) : null}
-            />
+            <Reveal as="section" delay={200}>
+              <CaseRecord
+                title={tf("record.title")}
+                hideLabel={tf("record.hide")}
+                showLabel={tf("record.show")}
+                rows={recordRows}
+                actsTitle={t("acts.title")}
+                acts={acts}
+                maskedLabel={t("masked")}
+                syncedNote={matter.last_synced_at ? tf("record.synced", { time: refreshed }) : null}
+              />
+            </Reveal>
 
             {/* parties & advocates — always shown (per the FAITHFUL-TO-PROTOTYPE bar: keep every
                 designed element, honest empty state, never a silently-dropped section) */}
-            <section>
+            <Reveal as="section" delay={240}>
               <SectionLabel>{tf("partiesTitle")}</SectionLabel>
               {partyGroups.size > 0 ? (
                 <div className="ec-card grid gap-0 sm:grid-cols-2">
                   {[...partyGroups.entries()].map(([side, group], i) => (
                     <div key={side} className={`border-b border-ec-hair p-5 last:border-b-0 sm:border-b-0 ${i > 0 ? "sm:border-l sm:border-ec-hair" : ""}`}>
                       <span className={`ec-chip ${i === 0 ? "ec-chip-hot" : ""}`}>{side}</span>
-                      {group.map((p, j) => {
-                        const reg = side === "petitioner" ? regional.pet_name : side === "respondent" ? regional.res_name : null;
-                        const bar = p.advocate ? advocateBars[p.advocate] : undefined;
-                        return (
-                          <div key={j} className={j > 0 ? "mt-3 border-t border-ec-hair pt-3" : "mt-2"}>
-                            <div className="font-display text-[16px] text-ec-ink">
-                              <CourtField value={p.name ?? null} maskedLabel={t("masked")} emptyLabel={t("parties.empty")} field="party" />
-                            </div>
-                            {reg && reg !== p.name && !isMaskedName(reg) && <div className="text-xs text-ec-ink-3">{reg}</div>}
-                            {p.advocate && (
-                              <div className="mt-1.5 text-[13px]">
-                                {bar ? (
-                                  <Link href={`/dashboard/advocate/${bar}`} className="text-ec-bronze-deep hover:underline">{p.advocate}</Link>
-                                ) : (
-                                  <span className="text-ec-ink-2">{p.advocate}</span>
-                                )}
-                              </div>
-                            )}
+                      {group.map((p, j) => (
+                        <div key={j} className={j > 0 ? "mt-3 border-t border-ec-hair pt-3" : "mt-2"}>
+                          <div className="font-display text-[16px] text-ec-ink">
+                            <CourtField value={p.name ?? null} maskedLabel={t("masked")} emptyLabel={t("parties.empty")} field="party" />
                           </div>
-                        );
-                      })}
+                          {p.advocate && !isMaskedName(p.advocate) && (
+                            <div className="mt-2 text-[13px]">
+                              <Link href={`/dashboard/search/directory?q=${encodeURIComponent(p.advocate)}`} className="text-ec-bronze-deep hover:underline">
+                                {p.advocate}
+                              </Link>
+                            </div>
+                          )}
+                          {p.advocate && isMaskedName(p.advocate) && (
+                            <div className="mt-2 text-[13px] text-ec-ink-2">{p.advocate}</div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="ec-card px-5 py-8 text-center text-sm text-ec-ink-3">{t("parties.empty")}</div>
               )}
-            </section>
-
-            {/* similar cases — real feature beyond the reference's own scope, kept (WO-334 precedent:
-                the reference is dummy content, not a spec to drop working features to match) */}
-            <section>
-              <SectionLabel>{t("similar.title")}</SectionLabel>
-              <p className="-mt-2 mb-3 text-xs text-ec-ink-3">{t("similar.help")}</p>
-              {similar.length ? (
-                <ul className="ec-card divide-y divide-ec-hair">
-                  {similar.map((s) => {
-                    const reasons: { tone: string; label: string }[] = [
-                      ...s.shared.parties.map((v) => ({ tone: "brand", label: `${t("reason.party")} · ${truncate(v)}` })),
-                      ...s.shared.advocates.map((v) => ({ tone: "green", label: `${t("reason.advocate")} · ${truncate(v)}` })),
-                      ...s.shared.judges.map((v) => ({ tone: "neutral", label: `${t("reason.judge")} · ${truncate(v)}` })),
-                      ...s.shared.acts.map((v) => ({ tone: "amber", label: `${t("reason.act")} · ${truncate(v)}` })),
-                    ];
-                    return (
-                      <li key={s.id}>
-                        <Link href={`/dashboard/cases/${s.id}`} className="ec-row block px-5 py-3.5">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-ec-ink">
-                              {s.title}
-                              {s.cnr && <span className="num ml-2 text-xs font-normal text-ec-ink-3">{s.cnr}</span>}
-                            </span>
-                            <span className="shrink-0 text-xs text-ec-ink-3">{s.court ?? "—"}</span>
-                          </div>
-                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                            {s.next_hearing_date && <span className="num mr-1 text-xs text-ec-ink-3">{t("similar.next", { date: formatCourtDate(s.next_hearing_date) ?? "—" })}</span>}
-                            {reasons.map((r, i) => <span key={i} className={chip(r.tone)}>{r.label}</span>)}
-                          </div>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <div className="ec-card flex flex-col items-center justify-center px-6 py-12 text-center">
-                  <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-ec-m bg-ec-bronze-tint text-ec-bronze-deep"><Icon name="cases" className="h-5 w-5" /></span>
-                  <h3 className="font-display text-base font-medium text-ec-ink">{t("similar.emptyTitle")}</h3>
-                  <p className="mt-1 text-sm text-ec-ink-3">{t("similar.emptyBody")}</p>
-                </div>
-              )}
-            </section>
-
-            {processes.length > 0 && (
-              <section>
-                <SectionLabel>{t("processes.title")} <span className="text-ec-ink-3">({processes.length})</span></SectionLabel>
-                <ul className="ec-card divide-y divide-ec-hair">
-                  {processes.map((p, i) => (
-                    <li key={p.process_id ?? i} className="flex items-center gap-3 px-5 py-3 text-sm">
-                      <Icon name="alert" className="h-4 w-4 shrink-0 text-ec-warn" />
-                      <span className="num w-24 shrink-0 text-ec-ink-3">{formatCourtDate(p.process_date) ?? "—"}</span>
-                      <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{p.title ?? t("processes.fallback")}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {courtFilings.length > 0 && (
-              <section>
-                <SectionLabel>{t("courtFilings.title")} <span className="text-ec-ink-3">({courtFilings.length})</span></SectionLabel>
-                <ul className="ec-card divide-y divide-ec-hair">
-                  {courtFilings.map((f, i) => (
-                    <li key={f.docNo ?? i} className="flex items-center gap-3 px-5 py-3 text-sm">
-                      <Icon name="documents" className="h-4 w-4 shrink-0 text-ec-ink-3" />
-                      <span className="num w-24 shrink-0 text-ec-ink-3">{formatCourtDate(f.filedDate) ?? "—"}</span>
-                      <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{f.document ?? "—"}</span>
-                      {f.advocate && <span className="shrink-0 truncate text-ec-ink-3">{f.advocate}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {objections.length > 0 && (
-              <section>
-                <SectionLabel>{t("objections.title")} <span className="text-ec-ink-3">({objections.length})</span></SectionLabel>
-                <ul className="ec-card divide-y divide-ec-hair">
-                  {objections.map((o, i) => (
-                    <li key={o.srNo ?? i} className="flex items-start gap-3 px-5 py-3 text-sm">
-                      <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0 text-ec-ink-3" />
-                      <span className="num w-24 shrink-0 text-ec-ink-3">{formatCourtDate(o.scrutinyDate) ?? "—"}</span>
-                      <span className="min-w-0 flex-1 text-ec-ink">{o.objection ?? t("objections.raised")}{o.complianceDate ? ` · ${t("objections.complyBy")} ${formatCourtDate(o.complianceDate) ?? "—"}` : ""}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {/* billing ledger + invoices — the aside card is a compact summary; the full record stays here */}
-            <section id="billing">
-              <SectionLabel>{t("billing.title")}</SectionLabel>
-              <div className="ec-card overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ec-hair px-5 py-4">
-                  <div className="num flex items-center gap-4 text-sm">
-                    <span className="text-ec-ink-3">{t("billing.time")} <span className="font-medium text-ec-ink">{fmtHours(totalMinutes)}</span></span>
-                    <span className="text-ec-ink-3">{t("billing.unbilled")} <span className="font-medium text-ec-ink">{fmtMoney(wip)}</span></span>
-                  </div>
-                  <CreateInvoiceButton matterId={matter.id} />
-                </div>
-                <LogTimeExpense matterId={matter.id} />
-                {((timeEntries?.length ?? 0) + (expenses?.length ?? 0)) > 0 && (
-                  <ul className="divide-y divide-ec-hair border-t border-ec-hair">
-                    {(timeEntries ?? []).map((t2) => (
-                      <li key={t2.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
-                        <Icon name="clock" className="h-4 w-4 shrink-0 text-ec-ink-3" />
-                        <span className="num w-20 shrink-0 text-ec-ink-3">{formatCourtDate(t2.entry_date) ?? "—"}</span>
-                        <span className="flex-1 truncate text-ec-ink-2">{t2.narrative ?? t("billing.entryFallback")}</span>
-                        {!t2.billable && <span className={chip("neutral")}>{t("billing.nonBillable")}</span>}
-                        <span className="num text-ec-ink-3">{fmtHours(t2.minutes)}</span>
-                        <span className="num w-20 text-right font-medium text-ec-ink">{fmtMoney(Math.round((t2.minutes / 60) * t2.rate_minor))}</span>
-                      </li>
-                    ))}
-                    {(expenses ?? []).map((e) => (
-                      <li key={e.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
-                        <Icon name="notices" className="h-4 w-4 shrink-0 text-ec-ink-3" />
-                        <span className="num w-20 shrink-0 text-ec-ink-3">{formatCourtDate(e.entry_date) ?? "—"}</span>
-                        <span className="flex-1 truncate text-ec-ink-2">{e.notes ?? e.category} <span className="text-ec-ink-3">· {e.category}</span></span>
-                        {!e.billable && <span className={chip("neutral")}>{t("billing.nonBillable")}</span>}
-                        <span className="num w-20 text-right font-medium text-ec-ink">{fmtMoney(e.amount_minor)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              {caseInvoices && caseInvoices.length > 0 && (
-                <ul className="ec-card mt-3 divide-y divide-ec-hair">
-                  {caseInvoices.map((inv) => (
-                    <li key={inv.id}>
-                      <Link href={`/dashboard/invoices/${inv.id}`} className="ec-row flex items-center justify-between px-5 py-3 text-sm">
-                        <span className="num font-medium text-ec-bronze-deep">{inv.number ?? t("invoices.draft")} · {formatCourtDate(inv.issue_date) ?? "—"}</span>
-                        <span className="flex items-center gap-3"><span className="num font-medium text-ec-ink">{fmtMoney(inv.total_minor)}</span><span className={chip(inv.status === "paid" ? "green" : inv.status === "sent" ? "amber" : "neutral")}>{inv.status}</span></span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            {caseNotices && caseNotices.length > 0 && (
-              <section>
-                <SectionLabel>{t("notices.title")} <span className="text-ec-ink-3">({caseNotices.length})</span></SectionLabel>
-                <ul className="ec-card divide-y divide-ec-hair">
-                  {caseNotices.map((n) => (
-                    <li key={n.id} className="flex items-center justify-between px-5 py-3 text-sm">
-                      <Link href="/dashboard/notices" className="font-medium capitalize text-ec-bronze-deep">{n.type.replace(/_/g, " ")}</Link>
-                      <span className="flex items-center gap-3">{n.response_due && <span className="num text-xs text-ec-ink-3">{t("notices.due", { date: formatCourtDate(n.response_due) ?? "—" })}</span>}<span className={chip(/escalat/.test(n.escalation_state) ? "red" : ["responded", "closed"].includes(n.escalation_state) ? "green" : "amber")}>{n.escalation_state.replace(/_/g, " ")}</span></span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {/* communications — every channel, both directions (the aside teaser links here) */}
-            <section id="comms">
-              <SectionLabel>{tc("communications.title")}</SectionLabel>
-              <Communications matterId={matter.id} />
-            </section>
-
-            <div className="flex justify-start">
-              <div className="relative -rotate-2 rounded-[8px] border-[1.5px] border-ec-bronze px-4 pb-2.5 pt-3 text-center text-ec-bronze opacity-75">
-                <span className="absolute left-1/2 top-[5px] h-[5px] w-[5px] -translate-x-1/2 rounded-full bg-ec-honey" />
-                <div className="mk-stamp-line">{sourceLabel}</div>
-                <div className="num mk-stamp-line">{tf("stamp.synced", { date: refreshed })}</div>
-              </div>
-            </div>
+            </Reveal>
           </div>
 
           {/* right rail */}
           <aside className="min-w-0 space-y-7">
-            <section>
+            <Reveal as="section" delay={120}>
               <SectionLabel>{t("info.client")}</SectionLabel>
               <div className="ec-card p-4">
                 {client ? (
@@ -659,9 +488,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                   <p className="text-sm text-ec-ink-3">{t("empty.client")}</p>
                 )}
               </div>
-            </section>
+            </Reveal>
 
-            <section>
+            <Reveal as="section" delay={160}>
               <SectionLabel>{tf("notify.title")}</SectionLabel>
               <div className="ec-card p-4">
                 {notifySeen.size > 0 ? (
@@ -683,9 +512,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                   <p className="text-sm text-ec-ink-3">{tf("notify.empty")}</p>
                 )}
               </div>
-            </section>
+            </Reveal>
 
-            <section>
+            <Reveal as="section" delay={200}>
               <SectionLabel>{t("deadlines.title")}</SectionLabel>
               <div className="ec-card divide-y divide-ec-hair">
                 {(() => {
@@ -718,10 +547,10 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                   <DeadlineRuleForm matterId={matter.id} rules={deadlineRules ?? []} />
                 </div>
               </div>
-            </section>
+            </Reveal>
 
-            <section>
-              <SectionLabel>{t("documents.title")} <span className="text-ec-ink-3">({docRows.length})</span></SectionLabel>
+            <Reveal as="section" delay={240}>
+              <SectionLabel>{t("documents.title")}</SectionLabel>
               <div className="ec-card">
                 <div className="border-b border-ec-hair px-3 py-2.5"><AddDocumentForm matterId={matter.id} /></div>
                 {docRows.length ? (
@@ -733,9 +562,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                   {tf("allDocuments")} →
                 </Link>
               </div>
-            </section>
+            </Reveal>
 
-            <section>
+            <Reveal as="section" delay={280}>
               <SectionLabel>{tf("inbox.title")}</SectionLabel>
               <div className="ec-card p-4">
                 {latestInbound ? (
@@ -750,22 +579,22 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 ) : (
                   <p className="text-sm text-ec-ink-3">{tf("inbox.empty")}</p>
                 )}
-                <a href="#comms" className="mt-3 block border-t border-ec-hair pt-2.5 text-[12.5px] text-ec-bronze-deep hover:underline">
+                <Link href="/dashboard/inbox" className="mt-3 block border-t border-ec-hair pt-2.5 text-[12.5px] text-ec-bronze-deep hover:underline">
                   {tf("inbox.review")} →
-                </a>
+                </Link>
               </div>
-            </section>
+            </Reveal>
 
-            <section>
+            <Reveal as="section" delay={320}>
               <SectionLabel>{t("billing.title")}</SectionLabel>
               <div className="ec-card p-4">
                 <div className="flex justify-between text-[13px]"><span className="text-ec-ink-2">{t("billing.unbilled")}</span><span className="num text-ec-ink">{fmtHours(totalMinutes)}</span></div>
                 <div className="mt-1.5 flex justify-between text-[13px]"><span className="text-ec-ink-2">{tf("billing.outstanding")}</span><span className="num text-ec-ink">{fmtMoney(wip)}</span></div>
                 <LogTimeToggle matterId={matter.id} label={t("timeExpense.logTime")} />
               </div>
-            </section>
+            </Reveal>
 
-            <section>
+            <Reveal as="section" delay={360}>
               <SectionLabel>{t("activity.title")}</SectionLabel>
               <ul className="ec-card divide-y divide-ec-hair">
                 {activity && activity.length ? activity.map((a) => (
@@ -775,7 +604,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                   </li>
                 )) : <li className="px-4 py-6 text-center text-sm text-ec-ink-3">{t("activity.empty")}</li>}
               </ul>
-            </section>
+            </Reveal>
           </aside>
         </div>
 

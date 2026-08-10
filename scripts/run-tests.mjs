@@ -108,6 +108,7 @@ const OFFLINE = [
   "profile_error_states",
   "wo326_public_proxy",
   "wo329_forwarded_host",
+  "wo341_redirect_origin",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the

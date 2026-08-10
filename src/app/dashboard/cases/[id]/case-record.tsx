@@ -1,6 +1,4 @@
-import Link from "next/link";
-import { CourtField, MaskedName } from "@/components/court";
-import { isMaskedName } from "@/lib/court/mask";
+import { CourtField } from "@/components/court";
 import { Icon } from "@/components/icons";
 
 type Row = { label: string; value: string | null; emptyReason?: "not-on-record" | "not-applicable"; emptyLabel: string };
@@ -8,13 +6,16 @@ type Row = { label: string; value: string | null; emptyReason?: "not-on-record" 
 // WO-332 · the prototype's collapsible "Court record" card — native <details>/<summary> (zero JS,
 // keyboard/screen-reader native) instead of a useState toggle. `open` defaults true (matches the
 // reference's default-expanded state); .group + Tailwind's `group-open:` flips the chevron.
+//
+// FIDELITY RECONCILE: Coram is just another row in `rows` now (reference's own RECORD array ends
+// on a plain "Coram" row, no special link/bold treatment) — CourtField already routes masking
+// through the same single four-state contract every other row uses, so no bespoke branch is
+// needed. Acts chips are the reference's neutral tone (not bronze) — `ec-chip` bare.
 export function CaseRecord({
   title,
   hideLabel,
   showLabel,
   rows,
-  coramLabel,
-  coramName,
   actsTitle,
   acts,
   maskedLabel,
@@ -24,14 +25,12 @@ export function CaseRecord({
   hideLabel: string;
   showLabel: string;
   rows: Row[];
-  coramLabel: string;
-  coramName: string | null;
   actsTitle: string;
   acts: string[];
   maskedLabel: string;
   syncedNote: string | null;
 }) {
-  if (!rows.length && !coramName && !acts.length) return null;
+  if (!rows.length && !acts.length) return null;
   return (
     <details className="group" open>
       <summary className="mb-3 flex cursor-pointer list-none items-end justify-between gap-3 [&::-webkit-details-marker]:hidden">
@@ -53,26 +52,12 @@ export function CaseRecord({
               </dd>
             </div>
           ))}
-          {coramName && (
-            <div className="grid gap-1 border-b border-ec-hair py-2.5 sm:grid-cols-[210px_minmax(0,1fr)]">
-              <dt className="ec-label">{coramLabel}</dt>
-              <dd className="text-[12.5px] font-medium text-ec-ink">
-                {isMaskedName(coramName) ? (
-                  <MaskedName value={coramName} label={maskedLabel} />
-                ) : (
-                  <Link href={`/dashboard/search/directory?q=${encodeURIComponent(coramName)}`} className="text-ec-bronze-deep hover:text-ec-bronze">
-                    {coramName}
-                  </Link>
-                )}
-              </dd>
-            </div>
-          )}
           {acts.length > 0 && (
             <div className="grid gap-1.5 py-2.5 sm:grid-cols-[210px_minmax(0,1fr)]">
               <dt className="ec-label">{actsTitle}</dt>
               <dd className="flex flex-wrap gap-1.5">
                 {acts.map((a, i) => (
-                  <span key={i} className="ec-chip ec-chip-hot">{a}</span>
+                  <span key={i} className="ec-chip">{a}</span>
                 ))}
               </dd>
             </div>

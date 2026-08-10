@@ -38,7 +38,7 @@ export function RequestAccessForm() {
     // of fabricated copy).
     return (
       <div className="ec-rule-left p-5">
-        <h1 className="mk-eyebrow">{t("sentTitle")}</h1>
+        <h1 id="request-access-title" className="mk-eyebrow">{t("sentTitle")}</h1>
         <p className="mt-2 text-[13px] leading-relaxed text-ec-ink-2">{t("sentBody", { email: state.email ?? "" })}</p>
         <a href="/login" className="mt-3 inline-block text-sm font-medium text-ec-bronze-deep underline-offset-2 hover:underline">
           {t("backToLogin")}
@@ -49,29 +49,32 @@ export function RequestAccessForm() {
 
   return (
     <div>
-      <h1 className="font-display text-[22px] font-medium leading-tight text-ec-ink">{t("title")}</h1>
+      <h1 id="request-access-title" className="font-display text-[22px] font-medium leading-tight text-ec-ink">{t("title")}</h1>
       <p className="mt-1.5 text-[13px] leading-relaxed text-ec-ink-2">{t("subtitle")}</p>
       <form action={action} className="mt-6 space-y-4">
         {/* WO-340 — 2-col name/email like the prototype's non-compact Field grid; note
             stays full-width below (the prototype's mobile-number row has no field here —
             the intake schema doesn't collect one, see actions.ts). */}
+        {/* WO-340 — `ra-` prefixed ids: this form now also mounts inside a dialog
+            layered OVER the login page (which has its own #email/#password), so
+            plain #name/#email/#note would collide with the page underneath. */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="ec-label" htmlFor="name">{t("name")}</label>
+            <label className="ec-label" htmlFor="ra-name">{t("name")}</label>
             {/* WO-316 — maxLength mirrors the server cap so the browser stops at the
                 same boundary instead of the server silently truncating. */}
-            <input id="name" name="name" type="text" maxLength={NAME_MAX} autoComplete="name" className="input mt-1.5" placeholder={t("ph.name")} />
+            <input id="ra-name" name="name" type="text" maxLength={NAME_MAX} autoComplete="name" className="input mt-1.5" placeholder={t("ph.name")} />
           </div>
           <div>
-            <label className="ec-label" htmlFor="email">
+            <label className="ec-label" htmlFor="ra-email">
               {t("email")} <span className="text-ec-bronze">*</span>
             </label>
-            <input id="email" name="email" type="email" required autoComplete="email" className="input mt-1.5" placeholder={t("ph.email")} />
+            <input id="ra-email" name="email" type="email" required autoComplete="email" className="input mt-1.5" placeholder={t("ph.email")} />
           </div>
         </div>
         <div>
-          <label className="ec-label" htmlFor="note">{t("note")}</label>
-          <textarea id="note" name="note" rows={3} maxLength={NOTE_MAX} className="input mt-1.5" placeholder={t("ph.note")} />
+          <label className="ec-label" htmlFor="ra-note">{t("note")}</label>
+          <textarea id="ra-note" name="note" rows={3} maxLength={NOTE_MAX} className="input mt-1.5" placeholder={t("ph.note")} />
         </div>
         {/* Honeypot — off-screen + tab-skipped; humans never fill it, bots do. */}
         <div className="hidden" aria-hidden="true">
