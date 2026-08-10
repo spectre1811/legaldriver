@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
-import type { NormalizedCase } from "./types";
+import type { NormalizedCase, NormalizedHearing, NormalizedOrderRef } from "./types";
 import { scheduleReminders } from "@/lib/notify/schedule";
 import { normalizeTier } from "./tier";
 import { maskTitle } from "./mask";
@@ -13,6 +13,105 @@ export async function getTenantId(supabase: DB): Promise<string | null> {
   const { data } = await supabase.from("tenant").select("id").single();
   return data?.id ?? null;
 }
+
+// ── WO-359 W1: Differential sync helpers ────────────────────────────────────
+// Hearing identity = (date, purpose). Purpose may be undefined/null for dateless entries.
+export function hearingKey(h: NormalizedHearing | { date: string; purpose?: string | null }): string {
+  return `${h.date}::${h.purpose ?? ""}`;
+}
+
+type ExistingHearing = {
+  id: string; date: string; purpose: string | null;
+  court_no: string | null; judge: string | null; raw: unknown;
+};
+
+type ExistingOrder = {
+  id: string; order_date: string | null; title: string | null;
+  raw: unknown;
+};
+
+export interface HearingDiff {
+  toInsert: NormalizedHearing[];
+  toUpdate: { id: string; changes: Record<string, unknown> }[];
+  toDelete: string[];
+}
+
+// Compute the minimal set of DELETE / UPDATE / INSERT ops to bring existing
+// hearing rows into alignment with the incoming NormalizedCase hearings.
+// Keyed on hearingKey(date, purpose) — a hearing is "the same hearing" when
+// the court lists it on the same date for the same purpose, even if ancillary
+// fields (court_no, judge, raw) changed.
+export function diffHearings(
+  existing: ExistingHearing[],
+  incoming: NormalizedHearing[],
+): HearingDiff {
+  const existingByKey = new Map(existing.map((e) => [hearingKey(e), e]));
+  const toInsert: NormalizedHearing[] = [];
+  const toUpdate: HearingDiff["toUpdate"] = [];
+  const incomingKeys = new Set<string>();
+
+  for (const h of incoming) {
+    const key = hearingKey(h);
+    incomingKeys.add(key);
+    const prev = existingByKey.get(key);
+    if (!prev) { toInsert.push(h); continue; }
+    const changes: Record<string, unknown> = {};
+    if ((h.courtNo ?? null) !== (prev.court_no ?? null)) changes.court_no = h.courtNo ?? null;
+    if ((h.judge ?? null) !== (prev.judge ?? null)) changes.judge = h.judge ?? null;
+    if (JSON.stringify(h.raw ?? {}) !== JSON.stringify(prev.raw ?? {})) changes.raw = h.raw ?? {};
+    if (Object.keys(changes).length > 0) toUpdate.push({ id: prev.id, changes });
+  }
+
+  const toDelete = existing.filter((e) => !incomingKeys.has(hearingKey(e))).map((e) => e.id);
+
+  return { toInsert, toUpdate, toDelete };
+}
+
+export interface OrderDiff {
+  toInsert: NormalizedOrderRef[];
+  toUpdate: { id: string; changes: Record<string, unknown> }[];
+  toDelete: string[];
+}
+
+// Compute the minimal set of DELETE / UPDATE / INSERT ops to bring existing
+// court_order rows into alignment with the incoming NormalizedOrderRef set.
+// Keyed on the stable provider order id (stored in raw.order_id).
+export function diffOrders(
+  existing: ExistingOrder[],
+  incoming: NormalizedOrderRef[],
+): OrderDiff {
+  const existingById = new Map<string, ExistingOrder>();
+  for (const e of existing) {
+    const oid = (e.raw as Record<string, unknown> | null)?.order_id;
+    if (oid != null) existingById.set(String(oid), e);
+  }
+
+  const toInsert: NormalizedOrderRef[] = [];
+  const toUpdate: OrderDiff["toUpdate"] = [];
+  const incomingIds = new Set<string>();
+
+  for (const o of incoming) {
+    incomingIds.add(o.id);
+    const prev = existingById.get(o.id);
+    if (!prev) { toInsert.push(o); continue; }
+    const changes: Record<string, unknown> = {};
+    const inDate = o.date && /^\d{4}-\d{2}-\d{2}/.test(o.date) ? o.date.slice(0, 10) : null;
+    if (inDate !== (prev.order_date ?? null)) changes.order_date = inDate;
+    if ((o.title ?? null) !== (prev.title ?? null)) changes.title = o.title ?? null;
+    const inRaw = { order_id: o.id, has_pdf: !!o.pdfUrl };
+    if (JSON.stringify(inRaw) !== JSON.stringify(prev.raw ?? {})) changes.raw = inRaw;
+    if (Object.keys(changes).length > 0) toUpdate.push({ id: prev.id, changes });
+  }
+
+  const toDelete = existing.filter((e) => {
+    const oid = (e.raw as Record<string, unknown> | null)?.order_id;
+    return oid != null && !incomingIds.has(String(oid));
+  }).map((e) => e.id);
+
+  return { toInsert, toUpdate, toDelete };
+}
+
+const DIFF_SYNC_ENABLED = process.env.DIFF_SYNC === "1";
 
 // Upsert a normalized case into matter + hearing for a tenant. Idempotent:
 // re-running replaces the hearing set and refreshes matter fields + provenance.
@@ -86,12 +185,24 @@ export async function upsertCase(
     matterId = data.id;
   }
 
-  // Replace hearings for the matter (idempotent re-sync).
-  await supabase.from("hearing").delete().eq("matter_id", matterId);
-  if (c.hearings.length) {
-    const rows = c.hearings
-      .filter((h) => h.date)
-      .map((h) => ({
+  // ── Hearing sync ──────────────────────────────────────────────────────
+  if (DIFF_SYNC_ENABLED && existing) {
+    const { data: existingHearings } = await supabase
+      .from("hearing")
+      .select("id, date, purpose, court_no, judge, raw")
+      .eq("matter_id", matterId);
+    const dh = diffHearings(
+      (existingHearings ?? []) as ExistingHearing[],
+      c.hearings.filter((h) => h.date),
+    );
+    for (const id of dh.toDelete) {
+      await supabase.from("hearing").delete().eq("id", id);
+    }
+    for (const { id, changes } of dh.toUpdate) {
+      await supabase.from("hearing").update(changes as Database["public"]["Tables"]["hearing"]["Update"]).eq("id", id);
+    }
+    if (dh.toInsert.length) {
+      const rows = dh.toInsert.map((h) => ({
         tenant_id: tenantId,
         matter_id: matterId,
         date: h.date,
@@ -100,38 +211,79 @@ export async function upsertCase(
         judge: h.judge ?? null,
         raw: (h.raw ?? {}) as Database["public"]["Tables"]["hearing"]["Insert"]["raw"],
       }));
-    if (rows.length) {
-      // WO-156: never swallow the write — a rejected hearing insert must surface, not vanish.
       const { error: hearingErr } = await supabase.from("hearing").insert(rows);
       if (hearingErr) throw new Error(`upsertCase: hearing insert failed: ${hearingErr.message}`);
     }
+  } else {
+    await supabase.from("hearing").delete().eq("matter_id", matterId);
+    if (c.hearings.length) {
+      const rows = c.hearings
+        .filter((h) => h.date)
+        .map((h) => ({
+          tenant_id: tenantId,
+          matter_id: matterId,
+          date: h.date,
+          purpose: h.purpose ?? null,
+          court_no: h.courtNo ?? null,
+          judge: h.judge ?? null,
+          raw: (h.raw ?? {}) as Database["public"]["Tables"]["hearing"]["Insert"]["raw"],
+        }));
+      if (rows.length) {
+        const { error: hearingErr } = await supabase.from("hearing").insert(rows);
+        if (hearingErr) throw new Error(`upsertCase: hearing insert failed: ${hearingErr.message}`);
+      }
+    }
   }
 
-  // Replace court orders for the matter (idempotent re-sync).
-  await supabase.from("court_order").delete().eq("matter_id", matterId);
-  if (c.orders?.length) {
-    // WO-156: dedupe by the STABLE provider order id — the identity of an order. Multiple
-    // orders can legitimately be dateless with a generic "Order" title, so keying on
-    // (date, title) collapses distinct orders and (under the old court_order_dedup_idx unique
-    // index) made the whole multi-row insert fail atomically → 0 orders persisted silently.
-    const seenOrderId = new Set<string>();
-    const orderRows = c.orders
-      .filter((o) => o.id && !seenOrderId.has(o.id) && seenOrderId.add(o.id))
-      .map((o) => ({
-        tenant_id: tenantId,
-        matter_id: matterId,
-        order_date: o.date && /^\d{4}-\d{2}-\d{2}/.test(o.date) ? o.date.slice(0, 10) : null,
-        title: o.title ?? null,
-        // Do NOT persist the provider's presigned pdf_url — it expires (~1h) → AccessDenied.
-        // Store only the stable provider order id; the PDF is streamed on demand via
-        // /api/court/order-pdf → the provider's stable /order/{id}/pdf endpoint.
-        raw: { order_id: o.id, has_pdf: !!o.pdfUrl } as Database["public"]["Tables"]["court_order"]["Insert"]["raw"],
-      }));
-    if (orderRows.length) {
-      // WO-156: surface a failed order write instead of swallowing it (the exact bug that
-      // wiped orders on every refresh while the action still reported success).
-      const { error: orderErr } = await supabase.from("court_order").insert(orderRows);
-      if (orderErr) throw new Error(`upsertCase: court_order insert failed: ${orderErr.message}`);
+  // ── Court order sync ───────────────────────────────────────────────────
+  if (DIFF_SYNC_ENABLED && existing) {
+    const { data: existingOrders } = await supabase
+      .from("court_order")
+      .select("id, order_date, title, raw")
+      .eq("matter_id", matterId);
+    const od = diffOrders(
+      (existingOrders ?? []) as ExistingOrder[],
+      c.orders ?? [],
+    );
+    for (const id of od.toDelete) {
+      await supabase.from("court_order").delete().eq("id", id);
+    }
+    for (const { id, changes } of od.toUpdate) {
+      await supabase.from("court_order").update(changes as Database["public"]["Tables"]["court_order"]["Update"]).eq("id", id);
+    }
+    if (od.toInsert.length) {
+      const seenOrderId = new Set<string>();
+      const orderRows = od.toInsert
+        .filter((o) => o.id && !seenOrderId.has(o.id) && seenOrderId.add(o.id))
+        .map((o) => ({
+          tenant_id: tenantId,
+          matter_id: matterId,
+          order_date: o.date && /^\d{4}-\d{2}-\d{2}/.test(o.date) ? o.date.slice(0, 10) : null,
+          title: o.title ?? null,
+          raw: { order_id: o.id, has_pdf: !!o.pdfUrl } as Database["public"]["Tables"]["court_order"]["Insert"]["raw"],
+        }));
+      if (orderRows.length) {
+        const { error: orderErr } = await supabase.from("court_order").insert(orderRows);
+        if (orderErr) throw new Error(`upsertCase: court_order insert failed: ${orderErr.message}`);
+      }
+    }
+  } else {
+    await supabase.from("court_order").delete().eq("matter_id", matterId);
+    if (c.orders?.length) {
+      const seenOrderId = new Set<string>();
+      const orderRows = c.orders
+        .filter((o) => o.id && !seenOrderId.has(o.id) && seenOrderId.add(o.id))
+        .map((o) => ({
+          tenant_id: tenantId,
+          matter_id: matterId,
+          order_date: o.date && /^\d{4}-\d{2}-\d{2}/.test(o.date) ? o.date.slice(0, 10) : null,
+          title: o.title ?? null,
+          raw: { order_id: o.id, has_pdf: !!o.pdfUrl } as Database["public"]["Tables"]["court_order"]["Insert"]["raw"],
+        }));
+      if (orderRows.length) {
+        const { error: orderErr } = await supabase.from("court_order").insert(orderRows);
+        if (orderErr) throw new Error(`upsertCase: court_order insert failed: ${orderErr.message}`);
+      }
     }
   }
 
