@@ -475,12 +475,12 @@
         },
         "notTracked": "Not tracked yet",
         "defaultsRow": "Defaults for every case",
-        "defaultsHint": "Applies on sync"
+        "defaultsHint": "Applies on sync",
+        "defaultsCourt": "Every matter added from the court record"
       },
       "ledger": {
         "title": "Delivery ledger",
         "receipts": "{n, plural, one {# receipt} other {# receipts}}",
-        "note": "“Delivered” and “read” aren't confirmed anywhere yet — sent is as far as we can verify.",
         "filter": {
           "all": "All",
           "whatsapp": "WhatsApp",
@@ -499,11 +499,15 @@
       },
       "brief": {
         "title": "Evening brief & quiet hours",
+        "eveningBrief": "Evening brief",
+        "eveningBriefBody": "Tomorrow's hearings, deadlines and unread mail — in one message.",
         "briefAt": "Brief at",
         "ist": "IST",
         "digest": "Digest",
         "instant": "Instant",
         "instantSoon": "Instant delivery isn't available yet",
+        "quietHours": "Quiet hours",
+        "quietHoursBody": "Your do-not-disturb window for automated sends.",
         "quietFrom": "Quiet hours from",
         "quietTo": "to",
         "save": "Save",
@@ -512,8 +516,6 @@
         "chipChannels": "{n, plural, one {# channel on} other {# channels on}}"
       },
       "footer": {
-        "stampLine1": "Delivery ledger",
-        "stampLine2": "Updated {date}",
         "link": "Manage channels in Settings →"
       }
     }
