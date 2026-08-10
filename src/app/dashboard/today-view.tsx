@@ -5,13 +5,14 @@ import { cleanPurpose } from "@/lib/court/code-labels";
 import { maskTitle } from "@/lib/court/mask";
 import { CountUp, Reveal } from "./motion";
 
-// Presentational "Overview" page — Chambers/Daybreak skin (WO-330 wave 2, exact-fidelity
-// reconcile vs. the reference design-mockups/iteration3/console/app.overview.tsx). Structure,
-// section order, labels and empty/first-run states mirror the reference node-for-node; every
-// value binds to real data (the reference itself carries dummy content). The reference's
-// <Stamp> "COURT RECORD SYNCED" provenance mark is a founder-directed omission — the section it
-// sat in stays (see "Last sync" below) with an honest text line instead of the stamp graphic, so
-// the sync-freshness disclosure this product requires on every court-data surface isn't lost.
+// Presentational "Overview" page — Chambers/Daybreak skin (WO-330 wave 2 + WO-346 wave-3
+// exact-fidelity reconcile vs. the reference design-mockups/iteration3/console/app.overview.tsx).
+// Structure, section order, labels and empty/first-run states mirror the reference node-for-node;
+// every value binds to real data (the reference itself carries dummy content). WO-346 restores the
+// reference's rotated <Stamp> "COURT RECORD SYNCED" provenance mark (a prior founder override had
+// dropped it to a plain text line) — see "Last sync" below; an honest "not yet synced" stamp covers
+// the case with no synced matter yet, so the sync-freshness disclosure this product requires on
+// every court-data surface is never lost either way.
 // The reference's "Show first-run state" button is a Lovable-canvas design-preview toggle (not a
 // real control — its own label says "state", and no other page in the reference has one); the
 // real product already knows first-run from data (page.tsx), so it drives the same structural
@@ -75,8 +76,9 @@ export async function TodayView({
     <div className="space-y-4">
       {/* masthead — the reference's <AppMasthead>, ported as the page's own dark "engraved" band
           (not shell chrome; WO-328's shell/top-bar/nav are untouched above this — same pattern as
-          the Notifications/Case-file Wave-2 reconciles). No right-rail toggle: see file header note. */}
-      <Reveal as="div" className="mk-engraved rounded-xl bg-ec-ink px-5 py-7 text-ec-paper sm:px-8">
+          the Notifications/Case-file Wave-2 reconciles). No right-rail toggle: see file header note.
+          WO-346: unrounded (the reference's ink band is square/edge-to-edge, not rounded-xl). */}
+      <Reveal as="div" className="mk-engraved bg-ec-ink px-5 py-7 text-ec-paper sm:px-8">
         <h1 className="font-display text-[28px] leading-tight text-ec-paper sm:text-[32px]">{to("title")}</h1>
         <p className="num mt-1.5 text-[13px] text-ec-line-strong">
           {wd(now, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · {to("tagline")}
@@ -212,7 +214,7 @@ export async function TodayView({
                     return (
                       <li key={f.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
                         <span className="min-w-0 text-[14px] text-ec-ink">
-                          {f.kind ?? t("filing")} — <b className="font-semibold">{f.matterTitle ?? "—"}</b>
+                          {f.kind ?? t("filing")} — {f.matterTitle ?? "—"}
                         </span>
                         <span className={`num font-mono text-[11.5px] ${overdue ? "text-ec-danger" : "text-ec-ink-3"}`}>
                           {overdue ? to("deadlines.overdue", { date: dateStr }) : to("deadlines.due", { date: dateStr })}
@@ -234,7 +236,7 @@ export async function TodayView({
                   <CountUp value={inboxReview} />
                 </div>
                 <span className="mt-2 inline-flex items-center gap-1 text-[12.5px] text-ec-bronze-deep">
-                  {to("inbox.cta")} →
+                  {to("inbox.cta")} <Icon name="arrow" className="h-3 w-3" />
                 </span>
               </Link>
 
@@ -269,14 +271,20 @@ export async function TodayView({
               <div>
                 <div className="ec-label">{to("lastSync.title")}</div>
                 <div className="mb-1.5 mt-1.5 h-[3px] border-y border-ec-hair" />
-                {/* founder override: the reference's rotated <Stamp> "COURT RECORD SYNCED" graphic
-                    is omitted here — the section stays, with an honest text line instead, so the
-                    sync-freshness disclosure (non-negotiable on every court-data surface) isn't lost. */}
-                <p className="num text-sm text-ec-ink-3">
-                  {syncedAt
-                    ? to("lastSync.at", { date: wd(syncedAt, { day: "2-digit", month: "short", year: "numeric" }), time: time(syncedAt) })
-                    : to("lastSync.never")}
-                </p>
+                {/* WO-346: the reference's rotated <Stamp> "COURT RECORD SYNCED" provenance mark,
+                    restored — a real "not yet synced" stamp covers the honest no-data case instead
+                    of fabricating a synced date. */}
+                <div className="flex justify-start">
+                  <div className="relative -rotate-2 rounded-lg border-[1.5px] border-ec-bronze px-4 pb-2.5 pt-3 text-center text-ec-bronze opacity-75">
+                    <span className="absolute left-1/2 top-[5px] h-[5px] w-[5px] -translate-x-1/2 rounded-full bg-ec-honey" />
+                    <div className="mk-stamp-line">{syncedAt ? to("lastSync.stampSynced") : to("lastSync.stampNever")}</div>
+                    {syncedAt && (
+                      <div className="mk-stamp-line num">
+                        {to("lastSync.stampAt", { date: wd(syncedAt, { day: "2-digit", month: "short", year: "numeric" }), time: time(syncedAt) })}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </Reveal>
           </div>

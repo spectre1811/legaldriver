@@ -78,8 +78,8 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
       {/* WO-342: dark ink engraved masthead — matches Overview/Directory's shipped treatment
           (today-view.tsx) instead of forking a light header; count moves into the honey mono
           pill on the ink-chip token (AppMasthead's title-slot count, design-mockups/iteration3/
-          console/app-shell.tsx). */}
-      <Reveal as="div" className="mk-engraved rounded-xl bg-ec-ink px-5 py-7 text-ec-paper sm:px-8">
+          console/app-shell.tsx). WO-346: unrounded (the reference's ink band is square/edge-to-edge). */}
+      <Reveal as="div" className="mk-engraved bg-ec-ink px-5 py-7 text-ec-paper sm:px-8">
         <div className="flex flex-wrap items-baseline gap-3">
           <h1 className="font-display text-[28px] leading-tight text-ec-paper sm:text-[32px]">{t("title")}</h1>
           {total > 0 && (
