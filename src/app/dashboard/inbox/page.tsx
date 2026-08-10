@@ -115,16 +115,18 @@ export default async function InboxPage({
 
   return (
     <div className="space-y-6">
-      <Reveal as="div" className="flex flex-wrap items-end justify-between gap-4">
-        <header className="min-w-0">
-          <div className="flex flex-wrap items-baseline gap-2">
-            <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
-            {conn && counts.needs_review > 0 && (
-              <span className="ec-chip ec-chip-hot">{td("toReview", { count: counts.needs_review })}</span>
-            )}
-          </div>
-          <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("subtitle")}</p>
-        </header>
+      {/* WO-343: dark ink engraved masthead — the prototype renders Inbox via AppMasthead (the
+          same dark band as Overview/Cases, design-mockups/iteration3/console/app.inbox.tsx); this
+          page had forked a light header. Match today-view/cases verbatim; count moves into the
+          honey mono pill. */}
+      <Reveal as="div" className="mk-engraved rounded-xl bg-ec-ink px-5 py-7 text-ec-paper sm:px-8">
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h1 className="font-display text-[28px] leading-tight text-ec-paper sm:text-[32px]">{t("title")}</h1>
+          {conn && counts.needs_review > 0 && (
+            <span className="num rounded-md bg-ec-ink-chip px-2 py-0.5 font-mono text-[12px] text-ec-honey">{td("toReview", { count: counts.needs_review })}</span>
+          )}
+        </div>
+        <p className="mt-1.5 max-w-2xl text-[13px] text-ec-line-strong">{t("subtitle")}</p>
       </Reveal>
 
       {searchParams.connected && <p className="rounded-md bg-ec-success-bg px-3.5 py-2.5 text-sm text-ec-success">{t("connected")}</p>}

@@ -54,7 +54,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
       .eq("kind", "cases")
       .order("created_at", { ascending: true }),
     fetchViewCounts(supabase),
-    fetchTierCounts(supabase),
+    fetchTierCounts(supabase, filters.status),
   ]);
 
   const distinct = (key: "court" | "case_type" | "stage") =>

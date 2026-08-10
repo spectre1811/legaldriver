@@ -39,7 +39,8 @@ ok("segmented is an ARIA group with pressed state", /role="group"/.test(seg) && 
 
 // ── page wiring ────────────────────────────────────────────────────────────────
 const page = src("src/app/dashboard/cases/page.tsx");
-ok("page fetches tier counts", /fetchTierCounts\(supabase\)/.test(page));
+// WO-343: tier counts are scoped to the active status so "All N" matches the (open-default) list.
+ok("page fetches tier counts, scoped to the active status", /fetchTierCounts\(supabase, filters\.status\)/.test(page));
 ok("page passes tier counts to the toolbar", /<CasesToolbar[\s\S]*?tierCounts=\{tierCounts\}/.test(page));
 ok("tier flows into the filters", /const filters: CasesFilters = \{ q, tier,/.test(page));
 

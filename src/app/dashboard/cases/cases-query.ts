@@ -259,8 +259,11 @@ export interface TierCounts {
   SC: number;
 }
 
-export async function fetchTierCounts(supabase: SupabaseClient<Database>): Promise<TierCounts> {
-  const head = () => supabase.from("matter").select("id", { count: "exact", head: true });
+// WO-343: scope the tier tab counts to the ACTIVE status (default "open"), so "All N" matches the
+// visible list + masthead pill instead of counting all-status (a disposed case made "All 15" sit
+// next to a 14-row open list). Reuses applyStatusFilter — the same open/disposed logic the list uses.
+export async function fetchTierCounts(supabase: SupabaseClient<Database>, status?: string): Promise<TierCounts> {
+  const head = () => applyStatusFilter(supabase.from("matter").select("id", { count: "exact", head: true }), status);
   const [all, hc, dist, trib, sc] = await Promise.all([
     head(),
     head().eq("tier", "HC"),

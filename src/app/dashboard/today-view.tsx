@@ -55,6 +55,7 @@ export async function TodayView({
   const t = await getTranslations("today");
   const to = await getTranslations("dashboard.overview");
   const tcd = await getTranslations("caseDetail");
+  const tcf = await getTranslations("dashboard.caseFile");
   const maskedLabel = tcd("maskedTitle");
   // WO-16 W3 — activation checklist: nudge partially-set-up tenants toward first case + WhatsApp alerts.
   const steps = [
@@ -157,7 +158,10 @@ export async function TodayView({
                       const masked = rawTitle != null && displayTitle !== rawTitle;
                       return (
                         <li key={h.id} className="ec-row flex flex-wrap items-start gap-x-3 gap-y-1 py-3">
-                          <span className="num w-14 shrink-0 pt-0.5 font-mono text-[12px] text-ec-ink-2">{time(h.date)}</span>
+                          {/* WO-343: the data model has no per-hearing TIME (h.date is date-only), so the
+                              reference's time slot renders a fabricated midnight-IST "05:30" on every row.
+                              This is a NEXT-HEARINGS list spanning days, so show the real hearing date here. */}
+                          <span className="num w-14 shrink-0 pt-0.5 font-mono text-[12px] text-ec-ink-2">{wd(h.date, { day: "numeric", month: "short" })}</span>
                           <div className="min-w-0 flex-1">
                             <Link
                               href={h.matter ? `/dashboard/cases/${h.matter.id}` : "#"}
@@ -166,7 +170,7 @@ export async function TodayView({
                               {masked ? <em className="text-ec-ink-3">{displayTitle}</em> : displayTitle}
                             </Link>
                             <div className="num mt-0.5 truncate font-mono text-[10.5px] uppercase tracking-[0.08em] text-ec-ink-3">
-                              {[h.matter?.court, h.courtNo].filter(Boolean).join(" · ") || "—"}
+                              {[h.matter?.court, h.courtNo ? tcf("courtNo", { no: h.courtNo }) : null].filter(Boolean).join(" · ") || "—"}
                             </div>
                           </div>
                           {/* basis-full forces the chip onto its own indented line when the row is too
