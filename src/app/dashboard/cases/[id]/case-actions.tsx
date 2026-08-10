@@ -1,12 +1,73 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { LogTimeExpense } from "./time-expense";
+import { SectionLabel } from "./case-section";
 import { generateCaseSummary, addCaseDocument, updateCase, refreshCase, confirmDeadline, dismissDeadline, setDiaryDate, deleteMatter } from "../actions";
+
+// WO-332 · founder ask: the AI briefing card is long and dense — make it hideable, and remember the
+// choice. A plain useState toggle (not CaseRecord's native <details>) because this ONE needs to
+// persist across visits — localStorage, client-only, not worth a DB round-trip for a UI preference.
+// Renders expanded on the server (matches the pre-existing default); a mount-time effect applies
+// whatever was last chosen — the one-frame "flash" of expanded-then-maybe-collapsed is the standard
+// tradeoff for any localStorage-backed UI state that must also SSR something.
+const AI_BRIEFING_COLLAPSED_KEY = "ld.aiBriefing.collapsed";
+
+export function AiBriefingSection({
+  title,
+  generateSummary,
+  hideLabel,
+  showLabel,
+  children,
+}: {
+  title: string;
+  generateSummary: ReactNode;
+  hideLabel: string;
+  showLabel: string;
+  children: ReactNode;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (window.localStorage.getItem(AI_BRIEFING_COLLAPSED_KEY) === "1") setCollapsed(true);
+  }, []);
+
+  const toggle = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      window.localStorage.setItem(AI_BRIEFING_COLLAPSED_KEY, next ? "1" : "0");
+      return next;
+    });
+  };
+
+  return (
+    <>
+      <SectionLabel
+        right={
+          <div className="flex items-center gap-3">
+            {generateSummary}
+            <button
+              type="button"
+              onClick={toggle}
+              aria-expanded={!collapsed}
+              className="inline-flex items-center gap-1 text-[12px] font-medium text-ec-bronze-deep hover:underline"
+            >
+              {collapsed ? showLabel : hideLabel}
+              <Icon name="chevron" className={`h-3 w-3 rotate-90 transition-transform ${collapsed ? "" : "-rotate-90"}`} />
+            </button>
+          </div>
+        }
+      >
+        {title}
+      </SectionLabel>
+      {!collapsed && <div className="ec-card p-5">{children}</div>}
+    </>
+  );
+}
 
 // The advocate's own next-hearing "diary" date — overrides a stale/wrong court date.
 export function MatterDiaryDate({ matterId, synced, override }: { matterId: string; synced: string | null; override: string | null }) {

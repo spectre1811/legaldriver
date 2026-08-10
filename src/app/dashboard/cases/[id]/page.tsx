@@ -4,11 +4,12 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { fmtAgo, fmtMoney, fmtHours } from "@/components/ui";
 import { Icon } from "@/components/icons";
-import { LogTimeToggle, RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm, ProposedDeadlineActions, MatterDiaryDate, CopyCnrButton, CaseMenu } from "./case-actions";
+import { LogTimeToggle, RefreshButton, GenerateSummaryButton, AddDocumentForm, EditCaseForm, ProposedDeadlineActions, MatterDiaryDate, CopyCnrButton, CaseMenu, AiBriefingSection } from "./case-actions";
 import { DeadlineRuleForm } from "./deadline-rules";
 import { CaseTimeline } from "./case-timeline";
 import { CaseRecord } from "./case-record";
 import { SectionLabel } from "./case-section";
+import { CaseSectionNav } from "./case-nav";
 import { DocumentsCard, type CaseDocRow } from "./doc-viewer";
 import { getTimeline, type TimelineEvent } from "@/lib/court/legaldriver-api";
 import { expandCaseType, cleanPurpose } from "@/lib/court/code-labels";
@@ -21,7 +22,14 @@ import { Reveal } from "../../motion";
 
 type Party = { name?: string; side?: string; advocate?: string; masked?: boolean };
 
-const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+// WO-332: also rejects the literal strings "null"/"undefined" — the provider occasionally sends
+// these AS TEXT (not a real null) for a missing field (e.g. an advocate-less party), which used to
+// render the word "null" on screen. Every field routed through `str()` gets this guard for free.
+const str = (v: unknown) => {
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  return t && !/^(null|undefined)$/i.test(t) ? t : null;
+};
 // short "02 Jul" from the shared day-first formatter (drop the year for the compact aside lists).
 const shortDate = (v: string | null | undefined) => formatCourtDate(v)?.replace(/ \d{4}$/, "") ?? null;
 const NOTIFY_CHANNEL_LABEL: Record<string, string> = { whatsapp: "WA", email: "EM", sms: "SMS", inapp: "IN", in_app: "IN" };
@@ -73,7 +81,15 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
     supabase.from("document").select("id", { count: "exact", head: true }).eq("matter_id", matter.id).filter("extracted->>status", "eq", "needs_review").filter("extracted->>deletedAt", "is", null),
   ]);
 
-  const parties = (Array.isArray(matter.parties) ? matter.parties : []) as Party[];
+  // WO-332: clean name/advocate through `str()` ONCE here — every downstream render (this page's
+  // parties card) then just sees "no value" instead of a stray literal "null"/"undefined" string
+  // (founder-reported under RESPONDENT). Root cause is upstream (the sync client can persist that
+  // literal text — flagged separately); this normalizes whatever's already on the row today too.
+  const parties = ((Array.isArray(matter.parties) ? matter.parties : []) as Party[]).map((p) => ({
+    ...p,
+    name: str(p.name) ?? undefined,
+    advocate: str(p.advocate) ?? undefined,
+  }));
   const ai = matter.ai_summary as unknown as CaseSummary | null;
   // Self-assessed confidence (BP-26). Only briefings generated with a real score carry the
   // chip/review banner; legacy summaries (no score) render unchanged rather than being mislabelled.
@@ -214,6 +230,18 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   }
   const lastNotify = (notifyRows ?? [])[0] ?? null;
 
+  // WO-332 · sticky scroll-spy nav (founder ask) — the page's primary content areas, in the
+  // order they now appear (Parties moved to the top of main, per the same ask). Every id below
+  // has a matching `id=` on its own section landmark further down; add a section here + there
+  // together, or the nav silently grows a dead tab.
+  const navSections = [
+    { id: "parties", label: tf("partiesTitle") },
+    { id: "ai-briefing", label: t("ai.title") },
+    { id: "hearings-orders", label: tf("hearingsOrders") },
+    { id: "court-record", label: tf("record.title") },
+    { id: "documents", label: t("documents.title") },
+  ];
+
   return (
     <div className="text-ec-ink">
       {/* header — the page's own dark "engraved" masthead panel (not shell chrome; WO-328's
@@ -274,6 +302,8 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         </div>
       </Reveal>
 
+      <CaseSectionNav sections={navSections} />
+
       <div className="pt-7">
         {matter.source === "mock" && (
           <Reveal as="div" delay={40} role="status" className="ec-rule-left mb-6 flex items-start gap-2.5 rounded-r-md px-4 py-3 text-sm text-ec-warn">
@@ -316,10 +346,54 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           {/* main */}
           <div className="min-w-0 space-y-9">
-            {/* AI briefing */}
-            <Reveal as="section" delay={120}>
-              <SectionLabel right={<GenerateSummaryButton matterId={matter.id} has={!!ai} />}>{t("ai.title")}</SectionLabel>
-              <div className="ec-card p-5">
+            {/* parties & advocates — WO-332: moved to the top of the main column (founder ask —
+                important, previously buried at the bottom). Always shown (per the FAITHFUL-TO-
+                PROTOTYPE bar: keep every designed element, honest empty state, never a silently-
+                dropped section). */}
+            <Reveal as="section" id="parties" delay={120} className="scroll-mt-28">
+              <SectionLabel>{tf("partiesTitle")}</SectionLabel>
+              {partyGroups.size > 0 ? (
+                <div className="ec-card grid gap-0 sm:grid-cols-2">
+                  {[...partyGroups.entries()].map(([side, group], i) => (
+                    <div key={side} className={`border-b border-ec-hair p-5 last:border-b-0 sm:border-b-0 ${i > 0 ? "sm:border-l sm:border-ec-hair" : ""}`}>
+                      <span className={`ec-chip ${i === 0 ? "ec-chip-hot" : ""}`}>{side}</span>
+                      {group.map((p, j) => (
+                        <div key={j} className={j > 0 ? "mt-3 border-t border-ec-hair pt-3" : "mt-2"}>
+                          <div className="font-display text-[16px] text-ec-ink">
+                            <CourtField value={p.name ?? null} maskedLabel={t("masked")} emptyLabel={t("parties.empty")} field="party" />
+                          </div>
+                          {/* WO-332: `p.advocate` is already cleaned (page-level `parties` map, above) —
+                              a literal "null"/"undefined" string can never reach here, so this stays a
+                              plain truthy check, not a special-cased render (no fabricated placeholder
+                              text either; the line simply doesn't print when there's nothing real). */}
+                          {p.advocate && !isMaskedName(p.advocate) && (
+                            <div className="mt-2 text-[13px]">
+                              <Link href={`/dashboard/search/directory?q=${encodeURIComponent(p.advocate)}`} className="text-ec-bronze-deep hover:underline">
+                                {p.advocate}
+                              </Link>
+                            </div>
+                          )}
+                          {p.advocate && isMaskedName(p.advocate) && (
+                            <div className="mt-2 text-[13px] text-ec-ink-2">{p.advocate}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="ec-card px-5 py-8 text-center text-sm text-ec-ink-3">{t("parties.empty")}</div>
+              )}
+            </Reveal>
+
+            {/* AI briefing — hideable + persisted (founder ask), see AiBriefingSection */}
+            <Reveal as="section" id="ai-briefing" delay={160} className="scroll-mt-28">
+              <AiBriefingSection
+                title={t("ai.title")}
+                generateSummary={<GenerateSummaryButton matterId={matter.id} has={!!ai} />}
+                hideLabel={tf("record.hide")}
+                showLabel={tf("record.show")}
+              >
                 {ai ? (
                   <>
                     <div className="flex flex-wrap items-center gap-2">
@@ -404,18 +478,18 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 ) : (
                   <p className="text-sm text-ec-ink-3">{t("ai.empty")}</p>
                 )}
-              </div>
+              </AiBriefingSection>
             </Reveal>
 
             {/* hearings & orders — one combined, reverse-chronological list (reference's own
                 shape); an order's document link opens the real streamed PDF. */}
-            <Reveal as="section" delay={160}>
+            <Reveal as="section" id="hearings-orders" delay={200} className="scroll-mt-28">
               <SectionLabel>{tf("hearingsOrders")}</SectionLabel>
               <CaseTimeline events={mainTimeline} hasCnr={!!matter.cnr} />
             </Reveal>
 
             {/* court record (collapsible) */}
-            <Reveal as="section" delay={200}>
+            <Reveal as="section" id="court-record" delay={240} className="scroll-mt-28">
               <CaseRecord
                 title={tf("record.title")}
                 hideLabel={tf("record.hide")}
@@ -426,40 +500,6 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 maskedLabel={t("masked")}
                 syncedNote={matter.last_synced_at ? tf("record.synced", { time: refreshed }) : null}
               />
-            </Reveal>
-
-            {/* parties & advocates — always shown (per the FAITHFUL-TO-PROTOTYPE bar: keep every
-                designed element, honest empty state, never a silently-dropped section) */}
-            <Reveal as="section" delay={240}>
-              <SectionLabel>{tf("partiesTitle")}</SectionLabel>
-              {partyGroups.size > 0 ? (
-                <div className="ec-card grid gap-0 sm:grid-cols-2">
-                  {[...partyGroups.entries()].map(([side, group], i) => (
-                    <div key={side} className={`border-b border-ec-hair p-5 last:border-b-0 sm:border-b-0 ${i > 0 ? "sm:border-l sm:border-ec-hair" : ""}`}>
-                      <span className={`ec-chip ${i === 0 ? "ec-chip-hot" : ""}`}>{side}</span>
-                      {group.map((p, j) => (
-                        <div key={j} className={j > 0 ? "mt-3 border-t border-ec-hair pt-3" : "mt-2"}>
-                          <div className="font-display text-[16px] text-ec-ink">
-                            <CourtField value={p.name ?? null} maskedLabel={t("masked")} emptyLabel={t("parties.empty")} field="party" />
-                          </div>
-                          {p.advocate && !isMaskedName(p.advocate) && (
-                            <div className="mt-2 text-[13px]">
-                              <Link href={`/dashboard/search/directory?q=${encodeURIComponent(p.advocate)}`} className="text-ec-bronze-deep hover:underline">
-                                {p.advocate}
-                              </Link>
-                            </div>
-                          )}
-                          {p.advocate && isMaskedName(p.advocate) && (
-                            <div className="mt-2 text-[13px] text-ec-ink-2">{p.advocate}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="ec-card px-5 py-8 text-center text-sm text-ec-ink-3">{t("parties.empty")}</div>
-              )}
             </Reveal>
           </div>
 
@@ -549,7 +589,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               </div>
             </Reveal>
 
-            <Reveal as="section" delay={240}>
+            <Reveal as="section" id="documents" delay={240} className="scroll-mt-28">
               <SectionLabel>{t("documents.title")}</SectionLabel>
               <div className="ec-card">
                 <div className="border-b border-ec-hair px-3 py-2.5"><AddDocumentForm matterId={matter.id} /></div>
