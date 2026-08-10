@@ -205,6 +205,10 @@ export async function updateNotificationPrefs(_prev: ActionResult, formData: For
   }
 
   revalidatePath("/dashboard/settings");
+  // WO-336: the Notifications page's Quiet-hours/Evening-brief block now submits through this
+  // SAME action (never a forked mutation) — revalidate it too, or a save there shows stale values
+  // until an unrelated navigation happens to refresh the route cache.
+  revalidatePath("/dashboard/notifications");
   return { ok: true, message: t("notify.saved") };
 }
 
