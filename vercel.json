@@ -1,15 +1,47 @@
 {
-  "regions": ["bom1"],
+  "regions": [
+    "bom1"
+  ],
   "crons": [
-    { "path": "/api/cron/refresh", "schedule": "0 1 * * *" },
-    { "path": "/api/cron/causelist", "schedule": "30 1 * * *" },
-    { "path": "/api/cron/escalate", "schedule": "0 2 * * *" },
-    { "path": "/api/cron/notify", "schedule": "0 3 * * *" },
-    { "path": "/api/cron/gmail", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/audit-refile", "schedule": "0 5 * * *" },
-    { "path": "/api/cron/onboarding-drain", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/ld-api-canary", "schedule": "0 7 * * *" },
-    { "path": "/api/cron/deploy-freshness", "schedule": "0 8 * * *" },
-    { "path": "/api/cron/daily-hearings", "schedule": "30 12 * * *" }
+    {
+      "path": "/api/cron/refresh",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/causelist",
+      "schedule": "30 1 * * *"
+    },
+    {
+      "path": "/api/cron/escalate",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/notify",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/gmail",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/audit-refile",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/onboarding-drain",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/ld-api-canary",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/deploy-freshness",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/daily-hearings",
+      "schedule": "30 12 * * *"
+    }
   ]
 }
