@@ -4,7 +4,9 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
-import { generateCaseSummary, addCaseDocument, updateCase, refreshCase, confirmDeadline, dismissDeadline, setDiaryDate } from "../actions";
+import { ConfirmDelete } from "@/components/confirm-delete";
+import { LogTimeExpense } from "./time-expense";
+import { generateCaseSummary, addCaseDocument, updateCase, refreshCase, confirmDeadline, dismissDeadline, setDiaryDate, deleteMatter } from "../actions";
 
 // The advocate's own next-hearing "diary" date — overrides a stale/wrong court date.
 export function MatterDiaryDate({ matterId, synced, override }: { matterId: string; synced: string | null; override: string | null }) {
@@ -75,11 +77,94 @@ export function RefreshButton({ matterId }: { matterId: string }) {
           }
         })}
         disabled={pending}
-        className="btn-secondary"
+        className="inline-flex items-center gap-1.5 rounded-md border border-ec-ink-border px-3 py-1.5 text-[12.5px] text-paper transition-colors hover:border-ec-honey hover:text-ec-honey disabled:opacity-50"
       >
-        <Icon name="refresh" className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} /> {pending ? t("actions.refreshing") : t("actions.refresh")}
+        <Icon name="refresh" className={`h-3.5 w-3.5 ${pending ? "animate-spin" : ""}`} /> {pending ? t("actions.refreshing") : t("actions.refresh")}
       </button>
-      {msg && <span role="status" className={`max-w-xs text-xs ${msg.ok ? "text-ink-muted" : "text-red-600"}`}>{msg.text}</span>}
+      {msg && <span role="status" className={`max-w-xs text-xs ${msg.ok ? "text-ec-line-strong" : "text-red-400"}`}>{msg.text}</span>}
+    </div>
+  );
+}
+
+// WO-332 · copy the CNR to clipboard — the prototype's header affordance. Falls back silently
+// (no clipboard permission in some embedded contexts) rather than throwing.
+export function CopyCnrButton({ cnr, label, copiedLabel }: { cnr: string; label: string; copiedLabel: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try { await navigator.clipboard?.writeText(cnr); } catch { /* no clipboard permission — nothing to file, the chip still shows the CNR */ }
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1400);
+      }}
+      aria-label={label}
+      className="inline-flex items-center gap-1 rounded border border-ec-ink-border px-1.5 py-0.5 text-[10.5px] text-ec-line-strong transition-colors hover:border-ec-honey hover:text-ec-honey"
+    >
+      <Icon name={copied ? "check" : "copy"} className="h-2.5 w-2.5" />
+      {copied ? copiedLabel : label}
+    </button>
+  );
+}
+
+// WO-332 · the header's "More actions" menu. Only "Delete" is a real, wired capability today
+// (existing soft-delete via ConfirmDelete/deleteMatter); the reference's calendar/share/export
+// items have no backing route in this app (non-goal: no new endpoints in a reskin WO) — shown
+// disabled with a "Soon" mark rather than silently dropped or wired to a no-op, matching the
+// WO-331 precedent for an un-shippable-yet reference control.
+export function CaseMenu({
+  matterId, label, deleteLabel, deleteConfirmLabel, deleteNote, soonItems, soonLabel,
+}: {
+  matterId: string; label: string; deleteLabel: string; deleteConfirmLabel: string; deleteNote: string;
+  soonItems: string[]; soonLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        aria-label={label}
+        onClick={() => setOpen((v) => !v)}
+        className="grid h-[31px] w-[31px] place-items-center rounded-md border border-ec-ink-border text-paper transition-colors hover:border-ec-honey hover:text-ec-honey"
+      >
+        <Icon name="more" className="h-4 w-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 z-40 mt-1.5 w-56 rounded-[10px] border border-ec-line bg-ec-card p-1.5 shadow-ec-2 motion-safe:animate-fade-in">
+          {soonItems.map((l) => (
+            <div key={l} className="flex items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] text-ec-ink-3">
+              <span>{l}</span>
+              <span className="ec-chip shrink-0 !text-[9px]">{soonLabel}</span>
+            </div>
+          ))}
+          <div className="mt-1 border-t border-ec-line pt-1">
+            <ConfirmDelete action={deleteMatter} id={matterId} label={deleteLabel} confirmLabel={deleteConfirmLabel} note={deleteNote} redirectTo="/dashboard/cases" size="md" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// WO-332 · billing rail — a compact summary + "Log time" reveal (the reference keeps the ledger
+// entry form out of sight until asked for). The full time/expense ledger + invoices stay in the
+// main-column Billing section unchanged; this only toggles the existing LogTimeExpense form.
+export function LogTimeToggle({ matterId, label }: { matterId: string; label: string }) {
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-ec-line px-3 py-1.5 text-[12.5px] text-ec-ink-2 transition-colors hover:border-ec-line-strong hover:bg-ec-band"
+      >
+        <Icon name="clock" className="h-3.5 w-3.5" /> {label}
+      </button>
+    );
+  }
+  return (
+    <div className="-mx-4 -mb-4 mt-3 border-t border-ec-hair">
+      <LogTimeExpense matterId={matterId} />
     </div>
   );
 }
@@ -89,16 +174,21 @@ export function GenerateSummaryButton({ matterId, has }: { matterId: string; has
   const [msg, setMsg] = useState("");
   const router = useRouter();
   const t = useTranslations("caseDetail");
+  // Slim text link once a briefing exists (matches the reference's SectionLabel "Regenerate"
+  // affordance); a real filled CTA the first time, since there's nothing on the card to click yet.
+  const className = has
+    ? "inline-flex items-center gap-1.5 text-[12px] text-ec-bronze-deep hover:underline disabled:opacity-50"
+    : "ec-btn ec-btn-ink !px-3 !py-1.5 text-[12.5px] disabled:opacity-50";
   return (
     <div className="flex items-center gap-3">
       <button
         onClick={() => start(async () => { const r = await generateCaseSummary(matterId); setMsg(r.message); router.refresh(); })}
         disabled={pending}
-        className="btn-primary"
+        className={className}
       >
-        <Icon name="sparkles" className="h-4 w-4" /> {pending ? t("actions.analysing") : has ? t("actions.regenerate") : t("actions.generateSummary")}
+        <Icon name={has ? "refresh" : "sparkles"} className="h-3.5 w-3.5" /> {pending ? t("actions.analysing") : has ? t("actions.regenerate") : t("actions.generateSummary")}
       </button>
-      {msg && <span className="max-w-xs text-xs text-ink-muted">{msg}</span>}
+      {msg && <span className="max-w-xs text-xs text-ec-ink-3">{msg}</span>}
     </div>
   );
 }
@@ -145,8 +235,11 @@ export function EditCaseForm({
   const t = useTranslations("caseDetail");
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="btn-secondary">
-        <Icon name="settings" className="h-4 w-4" /> {t("actions.edit")}
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 rounded-md border border-ec-ink-border px-3 py-1.5 text-[12.5px] text-paper transition-colors hover:border-ec-honey hover:text-ec-honey"
+      >
+        <Icon name="edit" className="h-3.5 w-3.5" /> {t("actions.edit")}
       </button>
     );
   }

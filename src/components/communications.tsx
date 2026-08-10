@@ -1,22 +1,22 @@
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { Card, Badge, EmptyState, fmtAgo } from "@/components/ui";
+import { fmtAgo } from "@/components/ui";
 import { Icon, type IconName } from "@/components/icons";
 
-const CHANNEL_META: Record<string, { label: string; icon: IconName; tone: "brand" | "green" | "neutral" }> = {
-  email: { label: "Email", icon: "gmail", tone: "brand" },
-  whatsapp: { label: "WhatsApp", icon: "inbox", tone: "green" },
-  sms: { label: "SMS", icon: "inbox", tone: "neutral" },
+const CHANNEL_META: Record<string, { label: string; icon: IconName; chip: string }> = {
+  email: { label: "Email", icon: "gmail", chip: "ec-chip-hot" },
+  whatsapp: { label: "WhatsApp", icon: "inbox", chip: "ec-chip-success" },
+  sms: { label: "SMS", icon: "inbox", chip: "" },
 };
 
-const STATUS_TONE: Record<string, "green" | "amber" | "neutral" | "red"> = {
-  delivered: "green",
-  sent: "green",
-  read: "green",
-  received: "neutral",
-  filed: "neutral",
-  pending: "amber",
-  failed: "red",
+const STATUS_CHIP: Record<string, string> = {
+  delivered: "ec-chip-success",
+  sent: "ec-chip-success",
+  read: "ec-chip-success",
+  received: "",
+  filed: "",
+  pending: "ec-chip-warn",
+  failed: "ec-chip-danger",
 };
 
 const truncate = (s: string, n = 120) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
@@ -35,53 +35,55 @@ export async function Communications({ matterId, clientId }: { matterId?: string
   const scope = matterId ? "case" : "client";
 
   return (
-    <Card className="overflow-hidden">
-      <div className="border-b border-line px-5 py-4">
-        <h2 className="text-base font-medium">
-          {t("communications.title")} <span className="text-ink-faint">({rows?.length ?? 0})</span>
+    <div className="ec-card overflow-hidden">
+      <div className="border-b border-ec-hair px-5 py-4">
+        <h2 className="font-display text-base font-medium">
+          {t("communications.title")} <span className="text-ec-ink-3">({rows?.length ?? 0})</span>
         </h2>
-        <p className="mt-1 text-xs text-ink-faint">
+        <p className="mt-1 text-xs text-ec-ink-3">
           {t("communications.note")}
         </p>
       </div>
       {rows && rows.length ? (
-        <ul className="divide-y divide-line">
+        <ul className="divide-y divide-ec-hair">
           {rows.map((c) => {
             const channel = c.channel ?? "email";
             const meta = CHANNEL_META[channel] ?? CHANNEL_META.email;
             const body = channel === "email" ? c.subject ?? c.preview : c.preview;
             return (
               <li key={c.id} className="flex items-start gap-3 px-5 py-3.5 text-sm">
-                <Icon name={meta.icon} className="mt-0.5 h-4 w-4 shrink-0 text-ink-faint" />
+                <Icon name={meta.icon} className="mt-0.5 h-4 w-4 shrink-0 text-ec-ink-3" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={meta.tone}>{t.has(`communications.channel.${channel}`) ? t(`communications.channel.${channel}`) : meta.label}</Badge>
+                    <span className={`ec-chip ${meta.chip}`}>{t.has(`communications.channel.${channel}`) ? t(`communications.channel.${channel}`) : meta.label}</span>
                     <span
-                      className="inline-flex items-center gap-1 text-xs text-ink-faint"
+                      className="inline-flex items-center gap-1 text-xs text-ec-ink-3"
                       title={c.direction === "out" ? t("communications.outbound") : t("communications.inbound")}
                     >
                       <Icon name="external" className={`h-3 w-3 ${c.direction === "out" ? "" : "rotate-180"}`} />
                       {c.direction === "out" ? t("communications.out") : t("communications.in")}
                     </span>
-                    <span className="min-w-0 truncate font-medium text-ink">{c.counterparty ?? "—"}</span>
+                    <span className="min-w-0 truncate font-medium text-ec-ink">{c.counterparty ?? "—"}</span>
                   </div>
-                  {body && <p className="mt-1 truncate text-ink-soft">{truncate(body)}</p>}
+                  {body && <p className="mt-1 truncate text-ec-ink-2">{truncate(body)}</p>}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="text-xs text-ink-faint">{fmtAgo(c.occurred_at)}</span>
-                  {c.status && <Badge tone={STATUS_TONE[c.status] ?? "neutral"}>{te.has(`status.${c.status}`) ? te(`status.${c.status}`) : c.status}</Badge>}
+                  <span className="text-xs text-ec-ink-3">{fmtAgo(c.occurred_at)}</span>
+                  {c.status && <span className={`ec-chip ${STATUS_CHIP[c.status] ?? ""}`}>{te.has(`status.${c.status}`) ? te(`status.${c.status}`) : c.status}</span>}
                 </div>
               </li>
             );
           })}
         </ul>
       ) : (
-        <EmptyState
-          icon="inbox"
-          title={t("communications.emptyTitle")}
-          body={t("communications.emptyBody", { scope: t(`communications.scope.${scope}`) })}
-        />
+        <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+          <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-ec-m bg-ec-bronze-tint text-ec-bronze-deep">
+            <Icon name="inbox" className="h-5 w-5" />
+          </span>
+          <h3 className="font-display text-base font-medium text-ec-ink">{t("communications.emptyTitle")}</h3>
+          <p className="mx-auto mt-1.5 max-w-md text-sm text-ec-ink-3">{t("communications.emptyBody", { scope: t(`communications.scope.${scope}`) })}</p>
+        </div>
       )}
-    </Card>
+    </div>
   );
 }
