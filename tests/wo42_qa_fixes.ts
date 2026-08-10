@@ -87,6 +87,10 @@ function row(o: Partial<JudgmentRow>): JudgmentRow {
   // (passes doc.hasFile to DocPreview), so the invariant is checked at its new location.
   const browser = src("src/app/dashboard/documents/documents-browser.tsx");
   ok("N2/N3: quick-look trigger passes the full row (incl. hasFile) to the viewer", /doc=\{preview\}/.test(browser));
+  // WO-334 EXACT-FIDELITY: the reference-faithful main list (documents-list.tsx) is a second,
+  // independent path to the same viewer — same invariant, same DocRow, checked at its location too.
+  const list = src("src/app/dashboard/documents/documents-list.tsx");
+  ok("N2/N3: ref-faithful list also passes the full row (incl. hasFile) to the viewer", /doc=\{preview\}/.test(list));
   const viewer = src("src/app/dashboard/documents/doc-viewer-panel.tsx");
   ok("N2/N3: viewer panel passes hasFile", /hasFile=\{doc\.hasFile\}/.test(viewer));
   const listPage = src("src/app/dashboard/documents/page.tsx");
