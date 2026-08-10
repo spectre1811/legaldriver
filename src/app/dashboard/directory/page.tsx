@@ -40,9 +40,14 @@ export const dynamic = "force-dynamic";
 //      pattern every case list in the app already uses).
 //   6. The disclaimer footer is a hard repo rule (CLAUDE.md §3: provenance + "not legal advice" on
 //      all court data) — the reference has none; ours is required regardless.
-//   7. The masthead subtitle drops the reference's literal "55,000,000+ case records, All India" —
-//      the live corpus is Gujarat-scoped (see the real, dynamic `coverage` line below the search
-//      field), so that clause would be a fabricated figure over the wrong scope.
+//
+// WO-349 WAVE-3 · masthead unrounded to bleed edge-to-edge like notifications/onboarding (was an
+// inset `rounded-xl` card within the shell's padding). Subtitle restored to the reference's exact
+// "55,000,000+ case records, All India." per an explicit founder call on this WO: the figure isn't
+// in plan/context/00-INPUTS.md (the live corpus is Gujarat-scoped — see the real, dynamic
+// `coverage` line right below the search field, kept as the honest scope disclosure) and the
+// prototype is being treated as the sanctioned source for this string — FLAGGED, not verified
+// against a real corpus-wide count.
 
 const EXAMPLES = ["Patel", "Shah", "Mehta", "Desai", "Trivedi"];
 const SLICE = { advocates: 25, judges: 25, parties: 30, caseNumber: 25 } as const;
@@ -102,7 +107,7 @@ export default async function DirectoryPage({
 
   return (
     <div className="space-y-8">
-      <Reveal as="div" className="mk-engraved rounded-xl bg-ec-ink px-5 py-7 text-ec-paper sm:px-8">
+      <Reveal as="div" className="mk-engraved -mx-5 rounded-[14px] bg-ec-ink px-5 py-7 text-ec-paper sm:-mx-8 sm:px-7">
         <h1 className="font-display text-[28px] leading-tight text-ec-paper sm:text-[32px]">{t("title")}</h1>
         <p className="mt-1.5 text-[13px] text-ec-line-strong">{t("subtitle")}</p>
       </Reveal>

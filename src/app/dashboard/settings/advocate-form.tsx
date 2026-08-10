@@ -23,11 +23,13 @@ const COUNCIL_OPTIONS = STATE_BAR_COUNCILS.map((c) => ({
 
 // A small inline status chip under the enrolment field — the live feedback that turns the old
 // "fill it, wait 60s, learn you needed the year" trap into an as-you-type signal.
+// WO-349: retoned off tailwind's default amber/emerald/(pre-Chambers) brand scale onto the ec-*
+// tokens (tokens.css) — same three tones, no visual behaviour change, just off the palette.
 function Chip({ tone, icon, children }: { tone: "amber" | "green" | "brand"; icon: IconName; children: React.ReactNode }) {
   const tones = {
-    amber: "bg-amber-50 text-amber-800",
-    green: "bg-emerald-50 text-emerald-700",
-    brand: "bg-brand-50 text-brand-700",
+    amber: "bg-ec-warn-t text-ec-warn",
+    green: "bg-ec-success-t text-ec-success",
+    brand: "bg-ec-bronze-tint text-ec-bronze-deep",
   } as const;
   return (
     <p className={`flex items-start gap-1.5 rounded-lg px-3 py-2 text-xs ${tones[tone]}`}>
@@ -53,28 +55,32 @@ function EnrolmentChip({ raw, councilId }: { raw: string; councilId: string }) {
 }
 
 // The two submit buttons live in a child so they can read the form's pending state.
-function Actions({ nameOnly, canPrimary, canName, onToggle }: {
-  nameOnly: boolean; canPrimary: boolean; canName: boolean; onToggle: (v: boolean) => void;
+// WO-349: `.btn-primary` (indigo) → `.ec-btn ec-btn-ink` (tokened ink button, matches every other
+// reskinned primary action, e.g. quiet-hours-form.tsx's SaveButton) — colour only, same behaviour.
+// `ctaLabel` lets a caller override just the primary button's copy (e.g. onboarding's lead card
+// wants "Assemble practice") without forking this shared form or changing Settings' own copy.
+function Actions({ nameOnly, canPrimary, canName, onToggle, ctaLabel }: {
+  nameOnly: boolean; canPrimary: boolean; canName: boolean; onToggle: (v: boolean) => void; ctaLabel?: string;
 }) {
   const t = useTranslations("settings.advocates");
   const { pending } = useFormStatus();
   return nameOnly ? (
     <div className="space-y-2">
-      <button type="submit" name="mode" value="name-only" disabled={pending || !canName} className="btn-primary">
+      <button type="submit" name="mode" value="name-only" disabled={pending || !canName} className="ec-btn ec-btn-ink press">
         {pending ? t("saving") : t("nameOnlyCta")}
       </button>
-      <button type="button" onClick={() => onToggle(false)} className="block text-xs text-brand-600 hover:underline">
+      <button type="button" onClick={() => onToggle(false)} className="block text-xs text-ec-bronze hover:underline">
         {t("nameOnlyBack")}
       </button>
     </div>
   ) : (
     <div className="space-y-2">
-      <button type="submit" name="mode" value="fetch" disabled={pending || !canPrimary} className="btn-primary">
-        <Icon name={pending ? "refresh" : "sparkles"} className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} /> {pending ? t("saving") : t("fetchCta")}
+      <button type="submit" name="mode" value="fetch" disabled={pending || !canPrimary} className="ec-btn ec-btn-ink press">
+        <Icon name={pending ? "refresh" : "sparkles"} className={`h-4 w-4 ${pending ? "animate-spin" : ""}`} /> {pending ? t("saving") : (ctaLabel ?? t("fetchCta"))}
       </button>
-      <p className="text-xs text-ink-faint">
+      <p className="text-xs text-ec-ink-3">
         {t("nameOnlyToggle")}{" "}
-        <button type="button" onClick={() => onToggle(true)} className="text-brand-600 hover:underline">{t("nameOnlyAction")}</button>
+        <button type="button" onClick={() => onToggle(true)} className="text-ec-bronze hover:underline">{t("nameOnlyAction")}</button>
       </p>
     </div>
   );
@@ -84,7 +90,7 @@ function Actions({ nameOnly, canPrimary, canName, onToggle }: {
 // primary path REQUIRES a parseable enrolment with year (the input that actually fetches cases —
 // founder ruling 2026-07-06); a clearly-secondary "add by name only" path stays for cause-list
 // alerts. Live inline validation removes the "submit → wait 60s → learn you needed the year" trap.
-export function AdvocateForm() {
+export function AdvocateForm({ ctaLabel }: { ctaLabel?: string } = {}) {
   const t = useTranslations("settings");
   const [state, action] = useFormState(addAdvocate, initial);
 
@@ -141,7 +147,7 @@ export function AdvocateForm() {
               onChange={(v) => { setCouncilTouched(true); setCouncilId(v ?? ""); }}
             />
           </div>
-          <p className="text-xs text-ink-faint">{t.rich("advocates.hint", { b: (c) => <strong>{c}</strong> })}</p>
+          <p className="text-xs text-ec-ink-3">{t.rich("advocates.hint", { b: (c) => <strong>{c}</strong> })}</p>
         </>
       )}
 
@@ -152,10 +158,11 @@ export function AdvocateForm() {
         canPrimary={canPrimary}
         canName={canName}
         onToggle={(v) => setNameOnly(v)}
+        ctaLabel={ctaLabel}
       />
 
       {state.message && (
-        <p role="status" className={`rounded-xl px-3.5 py-2.5 text-sm ${state.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
+        <p role="status" className={`rounded-xl px-3.5 py-2.5 text-sm ${state.ok ? "bg-ec-success-t text-ec-success" : "bg-ec-warn-t text-ec-warn"}`}>
           {state.message}
         </p>
       )}
