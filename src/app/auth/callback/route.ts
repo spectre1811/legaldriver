@@ -1,14 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isLocale, LOCALE_COOKIE } from "@/i18n/config";
-import { sanitizeNext } from "@/lib/auth/redirects";
+import { requestOrigin, sanitizeNext } from "@/lib/auth/redirects";
 import { track } from "@/lib/analytics/track"; // WO-184 user-lifecycle
 
 // Handles the redirect after email confirmation, password recovery or OAuth
 // (Google) sign-in. WO-50: failures land on a VISIBLE error page with retry —
 // never a silent bounce back to /login (that was an invisible redirect loop).
+// WO-341: origin MUST come from requestOrigin(), not new URL(request.url).origin —
+// behind the WO-323 self-host edge the latter resolves to internal localhost:3000,
+// bouncing post-Google-auth users to https://localhost:3000/dashboard (ERR_SSL_PROTOCOL_ERROR).
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = requestOrigin(request.headers);
   const code = searchParams.get("code");
   const next = sanitizeNext(searchParams.get("next")) ?? "/dashboard";
 
