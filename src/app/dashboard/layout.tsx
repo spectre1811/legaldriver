@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAllowedAdmin } from "@/lib/access/validate";
 import { signAvatar } from "@/lib/profile/avatar";
-import { NavLinks, AccountNav } from "./nav";
+import { NavLinks } from "./nav";
 import { MobileNav } from "./mobile-nav";
 import { TopBar } from "./top-bar";
 import { BrandMark } from "@/components/brand-mark";
@@ -55,12 +55,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
         <div className="mt-7 flex-1 overflow-y-auto">
           <NavLinks isAdmin={isAdmin} />
-        </div>
-
-        {/* WO-328: Settings pinned at the foot of the sidebar, outside the scroll region — it
-            was previously reachable only from the profile dropdown, not the hero-set nav. */}
-        <div className="mt-4 border-t border-ec-hair pt-3">
-          <AccountNav />
         </div>
       </aside>
 

@@ -62,7 +62,8 @@ const SECTIONS: { heading: string; items: NavEntry[] }[] = [
   },
 ];
 
-// Pinned in the sidebar footer (out of the scroll region) so it never clips off short viewports.
+// Settings lives in the profile dropdown (top-bar.tsx AccountLinks), not the sidebar — kept here
+// only so it still surfaces as a ⌘K jump-to target (NAV_TARGETS below).
 const ACCOUNT_ITEMS: NavEntry[] = [{ href: "/dashboard/settings", label: "settings", icon: "settings" }];
 
 // WO-272 — founder-only. Rendered ONLY when the layout passes isAdmin (ADMIN_EMAILS
@@ -135,20 +136,6 @@ export function NavLinks({ isAdmin = false }: { isAdmin?: boolean }) {
           </div>
         </div>
       )}
-    </nav>
-  );
-}
-
-// Rendered in the pinned footer of both the desktop sidebar and the mobile drawer.
-export function AccountNav() {
-  const t = useTranslations("nav");
-  const isActive = useIsActive();
-
-  return (
-    <nav className="flex flex-col gap-0.5" aria-label={t("heading.account")}>
-      {ACCOUNT_ITEMS.map((item) => (
-        <NavItem key={item.href} item={item} active={isActive(item.href)} t={t} />
-      ))}
     </nav>
   );
 }

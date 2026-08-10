@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { NavLinks, AccountNav } from "./nav";
+import { NavLinks } from "./nav";
 import { Avatar, AccountLinks } from "./top-bar";
 import { Icon } from "@/components/icons";
 import { brand } from "@/lib/brand";
@@ -81,11 +81,9 @@ export function MobileNav({ email, tenantName, initial, isAdmin = false, fullNam
             </div>
             <p className="mt-1.5 truncate px-2 text-xs text-ec-ink-3" title={tenantName}>{tenantName}</p>
             <div className="mt-6 flex-1 overflow-y-auto"><NavLinks isAdmin={isAdmin} /></div>
-            {/* Settings pinned at the foot, same as desktop (WO-328) — outside the scroll region. */}
-            <div className="mt-4 border-t border-ec-hair pt-3"><AccountNav /></div>
             {/* Full account block — parity with the desktop profile dropdown (same order:
                 header · Profile · Settings · Billing · Language · Sign out · Sign out everywhere). */}
-            <div className="mt-3 border-t border-ec-hair pt-3">
+            <div className="mt-4 border-t border-ec-hair pt-3">
               <div className="flex items-center gap-2.5 px-1 pb-2">
                 <Avatar initial={initial} photoUrl={photoUrl} name={fullName ?? email} />
                 <span className="min-w-0">
@@ -97,7 +95,7 @@ export function MobileNav({ email, tenantName, initial, isAdmin = false, fullNam
                   )}
                 </span>
               </div>
-              <AccountLinks menu={false} showSettings={false} />
+              <AccountLinks menu={false} />
             </div>
           </div>
         </div>
