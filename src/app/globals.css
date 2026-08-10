@@ -191,11 +191,17 @@
 }
 
 /* Devanagari is never letter-spaced (ui-frontend hard rule). Covers every tracked
-   mono/uppercase label a translated string can land in. */
+   mono/uppercase label a translated string can land in.
+   WO-337: `.tracking-[0.08em]` (Tailwind arbitrary-value utility) added — the exact
+   compiled class name a handful of tracked mono captions use directly instead of one
+   of the classes above (today-view.tsx's hearing/week-strip captions, cause-list's
+   date-jump control, this WO's advocate/judge row captions); one selector resets every
+   current + future user of that literal value, not just this WO's new rows. */
 html[lang="hi"] .mk-eyebrow,
 html[lang="hi"] .ec-label,
 html[lang="hi"] .ec-chip,
-html[lang="hi"] .mk-stamp-line {
+html[lang="hi"] .mk-stamp-line,
+html[lang="hi"] .tracking-\[0\.08em\] {
   letter-spacing: normal;
 }
 

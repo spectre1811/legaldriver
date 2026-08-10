@@ -200,6 +200,39 @@
         "stamp": "कोर्ट रिकॉर्ड सिंक हुआ",
         "never": "अभी तक सिंक नहीं हुआ"
       }
+    },
+    "clients": {
+      "searchPlaceholder": "नाम, फ़ोन या ईमेल से मुवक्किल खोजें…",
+      "searchAria": "मुवक्किल खोजें",
+      "addClient": "मुवक्किल जोड़ें",
+      "addClientModalTitle": "नया मुवक्किल",
+      "addClientModalHelper": "सेव करने से पहले हम मौजूदा मुवक्किलों व पक्षकारों के विरुद्ध किसी भी हित-टकराव को चिह्नित करेंगे।",
+      "close": "बंद करें",
+      "noMatches": "“{q}” से कोई मुवक्किल मेल नहीं खाता।",
+      "settled": "चुकता",
+      "contactHeading": "संपर्क",
+      "portalActiveDesc": "सक्रिय — वे पेशियाँ और दाखिल दस्तावेज़ देख सकते हैं।",
+      "portalNotInvitedDesc": "अभी आमंत्रित नहीं किया गया।",
+      "billingHeading": "बिलिंग",
+      "billed": "बिल किया गया",
+      "received": "प्राप्त",
+      "due": "शेष",
+      "activityHeading": "गतिविधि",
+      "activityEmpty": "अभी तक कोई गतिविधि नहीं।",
+      "lastActivity": "अंतिम गतिविधि",
+      "noActivity": "—",
+      "portalState": {
+        "notInvited": "आमंत्रित नहीं",
+        "invited": "आमंत्रित",
+        "active": "सक्रिय"
+      },
+      "portalInvitedUntracked": "अलग से दर्ज नहीं — आमंत्रण मिलते ही पहुँच तुरंत मिल जाती है, कोई प्रतीक्षारत स्थिति नहीं दिखाई जाती।"
+    },
+    "directory": {
+      "resultsCount": "{count, plural, one {# परिणाम} other {# परिणाम}}",
+      "resultsShown": "{total} में से {shown}",
+      "barLabel": "बार {id}",
+      "noBarLabel": "बार आईडी नहीं"
     }
   },
   "causeList": {
@@ -1380,35 +1413,6 @@
       "save": "बदलाव सहेजें",
       "saving": "सहेजा जा रहा है…",
       "cancel": "रद्द करें"
-    }
-  },
-  "dashboard": {
-    "clients": {
-      "searchPlaceholder": "नाम, फ़ोन या ईमेल से मुवक्किल खोजें…",
-      "searchAria": "मुवक्किल खोजें",
-      "addClient": "मुवक्किल जोड़ें",
-      "addClientModalTitle": "नया मुवक्किल",
-      "addClientModalHelper": "सेव करने से पहले हम मौजूदा मुवक्किलों व पक्षकारों के विरुद्ध किसी भी हित-टकराव को चिह्नित करेंगे।",
-      "close": "बंद करें",
-      "noMatches": "“{q}” से कोई मुवक्किल मेल नहीं खाता।",
-      "settled": "चुकता",
-      "contactHeading": "संपर्क",
-      "portalActiveDesc": "सक्रिय — वे पेशियाँ और दाखिल दस्तावेज़ देख सकते हैं।",
-      "portalNotInvitedDesc": "अभी आमंत्रित नहीं किया गया।",
-      "billingHeading": "बिलिंग",
-      "billed": "बिल किया गया",
-      "received": "प्राप्त",
-      "due": "शेष",
-      "activityHeading": "गतिविधि",
-      "activityEmpty": "अभी तक कोई गतिविधि नहीं।",
-      "lastActivity": "अंतिम गतिविधि",
-      "noActivity": "—",
-      "portalState": {
-        "notInvited": "आमंत्रित नहीं",
-        "invited": "आमंत्रित",
-        "active": "सक्रिय"
-      },
-      "portalInvitedUntracked": "अलग से दर्ज नहीं — आमंत्रण मिलते ही पहुँच तुरंत मिल जाती है, कोई प्रतीक्षारत स्थिति नहीं दिखाई जाती।"
     }
   },
   "notices": {
