@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
+import { RequestAccessDialog } from "@/components/request-access-dialog";
 import type { AuthErrorCode } from "@/lib/auth/errors";
 import {
   requestPasswordReset,
@@ -31,22 +32,6 @@ type Mode = "signin" | "forgot";
 // login.tsx's <Field>): bronze-only focus border, no shared-`.input` glow.
 const fieldInputClass =
   "mt-1.5 w-full rounded-md border border-ec-hair-strong bg-ec-paper-2 px-3.5 py-2.5 text-[13.5px] text-ec-ink outline-none transition-colors placeholder:text-ec-ink-3 focus:border-ec-bronze";
-
-// The registrar's stamp — hand-stamped provenance mark, ported from the
-// Chambers prototype's <Stamp lines={[...]}>. Purely decorative; copy stays
-// honest (no invented review-turnaround commitment).
-function InviteStamp() {
-  const t = useTranslations("auth");
-  return (
-    <div className="mt-10 flex justify-start">
-      <div className="relative -rotate-2 rounded-lg border-[1.5px] border-ec-bronze px-4 pb-2.5 pt-3 text-center text-ec-bronze opacity-75">
-        <span className="absolute left-1/2 top-[5px] h-[5px] w-[5px] -translate-x-1/2 rounded-full bg-ec-honey" />
-        <div className="mk-stamp-line">{t("invite.stamp.line1")}</div>
-        <div className="num mk-stamp-line">{t("invite.stamp.line2")}</div>
-      </div>
-    </div>
-  );
-}
 
 function Spinner() {
   return (
@@ -82,12 +67,18 @@ function ErrorNote({ code }: { code?: AuthErrorCode }) {
 }
 
 // WO-272 — the one entry point for people without an account: request access.
-function RequestAccessLink() {
+// WO-340 — opens the shared <RequestAccessDialog> in place (founder correction: the
+// prototype's request-access surface is a dialog, not a page navigation).
+function RequestAccessLink({ onOpen }: { onOpen: () => void }) {
   const t = useTranslations("auth");
   return (
-    <a href="/request-access" className="inline-flex items-center gap-1 font-medium text-ec-brass-deep underline-offset-2 hover:underline">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="inline-flex items-center gap-1 font-medium text-ec-brass-deep underline-offset-2 hover:underline"
+    >
       {t("invite.cta")} <Icon name="chevron" className="h-3 w-3" />
-    </a>
+    </button>
   );
 }
 
@@ -242,10 +233,15 @@ function ForgotForm({ onBack }: { onBack: () => void }) {
   const [state, formAction] = useFormState(requestPasswordReset, initial);
 
   if (state.ok === "resetSent" && state.email) {
+    // WO-339 — matches the prototype's `rule-left` "Link sent" block (an Eyebrow +
+    // paragraph, not a second full heading — the "Reset your password" chrome above
+    // stays visible).
     return (
       <div className="space-y-4">
-        <h2 className="font-display text-2xl font-medium text-ec-ink">{t("forgot.sentTitle")}</h2>
-        <p className="text-sm text-ec-ink-2">{t("forgot.sentBody", { email: state.email })}</p>
+        <div className="ec-rule-left p-4">
+          <p className="ec-label font-mono">{t("forgot.sentTitle")}</p>
+          <p className="mt-1.5 text-[13px] text-ec-ink-2">{t("forgot.sentBody", { email: state.email })}</p>
+        </div>
         <button type="button" onClick={onBack} className="text-sm font-medium text-ec-brass-deep underline-offset-2 hover:underline">
           ← {t("forgot.back")}
         </button>
@@ -284,26 +280,26 @@ export function AuthPanel({
   const t = useTranslations("auth");
   const [mode, setMode] = useState<Mode>(initialMode);
   const [confirmEmail, setConfirmEmail] = useState<string | null>(null);
+  // WO-340 — the request-access dialog, opened from either "Request access" link below.
+  const [requestOpen, setRequestOpen] = useState(false);
 
   if (confirmEmail) {
     return (
-      <>
-        <ConfirmScreen
-          email={confirmEmail}
-          next={next}
-          track={track}
-          onChangeEmail={() => setConfirmEmail(null)}
-          onSignIn={() => { setConfirmEmail(null); setMode("signin"); }}
-        />
-        <InviteStamp />
-      </>
+      <ConfirmScreen
+        email={confirmEmail}
+        next={next}
+        track={track}
+        onChangeEmail={() => setConfirmEmail(null)}
+        onSignIn={() => { setConfirmEmail(null); setMode("signin"); }}
+      />
     );
   }
 
   return (
     <div>
       <p className="ec-label font-mono">{t(`${mode}.eyebrow`)}</p>
-      <h2 className="mt-2 font-display text-[32px] font-medium leading-tight text-ec-ink">{t(`${mode}.title`)}</h2>
+      {/* h1 — this page's primary heading (the brand plate's headline is h2). */}
+      <h1 className="mt-2 font-display text-[32px] font-medium leading-tight text-ec-ink">{t(`${mode}.title`)}</h1>
       <p className="mt-2 text-[13px] text-ec-ink-2">{t(`${mode}.subtitle`)}</p>
 
       {urlError && (
@@ -328,7 +324,7 @@ export function AuthPanel({
         <div className="mt-5 rounded-ec-s bg-ec-brass-tint px-3.5 py-3 text-sm text-ec-brass-deep">
           <p className="font-medium">{t("invite.noticeTitle")}</p>
           <p className="mt-1 text-ec-ink-2">{t("invite.noticeBody")}</p>
-          <p className="mt-2"><RequestAccessLink /></p>
+          <p className="mt-2"><RequestAccessLink onOpen={() => setRequestOpen(true)} /></p>
         </div>
       )}
 
@@ -352,12 +348,12 @@ export function AuthPanel({
       </div>
 
       {mode !== "forgot" && (
-        <p className="mt-6 text-center text-sm text-ec-ink-2">
-          {t("invite.prompt")} <RequestAccessLink />
+        <p className="mt-6 text-sm text-ec-ink-2">
+          {t("invite.prompt")} <RequestAccessLink onOpen={() => setRequestOpen(true)} />
         </p>
       )}
 
-      <InviteStamp />
+      <RequestAccessDialog open={requestOpen} onClose={() => setRequestOpen(false)} />
     </div>
   );
 }

@@ -7,6 +7,9 @@ import { isAuthErrorCode, type AuthErrorCode } from "@/lib/auth/errors";
 import { sanitizeNext, sanitizeTrack } from "@/lib/auth/redirects";
 import { AuthPanel } from "./auth-panel";
 
+// WO-339 — exact-fidelity reconcile: the Chambers prototype's trust list has a bold
+// title above each line (design-mockups/iteration3/console/login.tsx's TRUST array),
+// which the first pass dropped. Restored via auth.trust.{key}.title in the catalog.
 const TRUST: [IconName, string][] = [
   ["cases", "cases"],
   ["gmail", "inbox"],
@@ -53,8 +56,10 @@ export default async function LoginPage({
   return (
     <main className="grid min-h-screen bg-ec-paper lg:grid-cols-2">
       {/* Brand plate — engraved ink plate, honey eyebrow + a divided trust list
-          (design-mockups/iteration3/console/login.tsx). */}
-      <section className="mk-engraved relative hidden flex-col justify-between overflow-hidden bg-ec-ink px-10 py-12 text-ec-paper lg:flex">
+          (design-mockups/iteration3/console/login.tsx). Renders on every width (the
+          prototype's grid stacks it above the form on mobile — WO-339 exact-fidelity
+          reconcile: the first pass wrongly hid this below `lg`). */}
+      <section className="mk-engraved relative flex flex-col justify-between overflow-hidden bg-ec-ink px-6 py-8 text-ec-paper sm:px-10 sm:py-12">
         <Link href="/" className="relative flex items-center gap-2.5">
           <BrandMark size={30} tone="light" />
           <span className="leading-tight">
@@ -65,15 +70,20 @@ export default async function LoginPage({
 
         <div className="relative max-w-md py-10">
           <p className="ec-label font-mono !text-ec-honey">{t("brand.eyebrow")}</p>
-          <h1 className="mt-3 font-display text-[30px] font-medium leading-[1.08] text-ec-paper sm:text-[38px]">
+          {/* h2 — the login/forgot heading below is this page's h1 (matches the
+              prototype: the form heading, not the marketing plate, is primary). */}
+          <h2 className="mt-3 font-display text-[30px] font-medium leading-[1.08] text-ec-paper sm:text-[38px]">
             {t("brand.headline")}
-          </h1>
+          </h2>
           <p className="mt-3 text-[13.5px] leading-relaxed text-ec-paper/70">{t("brand.sub")}</p>
           <ul className="mt-8 divide-y divide-white/10 border-y border-white/10">
             {TRUST.map(([icon, key]) => (
               <li key={key} className="flex gap-3 py-4">
                 <Icon name={icon} className="mt-1 h-4 w-4 shrink-0 text-ec-honey" />
-                <p className="min-w-0 text-[13px] leading-snug text-ec-hair-strong">{t(`trust.${key}`)}</p>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-medium text-ec-paper">{t(`trust.${key}.title`)}</div>
+                  <p className="mt-0.5 text-[12.5px] leading-snug text-ec-hair-strong">{t(`trust.${key}.line`)}</p>
+                </div>
               </li>
             ))}
           </ul>
@@ -85,14 +95,6 @@ export default async function LoginPage({
       {/* Auth panel */}
       <section className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm animate-fade-in">
-          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <BrandMark size={30} tone="dark" />
-            <span className="leading-tight">
-              <b className="block font-display text-xl font-medium lowercase tracking-tight text-ec-ink">{brand.name}</b>
-              <span className="block text-[11px] text-ec-ink-3">{brand.nameDevanagari}</span>
-            </span>
-          </div>
-
           <AuthPanel initialMode={mode} urlError={urlError} notice={notice} next={next} track={track} />
 
           <p className="mt-8 text-center text-xs text-ec-ink-3">{t("disclaimer")}</p>
