@@ -7,6 +7,17 @@
 // useState. "Add a different Bar ID" doesn't reset that run (it keeps assembling in the
 // background — its own roster row below tracks it live); it just lets the advocate move on to
 // adding another one, mirroring the mock's `onReset` intent for our real multi-advocate model.
+//
+// WO-349 WAVE-3 · the reference's card CTA reads "Assemble practice", but this card renders the
+// SAME <AdvocateForm> Settings uses — its default button copy ("Add & fetch my cases") stays
+// correct for Settings, so this passes an explicit `ctaLabel` override rather than forking or
+// renaming the shared component's own string (ui-pipeline: change a shared primitive once, don't
+// fork it — a label prop is the parameterization, not a fork). FLAGGED deviation: the reference's
+// heading is literally "Your entire practice, assembled from your Bar ID.", but "your entire
+// practice" is a hard-locked, CI-enforced retired line (WO-202 W2 — a TM-collision marketing line
+// purged from the copy-deck; `npm run guard:copy` fails the build on it). Compliance copy is
+// founder-gated, not this WO's to override, so `dashboard.onboarding.lead.addTitle` keeps its
+// pre-existing honest paraphrase ("Your whole practice…") instead of the reference's exact words.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
@@ -83,7 +94,7 @@ export function OnboardingLead({
       <h2 className="font-display mt-2 text-[22px] leading-snug text-ec-ink">{t("addTitle")}</h2>
       {centered && <p className="mt-2 text-[13px] text-ec-ink-3">{t("addBody")}</p>}
       <div className={`mt-5 ${centered ? "text-left" : ""}`}>
-        <AdvocateForm />
+        <AdvocateForm ctaLabel={t("assembleCta")} />
       </div>
     </div>
   );

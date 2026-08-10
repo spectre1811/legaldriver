@@ -310,6 +310,7 @@
       "lead": {
         "addTitle": "Your whole practice, assembled from your Bar ID.",
         "addBody": "One enrolment number is enough — we read the public court record and build the file.",
+        "assembleCta": "Assemble practice",
         "assembling": "Assembling",
         "leaveHint": "You can switch tabs or close this — we'll keep working and let you know when it's done.",
         "reset": "Add a different Bar ID",
@@ -454,10 +455,10 @@
     },
     "notifications": {
       "header": {
-        "eyebrow": "Alerts",
+        "eyebrow": "Alerts · receipted",
         "title": "Notifications",
-        "channelsOn": "{n, plural, one {# channel on} other {# channels on}}",
-        "meta": "Every alert queued and sent from here — verify delivery on the channel itself."
+        "channelsOn": "{n} active",
+        "meta": "Every alert receipted — queued, sent, delivered, read."
       },
       "empty": {
         "title": "Nothing configured",
@@ -497,7 +498,7 @@
           "stage": "Stage change"
         },
         "notTracked": "Not tracked yet",
-        "defaultsRow": "Defaults for every case",
+        "defaultsRow": "Defaults for new cases",
         "defaultsHint": "Applies on sync",
         "defaultsCourt": "Every matter added from the court record"
       },
@@ -521,7 +522,7 @@
         "dead": "failed · not retrying"
       },
       "brief": {
-        "title": "Evening brief & quiet hours",
+        "title": "Quiet hours & evening brief",
         "eveningBrief": "Evening brief",
         "eveningBriefBody": "Tomorrow's hearings, deadlines and unread mail — in one message.",
         "briefAt": "Brief at",
@@ -535,8 +536,8 @@
         "quietTo": "to",
         "save": "Save",
         "saving": "Saving…",
-        "chipSaved": "Saves instantly",
-        "chipChannels": "{n, plural, one {# channel on} other {# channels on}}"
+        "chipHearingAlways": "Hearing reminders always send",
+        "chipDigestHeld": "Digest held to {time}"
       },
       "footer": {
         "link": "Manage channels in Settings →"

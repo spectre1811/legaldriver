@@ -24,6 +24,14 @@ import { QuietHoursForm } from "./quiet-hours-form";
 // (the masthead's edge-to-edge ink bleed, the defaults row's 3rd "court" line, the evening-brief/
 // quiet-hours eyebrows+body copy, the quiet-hours chips back inside their column). Per founder
 // override, the reference's <Stamp> ("DELIVERY RECEIPTS" registrar mark) is omitted here.
+//
+// WO-349 WAVE-3 · closed the remaining copy/visual drift vs the reference: exact masthead eyebrow
+// ("Alerts · receipted"), meta ("Every alert receipted — queued, sent, delivered, read.") and
+// "{n} active" badge (was a WAVE-2 paraphrase); "Defaults for new cases" (was "...every case");
+// section title order "Quiet hours & evening brief"; the quiet-hours chip pair restored to the
+// reference's own copy ("Hearing reminders always send" / "Digest held to {time}", see
+// quiet-hours-form.tsx) instead of a WAVE-2 stand-in ("Saves instantly" / "N channels on"); the
+// In-app channel-health dot is honey (reference: `dot="honey"`), not the "connected" green.
 
 type Channel = "whatsapp" | "email" | "inapp";
 const CHANNELS: { key: Channel; icon: "chat" | "gmail" | "monitor"; short: string }[] = [
@@ -155,7 +163,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
               <ChannelCard
                 icon="monitor"
                 name={t("channelHealth.inapp.name")}
-                dot="on"
+                dot="honey"
                 detail={t("channelHealth.inapp.detail")}
                 state={t("channelHealth.inapp.state")}
                 configureLabel={t("channelHealth.configure")}
@@ -294,7 +302,10 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                   briefAt: t("brief.briefAt"), ist: t("brief.ist"), digest: t("brief.digest"), instant: t("brief.instant"),
                   instantSoon: t("brief.instantSoon"), quietHours: t("brief.quietHours"), quietHoursBody: t("brief.quietHoursBody"),
                   quietFrom: t("brief.quietFrom"), quietTo: t("brief.quietTo"),
-                  chipSaved: t("brief.chipSaved"), chipChannels: t("brief.chipChannels", { n: activeChannels }),
+                  // chipDigestHeld carries a raw (unresolved) `{time}` placeholder — the digest time is a
+                  // LIVE client-side value (the advocate can change it before saving), so the form
+                  // substitutes it itself rather than baking a stale server-rendered time into the string.
+                  chipHearingAlways: t("brief.chipHearingAlways"), chipDigestHeld: t.raw("brief.chipDigestHeld") as string,
                   save: t("brief.save"), saving: t("brief.saving"),
                 }}
               />

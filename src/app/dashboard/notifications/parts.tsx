@@ -20,10 +20,14 @@ export function SectionLabel({ children, right }: { children: ReactNode; right?:
   );
 }
 
-export type DotTone = "on" | "partial" | "off";
+// "honey" (prototype: In-app's ChannelCard `dot="honey"`) is visually distinct from "partial"
+// (WhatsApp connected-but-needs-a-number) even though both render honey — kept as separate tones
+// so a future semantic split (e.g. a different partial colour) doesn't have to hunt every caller.
+export type DotTone = "on" | "partial" | "honey" | "off";
 const DOT_CLASS: Record<DotTone, string> = {
   on: "bg-ec-success",
   partial: "bg-ec-honey",
+  honey: "bg-ec-honey",
   off: "bg-ec-line-strong",
 };
 
