@@ -80,6 +80,8 @@ const config: Config = {
           "ink-border": "var(--ink-border)",
           // WO-334 · flagged new token (see tokens.css) — Documents viewer canvas backdrop.
           "doc-well": "var(--doc-well)",
+          // WO-336 · flagged new token (see tokens.css) — the ink-masthead chip fill.
+          "ink-chip": "var(--ink-chip)",
         },
       },
       fontFamily: {

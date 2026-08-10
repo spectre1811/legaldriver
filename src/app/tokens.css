@@ -127,4 +127,14 @@
      duplicate: sits between --paper-3/--band (#F1ECE1) and --hair (#DDD5C6), a shade the palette
      didn't have a name for yet. One new named token, consumed as `bg-ec-doc-well` — never inlined. */
   --doc-well: #EFEDE8;
+
+  /* ── WO-336 · FLAGGED — founder directive 2026-08-10 (FAITHFUL-TO-PROTOTYPE BAR item 2):
+     the prototype's own `bg-[#26282B]` — a raw hex it repeats across app-shell/app.case/
+     app.notifications/app.documents/login/landing (12+ sites) as the "chip on the ink masthead"
+     fill / ink-button hover. Not in styles.css's CSS vars (so WO-331's line-by-line audit of
+     that file didn't cover it), and genuinely NOT a duplicate of --n800 (#2E2F2C, close but a
+     different swatch) — named so the Notifications header's "N channels on" badge (which sits
+     directly on the dark masthead, not a hover state) matches the reference exactly. Scoped to
+     this one new consumer; --n800 / .ec-btn-ink:hover are untouched (no revisit-every-page risk). */
+  --ink-chip: #26282B;
 }

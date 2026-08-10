@@ -12,7 +12,10 @@ export type IconName =
   // WO-334 Documents Notes/zoom viewer — glyphs the reference needs beyond the existing set.
   | "note" | "minus" | "download"
   // WO-335 Inbox Daybreak reskin — the disconnected-state reassurance bullets (ShieldCheck).
-  | "shield";
+  | "shield"
+  // WO-336 Notifications Chambers reskin — "in-app" channel glyph (console + bell), the one
+  // shape the existing set (gmail=envelope for Email, chat=speech-bubble for WhatsApp) lacks.
+  | "monitor";
 
 const P: Record<IconName, React.ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
@@ -63,6 +66,7 @@ const P: Record<IconName, React.ReactNode> = {
   minus: <><path d="M5 12h14" /></>,
   download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 11l5 5 5-5M12 4v12" /></>,
   shield: <><path d="M12 3 4.5 6v6c0 4.4 3 7.5 7.5 9 4.5-1.5 7.5-4.6 7.5-9V6z" /><path d="m8.5 12 2.4 2.4L16 9.5" /></>,
+  monitor: <><rect x="2.5" y="4" width="19" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></>,
 };
 
 export function Icon({ name, className = "h-5 w-5" }: IconProps) {

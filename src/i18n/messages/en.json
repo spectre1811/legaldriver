@@ -352,6 +352,94 @@
       "resultsShown": "{shown} of {total}",
       "barLabel": "bar {id}",
       "noBarLabel": "no bar id"
+    },
+    "notifications": {
+      "header": {
+        "eyebrow": "Alerts",
+        "title": "Notifications",
+        "channelsOn": "{n, plural, one {# channel on} other {# channels on}}",
+        "meta": "Every alert queued and sent from here — verify delivery on the channel itself."
+      },
+      "empty": {
+        "title": "Nothing configured",
+        "body": "No cases to alert on yet — add one and hearing reminders, stage changes and cause-list alerts start flowing automatically.",
+        "cta": "Add a case"
+      },
+      "channelHealth": {
+        "title": "Channel health",
+        "checked": "Settings saved {ago}",
+        "checkedNever": "Using defaults — not yet customised",
+        "configure": "Configure",
+        "whatsapp": {
+          "name": "WhatsApp",
+          "on": "On · WhatsApp Business API",
+          "needsNumber": "On · add a number to send",
+          "off": "Off",
+          "notAdded": "Not added"
+        },
+        "email": {
+          "name": "Email",
+          "on": "On",
+          "off": "Off"
+        },
+        "inapp": {
+          "name": "In-app",
+          "state": "Always on",
+          "detail": "Console · bell icon"
+        }
+      },
+      "matrix": {
+        "title": "Per-case channels",
+        "note": "Follows your account-wide settings",
+        "colCase": "Case",
+        "col": {
+          "hearing": "Hearing reminder",
+          "order": "Order uploaded",
+          "stage": "Stage change"
+        },
+        "notTracked": "Not tracked yet",
+        "defaultsRow": "Defaults for every case",
+        "defaultsHint": "Applies on sync"
+      },
+      "ledger": {
+        "title": "Delivery ledger",
+        "receipts": "{n, plural, one {# receipt} other {# receipts}}",
+        "note": "“Delivered” and “read” aren't confirmed anywhere yet — sent is as far as we can verify.",
+        "filter": {
+          "all": "All",
+          "whatsapp": "WhatsApp",
+          "email": "Email",
+          "failed": "Failed"
+        },
+        "empty": "No receipts in this filter.",
+        "step": {
+          "queued": "Queued",
+          "sent": "Sent",
+          "delivered": "Delivered",
+          "read": "Read"
+        },
+        "failedAttempt": "{n, plural, one {failed · # attempt} other {failed · # attempts}}",
+        "dead": "failed · not retrying"
+      },
+      "brief": {
+        "title": "Evening brief & quiet hours",
+        "briefAt": "Brief at",
+        "ist": "IST",
+        "digest": "Digest",
+        "instant": "Instant",
+        "instantSoon": "Instant delivery isn't available yet",
+        "quietFrom": "Quiet hours from",
+        "quietTo": "to",
+        "save": "Save",
+        "saving": "Saving…",
+        "chipSaved": "Saves instantly",
+        "chipChannels": "{n, plural, one {# channel on} other {# channels on}}"
+      },
+      "footer": {
+        "stampLine1": "Delivery ledger",
+        "stampLine2": "Updated {date}",
+        "link": "Manage channels in Settings →"
+      }
     }
   },
   "causeList": {
@@ -1914,7 +2002,9 @@
       "deadline_reminder": "Deadline reminder",
       "notice_escalation": "Notice escalation",
       "ipr_renewal": "IP renewal",
-      "case_update": "Case update"
+      "case_update": "Case update",
+      "daily_hearings": "Tomorrow's board",
+      "cause_list_alert": "Cause-list alert"
     },
     "channel": {
       "email": "Email",
