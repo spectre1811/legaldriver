@@ -1044,9 +1044,9 @@
       "footnote": "Court data from the public court record · not legal advice · verify against the official record."
     },
     "trust": {
-      "cases": "Every case, hearing & deadline in one calendar",
-      "inbox": "Gmail auto-filed against the right client & case",
-      "notices": "Legal-notice escalation that runs itself"
+      "cases": { "title": "Cases & deadlines", "line": "Every case, hearing & deadline in one calendar" },
+      "inbox": { "title": "Gmail inbox", "line": "Gmail auto-filed against the right client & case" },
+      "notices": { "title": "Notice escalation", "line": "Legal-notice escalation that runs itself" }
     },
     "google": "Continue with Google",
     "googlePending": "Opening Google…",
@@ -1121,11 +1121,7 @@
       "prompt": "New to Mukadma?",
       "cta": "Request access",
       "noticeTitle": "Mukadma is invite-only",
-      "noticeBody": "We're onboarding advocates by invitation right now. Leave your details and we'll be in touch.",
-      "stamp": {
-        "line1": "Invite-only access",
-        "line2": "Reviewed by the team"
-      }
+      "noticeBody": "We're onboarding advocates by invitation right now. Leave your details and we'll be in touch."
     },
     "errors": {
       "invalidCredentials": "Email or password is incorrect — or the account doesn't exist yet.",
@@ -1162,6 +1158,7 @@
     "sentTitle": "Request received",
     "sentBody": "Thanks — we've got your request and will be in touch at {email}.",
     "backToLogin": "← Back to sign in",
+    "close": "Close",
     "errors": {
       "email": "Enter a valid email address.",
       "failed": "Something went wrong — please try again in a minute.",
