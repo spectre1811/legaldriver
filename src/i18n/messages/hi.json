@@ -200,6 +200,85 @@
         "stamp": "कोर्ट रिकॉर्ड सिंक हुआ",
         "never": "अभी तक सिंक नहीं हुआ"
       }
+    },
+    "clients": {
+      "searchPlaceholder": "नाम, फ़ोन या ईमेल से मुवक्किल खोजें…",
+      "searchAria": "मुवक्किल खोजें",
+      "addClient": "मुवक्किल जोड़ें",
+      "addClientModalTitle": "नया मुवक्किल",
+      "addClientModalHelper": "सेव करने से पहले हम मौजूदा मुवक्किलों व पक्षकारों के विरुद्ध किसी भी हित-टकराव को चिह्नित करेंगे।",
+      "close": "बंद करें",
+      "noMatches": "“{q}” से कोई मुवक्किल मेल नहीं खाता।",
+      "settled": "चुकता",
+      "contactHeading": "संपर्क",
+      "portalActiveDesc": "सक्रिय — वे पेशियाँ और दाखिल दस्तावेज़ देख सकते हैं।",
+      "portalNotInvitedDesc": "अभी आमंत्रित नहीं किया गया।",
+      "billingHeading": "बिलिंग",
+      "billed": "बिल किया गया",
+      "received": "प्राप्त",
+      "due": "शेष",
+      "activityHeading": "गतिविधि",
+      "activityEmpty": "अभी तक कोई गतिविधि नहीं।",
+      "lastActivity": "अंतिम गतिविधि",
+      "noActivity": "—",
+      "portalState": {
+        "notInvited": "आमंत्रित नहीं",
+        "invited": "आमंत्रित",
+        "active": "सक्रिय"
+      },
+      "portalInvitedUntracked": "अलग से दर्ज नहीं — आमंत्रण मिलते ही पहुँच तुरंत मिल जाती है, कोई प्रतीक्षारत स्थिति नहीं दिखाई जाती।"
+    },
+    "caseFile": {
+      "back": "सभी मुकदमे",
+      "copyCnr": "कॉपी करें",
+      "copiedCnr": "कॉपी हो गया",
+      "stagePrefix": "चरण",
+      "moreActions": "अधिक विकल्प",
+      "soon": {
+        "calendar": "कैलेंडर में जोड़ें",
+        "share": "मुकदमा फ़ाइल साझा करें",
+        "export": "PDF के रूप में निर्यात करें",
+        "badge": "जल्द ही"
+      },
+      "next": {
+        "today": "आज",
+        "tomorrow": "कल",
+        "inDays": "{count, plural, one {# दिन में} other {# दिन में}}",
+        "past": "{count, plural, one {# दिन पहले} other {# दिन पहले}}"
+      },
+      "alert": {
+        "wasDue": "की नियत तारीख़ {date} थी",
+        "overdueDays": "{count, plural, one {# दिन अतिदेय} other {# दिन अतिदेय}}",
+        "reviewCount": "{count, plural, one {इस मुकदमे हेतु # इनबॉक्स फ़ाइलिंग असमीक्षित है} other {इस मुकदमे हेतु # इनबॉक्स फ़ाइलिंग असमीक्षित हैं}}",
+        "reviewLink": "फाइलिंग समीक्षा करें"
+      },
+      "record": {
+        "title": "न्यायालय अभिलेख",
+        "hide": "छिपाएं",
+        "show": "दिखाएं",
+        "synced": "न्यायालय अभिलेख से · {time} को सिंक हुआ"
+      },
+      "partiesTitle": "पक्षकार व अधिवक्ता",
+      "stamp": {
+        "synced": "सिंक हुआ · {date}"
+      },
+      "client": {
+        "view": "मुवक्किल देखें"
+      },
+      "notify": {
+        "title": "सूचनाएं",
+        "empty": "इस मुकदमे के लिए अभी तक कोई सूचना नहीं भेजी गई।",
+        "lastSent": "अंतिम बार {date} को भेजा गया"
+      },
+      "allDocuments": "सभी दस्तावेज़",
+      "inbox": {
+        "title": "इनबॉक्स से",
+        "empty": "इस मुकदमे से अभी तक कोई प्राप्त मेल संबद्ध नहीं हुआ।",
+        "review": "समीक्षा करें"
+      },
+      "billing": {
+        "outstanding": "शेष"
+      }
     }
   },
   "causeList": {
