@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { googleConfigured } from "@/lib/mail/oauth";
-import { PageHeader, Card, fmtAgo } from "@/components/ui";
+import { fmtAgo, fmtSize } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { IngestButton } from "./ingest-button";
 import { isDemoMode } from "@/lib/demo";
@@ -11,6 +11,7 @@ import { DisconnectButton, SyncNowButton } from "./connect-controls";
 import { Pagination } from "@/components/pagination";
 import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
 import { resolveThreshold, istDayStartIso } from "@/lib/mail/inbox-status";
+import { Reveal } from "../motion";
 
 type Tab = "needs_review" | "filed" | "ignored";
 const TABS: Tab[] = ["needs_review", "filed", "ignored"];
@@ -21,6 +22,7 @@ export default async function InboxPage({
   searchParams: { connected?: string; error?: string; page?: string; per?: string; tab?: string };
 }) {
   const t = await getTranslations("inbox");
+  const td = await getTranslations("dashboard.inbox");
   const supabase = createClient();
   const tab: Tab = TABS.includes(searchParams.tab as Tab) ? (searchParams.tab as Tab) : "needs_review";
   const page = parsePage(searchParams.page);
@@ -75,13 +77,17 @@ export default async function InboxPage({
 
   const list = rows ?? [];
   const listIds = list.map((e) => e.id);
+  // WO-335: also select mime + size_bytes (already-existing `document` columns, no schema change) —
+  // the Chambers reference's attachment chips show a kind·size caption and the inline preview needs
+  // the mime to pick pdf/image/download-only, same as the Documents viewer (WO-334).
   const { data: attachRows } = listIds.length
-    ? await supabase.from("document").select("id, filename, email_message_id").in("email_message_id", listIds)
-    : { data: [] as { id: string; filename: string | null; email_message_id: string | null }[] };
-  const attachByEmail = new Map<string, { id: string; filename: string }[]>();
+    ? await supabase.from("document").select("id, filename, mime, size_bytes, email_message_id").in("email_message_id", listIds)
+    : { data: [] as { id: string; filename: string | null; mime: string | null; size_bytes: number | null; email_message_id: string | null }[] };
+  const attachByEmail = new Map<string, WorkspaceEmail["attachments"]>();
   for (const d of attachRows ?? []) {
     if (!d.email_message_id) continue;
-    (attachByEmail.get(d.email_message_id) ?? attachByEmail.set(d.email_message_id, []).get(d.email_message_id)!).push({ id: d.id, filename: d.filename ?? "attachment" });
+    const arr = attachByEmail.get(d.email_message_id) ?? attachByEmail.set(d.email_message_id, []).get(d.email_message_id)!;
+    arr.push({ id: d.id, filename: d.filename ?? "attachment", mime: d.mime, sizeLabel: fmtSize(d.size_bytes) });
   }
 
   const emails: WorkspaceEmail[] = list.map((e) => ({
@@ -100,66 +106,106 @@ export default async function InboxPage({
   const counts = { needs_review: needsReviewC.count ?? 0, filed: filedC.count ?? 0, ignored: ignoredC.count ?? 0 };
   const belowThreshold = Math.max(0, counts.needs_review - (atOrAboveC.count ?? 0));
   const account = userData.user?.email ?? "";
+  const initials = account ? account.slice(0, 2).toUpperCase() : "—";
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("title")} subtitle={t("subtitle")} serif />
-
-      {searchParams.connected && <p className="rounded-xl bg-ec-success-t px-3.5 py-2.5 text-sm text-ec-success">{t("connected")}</p>}
-      {searchParams.error && <p className="rounded-xl bg-ec-warn-t px-3.5 py-2.5 text-sm text-ec-warn">{searchParams.error}</p>}
-
-      {/* Sync status card */}
-      <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
-        <div className="flex items-center gap-3">
-          <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${conn ? "bg-ec-bronze-tint text-ec-bronze" : "bg-paper text-ink-faint"}`}>
-            <Icon name="gmail" className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 text-sm">
-            <p className="font-display text-base text-ink">{conn ? t("account", { account }) : "Gmail"}</p>
-            <p className="text-xs text-ink-muted">
-              {conn
-                ? lastRow?.created_at
-                  ? t("sync.line", { rel: fmtAgo(lastRow.created_at), processed: processedTodayC.count ?? 0, filed: filedTodayC.count ?? 0, pending: counts.needs_review })
-                  : t("sync.never", { pending: counts.needs_review })
-                : googleConfigured()
-                ? t("state.notConnected")
-                : t("state.oauthNotConfigured")}
-            </p>
+      <Reveal as="div" className="flex flex-wrap items-end justify-between gap-4">
+        <header className="min-w-0">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
+            {conn && counts.needs_review > 0 && (
+              <span className="ec-chip ec-chip-hot">{td("toReview", { count: counts.needs_review })}</span>
+            )}
           </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {conn ? (
-            <>
+          <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("subtitle")}</p>
+        </header>
+      </Reveal>
+
+      {searchParams.connected && <p className="rounded-md bg-ec-success-bg px-3.5 py-2.5 text-sm text-ec-success">{t("connected")}</p>}
+      {searchParams.error && <p className="rounded-md bg-ec-warn-bg px-3.5 py-2.5 text-sm text-ec-warn">{searchParams.error}</p>}
+
+      {!conn ? (
+        // WO-335 · the Chambers reference's dedicated disconnected panel (was an inline compact
+        // row swap) — same real gate (googleConfigured() + /api/google/connect OAuth start).
+        <Reveal as="div" delay={60} className="mx-auto max-w-2xl py-10">
+          <div className="ec-rule-left rounded-r-md p-6">
+            <p className="ec-label">{td("disconnected.eyebrow")}</p>
+            <h2 className="mt-2 font-display text-[22px] leading-tight text-ec-ink">{td("disconnected.title")}</h2>
+            <ul className="mt-4 space-y-2 text-[13.5px] text-ec-ink-2">
+              {[td("disconnected.point1"), td("disconnected.point2"), td("disconnected.point3")].map((line) => (
+                <li key={line} className="flex gap-2">
+                  <Icon name="shield" className="mt-0.5 h-4 w-4 shrink-0 text-ec-bronze" />
+                  {line}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <a
+                href="/api/google/connect"
+                aria-disabled={!googleConfigured()}
+                className={googleConfigured() ? "ec-btn ec-btn-ink" : "ec-btn ec-btn-ink pointer-events-none opacity-50"}
+              >
+                <Icon name="gmail" className="h-4 w-4" /> {t("connectGmail")}
+              </a>
+              {!googleConfigured() && <span className="text-xs text-ec-warn">{t("state.oauthNotConfigured")}</span>}
+              {(process.env.NODE_ENV !== "production" || isDemoMode()) && <IngestButton />}
+            </div>
+          </div>
+        </Reveal>
+      ) : (
+        <Reveal as="div" delay={60} className="ec-card flex flex-wrap items-center justify-between gap-4 p-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ec-bronze-tint font-display text-[13px] text-ec-bronze-deep">
+              {initials}
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="num truncate font-mono text-[12.5px] text-ec-ink">{account}</span>
+                <span className="ec-chip ec-chip-success">
+                  <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-ec-success align-middle" />
+                  {td("connectedPill")}
+                </span>
+              </div>
               <GmailQueryForm initial={conn.gmail_query ?? ""} />
-              <SyncNowButton />
-              <DisconnectButton />
-            </>
-          ) : (
-            <a href="/api/google/connect" aria-disabled={!googleConfigured()} className={googleConfigured() ? "btn-primary" : "btn-primary pointer-events-none opacity-50"}>
-              <Icon name="gmail" className="h-4 w-4" /> {t("connectGmail")}
-            </a>
-          )}
-          {/* WO-29: the mock "Demo ingest" button is dev/demo-only — never in a real advocate's prod inbox. */}
-          {(process.env.NODE_ENV !== "production" || isDemoMode()) && <IngestButton />}
-        </div>
-      </Card>
+              <p className="num mt-1 font-mono text-[11px] uppercase tracking-[0.12em] text-ec-muted-ink">
+                {lastRow?.created_at
+                  ? t("sync.line", { rel: fmtAgo(lastRow.created_at), processed: processedTodayC.count ?? 0, filed: filedTodayC.count ?? 0, pending: counts.needs_review })
+                  : t("sync.never", { pending: counts.needs_review })}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <SyncNowButton />
+            <DisconnectButton />
+            {(process.env.NODE_ENV !== "production" || isDemoMode()) && <IngestButton />}
+          </div>
+        </Reveal>
+      )}
 
-      <InboxWorkspace
-        key={tab}
-        emails={emails}
-        clients={clientOpts}
-        matters={matterOpts}
-        tab={tab}
-        counts={counts}
-        threshold={threshold}
-        thresholdPct={thresholdPct}
-        belowThreshold={belowThreshold}
-        confirmAllCount={confirmAllC.count ?? 0}
-      />
+      {conn && (
+        <Reveal as="div" delay={120}>
+          <InboxWorkspace
+            key={tab}
+            emails={emails}
+            clients={clientOpts}
+            matters={matterOpts}
+            tab={tab}
+            counts={counts}
+            threshold={threshold}
+            thresholdPct={thresholdPct}
+            belowThreshold={belowThreshold}
+            confirmAllCount={confirmAllC.count ?? 0}
+            account={account}
+          />
 
-      {(tabTotal ?? 0) > per && <Pagination page={page} perPage={per} total={tabTotal ?? 0} />}
+          {(tabTotal ?? 0) > per && <Pagination page={page} perPage={per} total={tabTotal ?? 0} />}
+        </Reveal>
+      )}
 
-      <p className="text-xs text-ink-faint">{t("footer")}</p>
+      <div className="flex flex-wrap items-center gap-1.5 border-t border-ec-line pt-4 text-xs text-ec-muted-ink">
+        <Icon name="shield" className="h-3.5 w-3.5" /> {t("footer")}
+      </div>
     </div>
   );
 }
