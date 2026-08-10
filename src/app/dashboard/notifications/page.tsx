@@ -6,7 +6,7 @@ import { fmtAgo } from "@/components/ui";
 import { courtCaseNo } from "../cases/cases-row";
 import { OPEN_STATUS_OR } from "../cases/cases-query";
 import { Reveal } from "../motion";
-import { SectionLabel, ChannelCard, ChannelPill, ReceiptTrail, Stamp, type Step } from "./parts";
+import { SectionLabel, ChannelCard, ChannelPill, ReceiptTrail, type Step } from "./parts";
 import { QuietHoursForm } from "./quiet-hours-form";
 
 // design-system-v2 · Daybreak/Chambers (WO-336) — reskin of the Chambers prototype's
@@ -18,7 +18,12 @@ import { QuietHoursForm } from "./quiet-hours-form";
 // same mutation as Settings — see quiet-hours-form.tsx). Two real gaps, both flagged in-page
 // rather than silently dropped or faked: (1) "Order uploaded" has no notification `kind` yet —
 // its column reads "not tracked yet" everywhere; (2) delivered/read receipts aren't confirmed
-// anywhere in the schema — the trail is honestly capped at "sent".
+// anywhere in the schema — the trail is honestly capped at "sent". WAVE-2 exact-fidelity pass
+// (2026-08-10): reconciled class→token mapping (`eyebrow`→`.ec-label`, prototype `bg-band`→
+// `.ec-paper-3`, see tokens.css's WO-331 note) and restored nodes WAVE-1 had dropped or moved
+// (the masthead's edge-to-edge ink bleed, the defaults row's 3rd "court" line, the evening-brief/
+// quiet-hours eyebrows+body copy, the quiet-hours chips back inside their column). Per founder
+// override, the reference's <Stamp> ("DELIVERY RECEIPTS" registrar mark) is omitted here.
 
 type Channel = "whatsapp" | "email" | "inapp";
 const CHANNELS: { key: Channel; icon: "chat" | "gmail" | "monitor"; short: string }[] = [
@@ -98,8 +103,8 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
   return (
     <div className="space-y-8">
-      <Reveal as="div" className="mk-engraved rounded-xl bg-ec-ink px-5 py-7 text-ec-paper sm:px-8">
-        <p className="eyebrow !text-ec-honey">{t("header.eyebrow")}</p>
+      <Reveal as="div" className="mk-engraved -mx-5 rounded-[14px] bg-ec-ink px-5 py-7 sm:-mx-8 sm:px-7">
+        <p className="ec-label font-mono !text-ec-honey">{t("header.eyebrow")}</p>
         <h1 className="mt-2 flex flex-wrap items-center gap-3 font-display text-[30px] leading-[1.05] text-ec-paper sm:text-[34px]">
           {t("header.title")}
           <span className="num rounded-md bg-ec-ink-chip px-2 py-0.5 font-mono text-[12px] text-ec-honey">
@@ -111,7 +116,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
       {!hasCases ? (
         <Reveal as="div" delay={80} className="ec-rule-left p-6">
-          <p className="eyebrow">{t("empty.title")}</p>
+          <p className="ec-label">{t("empty.title")}</p>
           <p className="mt-2 max-w-xl font-display text-[24px] leading-snug text-ec-ink">{t("empty.body")}</p>
           <Link href="/dashboard/cases" className="ec-btn ec-btn-ink press mt-5 inline-flex w-fit items-center gap-2">
             <Icon name="cases" className="h-4 w-4 text-ec-honey" /> {t("empty.cta")}
@@ -123,7 +128,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
           <Reveal as="section" delay={80}>
             <SectionLabel
               right={
-                <span className="eyebrow">
+                <span className="ec-label">
                   {prefs.updated_at ? t("channelHealth.checked", { ago: fmtAgo(prefs.updated_at) }) : t("channelHealth.checkedNever")}
                 </span>
               }
@@ -160,22 +165,23 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
           {/* per-case matrix */}
           <Reveal as="section" delay={140}>
-            <SectionLabel right={<span className="eyebrow">{t("matrix.note")}</span>}>{t("matrix.title")}</SectionLabel>
+            <SectionLabel right={<span className="ec-label">{t("matrix.note")}</span>}>{t("matrix.title")}</SectionLabel>
             <div className="overflow-x-auto rounded-[10px] border border-ec-line bg-ec-card">
-              <table className="w-full min-w-[640px] border-collapse text-left">
+              <table className="w-full min-w-[720px] border-collapse text-left">
                 <thead>
-                  <tr className="border-b border-ec-line bg-ec-band">
-                    <th className="eyebrow px-4 py-2.5 font-normal">{t("matrix.colCase")}</th>
+                  <tr className="border-b border-ec-line bg-ec-paper-3">
+                    <th className="ec-label px-4 py-2.5 font-normal">{t("matrix.colCase")}</th>
                     {ALERT_COLS.map((c) => (
-                      <th key={c.key} className="eyebrow px-4 py-2.5 font-normal">{t(`matrix.col.${c.key}`)}</th>
+                      <th key={c.key} className="ec-label px-4 py-2.5 font-normal">{t(`matrix.col.${c.key}`)}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   <tr className="border-b border-ec-line bg-ec-bronze-tint/35">
-                    <td className="min-w-[220px] px-4 py-3 align-top">
+                    <td className="min-w-[240px] px-4 py-3 align-top">
                       <div className="font-display text-[14.5px] leading-snug text-ec-bronze-deep">{t("matrix.defaultsRow")}</div>
                       <div className="num mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ec-muted-ink">{t("matrix.defaultsHint")}</div>
+                      <div className="mt-0.5 text-[12px] text-ec-muted-ink">{t("matrix.defaultsCourt")}</div>
                     </td>
                     {ALERT_COLS.map((c) => (
                       <td key={c.key} className="px-4 py-3 align-top">
@@ -197,7 +203,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                     const caseNo = courtCaseNo(m.case_type, detail);
                     return (
                       <tr key={m.id} className="border-b border-ec-line last:border-0">
-                        <td className="min-w-[220px] px-4 py-3 align-top">
+                        <td className="min-w-[240px] px-4 py-3 align-top">
                           <Link href={`/dashboard/cases/${m.id}`} className="font-display text-[14.5px] leading-snug text-ec-ink hover:text-ec-bronze">{m.title}</Link>
                           <div className="num mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ec-muted-ink">{m.cnr ?? "—"}</div>
                           <div className="mt-0.5 text-[12px] text-ec-muted-ink">{[m.court, caseNo].filter(Boolean).join(" · ") || "—"}</div>
@@ -226,8 +232,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
           {/* delivery ledger */}
           <Reveal as="section" delay={200}>
-            <SectionLabel right={<span className="eyebrow">{t("ledger.receipts", { n: ledger.length })}</span>}>{t("ledger.title")}</SectionLabel>
-            <p className="mb-3 max-w-2xl text-[12px] text-ec-muted-ink">{t("ledger.note")}</p>
+            <SectionLabel right={<span className="ec-label">{t("ledger.receipts", { n: ledger.length })}</span>}>{t("ledger.title")}</SectionLabel>
             <div className="mb-3 flex flex-wrap gap-1.5">
               {(["all", "whatsapp", "email", "failed"] as const).map((v) => {
                 const href = v === "all" ? "/dashboard/notifications" : v === "failed" ? "/dashboard/notifications?failed=1" : `/dashboard/notifications?channel=${v}`;
@@ -237,7 +242,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                     key={v}
                     href={href}
                     aria-current={active ? "true" : undefined}
-                    className={`press rounded-md border px-2.5 py-1 text-[12.5px] transition-colors ${active ? "border-ec-bronze bg-ec-bronze-tint text-ec-bronze-deep" : "border-ec-line bg-ec-card text-ec-ink-2 hover:border-ec-line-strong hover:bg-ec-band"}`}
+                    className={`press rounded-md border px-2.5 py-1 text-[12.5px] transition-colors ${active ? "border-ec-bronze bg-ec-bronze-tint text-ec-bronze-deep" : "border-ec-line bg-ec-card text-ec-ink-2 hover:border-ec-line-strong hover:bg-ec-paper-3"}`}
                   >
                     {t(`ledger.filter.${v}`)}
                   </Link>
@@ -257,13 +262,13 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                 const when = n.scheduled_for ?? n.created_at;
                 return (
                   <li key={n.id} className="flex flex-wrap gap-3 px-4 py-3.5">
-                    <Icon name={ch.icon} className={`mt-[3px] h-3.5 w-3.5 shrink-0 ${isFailed ? "text-ec-danger" : "text-ec-bronze"}`} />
+                    <Icon name={ch.icon} className={`mt-[3px] h-[15px] w-[15px] shrink-0 ${isFailed ? "text-ec-danger" : "text-ec-bronze"}`} />
                     <div className="min-w-0 flex-1">
                       <div className="text-[13.5px] leading-snug text-ec-ink">
                         {kindLabel}
+                        {detail && <span className="text-ec-muted-ink"> · {detail}</span>}
                         {p.title && <><span className="text-ec-muted-ink"> · </span><span className="font-display text-[14px] text-ec-ink">{p.title}</span></>}
                       </div>
-                      {detail && <div className="mt-0.5 truncate text-[12px] text-ec-muted-ink">{detail}</div>}
                       <div className="mt-1.5">
                         <ReceiptTrail reached={reached} failedLabel={failedLabel} stepLabel={(s) => t(`ledger.step.${s}`)} />
                       </div>
@@ -285,20 +290,20 @@ export default async function NotificationsPage({ searchParams }: { searchParams
               <QuietHoursForm
                 prefs={prefs}
                 t={{
+                  eveningBrief: t("brief.eveningBrief"), eveningBriefBody: t("brief.eveningBriefBody"),
                   briefAt: t("brief.briefAt"), ist: t("brief.ist"), digest: t("brief.digest"), instant: t("brief.instant"),
-                  instantSoon: t("brief.instantSoon"), quietFrom: t("brief.quietFrom"), quietTo: t("brief.quietTo"),
+                  instantSoon: t("brief.instantSoon"), quietHours: t("brief.quietHours"), quietHoursBody: t("brief.quietHoursBody"),
+                  quietFrom: t("brief.quietFrom"), quietTo: t("brief.quietTo"),
+                  chipSaved: t("brief.chipSaved"), chipChannels: t("brief.chipChannels", { n: activeChannels }),
                   save: t("brief.save"), saving: t("brief.saving"),
                 }}
               />
             </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <span className="ec-chip ec-chip-hot">{t("brief.chipSaved")}</span>
-              <span className="ec-chip">{t("brief.chipChannels", { n: activeChannels })}</span>
-            </div>
           </Reveal>
 
-          <Reveal as="div" delay={320} className="flex flex-wrap items-center justify-between gap-4">
-            <Stamp lines={[t("footer.stampLine1"), t("footer.stampLine2", { date: ledgerDate(new Date().toISOString()) })]} />
+          {/* WO-336 founder override: the reference's registrar Stamp is omitted here (kept
+              elsewhere in the console, e.g. /login) — this row is just the case-file link. */}
+          <Reveal as="div" delay={320} className="flex flex-wrap items-center justify-end gap-4">
             <Link href="/dashboard/settings" className="text-[12.5px] text-ec-bronze hover:underline">{t("footer.link")}</Link>
           </Reveal>
         </div>
