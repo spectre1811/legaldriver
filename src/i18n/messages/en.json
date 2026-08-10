@@ -346,6 +346,12 @@
         "fileAllPending": "Bulk filing is coming soon — file one at a time from the preview.",
         "ignore": "Ignore"
       }
+    },
+    "directory": {
+      "resultsCount": "{count, plural, one {# result} other {# results}}",
+      "resultsShown": "{shown} of {total}",
+      "barLabel": "bar {id}",
+      "noBarLabel": "no bar id"
     }
   },
   "causeList": {

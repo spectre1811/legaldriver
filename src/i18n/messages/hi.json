@@ -346,6 +346,12 @@
         "fileAllPending": "थोक में दर्ज करना जल्द आ रहा है — पूर्वावलोकन से एक-एक करके दर्ज करें।",
         "ignore": "अनदेखा करें"
       }
+    },
+    "directory": {
+      "resultsCount": "{count, plural, one {# परिणाम} other {# परिणाम}}",
+      "resultsShown": "{total} में से {shown}",
+      "barLabel": "बार {id}",
+      "noBarLabel": "बार आईडी नहीं"
     }
   },
   "causeList": {
