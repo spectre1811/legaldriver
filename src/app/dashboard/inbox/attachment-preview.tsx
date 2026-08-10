@@ -11,7 +11,7 @@ const ZOOM_MIN = 80;
 const ZOOM_MAX = 160;
 const ZOOM_STEP = 10;
 
-export type MailAttachment = { id: string; filename: string; mime: string | null; sizeLabel: string };
+export type MailAttachment = { id: string; filename: string; mime: string | null; sizeLabel: string; docType: string | null };
 
 // WO-335 · the Chambers reference's inline attachment DocPreview (page rail, zoom, download,
 // maximize) — reuses the SAME shared `DocPreview` primitive doc-viewer-panel.tsx renders (real

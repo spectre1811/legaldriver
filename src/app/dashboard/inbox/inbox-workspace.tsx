@@ -23,10 +23,18 @@ export type WorkspaceEmail = {
   clientId: string | null;
   matterId: string | null;
   suggestion: string | null; // resolved case/client name, or null when the classifier had no match
+  matterCnr: string | null; // the matched case's CNR, when the suggestion is a matter (not a bare client)
   attachments: MailAttachment[];
 };
 type Tab = "needs_review" | "filed" | "ignored";
 type Sort = "date" | "sender";
+
+// "legal_notice" → "Legal notice" — the classifier's controlled doc_type vocabulary
+// (src/lib/docs/categories.ts) is a machine slug; the reference's "Document type" field shows a
+// human label, so we title-case it here rather than growing a second parallel label table.
+function humanizeDocType(slug: string): string {
+  return slug.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 // mono clock for today's mail, "24 Jul" once it's older — matches the reference's mono time column.
 // tz is pinned to IST (the audience) so the server (UTC) and browser render the same string — an
@@ -92,7 +100,12 @@ export function InboxWorkspace({
   const sel = useInboxSelection(order);
   const [pending, start] = useTransition();
   const [activeId, setActiveId] = useState<string>("");
-  const active = shown.find((e) => e.id === activeId) ?? shown[0];
+  // The reference defaults to the first row open and stays that way until the reader explicitly
+  // closes it (the desktop pane's X) — `closed` is that explicit state, distinct from "no id
+  // chosen yet" (activeId === "").
+  const [closed, setClosed] = useState(false);
+  const active = closed ? undefined : shown.find((e) => e.id === activeId) ?? shown[0];
+  const selectId = (id: string) => { setClosed(false); setActiveId(id); };
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dockClient, setDockClient] = useState<string>("");
   const [dockMatter, setDockMatter] = useState<string>("");
@@ -116,7 +129,7 @@ export function InboxWorkspace({
   const advance = () => setActiveId(order[activeIndex + 1] ?? order[activeIndex - 1] ?? "");
 
   function openRow(id: string) {
-    setActiveId(id);
+    selectId(id);
     setMobileOpen(true);
   }
 
@@ -173,8 +186,8 @@ export function InboxWorkspace({
       if (e.repeat) return; // a held key must not fire a burst of files/moves
       const el = document.activeElement as HTMLElement | null;
       if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
-      if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); setActiveId(order[Math.min(activeIndex + 1, order.length - 1)] ?? activeId); }
-      else if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); setActiveId(order[Math.max(activeIndex - 1, 0)] ?? activeId); }
+      if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); selectId(order[Math.min(activeIndex + 1, order.length - 1)] ?? activeId); }
+      else if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); selectId(order[Math.max(activeIndex - 1, 0)] ?? activeId); }
       else if (e.key === "f" && tab === "needs_review") { e.preventDefault(); fileActive(); }
     };
     window.addEventListener("keydown", onKey);
@@ -349,8 +362,8 @@ export function InboxWorkspace({
                 setDockMatter={setDockMatter}
                 pending={pending}
                 onFile={fileActive}
-                onSkip={advance}
                 onArchive={archiveActive}
+                onClose={() => setClosed(true)}
               />
             )}
           </div>
@@ -379,8 +392,8 @@ export function InboxWorkspace({
               setDockMatter={setDockMatter}
               pending={pending}
               onFile={() => { fileActive(); setMobileOpen(false); }}
-              onSkip={() => { advance(); setMobileOpen(false); }}
               onArchive={() => { archiveActive(); setMobileOpen(false); }}
+              onClose={() => setMobileOpen(false)}
             />
           </div>
         </div>
@@ -396,7 +409,7 @@ export function InboxWorkspace({
 function MailDetail({
   mail, tab, account, threshold, clients, matters,
   dockClient, dockMatter, setDockClient, setDockMatter,
-  pending, onFile, onSkip, onArchive,
+  pending, onFile, onArchive, onClose,
 }: {
   mail: WorkspaceEmail;
   tab: Tab;
@@ -410,22 +423,33 @@ function MailDetail({
   setDockMatter: (v: string) => void;
   pending: boolean;
   onFile: () => void;
-  onSkip: () => void;
   onArchive: () => void;
+  onClose: () => void;
 }) {
   const t = useTranslations("inbox");
   const td = useTranslations("dashboard.inbox");
   const [openAttId, setOpenAttId] = useState<string | undefined>(mail.attachments[0]?.id);
   const openAtt = mail.attachments.find((a) => a.id === openAttId) ?? mail.attachments[0];
+  // The reference's "Document type" field reads the classifier's own already-set doc_type (the
+  // SAME controlled vocabulary src/lib/docs/categories.ts writes at ingest) — an honest read-only
+  // display, not a second place to edit it (that stays out of this restyle-only WO's scope).
+  const primaryDocType = mail.attachments.find((a) => a.docType)?.docType ?? null;
 
   useEffect(() => setOpenAttId(mail.attachments[0]?.id), [mail.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden lg:border-l lg:border-ec-line">
       <div className="border-b border-ec-line px-5 py-4">
-        <h2 className="font-display text-[19px] leading-tight text-ec-ink">{mail.subject || t("noSubject")}</h2>
-        <p className="num mt-1 truncate font-mono text-[11.5px] text-ec-ink-2">{mail.from || "—"}</p>
-        <p className="num font-mono text-[11px] text-ec-muted-ink">{td("toLine", { account })} · {fullDate(mail.receivedAt)}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="font-display text-[19px] leading-tight text-ec-ink">{mail.subject || t("noSubject")}</h2>
+            <p className="num mt-1 truncate font-mono text-[11.5px] text-ec-ink-2">{mail.from || "—"}</p>
+            <p className="num font-mono text-[11px] text-ec-muted-ink">{td("toLine", { account })} · {fullDate(mail.receivedAt)}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label={t("preview.closeAria")} className="hidden shrink-0 text-ec-muted-ink hover:text-ec-ink lg:block">
+            <Icon name="close" className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 space-y-3 overflow-auto px-5 py-4">
@@ -473,41 +497,71 @@ function MailDetail({
           resurrect it or overwrite its classification. */}
       {tab === "needs_review" && (
         <div className="space-y-3 border-t border-ec-line bg-ec-paper-3/40 px-5 py-4">
-          <div className="flex items-center justify-between">
-            <p className="ec-label">{t("dock.title")}</p>
-            <div className="flex items-center gap-1 text-ec-muted-ink">
-              <a href={`mailto:${mail.from}`} aria-label={t("preview.reply")} title={t("preview.reply")} className="rounded-md p-1.5 hover:bg-ec-paper-3 hover:text-ec-ink">
-                <Icon name="external" className="h-4 w-4" />
-              </a>
-              <button onClick={onArchive} disabled={pending} aria-label={t("preview.archive")} title={t("preview.archive")} className="rounded-md p-1.5 hover:bg-ec-paper-3 hover:text-ec-ink disabled:opacity-50">
-                <Icon name="inbox" className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+          <p className="ec-label">{t("dock.title")}</p>
 
           <div className="rounded-md border border-ec-line bg-ec-card p-3">
             <div className="flex items-center gap-1.5 text-[13.5px] text-ec-ink">
               <span className="text-ec-bronze">→</span> {mail.suggestion ?? t("preview.noCaseMatch")}
             </div>
-            <div className="mt-1"><Ticks confidence={mail.confidence} threshold={threshold} /></div>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              {mail.matterCnr && <span className="ec-mono-label">{mail.matterCnr}</span>}
+              <Ticks confidence={mail.confidence} threshold={threshold} />
+            </div>
+            <div className="mt-3">
+              <Combobox
+                label={t("dock.case")} placeholder={t("dock.casePlaceholder")}
+                options={matters.map((m) => ({ value: m.id, label: m.label }))}
+                value={dockMatter || null} onChange={(v) => setDockMatter(v ?? "")}
+              />
+            </div>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Combobox
-              label={t("dock.client")} placeholder={t("dock.clientPlaceholder")}
-              options={clients.map((c) => ({ value: c.id, label: c.label }))}
-              value={dockClient || null} onChange={(v) => setDockClient(v ?? "")}
-            />
-            <Combobox
-              label={t("dock.case")} placeholder={t("dock.casePlaceholder")}
-              options={matters.map((m) => ({ value: m.id, label: m.label }))}
-              value={dockMatter || null} onChange={(v) => setDockMatter(v ?? "")}
-            />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="ec-label">{td("dock.docType")}</p>
+              <div className="mt-1.5">
+                <Combobox
+                  label={td("dock.docType")}
+                  placeholder={td("dock.docTypeNone")}
+                  options={primaryDocType ? [{ value: primaryDocType, label: humanizeDocType(primaryDocType) }] : []}
+                  value={primaryDocType}
+                  onChange={() => {}}
+                  disabled
+                  clearable={false}
+                />
+              </div>
+            </div>
+            <div>
+              <p className="ec-label">{t("dock.client")}</p>
+              <div className="mt-1.5">
+                <Combobox
+                  label={t("dock.client")} placeholder={t("dock.clientPlaceholder")}
+                  options={clients.map((c) => ({ value: c.id, label: c.label }))}
+                  value={dockClient || null} onChange={(v) => setDockClient(v ?? "")}
+                />
+              </div>
+              <p className="mt-1 text-[11.5px] text-ec-muted-ink">{td("dock.clientHint")}</p>
+            </div>
           </div>
-          <div className="flex items-center justify-end gap-2">
-            <button onClick={onSkip} className="ec-btn ec-btn-ghost text-[12.5px]">{t("dock.skip")}</button>
+
+          <div className="flex flex-wrap items-center gap-2">
             <button onClick={onFile} disabled={pending || (!dockClient && !dockMatter)} className="ec-btn ec-btn-ink text-[13px]">
-              {pending ? t("dock.filing") : t("dock.file")}
+              <Icon name="check" className="h-3.5 w-3.5" /> {pending ? t("dock.filing") : t("dock.file")}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setDockClient(""); setDockMatter(""); }}
+              className="ec-btn ec-btn-ghost text-[12.5px]"
+            >
+              {t("dock.notThisCase")}
+            </button>
+            <button
+              type="button"
+              onClick={onArchive}
+              disabled={pending}
+              className="rounded-md px-3 py-2 text-[12.5px] text-ec-muted-ink transition-colors hover:text-ec-ink-2 disabled:opacity-50"
+            >
+              {td("bulk.ignore")}
             </button>
           </div>
         </div>

@@ -134,7 +134,6 @@
     },
     "hearingFallback": "Hearing",
     "openFile": "Open file",
-    "summary": "{count, plural, =0 {No listings today} one {# listing} other {# listings}} · {courts, plural, =0 {no courts} one {# court} other {# courts}}",
     "syncedAt": "synced from the court record at {time}",
     "empty": {
       "title": "No hearings today",
@@ -175,6 +174,7 @@
   },
   "dashboard": {
     "overview": {
+      "title": "Overview",
       "tagline": "Tomorrow's hearings before you ask.",
       "sectionHearings": "Next hearings",
       "sectionDeadlines": "Deadlines open",
@@ -197,7 +197,7 @@
       },
       "lastSync": {
         "title": "Last sync",
-        "stamp": "COURT RECORD SYNCED",
+        "at": "Synced {date} · {time}",
         "never": "Not yet synced"
       }
     },
@@ -208,6 +208,8 @@
       "addClientModalTitle": "New client",
       "addClientModalHelper": "We'll flag any conflicts against existing clients and parties before you save.",
       "close": "Close",
+      "colMatters": "Matters",
+      "emptyLinkCase": "Link from a case",
       "noMatches": "No client matches “{q}”.",
       "settled": "settled",
       "contactHeading": "Contact",
@@ -388,14 +390,53 @@
       "bulk": {
         "fileAll": "File all",
         "fileAllPending": "Bulk filing is coming soon — file one at a time from the preview.",
-        "ignore": "Ignore"
+        "ignore": "Ignore",
+        "markReviewed": "Mark reviewed",
+        "markReviewedPending": "Marking reviewed is coming soon — there's no separate reviewed state yet."
+      },
+      "dock": {
+        "docType": "Document type",
+        "docTypeNone": "Not classified yet",
+        "clientHint": "Optional — appears on their page."
       }
     },
     "directory": {
+      "title": "Judge & advocate search",
+      "subtitle": "Know the bench before you argue.",
+      "searchPlaceholder": "Judge, advocate, or party name…",
+      "searchAria": "Judge, advocate, or party name",
+      "searchButton": "Search",
+      "notConfigured": "Live court API not configured (LD_API_KEY).",
+      "coverage": "Searching {total} cases across Gujarat ({district} district · {high} High Court).",
+      "browseTitle": "Search the live court corpus",
+      "browseBody": "Type a name above to find advocates, judges, and parties. Every advocate and judge links to a full dossier — caseload, side split, disposal patterns and cross-links.",
+      "examplesLabel": "Try a name:",
+      "caseNumberTitle": "Case number lookup",
+      "caseNumberTypeAria": "Case type",
+      "caseNumberTypePlaceholder": "Type",
+      "caseNumberNumberAria": "Case number",
+      "caseNumberNumberPlaceholder": "Number",
+      "caseNumberYearAria": "Case year",
+      "caseNumberYearPlaceholder": "Year",
+      "caseNumberSearch": "Look up",
+      "caseNumberNoResults": "No case matched",
+      "caseNumberNoResultsBody": "Check the type, number and year against the filing receipt, or search by CNR above.",
+      "advocates": "Advocates",
+      "judges": "Judges",
+      "parties": "Parties",
+      "advocateMatters": "{n, plural, one {# matter} other {# matters}}",
       "resultsCount": "{count, plural, one {# result} other {# results}}",
       "resultsShown": "{shown} of {total}",
       "barLabel": "bar {id}",
-      "noBarLabel": "no bar id"
+      "noBarLabel": "no bar id",
+      "noAdvocates": "No advocates found",
+      "noJudges": "No judges found",
+      "noParties": "No parties found",
+      "noPartiesBody": "Try a surname (fuzzy match across litigants).",
+      "typeMore": "Type at least 2 characters to search.",
+      "searchErrorTitle": "Search temporarily unavailable",
+      "searchErrorBody": "This search is too heavy for the current engine right now — try a more specific query, or try again shortly.",
+      "footer": "Source: Mukadma / public court records (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record."
     },
     "notifications": {
       "header": {
@@ -443,12 +484,12 @@
         },
         "notTracked": "Not tracked yet",
         "defaultsRow": "Defaults for every case",
-        "defaultsHint": "Applies on sync"
+        "defaultsHint": "Applies on sync",
+        "defaultsCourt": "Every matter added from the court record"
       },
       "ledger": {
         "title": "Delivery ledger",
         "receipts": "{n, plural, one {# receipt} other {# receipts}}",
-        "note": "“Delivered” and “read” aren't confirmed anywhere yet — sent is as far as we can verify.",
         "filter": {
           "all": "All",
           "whatsapp": "WhatsApp",
@@ -467,11 +508,15 @@
       },
       "brief": {
         "title": "Evening brief & quiet hours",
+        "eveningBrief": "Evening brief",
+        "eveningBriefBody": "Tomorrow's hearings, deadlines and unread mail — in one message.",
         "briefAt": "Brief at",
         "ist": "IST",
         "digest": "Digest",
         "instant": "Instant",
         "instantSoon": "Instant delivery isn't available yet",
+        "quietHours": "Quiet hours",
+        "quietHoursBody": "Your do-not-disturb window for automated sends.",
         "quietFrom": "Quiet hours from",
         "quietTo": "to",
         "save": "Save",
@@ -480,8 +525,6 @@
         "chipChannels": "{n, plural, one {# channel on} other {# channels on}}"
       },
       "footer": {
-        "stampLine1": "Delivery ledger",
-        "stampLine2": "Updated {date}",
         "link": "Manage channels in Settings →"
       }
     }
@@ -1066,9 +1109,18 @@
       "footnote": "Court data from the public court record · not legal advice · verify against the official record."
     },
     "trust": {
-      "cases": { "title": "Cases & deadlines", "line": "Every case, hearing & deadline in one calendar" },
-      "inbox": { "title": "Gmail inbox", "line": "Gmail auto-filed against the right client & case" },
-      "notices": { "title": "Notice escalation", "line": "Legal-notice escalation that runs itself" }
+      "cases": {
+        "title": "Cases & deadlines",
+        "line": "Every case, hearing & deadline in one calendar"
+      },
+      "inbox": {
+        "title": "Gmail inbox",
+        "line": "Gmail auto-filed against the right client & case"
+      },
+      "notices": {
+        "title": "Notice escalation",
+        "line": "Legal-notice escalation that runs itself"
+      }
     },
     "google": "Continue with Google",
     "googlePending": "Opening Google…",
@@ -1606,22 +1658,22 @@
   },
   "clients": {
     "title": "Clients",
-    "subtitle": "Add clients with a built-in conflict-of-interest check before you open the file.",
+    "subtitle": "Who you act for — their matters, documents and money, in one register.",
     "newIntake": "New client intake",
     "colClient": "Client",
     "colType": "Type",
     "colContact": "Contact",
     "colCases": "Cases",
     "emptyTitle": "No clients yet",
-    "emptyBody": "Add your first client above — we'll flag any conflicts against existing clients and parties.",
+    "emptyBody": "Add your first client — or link one from a case.",
     "backToClients": "Clients",
     "deleteClient": "Delete client",
     "deleteNote": "Cases & documents are kept (unlinked)",
     "clientPortal": "Client portal",
-    "casesHeading": "Cases",
+    "casesHeading": "Their cases",
     "noCases": "No cases for this client yet.",
     "nextPrefix": "next",
-    "documentsHeading": "Documents",
+    "documentsHeading": "Their documents",
     "colFile": "File",
     "colFiledUnder": "Filed under",
     "colSize": "Size",
@@ -1722,7 +1774,7 @@
   },
   "inbox": {
     "title": "Inbox",
-    "subtitle": "Connect Gmail to auto-file emails & attachments against the right client or case.",
+    "subtitle": "Forward it; it files itself — read the document, then file it to the matter.",
     "connected": "Gmail connected.",
     "state": {
       "connected": "Connected — syncing every 30 min.",
@@ -1796,12 +1848,11 @@
     },
     "confirmAll": "Confirm all high-confidence ({count})",
     "preview": {
-      "none": "Select an email to preview it here.",
+      "none": "Select an email to read it, preview the attachment and file it to a matter.",
       "suggests": "Suggests",
       "noCaseMatch": "No case match",
-      "reply": "Reply",
-      "archive": "Archive",
-      "attachments": "Attachments"
+      "attachments": "Attachments",
+      "closeAria": "Close email"
     },
     "dock": {
       "title": "File this email",
@@ -1809,10 +1860,10 @@
       "case": "Case",
       "clientPlaceholder": "Search clients",
       "casePlaceholder": "Search cases",
-      "skip": "Skip",
-      "file": "File",
+      "file": "File to case",
       "filing": "Filing…",
-      "filed": "Filed to {target}."
+      "filed": "Filed to {target}.",
+      "notThisCase": "Not this case"
     },
     "emptyTab": {
       "filed": "Nothing auto-filed yet.",
@@ -1867,7 +1918,8 @@
   },
   "documents": {
     "title": "Documents",
-    "subtitle": "Every document, organised by category and client. A case is an optional tag — file by client first, link to a case when it matters.",
+    "subtitle": "Filed, findable, full-text — every document from your uploads and the court record, grouped by case or by client.",
+    "reviewBanner": "{count, plural, one {document needs filing review} other {documents need filing review}}",
     "stat": {
       "inFile": "In the file",
       "inFileHint": "All documents, filed and unfiled",
@@ -1878,6 +1930,7 @@
     },
     "upload": {
       "cta": "Upload documents",
+      "short": "Upload",
       "hint": "Drop files here or click — we read, type, and file each one to the right case.",
       "uploading": "Uploading & filing…"
     },
@@ -1935,7 +1988,10 @@
       "client": "Client",
       "case": "Case",
       "noClient": "No client",
-      "noCase": "No case"
+      "noCase": "No case",
+      "tabCase": "By case",
+      "tabClient": "By client",
+      "docCount": "{n, plural, one {# document} other {# documents}}"
     },
     "summary": {
       "count": "{docs, plural, one {# document} other {# documents}} in {categories, plural, one {# category} other {# categories}}",
@@ -2013,6 +2069,8 @@
         "court_filing": "Court Filings",
         "other": "Other"
       },
+      "matterAria": "Case",
+      "allCases": "All cases",
       "sourceAria": "Source",
       "allSources": "All sources",
       "source": {
@@ -2025,7 +2083,8 @@
       "filedAria": "Filed",
       "all": "All",
       "filed": "Filed",
-      "unfiled": "Unfiled"
+      "unfiled": "Unfiled",
+      "noMatch": "Nothing matches “{q}” in any document text."
     },
     "docActions": {
       "open": "Open",
@@ -2147,46 +2206,6 @@
     "never": "never",
     "caseFallback": "case",
     "footer": "Risk signals are computed from tracked cases + court data — indicative, not legal advice. Verify against the official record."
-  },
-  "lookup": {
-    "title": "Judges, advocates & parties",
-    "directoryTitle": "Judges & Lawyers",
-    "directorySubtitle": "Look up any advocate’s bar-wise caseload, a judge’s dossier and disposal patterns, or a party’s cases — across the live court corpus.",
-    "browseTitle": "Search the live court corpus",
-    "browseBody": "Type a name above to find advocates, judges, and parties. Every advocate and judge links to a full dossier — caseload, side split, disposal patterns and cross-links.",
-    "examplesLabel": "Try a name:",
-    "subtitle": "Search the live court corpus for any advocate (bar-wise caseload), judge (dossier + disposal patterns), or party (their cases + the side they're on).",
-    "placeholder": "Advocate, judge, or party name — e.g. Prajapati, Pinto, Patel…",
-    "search": "Search",
-    "notConfigured": "Live court API not configured (LD_API_KEY).",
-    "coverage": "Searching {total} cases across Gujarat ({district} district · {high} High Court).",
-    "advocates": "Advocates",
-    "judges": "Judges",
-    "parties": "Parties / litigants",
-    "casesCount": "{n} cases",
-    "barSuffix": " · bar {id}",
-    "noBar": " · no bar id",
-    "noAdvocates": "No advocates found",
-    "noJudges": "No judges found",
-    "noParties": "No parties found",
-    "noPartiesBody": "Try a surname (fuzzy match across litigants).",
-    "footer": "Source: Mukadma / public court records (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record.",
-    "caseNumber": {
-      "title": "Find a case by number",
-      "subtitle": "Registration number, not CNR — e.g. type C.S., number 1234, year 2022.",
-      "typeLabel": "Type",
-      "typePlaceholder": "C.S.",
-      "numberLabel": "Number",
-      "numberPlaceholder": "1234",
-      "yearLabel": "Year",
-      "yearPlaceholder": "2022",
-      "search": "Find case",
-      "noResults": "No case matched",
-      "noResultsBody": "Check the type, number and year against the filing receipt, or search by CNR above."
-    },
-    "typeMore": "Type at least 2 characters to search.",
-    "searchErrorTitle": "Search temporarily unavailable",
-    "searchErrorBody": "This search is too heavy for the current engine right now — try a more specific query, or try again shortly."
   },
   "analytics": {
     "title": "Analytics",

@@ -72,7 +72,6 @@ export default async function OverviewPage() {
     counts.set(k, (counts.get(k) ?? 0) + 1);
   }
   const week: TodayWeekDay[] = days.map((iso) => ({ iso, count: counts.get(iso) ?? 0, isToday: iso === today }));
-  const courts = new Set(hearings.map((h) => h.matter?.court).filter(Boolean)).size;
   const filings: TodayFiling[] = (deadlines.data ?? []).map((d) => ({
     id: d.id,
     kind: d.kind,
@@ -86,7 +85,6 @@ export default async function OverviewPage() {
         now={now.toISOString()}
         week={week}
         hearings={hearings}
-        courts={courts}
         syncedAt={lastSync.data?.last_synced_at ?? null}
         filings={filings}
         inboxReview={review.count ?? 0}

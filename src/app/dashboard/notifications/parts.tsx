@@ -51,7 +51,7 @@ export function ChannelCard({
         <span className={`ml-auto h-2 w-2 shrink-0 rounded-full ${DOT_CLASS[dot]}`} aria-hidden />
       </div>
       <div className="num mt-2 truncate font-mono text-[11.5px] text-ec-ink-2">{detail}</div>
-      <div className="eyebrow mt-1">{state}</div>
+      <div className="ec-label mt-1">{state}</div>
       <Link
         href="/dashboard/settings"
         className="mt-3 inline-flex items-center gap-1.5 self-start rounded-md px-2 py-1 text-[12.5px] text-ec-bronze transition-colors hover:bg-ec-bronze-tint"
@@ -100,20 +100,6 @@ export function ReceiptTrail({ reached, stepLabel, failedLabel }: { reached: Ste
         );
       })}
       {failedLabel && <span className="ec-chip ec-chip-danger ml-1">{failedLabel}</span>}
-    </div>
-  );
-}
-
-/** The registrar's stamp — ported verbatim (WO-339 already did the container once for /login;
- *  mirrored here rather than sharing a component across two very different pages' local trees). */
-export function Stamp({ lines }: { lines: [string, string] }) {
-  return (
-    <div className="flex justify-start">
-      <div className="relative -rotate-2 rounded-lg border-[1.5px] border-ec-bronze px-4 pb-2.5 pt-3 text-center text-ec-bronze opacity-75">
-        <span className="absolute left-1/2 top-[5px] h-[5px] w-[5px] -translate-x-1/2 rounded-full bg-ec-honey" />
-        <div className="mk-stamp-line">{lines[0]}</div>
-        <div className="num mk-stamp-line">{lines[1]}</div>
-      </div>
     </div>
   );
 }
