@@ -278,7 +278,9 @@
       },
       "billing": {
         "outstanding": "Outstanding"
-      }
+      },
+      "hearingsOrders": "Hearings & orders",
+      "courtNo": "Court {no}"
     },
     "onboarding": {
       "eyebrow": "Setup",
@@ -768,6 +770,7 @@
     },
     "ai": {
       "title": "AI briefing",
+      "generated": "Generated {time}",
       "posture": "Procedural posture",
       "keyPoints": "Key points",
       "nextSteps": "Suggested next steps",
@@ -847,7 +850,7 @@
       "title": "Acts & Sections"
     },
     "deadlines": {
-      "title": "Statutory deadlines",
+      "title": "Deadlines",
       "help": "Apply a limitation/procedural rule from a base date — it computes the due date and adds it to your calendar. Assistive; verify against the bare act.",
       "proposed": "Proposed — confirm to add to your calendar",
       "proposedNote": "Computed from a rule — verify against the bare act before confirming.",
@@ -910,9 +913,9 @@
       "empty": "No documents yet — upload one above, or they'll arrive auto-filed from Gmail."
     },
     "billing": {
-      "title": "Time & expenses",
+      "title": "Billing",
       "time": "Time",
-      "unbilled": "Unbilled",
+      "unbilled": "Unbilled time",
       "entryFallback": "Time entry",
       "nonBillable": "non-billable"
     },
