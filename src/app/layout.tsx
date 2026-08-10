@@ -8,11 +8,15 @@ import "./globals.css";
 
 // v2 UI sans (design-system-v2 §3). Work Sans + Noto Devanagari/Gujarati pairing.
 const sans = Work_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+// WO-344 · load Fraunces as the VARIABLE font with its `opsz` (optical-size) axis, not fixed
+// weight cuts. Pinning weights dropped the opsz axis, so serif headings never optically sized
+// (font-optical-sizing:auto is the CSS default but needs the axis present) — a key "thin/flat
+// headings" cause. The variable font also gives continuous weights the `.display` utility uses.
 const serif = Fraunces({
   subsets: ["latin"],
   variable: "--font-serif",
   display: "swap",
-  weight: ["400", "500", "600"],
+  axes: ["opsz"],
 });
 // v2 mono (design-system-v2 §3) — CNRs, case numbers, dates, ₹ amounts, serials; tabular-nums.
 const mono = IBM_Plex_Mono({

@@ -58,3 +58,4 @@ blob-report/
 # WO-36 Layer 2 · QA agent — nightly generated sweep reports are run artifacts (uploaded in CI); ignore them.
 # Human-written QA run reports in qa-reports/ ARE committed (they are docs, not build output).
 # (Playwright visual baselines under e2e/*-snapshots/ ARE committed — do not ignore those.)
+.gstack/

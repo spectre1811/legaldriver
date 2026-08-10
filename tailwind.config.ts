@@ -93,7 +93,7 @@ const config: Config = {
         ui: ["var(--f-ui)"],
         code: ["var(--f-mono)"],
       },
-      borderRadius: { xl: "0.875rem", "2xl": "1.125rem", "ec-s": "var(--r-s)", "ec-m": "var(--r-m)" },
+      borderRadius: { xl: "0.875rem", "2xl": "1.125rem", "ec-s": "var(--r-s)", "ec-m": "var(--r-m)", "ec-l": "var(--r-l)" },
       boxShadow: {
         card: "0 1px 2px rgba(16,18,24,0.04), 0 1px 3px rgba(16,18,24,0.06)",
         lift: "0 4px 14px rgba(16,18,24,0.08)",

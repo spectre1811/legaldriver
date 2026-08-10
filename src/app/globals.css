@@ -12,22 +12,41 @@
   body {
     @apply bg-paper text-ink antialiased;
     font-feature-settings: "ss01", "cv01";
+    /* WO-344 · the Chambers prototype's subliminal paper grain (styles.css:98-101). The single
+       largest "flat/bland" contributor was its absence — every page sat on dead-flat paper. */
+    background-image: radial-gradient(rgba(26, 28, 30, 0.055) 0.5px, transparent 0.5px);
+    background-size: 3px 3px;
   }
   h1, h2, h3, h4 {
     @apply font-serif tracking-tight text-ink;
+    /* WO-344 · Fraunces now loads its opsz axis (layout.tsx); auto optical sizing gives serif
+       headings their intended heft at display sizes (prototype `.display`, styles.css:128-133). */
+    font-optical-sizing: auto;
+  }
+  /* WO-344 · one global honey focus ring (prototype styles.css:108-112) — replaces the
+     inconsistent per-element ring-ec-indigo(bronze)/ring-ec-honey split so focus is honey app-wide. */
+  :focus-visible {
+    outline: 2px solid var(--honey);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
   ::selection {
-    @apply bg-brand-100 text-brand-900;
+    /* WO-344 · prototype uses bronze-tint with no forced text colour (styles.css:114-116). */
+    background: var(--bronze-tint);
   }
 }
 
 @layer components {
-  /* Shared surface + control primitives */
+  /* Shared surface + control primitives.
+     WO-344 · the legacy .card/.input/.btn-primary/.label below were pre-Chambers (rounded-2xl
+     cards, bronze primary buttons, bold-sans labels) and still serve the not-yet-page-reconciled
+     forms (client-intake, case-actions, deadline-rules, onboarding AdvocateForm). Repointed to the
+     Chambers treatment so those surfaces re-tone in place — same shapes/tokens as the .ec-* set. */
   .card {
-    @apply rounded-2xl border border-line bg-surface shadow-card;
+    @apply rounded-ec-m border border-line bg-surface shadow-ec-1;
   }
   .input {
-    @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink
+    @apply w-full rounded-ec-s border border-line bg-paper px-3.5 py-2.5 text-sm text-ink
            placeholder:text-ink-faint outline-none transition
            focus:border-ec-honey focus:shadow-ec-2;
   }
@@ -41,9 +60,14 @@
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium
            transition disabled:opacity-50 disabled:pointer-events-none;
   }
+  /* WO-344 · was bronze (bg-brand-600 → --indigo → aliased to --bronze). The prototype's primary
+     CTA is INK (bg-ink; app.clients.tsx, add-case footer), matching the newer .ec-btn-ink. */
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-900 shadow-sm;
+    @apply btn text-ec-paper shadow-sm;
+    background: var(--ink);
   }
+  .btn-primary:hover { background: var(--n800); }
+  .btn-primary:active { background: var(--n900); }
   .btn-secondary {
     @apply btn border border-line bg-surface text-ink-soft hover:bg-paper hover:border-ink-faint;
   }
@@ -53,9 +77,16 @@
   .badge {
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
+  /* WO-344 · was bold-sans (a pre-Chambers idiom). The prototype's field/section labels are the
+     mono small-caps `eyebrow` (styles.css:119-126); repointed so legacy-form labels re-tone. */
   .label {
-    @apply text-[0.7rem] font-semibold uppercase tracking-wider text-ink-faint;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted-ink);
   }
+  html[lang="hi"] .label { letter-spacing: normal; }
 }
 
 @layer components {
@@ -128,11 +159,22 @@
      "Complete" status is the first consumer; every future honey-toned chip follows this. */
   .ec-chip-honey { border-color: var(--honey); color: var(--on-honey); background: var(--honey); }
 
-  /* small-caps section label */
-  .ec-label { font-size: 11px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-3); }
-  /* WO-328: Devanagari is never letter-spaced (charter) — .ec-label tracks at 0.13em for Latin
-     small-caps; every current+future user of the class gets the hi override from one place. */
+  /* small-caps section label.
+     WO-344 · was bold SANS (font-weight 600, no font-family) — the audit found 45 sites rendering
+     a heavy sans label where the prototype's canonical section label is MONO small-caps (the
+     `eyebrow` utility, styles.css:119-126). Repointed to mono so all 45 re-tone in place; this was
+     a major "feels different" driver. Same size/tracking/uppercase; now IBM Plex Mono + muted-ink. */
+  .ec-label { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted-ink); }
+  /* WO-328: Devanagari is never letter-spaced (charter) — every user of the class gets the hi
+     override from one place. */
   html[lang="hi"] .ec-label { letter-spacing: normal; }
+
+  /* WO-344 · the prototype's canonical serif display treatment (styles.css:128-133) — one class
+     that sets optical sizing + tightened tracking + weight, so serif headings are consistent
+     instead of each site re-deriving weight/tracking off a bare `font-display` family swap. */
+  .display { font-family: var(--f-display); font-optical-sizing: auto; letter-spacing: -0.01em; font-weight: 500; }
+  /* WO-344 · reusable paper grain (styles.css:172-176) for any surface that wants the body texture. */
+  .grain { background-image: radial-gradient(rgba(26, 28, 30, 0.055) 0.5px, transparent 0.5px); background-size: 3px 3px; }
 
   /* WO-335 · a smaller tracked mono caption (Ticks confidence label, attachment kind·size) —
      the reference's `num font-mono text-[10px] uppercase tracking-[0.1em]` idiom, named once
