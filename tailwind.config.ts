@@ -76,6 +76,8 @@ const config: Config = {
           "success-bg": "var(--success-bg)",
           "warn-bg": "var(--warn-bg)",
           "danger-bg": "var(--danger-bg)",
+          // WO-332 · flagged new token (see tokens.css) — border for outlined controls on --ink.
+          "ink-border": "var(--ink-border)",
           // WO-334 · flagged new token (see tokens.css) — Documents viewer canvas backdrop.
           "doc-well": "var(--doc-well)",
         },

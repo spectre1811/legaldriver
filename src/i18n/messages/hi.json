@@ -233,6 +233,75 @@
       "resultsShown": "{total} में से {shown}",
       "barLabel": "बार {id}",
       "noBarLabel": "बार आईडी नहीं"
+    },
+    "caseFile": {
+      "back": "सभी मुकदमे",
+      "copyCnr": "कॉपी करें",
+      "copiedCnr": "कॉपी हो गया",
+      "stagePrefix": "चरण",
+      "moreActions": "अधिक विकल्प",
+      "soon": {
+        "calendar": "कैलेंडर में जोड़ें",
+        "share": "मुकदमा फ़ाइल साझा करें",
+        "export": "PDF के रूप में निर्यात करें",
+        "badge": "जल्द ही"
+      },
+      "next": {
+        "today": "आज",
+        "tomorrow": "कल",
+        "inDays": "{count, plural, one {# दिन में} other {# दिन में}}",
+        "past": "{count, plural, one {# दिन पहले} other {# दिन पहले}}"
+      },
+      "alert": {
+        "wasDue": "की नियत तारीख़ {date} थी",
+        "overdueDays": "{count, plural, one {# दिन अतिदेय} other {# दिन अतिदेय}}",
+        "reviewCount": "{count, plural, one {इस मुकदमे हेतु # इनबॉक्स फ़ाइलिंग असमीक्षित है} other {इस मुकदमे हेतु # इनबॉक्स फ़ाइलिंग असमीक्षित हैं}}",
+        "reviewLink": "फाइलिंग समीक्षा करें"
+      },
+      "record": {
+        "title": "न्यायालय अभिलेख",
+        "hide": "छिपाएं",
+        "show": "दिखाएं",
+        "synced": "न्यायालय अभिलेख से · {time} को सिंक हुआ"
+      },
+      "partiesTitle": "पक्षकार व अधिवक्ता",
+      "stamp": {
+        "synced": "सिंक हुआ · {date}"
+      },
+      "client": {
+        "view": "मुवक्किल देखें"
+      },
+      "notify": {
+        "title": "सूचनाएं",
+        "empty": "इस मुकदमे के लिए अभी तक कोई सूचना नहीं भेजी गई।",
+        "lastSent": "अंतिम बार {date} को भेजा गया"
+      },
+      "allDocuments": "सभी दस्तावेज़",
+      "inbox": {
+        "title": "इनबॉक्स से",
+        "empty": "इस मुकदमे से अभी तक कोई प्राप्त मेल संबद्ध नहीं हुआ।",
+        "review": "समीक्षा करें"
+      },
+      "billing": {
+        "outstanding": "शेष"
+      }
+    },
+    "onboarding": {
+      "eyebrow": "सेटअप",
+      "addEyebrow": "अधिवक्ता जोड़ें",
+      "rosterEmpty": "अभी तक कोई अधिवक्ता नहीं जोड़ा गया।",
+      "viewMatters": "मामले देखें",
+      "sidebar": {
+        "title": "आपको क्या मिलता है",
+        "calendarLabel": "कैलेंडर",
+        "calendarCount": "{n, plural, one {इस महीने # पेशी} other {इस महीने # पेशियाँ}}",
+        "calendarEmpty": "अभी तक कोई पेशी दर्ज नहीं",
+        "weekdays": ["सो", "मं", "बु", "गु", "शु", "श", "र"],
+        "briefHeader": "{brand} · सुबह की जानकारी",
+        "briefNext": "आपके कैलेंडर पर अगली पेशी: {title} — {court}, {date}",
+        "briefEmpty": "आपकी प्रैक्टिस तैयार होते ही यहाँ आपकी सुबह की जानकारी दिखेगी।",
+        "briefNote": "व्हाट्सऐप डिलीवरी जल्द आ रही है — फ़िलहाल हर सुबह यहाँ देखें।"
+      }
     }
   },
   "causeList": {

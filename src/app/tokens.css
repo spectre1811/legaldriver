@@ -114,6 +114,13 @@
   --gradient-quote-wash: linear-gradient(120deg, var(--bronze-tint), transparent);
   --gradient-records-wash: radial-gradient(700px 300px at 82% 8%, rgba(232, 181, 99, .14), transparent 60%);
 
+  /* WO-332 · FLAGGED — the case-file masthead's own dark "engraved ink" panel (ported from
+     design-mockups/iteration3/console/app.case.tsx, whose outlined header buttons hardcode
+     `border-[#3A3D40]` even in the reference itself). This is a genuinely NEW colour — it's a
+     cool neutral, unlike every value in our warm graphite --n900…--n050 ramp, so it isn't an
+     alias of anything already on disk. Named per the FAITHFUL-TO-PROTOTYPE BAR (WO-332 file):
+     the one border colour used for outlined controls sitting directly on --ink. */
+  --ink-border: #3A3D40;
   /* ── WO-334 · FLAGGED — founder directive 2026-08-10 (FAITHFUL-TO-PROTOTYPE BAR item 2):
      the Documents Notes/zoom viewer's recessed canvas backdrop (`bg-[#EFEDE8]` in the prototype's
      app.documents.tsx DocViewer). Audited against every existing var above — genuinely NOT a
