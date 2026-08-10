@@ -35,7 +35,7 @@ export function AddCaseButton({ autoCnr, autoOpen }: { autoCnr?: string; autoOpe
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="add-case-title">
-          <div className="absolute inset-0 bg-ec-ink/40" onClick={() => setOpen(false)} />
+          <div className="absolute inset-0 bg-ec-ink/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
           <div className="relative z-10 w-full max-w-md rounded-ec-l border border-ec-hair bg-ec-paper shadow-ec-2">
             <div className="flex items-start justify-between border-b border-ec-hair px-5 py-4">
               <div>

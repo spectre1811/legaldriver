@@ -40,7 +40,7 @@ export function AddClientButton({ practiceAreas }: { practiceAreas: { id: string
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="add-client-title">
           <div
-            className={`absolute inset-0 bg-ec-ink/40 transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 bg-ec-ink/40 backdrop-blur-sm transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"}`}
             onClick={close}
           />
           <div

@@ -56,7 +56,7 @@ export function Dialog({
       aria-labelledby={labelledBy}
     >
       <div
-        className={`absolute inset-0 bg-ec-ink/40 transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 bg-ec-ink/40 backdrop-blur-sm transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"}`}
         onClick={onClose}
       />
       <div
