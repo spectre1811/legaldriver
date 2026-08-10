@@ -8,7 +8,9 @@ export type IconName =
   | "clients" | "invoice" | "bulb" | "chart" | "chat" | "mic" | "gauge" | "printer"
   | "sunrise" | "judge" | "scroll"
   // WO-334 Documents Notes/zoom viewer — glyphs the reference needs beyond the existing set.
-  | "note" | "minus" | "download";
+  | "note" | "minus" | "download"
+  // WO-335 Inbox Daybreak reskin — the disconnected-state reassurance bullets (ShieldCheck).
+  | "shield";
 
 const P: Record<IconName, React.ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
@@ -55,6 +57,7 @@ const P: Record<IconName, React.ReactNode> = {
   note: <><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10.5a2 2 0 0 0 2-2V8.5z" /><path d="M15 3v4a2 2 0 0 0 2 2h4" /><path d="M8 13h5M8 17h3" /></>,
   minus: <><path d="M5 12h14" /></>,
   download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 11l5 5 5-5M12 4v12" /></>,
+  shield: <><path d="M12 3 4.5 6v6c0 4.4 3 7.5 7.5 9 4.5-1.5 7.5-4.6 7.5-9V6z" /><path d="m8.5 12 2.4 2.4L16 9.5" /></>,
 };
 
 export function Icon({ name, className = "h-5 w-5" }: IconProps) {

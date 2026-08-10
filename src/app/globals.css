@@ -130,6 +130,12 @@
      small-caps; every current+future user of the class gets the hi override from one place. */
   html[lang="hi"] .ec-label { letter-spacing: normal; }
 
+  /* WO-335 · a smaller tracked mono caption (Ticks confidence label, attachment kind·size) —
+     the reference's `num font-mono text-[10px] uppercase tracking-[0.1em]` idiom, named once
+     so it (like .ec-label) gets the Devanagari-untracked override from a single place. */
+  .ec-mono-label { font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-ink); font-variant-numeric: tabular-nums; }
+  html[lang="hi"] .ec-mono-label { letter-spacing: normal; }
+
   /* ledger row hover — the brass-wash on the active line */
   .ec-row { transition: background var(--motion-fast) var(--ease); }
   .ec-row:hover { background: color-mix(in srgb, var(--brass-tint) 40%, transparent); }
