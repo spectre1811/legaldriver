@@ -24,6 +24,17 @@ export type DocRow = {
   sourceLabel: string; sizeLabel: string; dateLabel: string;
   matterId: string | null; clientId: string | null; shared: boolean;
   hasFile: boolean;
+  // WO-334 EXACT-FIDELITY · the resolved client (direct tag, else via the tagged case) — the
+  // "by client" grouping key on the ref-faithful main list (documents-list.tsx); a doc filed
+  // only to a case still nests under its case's client. Same per-doc mapping (toRow() in
+  // page.tsx) also feeds this table, so both consumers share one source of truth.
+  resolvedClientId: string | null;
+  // Same real definition the Review Inbox / attention-card count already uses (WO-33): flagged
+  // needs_review OR genuinely unfiled — drives the ref's per-row Filed/Needs-review chip.
+  needsReview: boolean;
+  // The document's category icon (lib/docs/categories.ts) — real classification standing in for
+  // the ref's fabricated 3-way order/pleading/annexure kind icon.
+  iconName: IconName;
 };
 export type DocSection = { cat: string; label: string; icon: string; rows: DocRow[] };
 type Opt = { id: string; label: string };

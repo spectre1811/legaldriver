@@ -1867,7 +1867,8 @@
   },
   "documents": {
     "title": "Documents",
-    "subtitle": "Every document, organised by category and client. A case is an optional tag — file by client first, link to a case when it matters.",
+    "subtitle": "Filed, findable, full-text — every document from your uploads and the court record, grouped by case or by client.",
+    "reviewBanner": "{count, plural, one {document needs filing review} other {documents need filing review}}",
     "stat": {
       "inFile": "In the file",
       "inFileHint": "All documents, filed and unfiled",
@@ -1878,6 +1879,7 @@
     },
     "upload": {
       "cta": "Upload documents",
+      "short": "Upload",
       "hint": "Drop files here or click — we read, type, and file each one to the right case.",
       "uploading": "Uploading & filing…"
     },
@@ -1935,7 +1937,10 @@
       "client": "Client",
       "case": "Case",
       "noClient": "No client",
-      "noCase": "No case"
+      "noCase": "No case",
+      "tabCase": "By case",
+      "tabClient": "By client",
+      "docCount": "{n, plural, one {# document} other {# documents}}"
     },
     "summary": {
       "count": "{docs, plural, one {# document} other {# documents}} in {categories, plural, one {# category} other {# categories}}",
@@ -2013,6 +2018,8 @@
         "court_filing": "Court Filings",
         "other": "Other"
       },
+      "matterAria": "Case",
+      "allCases": "All cases",
       "sourceAria": "Source",
       "allSources": "All sources",
       "source": {
@@ -2025,7 +2032,8 @@
       "filedAria": "Filed",
       "all": "All",
       "filed": "Filed",
-      "unfiled": "Unfiled"
+      "unfiled": "Unfiled",
+      "noMatch": "Nothing matches “{q}” in any document text."
     },
     "docActions": {
       "open": "Open",

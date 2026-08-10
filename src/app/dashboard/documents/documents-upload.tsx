@@ -6,14 +6,16 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { uploadDocumentHub } from "./actions";
 
-// WO-27 — the upload surface the Documents hub was missing. Drag-and-drop or click; each file runs
-// the shared extract → classify → auto-file path server-side, so it lands typed + linked (or in
-// "needs review"). Deliberately simple UI; the intelligence is server-side.
-export function DocumentsUpload() {
+// WO-334 EXACT-FIDELITY · was a full drag-and-drop dropzone card (WO-27) — a surface
+// app.documents.tsx doesn't have. The reference's Upload is one compact ink pill (two sizes:
+// the toolbar's small trigger, the empty state's slightly larger CTA); both share this component
+// so the upload logic (extract → classify → auto-file, WO-27) isn't duplicated. Same server
+// action, same result message — file selection is now click-to-browse only (no drag/drop chrome
+// to match), which is still keyboard/AT reachable via the native file input.
+export function DocumentsUpload({ size = "sm", className = "" }: { size?: "sm" | "md"; className?: string }) {
   const t = useTranslations("documents.upload");
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState("");
-  const [drag, setDrag] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -29,31 +31,32 @@ export function DocumentsUpload() {
     });
   }
 
+  const sizeCls = size === "md" ? "px-4 py-2.5 text-[13px]" : "px-3.5 py-2 text-[12.5px]";
+  const iconCls = size === "md" ? "h-3.5 w-3.5" : "h-3 w-3";
+
   return (
-    <div
-      onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-      onDragLeave={() => setDrag(false)}
-      onDrop={(e) => { e.preventDefault(); setDrag(false); send(e.dataTransfer.files); }}
-      onClick={() => inputRef.current?.click()}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
-      className={`ec-card flex cursor-pointer flex-col items-center justify-center gap-1.5 border-2 border-dashed px-4 py-6 text-center transition-colors ${
-        drag ? "border-ec-bronze bg-ec-bronze-tint/40" : "border-ec-hair-strong hover:border-ec-bronze/50"
-      }`}
-      aria-label={t("cta")}
-    >
-      <Icon name="upload" className={`h-5 w-5 ${pending ? "animate-pulse text-ec-bronze" : "text-ec-ink-3"}`} />
-      <div className="text-sm font-medium text-ec-ink">{pending ? t("uploading") : t("cta")}</div>
-      <div className="text-xs text-ec-ink-3">{t("hint")}</div>
-      {msg && <div className="mt-1 text-xs text-ec-ink-3">{msg}</div>}
+    <span className={`inline-flex min-w-0 items-center gap-2 ${className}`}>
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={pending}
+        // Bespoke (not .ec-btn-ink): the reference's exact hover fill is #26282B
+        // (tokens.css --ink-chip), one shade darker than .ec-btn-ink's shared --n800 hover —
+        // full color fidelity per the WO's FAITHFUL-TO-PROTOTYPE BAR.
+        className={`inline-flex shrink-0 items-center gap-1.5 rounded-md bg-ec-ink font-medium text-ec-paper transition-colors hover:bg-ec-ink-chip disabled:opacity-60 ${sizeCls}`}
+      >
+        <Icon name="upload" className={iconCls} />
+        {pending ? t("uploading") : size === "md" ? t("cta") : t("short")}
+      </button>
+      {msg && <span className="min-w-0 truncate text-xs text-ec-ink-3">{msg}</span>}
       <input
         ref={inputRef}
         type="file"
         multiple
         className="hidden"
+        aria-label={t("cta")}
         onChange={(e) => { send(e.target.files); e.currentTarget.value = ""; }}
       />
-    </div>
+    </span>
   );
 }
