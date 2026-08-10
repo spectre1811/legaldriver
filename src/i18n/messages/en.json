@@ -347,6 +347,12 @@
         "ignore": "Ignore"
       }
     },
+    "directory": {
+      "resultsCount": "{count, plural, one {# result} other {# results}}",
+      "resultsShown": "{shown} of {total}",
+      "barLabel": "bar {id}",
+      "noBarLabel": "no bar id"
+    },
     "notifications": {
       "header": {
         "eyebrow": "Alerts",

@@ -347,6 +347,12 @@
         "ignore": "अनदेखा करें"
       }
     },
+    "directory": {
+      "resultsCount": "{count, plural, one {# परिणाम} other {# परिणाम}}",
+      "resultsShown": "{total} में से {shown}",
+      "barLabel": "बार {id}",
+      "noBarLabel": "बार आईडी नहीं"
+    },
     "notifications": {
       "header": {
         "eyebrow": "अलर्ट",
