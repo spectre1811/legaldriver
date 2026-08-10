@@ -225,31 +225,33 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
         {trash ? (
           <>
             <button onClick={onRestore} disabled={busy} className={btn}>{t("bulk.restore")}</button>
-            <button onClick={onPurge} disabled={busy} className={`${btn} text-red-300`}>{t("bulk.purge")}</button>
+            <button onClick={onPurge} disabled={busy} className={`${btn} text-ec-danger`}>{t("bulk.purge")}</button>
           </>
         ) : (
           <>
             <button onClick={onExport} disabled={busy} className={btn}>{busy ? t("bulk.exporting") : t("bulk.export")}</button>
-            {/* Client-first: file to a client, or tag to a case. */}
+            {/* Client-first: file to a client, or tag to a case. WO-331: BulkBar retoned from a dark
+                ink pill to a light card (components/selection/bulk-bar.tsx) — these inline selects
+                follow suit instead of going invisible (light text on a now-light bar). */}
             <select
               onChange={(e) => { onFileClient(e.target.value); e.currentTarget.selectedIndex = 0; }}
               disabled={busy} defaultValue=""
-              className="rounded-full bg-paper/15 px-3 py-1 text-sm text-paper focus:outline-none"
+              className={`${btn} bg-transparent pr-1`}
               aria-label={t("bulk.toClient")}
             >
-              <option value="" className="text-ink">{t("bulk.toClient")}</option>
-              {clientOpts.map((c) => <option key={c.id} value={c.id} className="text-ink">{c.label}</option>)}
+              <option value="">{t("bulk.toClient")}</option>
+              {clientOpts.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
             <select
               onChange={(e) => { onFileCase(e.target.value); e.currentTarget.selectedIndex = 0; }}
               disabled={busy} defaultValue=""
-              className="rounded-full bg-paper/15 px-3 py-1 text-sm text-paper focus:outline-none"
+              className={`${btn} bg-transparent pr-1`}
               aria-label={t("bulk.toCase")}
             >
-              <option value="" className="text-ink">{t("bulk.toCase")}</option>
-              {matterOpts.map((m) => <option key={m.id} value={m.id} className="text-ink">{m.label}</option>)}
+              <option value="">{t("bulk.toCase")}</option>
+              {matterOpts.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
             </select>
-            <button onClick={onDelete} disabled={busy} className={`${btn} text-red-300`}>{t("bulk.delete")}</button>
+            <button onClick={onDelete} disabled={busy} className={`${btn} text-ec-danger`}>{t("bulk.delete")}</button>
           </>
         )}
       </BulkBar>

@@ -2,7 +2,10 @@
 //   (1) the pure density parser (valid set, safe default, no fabrication);
 //   (2) the server page seeds density from the cookie (no hydration flash);
 //   (3) the table renders the density control + reflows via the container [data-density] hook,
-//       persists to the cookie, and the CSS reflow + Compact subline-hide exist.
+//       persists to the cookie, and the CSS reflow exists.
+// WO-331 EXACT-FIDELITY: the reference (cases.tsx) toggles only comfortable/compact — the third
+// "cozy" tier was our own addition, dropped to match; default is "comfortable" (the reference's
+// own initial state), and Compact no longer hides the subline (the reference only tightens padding).
 //
 // Run: npx tsx tests/wo54_density.ts
 
@@ -17,12 +20,13 @@ function ok(name: string, cond: boolean) {
 const src = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
 // ── 1. pure parser ───────────────────────────────────────────────────────────
-ok("three density tiers", DENSITIES.length === 3 && DENSITIES.includes("comfortable") && DENSITIES.includes("cozy") && DENSITIES.includes("compact"));
-ok("default is cozy", DEFAULT_DENSITY === "cozy");
+ok("two density tiers", DENSITIES.length === 2 && DENSITIES.includes("comfortable") && DENSITIES.includes("compact"));
+ok("default is comfortable", DEFAULT_DENSITY === "comfortable");
 ok("parseDensity accepts a valid value", parseDensity("compact") === "compact");
-ok("parseDensity falls back to default on junk", parseDensity("huge") === "cozy");
-ok("parseDensity falls back on undefined (no cookie yet)", parseDensity(undefined) === "cozy");
-ok("isDensity rejects a non-member", !isDensity("spacious") && isDensity("cozy"));
+ok("parseDensity falls back to default on junk", parseDensity("huge") === "comfortable");
+ok("parseDensity falls back on undefined (no cookie yet)", parseDensity(undefined) === "comfortable");
+ok("parseDensity falls back on the retired 'cozy' value", parseDensity("cozy") === "comfortable");
+ok("isDensity rejects a non-member", !isDensity("spacious") && isDensity("comfortable"));
 
 // ── 2. server page seeds from the cookie ─────────────────────────────────────
 const page = src("src/app/dashboard/cases/page.tsx");
@@ -40,7 +44,7 @@ ok("subline tagged for the Compact single-line reflow", /cases-subline/.test(tab
 // ── 4. CSS reflow exists (container-scoped) ──────────────────────────────────
 const css = src("src/app/globals.css");
 ok("CSS reflows td padding per density", /\.cases-table\[data-density="comfortable"\] tbody td/.test(css) && /\.cases-table\[data-density="compact"\] tbody td/.test(css));
-ok("Compact hides the subline (single-line scan)", /\.cases-table\[data-density="compact"\] \.cases-subline\s*\{\s*display: none/.test(css));
+ok("no stale 'cozy' density rule left behind", !/data-density="cozy"/.test(css));
 
 console.log(failed === 0 ? "\nPASS" : `\nFAIL (${failed})`);
 process.exit(failed === 0 ? 0 : 1);

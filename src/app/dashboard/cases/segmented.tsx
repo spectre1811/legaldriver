@@ -1,8 +1,11 @@
 "use client";
 
-// WO-147 W2 · Segmented control — the toolbar's dominant-axis filters (court tier, open/disposed).
-// One row, ink-fill on the active option, live count per option. Replaces the two stacked pill
-// strips (CasesTierTabs + status tabs) with a single compact control per §6 anti-clutter contract.
+// WO-147 W2 · Segmented control — the toolbar's dominant-axis filters (court tier, open/disposed,
+// list/agenda). One row, live count per option. Replaces the two stacked pill strips (CasesTierTabs
+// + status tabs) with a single compact control per §6 anti-clutter contract.
+// WO-331 EXACT-FIDELITY: active fill retoned from ink to the reference's own Segmented
+// (design-mockups/iteration3/console/ui.tsx) — bronze-tint/bronze-deep, not an ink pill — and the
+// count badge always reads muted-ink (the reference never re-colours it for the active option).
 type Opt = { value: string; label: string; count?: number };
 
 export function Segmented({
@@ -34,19 +37,11 @@ export function Segmented({
             aria-pressed={active}
             disabled={disabled}
             className={`inline-flex items-center gap-1.5 rounded-ec-s px-2.5 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo disabled:opacity-60 ${
-              active ? "bg-ec-ink text-ec-paper" : "text-ec-ink-2 hover:bg-ec-paper-3 hover:text-ec-ink"
+              active ? "bg-ec-bronze-tint text-ec-bronze-deep" : "text-ec-ink-2 hover:bg-ec-paper-3 hover:text-ec-ink"
             }`}
           >
             {o.label}
-            {o.count != null && (
-              <span
-                className={`num rounded-ec-s px-1 py-0.5 text-[0.6rem] ${
-                  active ? "bg-ec-paper/20 text-ec-paper" : "bg-ec-hair text-ec-ink-3"
-                }`}
-              >
-                {o.count}
-              </span>
-            )}
+            {o.count != null && <span className="num font-mono text-[10.5px] text-ec-muted-ink">{o.count}</span>}
           </button>
         );
       })}

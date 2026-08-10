@@ -44,10 +44,13 @@ export function UndoToast({
   onUndo: () => void;
 }) {
   if (!undo) return null;
+  // WO-331: text-brand-200 was a leftover indigo accent from before the Bronze & Honey retone —
+  // this palette has no blue (tokens.css §V-A). The reference's own undo toast uses its honey
+  // accent, unstyled as a link (no underline) — matched here.
   return (
     <div className="fixed inset-x-0 bottom-24 z-50 mx-auto flex w-fit items-center gap-3 rounded-lg bg-ink px-4 py-2.5 text-paper shadow-xl">
       <span className="text-sm">{undo.label}</span>
-      <button onClick={onUndo} className="text-sm font-semibold text-brand-200 underline">
+      <button onClick={onUndo} className="text-sm font-medium text-ec-honey">
         {actionLabel}
       </button>
     </div>

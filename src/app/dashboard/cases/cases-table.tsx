@@ -21,7 +21,7 @@ import { hearingUrgency, courtCaseNo } from "./cases-row";
 import { DENSITIES, DENSITY_COOKIE, type Density } from "./density";
 import { parseSort, toCasesCsv } from "./cases-query";
 import type { MatterRow } from "./cases-query";
-import { Segmented } from "./segmented";
+import { useCasesNav } from "./cases-nav";
 import {
   bulkDeleteMatters, restoreMatters, bulkSetStage, bulkRestoreStages, type StageSnapshot,
 } from "./actions";
@@ -36,7 +36,7 @@ type SortKey = "title" | "court" | "stage" | "status" | "next";
 const SYNCED_FRESH_SLO_HOURS = 48;
 
 export function CasesTable({
-  rows, today, stages, initialDensity = "cozy",
+  rows, today, stages, initialDensity = "comfortable",
 }: {
   rows: MatterRow[];
   today: string;
@@ -69,12 +69,15 @@ export function CasesTable({
   // Prior stages captured by the last bulk stage-change, so its Undo can restore per-row values.
   const [stageUndo, setStageUndo] = useState<StageSnapshot[] | null>(null);
 
-  // WO-331 Daybreak reskin · List/Agenda view toggle (reference: cases.tsx's `view` state). Agenda
-  // groups the SAME page of `rows` this component already has by real upcoming hearing date — no
-  // second fetch, no full-account scan. It's honestly scoped to the current filtered/paginated page,
-  // same as the table itself; there's no per-hearing TIME or courtroom field in the data model (the
-  // reference's dummy "10:30"/"Court 12" columns), so those are dropped rather than fabricated.
-  const [view, setView] = useState<"list" | "agenda">("list");
+  // WO-331 Daybreak reskin · List/Agenda view toggle (reference: cases.tsx's `view` state). WO-331
+  // EXACT-FIDELITY: `view` now lives in the shared CasesNav context (cases-nav.ts), not local state
+  // here — the reference puts the toggle in its command row (cases-toolbar.tsx), not above the
+  // table, so toolbar and table have to share one value. Agenda groups the SAME page of `rows` this
+  // component already has by real upcoming hearing date — no second fetch, no full-account scan.
+  // It's honestly scoped to the current filtered/paginated page, same as the table itself; there's
+  // no per-hearing TIME or courtroom field in the data model (the reference's dummy "10:30"/"Court
+  // 12" columns), so those are dropped rather than fabricated.
+  const { view } = useCasesNav();
   const agenda = useMemo(() => {
     const upcoming = rows
       .map((r) => ({ row: r, eff: r.next_hearing_override ?? r.next_hearing_date }))
@@ -166,37 +169,38 @@ export function CasesTable({
 
   return (
     <>
-      {/* WO-331 · List/Agenda (reference view toggle) + WO-54 W4 density control, one row. */}
-      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-        <Segmented
-          label={t("view.aria")}
-          value={view}
-          onChange={(v) => setView(v as "list" | "agenda")}
-          options={[
-            { value: "list", label: t("view.list") },
-            { value: "agenda", label: t("view.agenda") },
-          ]}
-        />
-        <div className="inline-flex items-center gap-0.5 rounded-full border border-ec-hair-strong p-0.5" role="group" aria-label={t("density.aria")}>
+      {/* WO-331 EXACT-FIDELITY: the reference's density row is list-view-only, right-aligned, plain
+          text buttons (not a bordered pill group) — matched here; List/Agenda itself moved into the
+          toolbar's command row (cases-toolbar.tsx), same as the reference. */}
+      {view === "list" && (
+        <div className="mb-2.5 flex items-center justify-end gap-3" role="group" aria-label={t("density.aria")}>
           {DENSITIES.map((d) => (
             <button
               key={d}
               type="button"
               onClick={() => changeDensity(d)}
               aria-pressed={density === d}
-              title={t(`density.${d}`)}
-              className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
-                density === d ? "bg-ec-ink text-paper" : "text-ec-ink-3 hover:text-ec-ink"
+              className={`text-[12px] capitalize transition-colors ${
+                density === d ? "font-medium text-ec-ink" : "text-ec-muted-ink hover:text-ec-ink-2"
               }`}
             >
               {t(`density.${d}`)}
             </button>
           ))}
         </div>
-      </div>
+      )}
 
       {view === "list" ? (
       <div className="ec-card stagger overflow-hidden">
+        {/* WO-331 render-inspect @768: our real dashboard shell keeps a fixed 256px sidebar (unlike
+            the reference's own AppShell), so the card's content area is narrower than the reference
+            ever has to plan for — Court + Next hearing + the merged actions/synced column can't all
+            fit below `lg`. Both moved from the reference's implied `sm`/no-breakpoint to `lg`, so at
+            tablet widths the table falls back to the existing mobile combined court+date line
+            instead of clipping columns against the card's `overflow-hidden`. `overflow-x-auto` here
+            (not on the outer card, which keeps its rounded-corner clip) is a second line of defence
+            so nothing is ever silently unreachable, even at an in-between width. */}
+        <div className="overflow-x-auto">
         <table className="cases-table w-full text-sm" data-density={density}>
           <thead>
             <tr className="border-b border-ec-hair-strong text-left">
@@ -208,10 +212,14 @@ export function CasesTable({
                 />
               </th>
               <SortHeader label={t("th.case")} col="title" active={active} onSort={setSort} />
-              <SortHeader label={t("th.court")} col="court" active={active} onSort={setSort} className="hidden md:table-cell" />
+              <SortHeader label={t("th.court")} col="court" active={active} onSort={setSort} className="hidden lg:table-cell" />
               <SortHeader label={t("th.next")} col="next" active={active} onSort={setSort} className="w-44" />
-              <th className="ec-label hidden w-20 px-5 py-3 text-right sm:table-cell">{t("th.synced")}</th>
-              <th className="w-10 px-3 py-3" aria-hidden="true" />
+              {/* WO-331 EXACT-FIDELITY: the reference's 5th grid column (row actions + the synced
+                  dot, combined) has no visible header label at all — matched here; "Synced" stays
+                  as an sr-only label so the column keeps a real accessible name. */}
+              <th className="hidden w-20 px-3 py-3 text-right lg:table-cell">
+                <span className="sr-only">{t("th.synced")}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -261,11 +269,11 @@ export function CasesTable({
                       </div>
                     )}
                     {/* Mobile fallback — court + next hearing collapse here once the dedicated columns hide. */}
-                    <div className="num mt-1 text-[11px] text-ec-ink-3 sm:hidden">
+                    <div className="num mt-1 text-[11px] text-ec-ink-3 lg:hidden">
                       {[m.court, eff ? (formatCourtDate(eff) ?? null) : t("noDate")].filter(Boolean).join(" · ")}
                     </div>
                   </td>
-                  <td className="hidden px-5 py-3.5 text-ec-ink-2 md:table-cell">{m.court ?? "—"}</td>
+                  <td className="hidden px-5 py-3.5 text-ec-ink-2 lg:table-cell">{m.court ?? "—"}</td>
                   <td className="num px-5 py-3.5">
                     {eff ? (
                       <span className="inline-flex flex-wrap items-center gap-1.5">
@@ -275,46 +283,48 @@ export function CasesTable({
                       </span>
                     ) : <span className="text-xs text-ec-ink-3">{t("noDate")}</span>}
                   </td>
-                  <td className="hidden px-5 py-3.5 text-right sm:table-cell">
-                    <span
-                      title={syncedTitle}
-                      aria-label={syncedTitle}
-                      className={`inline-block h-2 w-2 rounded-full ${fresh ? "bg-ec-success" : "bg-ec-hair-strong"}`}
-                    />
-                  </td>
-                  <td className="px-3 py-3.5 text-right">
-                    {/* WO-331 · the reference's row-hover action cluster. "Open" is real (the existing
-                        drawer). "Cause list" is real — legaldriver already has /dashboard/cause-list;
-                        not deep-linked per row (no reliable court-id on the record to scope it), still
-                        a genuine destination. "Add note" has no backing capability anywhere in the app
-                        (checked actions.ts) — kept visible per the prototype but disabled/"soon" rather
-                        than faked, same treatment as the refresh controls. */}
-                    <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={() => setDrawerRow(m)}
-                        aria-label={t("drawer.openAria", { title: m.title })}
-                        className="rounded-full p-1.5 text-ec-ink-3 transition hover:bg-ec-hair hover:text-ec-brass-deep focus-visible:ring-2 focus-visible:ring-ec-brass"
-                      >
-                        <Icon name="eye" className="h-4 w-4" />
-                      </button>
-                      <Link
-                        href="/dashboard/cause-list"
-                        aria-label={t("row.causeList")}
-                        title={t("row.causeList")}
-                        className="rounded-full p-1.5 text-ec-ink-3 transition hover:bg-ec-hair hover:text-ec-brass-deep focus-visible:ring-2 focus-visible:ring-ec-brass"
-                      >
-                        <Icon name="calendar" className="h-4 w-4" />
-                      </Link>
-                      <button
-                        type="button"
-                        disabled
-                        aria-label={t("row.addNote")}
-                        title={t("row.addNoteTitle")}
-                        className="rounded-full p-1.5 text-ec-ink-3 opacity-40"
-                      >
-                        <Icon name="edit" className="h-4 w-4" />
-                      </button>
+                  {/* WO-331 EXACT-FIDELITY: the reference combines the row-hover action cluster and
+                      the synced dot into ONE trailing column (its 78px grid track), not two separate
+                      ones — merged here to match. "Open" is real (the existing drawer). "Cause list"
+                      is real — legaldriver already has /dashboard/cause-list; not deep-linked per row
+                      (no reliable court-id on the record to scope it), still a genuine destination.
+                      "Add note" has no backing capability anywhere in the app (checked actions.ts) —
+                      kept visible per the prototype but disabled/"soon" rather than faked, same
+                      treatment as the refresh controls. */}
+                  <td className="hidden px-3 py-3.5 text-right lg:table-cell">
+                    <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={() => setDrawerRow(m)}
+                          aria-label={t("drawer.openAria", { title: m.title })}
+                          className="rounded-full p-1.5 text-ec-ink-3 transition hover:bg-ec-hair hover:text-ec-brass-deep focus-visible:ring-2 focus-visible:ring-ec-brass"
+                        >
+                          <Icon name="eye" className="h-4 w-4" />
+                        </button>
+                        <Link
+                          href="/dashboard/cause-list"
+                          aria-label={t("row.causeList")}
+                          title={t("row.causeList")}
+                          className="rounded-full p-1.5 text-ec-ink-3 transition hover:bg-ec-hair hover:text-ec-brass-deep focus-visible:ring-2 focus-visible:ring-ec-brass"
+                        >
+                          <Icon name="calendar" className="h-4 w-4" />
+                        </Link>
+                        <button
+                          type="button"
+                          disabled
+                          aria-label={t("row.addNote")}
+                          title={t("row.addNoteTitle")}
+                          className="rounded-full p-1.5 text-ec-ink-3 opacity-40"
+                        >
+                          <Icon name="edit" className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <span
+                        title={syncedTitle}
+                        aria-label={syncedTitle}
+                        className={`ml-1 inline-block h-2 w-2 shrink-0 rounded-full ${fresh ? "bg-ec-success" : "bg-ec-hair-strong"}`}
+                      />
                     </div>
                   </td>
                 </tr>
@@ -322,6 +332,7 @@ export function CasesTable({
             })}
           </tbody>
         </table>
+        </div>
       </div>
       ) : (
         <div className="stagger space-y-6">
@@ -363,17 +374,19 @@ export function CasesTable({
         </div>
       )}
 
-      {/* Floating bulk-action bar — appears on selection (shared WO-43 primitive). */}
+      {/* Floating bulk-action bar — appears on selection (shared WO-43 primitive). WO-331: retoned
+          to the reference's light card (see components/selection/bulk-bar.tsx); this select's own
+          inline styling follows suit (it used to sit on a dark ink bar). */}
       <BulkBar count={sel.size} label={t("bulk.selected", { n: sel.size })} clearLabel={t("bulk.clear")} onClear={sel.clear}>
         <select
           onChange={(e) => { onSetStage(e.target.value); e.currentTarget.selectedIndex = 0; }}
           disabled={busy}
           defaultValue=""
-          className="rounded-full bg-paper/15 px-3 py-1 text-sm text-paper focus:outline-none"
+          className={`${bulkBtn} bg-transparent pr-1`}
           aria-label={t("bulk.setStage")}
         >
-          <option value="" className="text-ink">{t("bulk.setStage")}</option>
-          {stages.map((s) => <option key={s} value={s} className="text-ink">{cleanPurpose(s)}</option>)}
+          <option value="">{t("bulk.setStage")}</option>
+          {stages.map((s) => <option key={s} value={s}>{cleanPurpose(s)}</option>)}
         </select>
         {/* WO-331 · kept visible per the prototype (bulk refresh is a designed control, not dropped) —
             the ACTION stays deferred to WO-309: a synchronous per-selected-case fan-out is exactly the
@@ -382,7 +395,7 @@ export function CasesTable({
           {t("bulk.refresh")}
         </button>
         <button onClick={onExport} disabled={busy} className={bulkBtn}>{t("bulk.export")}</button>
-        <button onClick={onDelete} disabled={busy} className={`${bulkBtn} text-red-300`}>{t("bulk.delete")}</button>
+        <button onClick={onDelete} disabled={busy} className={`${bulkBtn} text-ec-danger`}>{t("bulk.delete")}</button>
       </BulkBar>
 
       <UndoToast undo={undo} actionLabel={t("bulk.undo")} onUndo={onUndo} />

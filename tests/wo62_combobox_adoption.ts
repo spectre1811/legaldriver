@@ -40,6 +40,7 @@ const rel = (p: string) => p.slice(root.length + 1).replaceAll("\\", "/");
 // (tracked in BACKLOG §D "WO-62 combobox adoption — remaining sweep").
 const ALLOWLIST = new Set<string>([
   "src/components/pagination.tsx",                    // page-size 25/50/100 — fixed enum
+  "src/app/dashboard/cases/cases-pagination.tsx",      // WO-331: Cases' own pager, same page-size 25/50/100 fixed enum
   // clients/client-intake.tsx dropped (WO-201 W2): type → Segmented, practice_area_id → Combobox; no raw <select> remains.
   "src/app/dashboard/ip/ip-form.tsx",                // IP asset type — fixed enum
   "src/app/dashboard/cases/[id]/time-expense.tsx",   // expense category — fixed enum
