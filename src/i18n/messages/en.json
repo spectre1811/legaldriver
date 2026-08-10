@@ -159,13 +159,13 @@
       "open": "Open inbox"
     },
     "firstRun": {
-      "eyebrow": "Get started",
-      "title": "Let's bring in your practice",
-      "body": "Add your advocate name and Bar registration number — we'll fetch your entire caseload from the public court record automatically. Cases, hearings and deadlines, on one calendar. No manual entry.",
+      "eyebrow": "No advocate linked",
+      "title": "Add your Bar ID and we assemble the practice.",
+      "body": "Nothing to import and no spreadsheets. One enrolment number pulls your cases, hearing dates and orders from the court record — usually in a few minutes.",
       "step1": "Add your advocate + Bar number",
       "step2": "We pull your cases & hearing dates",
       "step3": "Cause list ready daily (WhatsApp alerts coming soon)",
-      "primaryCta": "Set up my practice",
+      "primaryCta": "Start onboarding",
       "secondaryCta": "Add a case by CNR",
       "foot": "Takes about 2 minutes · From public court records."
     },
@@ -199,12 +199,13 @@
         "hearings": "Hearings",
         "filings": "Filings made",
         "notTracked": "Not yet tracked",
-        "orders": "Orders on your cases"
+        "orders": "Orders received"
       },
       "lastSync": {
         "title": "Last sync",
-        "at": "Synced {date} · {time}",
-        "never": "Not yet synced"
+        "stampSynced": "Court record synced",
+        "stampNever": "Not yet synced",
+        "stampAt": "{date} · {time} IST"
       }
     },
     "clients": {
@@ -706,7 +707,7 @@
       "neverSynced": "Not yet synced"
     },
     "title": "Cases",
-    "subtitle": "Your running file — synced by CNR from the court record, refreshed nightly.",
+    "subtitle": "Every matter you act in, kept current against the court record.",
     "count": "{count, plural, one {# case} other {# cases}}",
     "filtered": "filtered",
     "clearFilters": "Clear filters",
@@ -781,10 +782,14 @@
       "filteredBody": "Try a different search, or clear the filters to see everything."
     },
     "add": {
+      "eyebrow": "New matter",
       "cta": "Add case",
       "fetching": "Fetching…",
-      "placeholder": "Paste a 16-character CNR — e.g. GJAH010000012024",
+      "placeholder": "GJHC240820012022",
       "aria": "CNR number",
+      "cnrLabel": "CNR number",
+      "cnrHint": "16 characters — e.g. GJHC240820012022 (state · court · number · year).",
+      "pullBody": "We pull the title, parties, court, stage and hearing history from the record.",
       "modalTitle": "Add a case",
       "modalHelper": "We fetch the full record and keep it fresh nightly.",
       "close": "Close"
@@ -792,11 +797,11 @@
     "toolbar": {
       "toolbarAria": "Filter and sort cases",
       "filters": "Filters",
-      "clearAll": "Clear all",
+      "clearAll": "Clear",
       "saveView": "Save this view",
       "sheetTitle": "Filters",
       "sheetSubtitle": "Narrow the case list. Results update instantly.",
-      "done": "Done",
+      "done": "Apply filters",
       "refreshAll": "Refresh all cases",
       "refreshAllTitle": "Queued for WO-309's bulk-refresh lane — not live yet",
       "refreshSoon": "Soon",
@@ -804,6 +809,7 @@
       "savedViewsClose": "Hide saved views",
       "refreshModalTitle": "Refresh all cases?",
       "refreshModalBody": "Bulk refresh across every matter isn’t live yet — queued for a future release. Refresh one case at a time from its case page today.",
+      "refreshModalPrimary": "Queue refresh",
       "refreshModalClose": "Close"
     },
     "console": {
@@ -847,15 +853,18 @@
       "body": "Cases added here are synthetic examples, not real court records. Add a court-data key (LD_API_KEY) to fetch live cases by CNR."
     },
     "manual": {
-      "toggle": "Add a case manually",
+      "toggle": "No CNR? Enter the case manually",
+      "toggleHide": "Hide manual entry",
       "help": "For a case the court portal can’t find yet (pre-filing or not yet on the court record). Add the CNR later to sync live data.",
       "titleLabel": "Case title",
       "titlePlaceholder": "e.g. Sharma vs State of Gujarat",
-      "courtLabel": "Court (optional)",
-      "courtPlaceholder": "e.g. City Civil Court, Ahmedabad",
+      "caseNumberLabel": "Case number",
+      "caseNumberPlaceholder": "e.g. FA/5053/2022",
+      "courtLabel": "Court",
+      "courtSelectPlaceholder": "Select a court",
       "typeLabel": "Case type (optional)",
       "typePlaceholder": "e.g. Civil Suit",
-      "nextLabel": "Next hearing (optional)",
+      "nextLabel": "Next hearing",
       "cta": "Create case",
       "creating": "Creating…"
     },

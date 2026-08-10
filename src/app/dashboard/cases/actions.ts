@@ -343,6 +343,10 @@ export async function createManualMatter(
   if (!title) return { ok: false, message: "Give the case a title (e.g. the party names)." };
   const nextDate = get("next_hearing_date");
   if (nextDate && !/^\d{4}-\d{2}-\d{2}$/.test(nextDate)) return { ok: false, message: "Enter the next hearing date as YYYY-MM-DD." };
+  // WO-346 add-case modal: a free-text "Case number" (e.g. "FA/5053/2022", the CNR's court-facing
+  // counterpart) — stored in `detail`, the same jsonb field a real court sync populates, so it
+  // shows up in the row subline (cases-row.ts's courtCaseNo) exactly like a synced one would.
+  const caseNumber = get("case_number");
 
   const { data, error } = await supabase
     .from("matter")
@@ -354,6 +358,7 @@ export async function createManualMatter(
       next_hearing_date: nextDate,
       status: "active",
       source: "manual",
+      ...(caseNumber ? { detail: { registrationNumber: caseNumber } } : {}),
     })
     .select("id")
     .single();
