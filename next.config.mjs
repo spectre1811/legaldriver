@@ -1,8 +1,14 @@
 import createNextIntlPlugin from "next-intl/plugin";
 import { securityHeaders } from "./src/lib/security/headers.mjs";
+import bundleAnalyzer from "@next/bundle-analyzer";
 
 // next-intl (WO-03) — no i18n routing; request config resolves locale per request.
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+// WO-353 W2 · bundle-size tripwire (ANALYZE=true produces the report; no-op otherwise)
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -42,4 +48,4 @@ const nextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default withBundleAnalyzer(withNextIntl(nextConfig));

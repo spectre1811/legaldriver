@@ -32,8 +32,15 @@ jobs:
           # Public env needed for the build; non-secret placeholders are fine for compilation.
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      # WO-353 W2 · advisory bundle-size budget check — compares .next/static JS total
+      # against web-perf-budget.json, emits a ::warning:: if over warn_pct%, always exit 0.
+      - run: node scripts/check-bundle-size.mjs
       # WO-11 · secret-free test suite (mocked; no network, no .env). Runs INSIDE the
       # `build` job on purpose: automerge's label path only gates on the check whose
       # name contains "build", so tests must ride that check to actually gate merges.
       # DB/RLS + LLM tests are the separate, dormant db-tests.yml (need founder secrets).
       - run: node scripts/run-tests.mjs offline
+      # WO-353 W2 · advisory dead-code / unused-dep check (knip). Exit 0 always.
+      # Output goes to the job summary; the knip.json ignore list keeps tests,
+      # scripts, e2e, and qa-agent out of the report.
+      - run: npx knip --no-progress || true
