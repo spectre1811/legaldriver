@@ -42,12 +42,11 @@ export const dynamic = "force-dynamic";
 //      all court data) — the reference has none; ours is required regardless.
 //
 // WO-349 WAVE-3 · masthead unrounded to bleed edge-to-edge like notifications/onboarding (was an
-// inset `rounded-xl` card within the shell's padding). Subtitle restored to the reference's exact
-// "55,000,000+ case records, All India." per an explicit founder call on this WO: the figure isn't
-// in plan/context/00-INPUTS.md (the live corpus is Gujarat-scoped — see the real, dynamic
-// `coverage` line right below the search field, kept as the honest scope disclosure) and the
-// prototype is being treated as the sanctioned source for this string — FLAGGED, not verified
-// against a real corpus-wide count.
+// inset `rounded-xl` card within the shell's padding). Subtitle: the prototype's exact string is
+// "… — 55,000,000+ case records, All India." but that figure isn't in plan/context/00-INPUTS.md and
+// the live corpus is Gujarat-scoped, so the "All India / 55M" claim would be a fabricated figure on
+// a user surface — dropped per the honesty bar (master call, overrides literal prototype-match). The
+// real, dynamic `coverage` line right below the search field remains as the honest scope disclosure.
 
 const EXAMPLES = ["Patel", "Shah", "Mehta", "Desai", "Trivedi"];
 const SLICE = { advocates: 25, judges: 25, parties: 30, caseNumber: 25 } as const;
