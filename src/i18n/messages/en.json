@@ -285,6 +285,44 @@
       "addEyebrow": "Add an advocate",
       "rosterEmpty": "No advocates yet.",
       "viewMatters": "View matters",
+      "masthead": {
+        "title": "Advocate onboarding",
+        "meta": "Type your Bar enrolment number once — we assemble the rest from the court record."
+      },
+      "lead": {
+        "addTitle": "Your whole practice, assembled from your Bar ID.",
+        "addBody": "One enrolment number is enough — we read the public court record and build the file.",
+        "assembling": "Assembling",
+        "leaveHint": "You can switch tabs or close this — we'll keep working and let you know when it's done.",
+        "reset": "Add a different Bar ID",
+        "stage": {
+          "causelist": "Reading your cause list",
+          "fetch": "Fetching your cases",
+          "enrich": "Enriching case details",
+          "deadlines": "Proposing deadlines",
+          "inbox": "Filing emails",
+          "closed": "Finding closed cases",
+          "summaries": "Queuing AI briefings"
+        }
+      },
+      "roster": {
+        "heading": "Already added",
+        "complete": "Complete ✓",
+        "gathering": "Gathering {n}%",
+        "attention": "Attention needed",
+        "matters": "{n, plural, one {# matter} other {# matters}}",
+        "noBar": "no bar number",
+        "stateUnknown": "state unknown",
+        "lastSynced": "Last synced {date}",
+        "notRun": "Not run yet",
+        "resync": "Re-sync",
+        "stalledNote": "We couldn't reach the court record just now. Anything already found is saved — re-sync in a moment to try again.",
+        "errorFallback": "Something went wrong assembling this practice — re-sync to try again."
+      },
+      "disclosure": {
+        "heading": "How this works — honestly",
+        "body": "We read the same public sources you would: the court record, High Court case status and daily cause lists. We match on your Bar enrolment number, then on name where the record has no Bar number — so a small number of matters can be missed or wrongly attributed. Nothing is filed, and nothing is sent to any court on your behalf. You can remove an advocate at any time and the assembled file goes with it."
+      },
       "sidebar": {
         "title": "What you get",
         "calendarLabel": "Calendar",
@@ -303,6 +341,10 @@
         "briefNext": "Next on your calendar: {title} — {court}, {date}",
         "briefEmpty": "Once your practice is assembled, your morning brief appears here.",
         "briefNote": "WhatsApp delivery is coming soon — for now, check here each morning."
+      },
+      "notify": {
+        "title": "Onboarding complete",
+        "body": "{name}'s cases are ready — {n, plural, one {# case on file} other {# cases on file}}."
       }
     },
     "inbox": {
@@ -2212,139 +2254,6 @@
       "addAsset": "Add asset",
       "saving": "Saving…"
     }
-  },
-  "onboarding": {
-    "title": "Advocate onboarding",
-    "subtitle": "Enter once, and we assemble your practice: cases on the calendar, inbox filed, closed cases by name, and AI briefings.",
-    "hero": {
-      "title": "Your practice, assembled from the court record",
-      "body": "Add your Bar registration number and we gather every case in your name from the court record — onto your calendar, with hearings, deadlines, and AI briefings. No manual upload."
-    },
-    "steps": {
-      "heading": "How onboarding works",
-      "one": {
-        "title": "Enter your Bar number",
-        "body": "Your name and Bar registration — that's all we need to find you in the court record.",
-        "label": "Bar ID"
-      },
-      "two": {
-        "title": "We gather every case",
-        "body": "We fetch your full roster in the background. Leave the page — we'll notify you when it's ready.",
-        "label": "Fetch & verify"
-      },
-      "three": {
-        "title": "Your practice comes alive",
-        "body": "Cases land on your calendar with hearings, deadlines, filed emails, and AI briefings.",
-        "label": "Practice assembled"
-      }
-    },
-    "howHeading": "How this works — honestly",
-    "intro1": "We <b>auto-fetch your cases by your name</b> from compliant sources — no manual upload. Active sources: <b>{providers}</b>. The free <b>open judgments corpus</b> covers High Courts + the Supreme Court (mostly decided cases); adding a licensed key (Indian Kanoon / Vakeel360) broadens coverage to live orders automatically.",
-    "intro2": "What we <i>don't</i> do: automate the court portal or bypass its CAPTCHA. India has no compliant API for an advocate's full live open-case roster by bar number, so for live status we also use your <b>cause list</b>, cases you <b>add by CNR</b>, and <b>HITL refresh</b>. Everything is marked with its source; <b>not legal advice</b>.",
-    "providersNone": "none configured",
-    "provider": {
-      "corpus": "open corpus (free)",
-      "indiankanoon": "Indian Kanoon",
-      "vakeel360": "Vakeel360"
-    },
-    "yourAdvocates": "Your advocates",
-    "bar": "Bar {n}",
-    "noBar": "no bar number",
-    "runStatus": {
-      "done": "done",
-      "error": "error",
-      "queued": "queued",
-      "pending": "pending"
-    },
-    "rerun": "Re-run",
-    "run": "Run onboarding",
-    "running": "Running…",
-    "timeout": "Still assembling your practice — this can take a moment on a large roster. We'll keep going in the background; anything already found is saved.",
-    "retry": "Try again",
-    "runDetails": "Run details",
-    "practice": {
-      "title": "Your practice",
-      "count": "{n, plural, one {# case synced from the record} other {# cases synced from the record}}",
-      "viewAll": "View all in Cases",
-      "nextHearing": "Next hearing {date}",
-      "noHearing": "No hearing scheduled"
-    },
-    "stage": {
-      "queued": "Starting…",
-      "causelist": "Reading your cause list",
-      "fetch": "Fetching your cases",
-      "enrich": "Enriching case details",
-      "deadlines": "Proposing deadlines",
-      "inbox": "Filing emails",
-      "closed": "Finding closed cases",
-      "summaries": "Queuing AI briefings",
-      "done": "Done",
-      "error": "Something went wrong",
-      "working": "Working…"
-    },
-    "background": {
-      "title": "Still gathering your full roster",
-      "body": "We're pulling your complete case history from the court record in the background. You can leave this page — new cases file automatically as they arrive.",
-      "check": "Check for new cases",
-      "checking": "Checking…",
-      "arrived": "{n, plural, one {# new case just filed} other {# new cases just filed}}",
-      "leaveHint": "You can switch tabs or close this — we'll keep working and let you know when it's done."
-    },
-    "phaseBadge": {
-      "assembling": "Assembling",
-      "gathering": "Gathering",
-      "stalled": "Paused",
-      "complete": "Ready",
-      "error": "Needs attention",
-      "idle": "Not run yet"
-    },
-    "coverage": {
-      "onFile": "{n, plural, one {# case on file} other {# cases on file}}",
-      "detailed": "{done} of {total} with full detail",
-      "allIn": "All case details in",
-      "fetching": "Fetching your cases from the court record…"
-    },
-    "notify": {
-      "enable": "Notify me when it's done",
-      "enabled": "We'll notify you when it's ready",
-      "blocked": "Notifications are blocked — enable them in your browser to be alerted.",
-      "title": "Onboarding complete",
-      "body": "{name}'s cases are ready — {n, plural, one {# case on file} other {# cases on file}}."
-    },
-    "ready": {
-      "title": "{name}'s practice is ready",
-      "body": "{n, plural, one {# case is on file} other {# cases are on file}} with hearings on your calendar.",
-      "view": "View cases",
-      "dismiss": "Dismiss"
-    },
-    "stalled": {
-      "title": "Fetch paused",
-      "body": "We couldn't reach the court record just now. Anything already found is saved — check again in a moment, or re-run.",
-      "refresh": "Check again",
-      "refreshing": "Checking…"
-    },
-    "stat": {
-      "causelist": "Cause-list",
-      "rosterTotal": "Cases on file",
-      "casesFetched": "New this run",
-      "mattersSeeded": "Matters seeded",
-      "enriched": "Enriched",
-      "deadlinesProposed": "Deadlines proposed",
-      "emailsFiled": "Emails filed",
-      "docsFiled": "Docs auto-filed",
-      "closedFound": "Closed found",
-      "briefingsQueued": "Briefings queued"
-    },
-    "lastRun": "Last run {date}",
-    "empty": {
-      "title": "Add your first advocate",
-      "body": "Enter your advocate's name and Bar registration number below — then run onboarding to auto-fetch their entire caseload from the court record.",
-      "cta": "Go to Settings"
-    },
-    "footer": "After a run: open cases (with hearings + reminders) are on your <calendar>Calendar</calendar>, matters are in <cases>Cases</cases> with AI briefings, and closed cases by name are in <research>Research</research>.",
-    "addAnother": "Add another advocate",
-    "remove": "Remove",
-    "removeConfirm": "Remove {name} and their onboarded cases? This can’t be undone."
   },
   "settings": {
     "title": "Settings",
