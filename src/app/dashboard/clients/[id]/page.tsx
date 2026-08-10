@@ -15,6 +15,7 @@ import { Pagination } from "@/components/pagination";
 import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
 import { deleteClient } from "./actions";
 import { ClientEdit } from "./client-edit";
+import { Reveal } from "../../motion";
 
 // WO-333 · Client detail → Daybreak/Chambers. Same restyle approach as the roster: `ec-*`
 // primitives already established by cases/[id]/page.tsx, no new global CSS, every section
@@ -28,6 +29,29 @@ import { ClientEdit } from "./client-edit";
 // Portal is rendered as the 2 states the schema actually has (Active / Not invited) — there
 // is no separate "invited, not yet signed in" row in portal_user, so a 3rd state would be
 // fabricated.
+// WO-347 · restyled to the reference's ClientDetail look (design-mockups/iteration3/console/
+// app.clients.tsx): a dark engraved masthead (ported here as the page's own top band, matching
+// every other Wave-3 full page — the reference's version is a slide-over, but this stays a full
+// PAGE, a real feature: the document library alone needs more room than a drawer, and every
+// sibling detail surface in this app is a page), SectionLabel headers + hairline on Contact/
+// Their cases/Their documents/Activity (ported as the local <SectionHead> below — no shared
+// primitive exists yet for it; promote it if a second page wants one), a practice-area chip on
+// Contact's header, a Disposed chip on disposed matters (same substring convention
+// cases-table.tsx already uses), and the Portal card on `.ec-rule-left` (Billing stays
+// `.ec-card`, matching the reference's own `card-surface`). Communications/Messages are real
+// bonus sections beyond the reference — left in their existing boxed style, not in this WO's ask.
+function SectionHead({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
+  return (
+    <div className="mb-3">
+      <div className="flex items-end justify-between gap-3">
+        <p className="eyebrow">{children}</p>
+        {right}
+      </div>
+      <div className="mt-1.5 h-[3px] border-y border-ec-line" />
+    </div>
+  );
+}
+
 export default async function ClientDetailPage({
   params,
   searchParams,
@@ -37,6 +61,9 @@ export default async function ClientDetailPage({
 }) {
   const t = await getTranslations("clients");
   const td = await getTranslations("dashboard.clients");
+  const te = await getTranslations("enum");
+  // Same disposed-status convention as cases-table.tsx, so the two surfaces never disagree.
+  const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
   const supabase = createClient();
   const { data: client } = await supabase.from("client").select("*").eq("id", params.id).maybeSingle();
   if (!client) notFound();
@@ -64,8 +91,13 @@ export default async function ClientDetailPage({
     supabase.from("practice_area").select("id, name").order("name"),
   ]);
 
-  // custom jsonb fields (no schema change) + resolved practice-area name.
-  const custom = (client.custom as { practice_area_id?: string; address?: string; contact_person?: string; notes?: string }) ?? {};
+  // custom jsonb fields (no schema change) + resolved practice-area name. WO-347 adds
+  // referral_source/id_note/billing_type/billing_amount — captured by the intake wizard's Step 2,
+  // no migration (see actions.ts buildCustom).
+  const custom = (client.custom as {
+    practice_area_id?: string; address?: string; contact_person?: string; notes?: string;
+    referral_source?: string; id_note?: string; billing_type?: string; billing_amount?: string;
+  }) ?? {};
   const practiceAreaName = custom.practice_area_id ? (allAreas ?? []).find((a) => a.id === custom.practice_area_id)?.name ?? null : null;
 
   // Billed = issued invoices (sent + paid) — draft (unbilled) and cancelled (void) excluded,
@@ -125,89 +157,104 @@ export default async function ClientDetailPage({
     .map((key) => ({ key, docs: byCategory.get(key) ?? [] }))
     .filter((g) => g.docs.length > 0);
 
+  const matterCountLabel = td("clientMeta.matters", { n: matterTotal ?? 0 });
+  const moneyLine = outstandingMinor > 0 ? td("clientMeta.outstanding", { amount: fmtMoney(outstandingMinor) }) : td("settled");
+  const hasContact = (client.phones?.length ?? 0) > 0 || (client.emails?.length ?? 0) > 0 || Boolean(custom.address) || Boolean(custom.contact_person) || Boolean(custom.notes);
+
   return (
     <div className="space-y-6">
-      <Link href="/dashboard/clients" className="inline-flex items-center gap-1.5 text-sm font-medium text-ec-bronze hover:underline">
-        <Icon name="back" className="h-4 w-4" /> {t("backToClients")}
-      </Link>
+      {/* WO-347 · dark engraved masthead — the reference's ClientDetail slide-over header, ported
+          as this full page's own top band (same edge-to-edge, unrounded treatment as the roster's
+          masthead, WO-347). */}
+      <Reveal as="div" className="mk-engraved -mx-5 bg-ec-ink px-5 py-7 text-ec-paper sm:-mx-8 sm:px-8">
+        <Link href="/dashboard/clients" className="inline-flex items-center gap-1.5 text-[12.5px] text-ec-line-strong transition-colors hover:text-ec-honey">
+          <Icon name="back" className="h-3.5 w-3.5" /> {t("backToClients")}
+        </Link>
+        <p className="eyebrow mt-4 !text-ec-honey">{td("clientEyebrow", { type: client.type === "org" ? t("intake.typeOrg") : t("intake.typeIndividual") })}</p>
+        <h1 className="display mt-1 text-[26px] leading-tight text-ec-paper sm:text-[30px]">{client.name}</h1>
+        <p className="num mt-1.5 text-[12.5px] text-ec-line-strong">
+          {t("clientSince", { date: formatCourtDate(client.created_at) ?? "—" })} · {matterCountLabel} · {moneyLine}
+        </p>
+      </Reveal>
 
-      <header className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="ec-label">{t("clientSince", { date: formatCourtDate(client.created_at) ?? "—" })}</p>
-            <h1 className="mt-1 font-display text-[1.7rem] font-medium leading-tight text-ec-ink">{client.name}</h1>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ec-ink-3">
-              <span className="ec-chip">{client.type === "org" ? t("intake.typeOrg") : t("intake.typeIndividual")}</span>
-              {practiceAreaName && <span>{practiceAreaName}</span>}
-            </div>
-            {outstandingMinor > 0 && (
-              <p className="mt-2 text-sm text-ec-ink-3">{t("outstanding")}: <span className="num font-medium text-ec-ink">{fmtMoney(outstandingMinor)}</span></p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <ConfirmDelete action={deleteClient} id={client.id} label={t("deleteClient")} confirmLabel={t("deleteClient")} note={t("deleteNote")} redirectTo="/dashboard/clients" size="md" />
-          </div>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <ClientEdit id={client.id} practiceAreas={allAreas ?? []} defaults={editDefaults} />
-      </header>
+        <ConfirmDelete action={deleteClient} id={client.id} label={t("deleteClient")} confirmLabel={t("deleteClient")} note={t("deleteNote")} redirectTo="/dashboard/clients" size="md" />
+      </div>
 
-      {(custom.address || custom.contact_person || custom.notes) && (
-        <div className="ec-card p-5">
-          <dl className="grid gap-4 text-sm sm:grid-cols-2">
-            {custom.contact_person && <div><dt className="ec-label">{t("intake.contactPerson")}</dt><dd className="mt-1 text-ec-ink">{custom.contact_person}</dd></div>}
-            {custom.address && <div><dt className="ec-label">{t("intake.address")}</dt><dd className="mt-1 text-ec-ink">{custom.address}</dd></div>}
-            {custom.notes && <div className="sm:col-span-2"><dt className="ec-label">{t("intake.notes")}</dt><dd className="mt-1 whitespace-pre-wrap text-ec-ink">{custom.notes}</dd></div>}
-          </dl>
-        </div>
-      )}
-
-      {((client.phones?.length ?? 0) > 0 || (client.emails?.length ?? 0) > 0) && (
-        <div className="ec-card p-5">
-          <p className="ec-label mb-2">{td("contactHeading")}</p>
-          <div className="flex flex-wrap gap-2">
-            {(client.phones ?? []).map((p: string) => (
-              <a key={p} href={`tel:${p}`} className="num rounded-ec-s border border-ec-hair bg-ec-paper px-3 py-1.5 text-[12.5px] text-ec-ink-2 transition hover:border-ec-bronze hover:text-ec-bronze">{p}</a>
-            ))}
-            {(client.emails ?? []).map((e: string) => (
-              <a key={e} href={`mailto:${e}`} className="num rounded-ec-s border border-ec-hair bg-ec-paper px-3 py-1.5 text-[12.5px] text-ec-ink-2 transition hover:border-ec-bronze hover:text-ec-bronze">{e}</a>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Contact — merged phone/email/address (reference's own Contact section) plus the real
+          contact-person/referral/ID-note/notes fields the reference has no slot for; the
+          practice-area chip sits in the section header per the reference's `Chip tone="bronze"`. */}
+      <section>
+        <SectionHead right={practiceAreaName ? <span className="ec-chip ec-chip-hot">{practiceAreaName}</span> : undefined}>
+          {td("contactHeading")}
+        </SectionHead>
+        {hasContact ? (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(client.phones ?? []).map((p: string) => (
+                <a key={p} href={`tel:${p}`} className="num flex items-center gap-2 rounded-ec-s border border-ec-line bg-ec-card px-3 py-2 text-[12.5px] text-ec-ink-2 transition-colors hover:border-ec-bronze">{p}</a>
+              ))}
+              {(client.emails ?? []).map((e: string) => (
+                <a key={e} href={`mailto:${e}`} className="num flex min-w-0 items-center gap-2 rounded-ec-s border border-ec-line bg-ec-card px-3 py-2 text-[12.5px] text-ec-ink-2 transition-colors hover:border-ec-bronze"><span className="truncate">{e}</span></a>
+              ))}
+            </div>
+            {custom.address && <p className="mt-2 text-[12.5px] text-ec-muted-ink">{custom.address}</p>}
+            {(custom.contact_person || custom.notes || custom.referral_source || custom.id_note) && (
+              <dl className="mt-4 grid gap-3 border-t border-ec-line pt-4 text-sm sm:grid-cols-2">
+                {custom.contact_person && <div><dt className="eyebrow">{t("intake.contactPerson")}</dt><dd className="mt-1 text-ec-ink">{custom.contact_person}</dd></div>}
+                {custom.referral_source && <div><dt className="eyebrow">{td("referralSource")}</dt><dd className="mt-1 text-ec-ink">{custom.referral_source}</dd></div>}
+                {custom.id_note && <div><dt className="eyebrow">{td("idNote")}</dt><dd className="num mt-1 text-ec-ink">{custom.id_note}</dd></div>}
+                {custom.notes && <div className="sm:col-span-2"><dt className="eyebrow">{t("intake.notes")}</dt><dd className="mt-1 whitespace-pre-wrap text-ec-ink">{custom.notes}</dd></div>}
+              </dl>
+            )}
+          </>
+        ) : (
+          <p className="text-[13px] text-ec-ink-3">{td("noContact")}</p>
+        )}
+      </section>
 
       {/* WO-333 Wave 2 EXACT-FIDELITY: reference order is Contact → Their cases → Their documents
           → Client portal + Billing → Activity — Matters/Documents moved up ahead of Portal+Billing
           to match; the two real additions beyond the reference (Communications, Messages) sit after
           Portal+Billing, and Activity is last again, matching the reference's own final section. */}
 
-      {/* Matters ("Their cases") */}
-      <div className="ec-card overflow-hidden">
-        <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium text-ec-ink">{t("casesHeading")} <span className="text-ec-ink-3">({matterTotal ?? 0})</span></h2></div>
+      {/* Matters ("Their cases") — unboxed list + Disposed chip (cases-table.tsx's own
+          substring convention), matching the reference's flat SectionLabel section. */}
+      <section>
+        <SectionHead right={<span className="num text-[10.5px] text-ec-muted-ink">{matterTotal ?? 0}</span>}>{t("casesHeading")}</SectionHead>
         {matters && matters.length ? (
           <>
-            <ul className="divide-y divide-ec-hair">
-              {matters.map((m) => (
+            <ul className="divide-y divide-ec-line">
+              {matters.map((m) => {
+                const isDisposed = (m.status ?? "").toUpperCase().includes("DISPOSED");
+                return (
                 <li key={m.id}>
-                  <Link href={`/dashboard/cases/${m.id}`} className="ec-row flex flex-col gap-1 px-5 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                  <Link href={`/dashboard/cases/${m.id}`} className="ec-row flex flex-col gap-1 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <span className="min-w-0 truncate font-medium text-ec-ink">{m.title}</span>
-                    <span className="num shrink-0 text-xs text-ec-ink-3">{m.cnr ?? "—"} · {t("nextPrefix")} {(formatCourtDate(m.next_hearing_date) ?? "—")}</span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="num text-xs text-ec-ink-3">{m.cnr ?? "—"} · {t("nextPrefix")} {(formatCourtDate(m.next_hearing_date) ?? "—")}</span>
+                      {isDisposed && <span className="ec-chip">{st(m.status!)}</span>}
+                    </span>
                   </Link>
                 </li>
-              ))}
+                );
+              })}
             </ul>
-            <div className="border-t border-ec-hair px-5 py-3">
+            <div className="pt-3">
               <Pagination page={mPage} perPage={mPer} total={matterTotal ?? 0} />
             </div>
           </>
-        ) : <p className="px-5 py-8 text-center text-sm text-ec-ink-3">{t("noCases")}</p>}
-      </div>
+        ) : <p className="py-8 text-center text-sm text-ec-ink-3">{t("noCases")}</p>}
+      </section>
 
-      {/* Document library ("Their documents") — everything filed under this client or its cases */}
-      <div className="ec-card overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ec-hair px-5 py-3">
-          <h2 className="font-display text-base font-medium text-ec-ink">{t("documentsHeading")} <span className="text-ec-ink-3">({docTotal ?? 0})</span></h2>
-          <ClientDocUpload clientId={client.id} />
-        </div>
+      {/* Document library ("Their documents") — everything filed under this client or its cases.
+          Header is the reference's flat SectionLabel; the table itself stays in a slim card (a
+          real feature richer than the reference's simple list — per-category grouping, doc-type
+          chip, filed-under, size, added, actions). */}
+      <section>
+        <SectionHead right={<ClientDocUpload clientId={client.id} />}>{t("documentsHeading")} <span className="num text-ec-muted-ink">({docTotal ?? 0})</span></SectionHead>
+        <div className="ec-card overflow-hidden">
         {docGroups.length ? (
           <div className="divide-y divide-ec-hair">
             {docGroups.map((g) => (
@@ -261,15 +308,20 @@ export default async function ClientDetailPage({
             <Pagination page={dPage} perPage={dPer} total={docTotal ?? 0} pageKey="dpage" perKey="dper" />
           </div>
         )}
-      </div>
+        </div>
+      </section>
 
       {/* Client portal + Billing — side by side only once each has room for its own content
-          (the Billing card's 3-col Billed/Received/Due needs more than half of a 768px column). */}
+          (the Billing card's 3-col Billed/Received/Due needs more than half of a 768px column).
+          WO-347: Portal is now `.ec-rule-left` (the reference's own `rule-left` treatment); Billing
+          stays `.ec-card` (the reference's own `card-surface`) and now shows the real billing
+          arrangement line the wizard captures — the reference's `client.billing` slot, dropped
+          silently otherwise. */}
       <section className="grid gap-4 lg:grid-cols-2">
-        <div className="ec-card p-5">
+        <div className="ec-rule-left px-4 py-3">
           <div className="mb-2 flex items-center gap-2">
             <Icon name="inbox" className="h-4 w-4 text-ec-bronze" />
-            <p className="ec-label">{t("clientPortal")}</p>
+            <p className="eyebrow">{t("clientPortal")}</p>
           </div>
           {/* All 3 states the prototype shows — "Invited" (pending, not yet signed in) has no
               backing row in `portal_user` (inviteToPortal creates an ACTIVE row directly, there's
@@ -300,8 +352,13 @@ export default async function ClientDetailPage({
           </div>
         </div>
         <div className="ec-card p-5">
-          <p className="ec-label mb-3">{td("billingHeading")}</p>
-          <div className="grid grid-cols-3 gap-2">
+          <p className="eyebrow">{td("billingHeading")}</p>
+          {custom.billing_type && (
+            <p className="num mt-1 text-[11.5px] text-ec-muted-ink">
+              {custom.billing_type}{custom.billing_amount ? ` · ${custom.billing_amount}` : ""}
+            </p>
+          )}
+          <div className="mt-3 grid grid-cols-3 gap-2">
             <div>
               <div className="ec-label">{td("billed")}</div>
               <div className="num mt-0.5 font-display text-[16px] text-ec-ink">{fmtMoney(billedMinor)}</div>
@@ -337,23 +394,23 @@ export default async function ClientDetailPage({
       </div>
 
       {/* Activity — this client's matters only (bounded, tenant + client scoped). The reference's
-          own final section; kept last here too. */}
-      <div className="ec-card">
-        <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium text-ec-ink">{td("activityHeading")}</h2></div>
+          own final section, unboxed SectionLabel treatment; kept last here too. */}
+      <section>
+        <SectionHead>{td("activityHeading")}</SectionHead>
         {activity && activity.length ? (
-          <ul className="px-5 py-2">
+          <ul className="space-y-2">
             {activity.map((a) => (
-              <li key={a.id} className="flex gap-3 py-2.5 text-sm">
+              <li key={a.id} className="flex gap-3 text-sm">
                 <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-ec-bronze" />
                 <span className="flex-1 text-ec-ink-2">{a.summary}</span>
-                <span className="shrink-0 text-xs text-ec-ink-3">{fmtAgo(a.created_at)}</span>
+                <span className="num shrink-0 text-xs text-ec-ink-3">{fmtAgo(a.created_at)}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="px-5 py-8 text-center text-sm text-ec-ink-3">{td("activityEmpty")}</p>
+          <p className="py-8 text-center text-sm text-ec-ink-3">{td("activityEmpty")}</p>
         )}
-      </div>
+      </section>
 
       <Disclaimer />
     </div>
