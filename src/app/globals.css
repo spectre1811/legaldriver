@@ -123,6 +123,10 @@
   .ec-chip-success { border-color: color-mix(in srgb, var(--success) 40%, transparent); color: var(--success); background: var(--success-t); }
   .ec-chip-warn { border-color: color-mix(in srgb, var(--warn) 40%, transparent); color: var(--warn); background: var(--warn-t); }
   .ec-chip-danger { border-color: color-mix(in srgb, var(--danger) 40%, transparent); color: var(--danger); background: var(--danger-t); }
+  /* WO-338 · the Chambers prototype's `Chip tone="honey"` (design-mockups/iteration3/console/ui.tsx) —
+     a solid honey pill, distinct from the tinted `-hot` (bronze) tone above. Onboarding's roster
+     "Complete" status is the first consumer; every future honey-toned chip follows this. */
+  .ec-chip-honey { border-color: var(--honey); color: var(--on-honey); background: var(--honey); }
 
   /* small-caps section label */
   .ec-label { font-size: 11px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ink-3); }
