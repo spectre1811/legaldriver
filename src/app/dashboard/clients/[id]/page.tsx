@@ -175,62 +175,12 @@ export default async function ClientDetailPage({
         </div>
       )}
 
-      {/* Client portal + Billing — side by side only once each has room for its own content
-          (the Billing card's 3-col Billed/Received/Due needs more than half of a 768px column). */}
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="ec-card p-5">
-          <div className="mb-2 flex items-center gap-2">
-            <Icon name="inbox" className="h-4 w-4 text-ec-bronze" />
-            <p className="ec-label">{t("clientPortal")}</p>
-          </div>
-          {/* All 3 states the prototype shows — "Invited" (pending, not yet signed in) has no
-              backing row in `portal_user` (inviteToPortal creates an ACTIVE row directly, there's
-              no pending state to read), so it renders permanently dim/disabled with a note rather
-              than being dropped or faked as reachable. */}
-          <div className="mb-2 inline-flex items-center gap-1 rounded-ec-s border border-ec-hair bg-ec-paper p-[3px]">
-            {(["notInvited", "invited", "active"] as const).map((s) => {
-              const real = portal?.id ? "active" : "notInvited";
-              const isCurrent = s === real;
-              const isTracked = s !== "invited";
-              return (
-                <span
-                  key={s}
-                  title={!isTracked ? td("portalInvitedUntracked") : undefined}
-                  className={
-                    "rounded-[4px] px-2 py-1 text-[11px] font-medium transition-colors " +
-                    (isCurrent ? "bg-ec-bronze-tint text-ec-bronze-deep" : isTracked ? "text-ec-ink-3" : "cursor-help text-ec-ink-3/50")
-                  }
-                >
-                  {td(`portalState.${s}`)}
-                </span>
-              );
-            })}
-          </div>
-          <p className="text-[13px] text-ec-ink-2">{portal?.id ? td("portalActiveDesc") : td("portalNotInvitedDesc")}</p>
-          <div className="mt-3">
-            <PortalInvite clientId={client.id} portalUserId={portal?.id ?? null} />
-          </div>
-        </div>
-        <div className="ec-card p-5">
-          <p className="ec-label mb-3">{td("billingHeading")}</p>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <div className="ec-label">{td("billed")}</div>
-              <div className="num mt-0.5 font-display text-[16px] text-ec-ink">{fmtMoney(billedMinor)}</div>
-            </div>
-            <div>
-              <div className="ec-label">{td("received")}</div>
-              <div className="num mt-0.5 font-display text-[16px] text-ec-ink">{fmtMoney(receivedMinor)}</div>
-            </div>
-            <div>
-              <div className="ec-label">{td("due")}</div>
-              <div className="num mt-0.5 font-display text-[16px] text-ec-ink">{outstandingMinor > 0 ? fmtMoney(outstandingMinor) : "—"}</div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* WO-333 Wave 2 EXACT-FIDELITY: reference order is Contact → Their cases → Their documents
+          → Client portal + Billing → Activity — Matters/Documents moved up ahead of Portal+Billing
+          to match; the two real additions beyond the reference (Communications, Messages) sit after
+          Portal+Billing, and Activity is last again, matching the reference's own final section. */}
 
-      {/* Matters */}
+      {/* Matters ("Their cases") */}
       <div className="ec-card overflow-hidden">
         <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium text-ec-ink">{t("casesHeading")} <span className="text-ec-ink-3">({matterTotal ?? 0})</span></h2></div>
         {matters && matters.length ? (
@@ -252,7 +202,7 @@ export default async function ClientDetailPage({
         ) : <p className="px-5 py-8 text-center text-sm text-ec-ink-3">{t("noCases")}</p>}
       </div>
 
-      {/* Document library — everything filed under this client or its cases */}
+      {/* Document library ("Their documents") — everything filed under this client or its cases */}
       <div className="ec-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-ec-hair px-5 py-3">
           <h2 className="font-display text-base font-medium text-ec-ink">{t("documentsHeading")} <span className="text-ec-ink-3">({docTotal ?? 0})</span></h2>
@@ -313,10 +263,81 @@ export default async function ClientDetailPage({
         )}
       </div>
 
-      {/* Communications timeline (email + WhatsApp/SMS filed to this client) */}
+      {/* Client portal + Billing — side by side only once each has room for its own content
+          (the Billing card's 3-col Billed/Received/Due needs more than half of a 768px column). */}
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="ec-card p-5">
+          <div className="mb-2 flex items-center gap-2">
+            <Icon name="inbox" className="h-4 w-4 text-ec-bronze" />
+            <p className="ec-label">{t("clientPortal")}</p>
+          </div>
+          {/* All 3 states the prototype shows — "Invited" (pending, not yet signed in) has no
+              backing row in `portal_user` (inviteToPortal creates an ACTIVE row directly, there's
+              no pending state to read), so it renders permanently dim/disabled with a note rather
+              than being dropped or faked as reachable. */}
+          <div className="mb-2 inline-flex items-center gap-1 rounded-ec-s border border-ec-hair bg-ec-paper p-[3px]">
+            {(["notInvited", "invited", "active"] as const).map((s) => {
+              const real = portal?.id ? "active" : "notInvited";
+              const isCurrent = s === real;
+              const isTracked = s !== "invited";
+              return (
+                <span
+                  key={s}
+                  title={!isTracked ? td("portalInvitedUntracked") : undefined}
+                  className={
+                    "rounded-[4px] px-2 py-1 text-[11px] font-medium transition-colors " +
+                    (isCurrent ? "bg-ec-bronze-tint text-ec-bronze-deep" : isTracked ? "text-ec-ink-3" : "cursor-help text-ec-ink-3/50")
+                  }
+                >
+                  {td(`portalState.${s}`)}
+                </span>
+              );
+            })}
+          </div>
+          <p className="text-[13px] text-ec-ink-2">{portal?.id ? td("portalActiveDesc") : td("portalNotInvitedDesc")}</p>
+          <div className="mt-3">
+            <PortalInvite clientId={client.id} portalUserId={portal?.id ?? null} />
+          </div>
+        </div>
+        <div className="ec-card p-5">
+          <p className="ec-label mb-3">{td("billingHeading")}</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <div className="ec-label">{td("billed")}</div>
+              <div className="num mt-0.5 font-display text-[16px] text-ec-ink">{fmtMoney(billedMinor)}</div>
+            </div>
+            <div>
+              <div className="ec-label">{td("received")}</div>
+              <div className="num mt-0.5 font-display text-[16px] text-ec-ink">{fmtMoney(receivedMinor)}</div>
+            </div>
+            <div>
+              <div className="ec-label">{td("due")}</div>
+              <div className="num mt-0.5 font-display text-[16px] text-ec-ink">{outstandingMinor > 0 ? fmtMoney(outstandingMinor) : "—"}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Communications timeline (email + WhatsApp/SMS filed to this client) — real addition
+          beyond the reference, kept after Portal+Billing so Activity can stay last, as reference. */}
       <Communications clientId={client.id} />
 
-      {/* Activity — this client's matters only (bounded, tenant + client scoped) */}
+      {/* Secure messaging (same thread the client sees in the portal) — real addition beyond
+          the reference, same reasoning as Communications above. */}
+      <div className="ec-card overflow-hidden">
+        <div className="border-b border-ec-hair px-5 py-3"><h2 className="font-display text-base font-medium text-ec-ink">{t("messagesHeading")}</h2></div>
+        <ul className="max-h-72 space-y-2 overflow-y-auto px-5 py-4">
+          {messages && messages.length ? messages.map((m) => (
+            <li key={m.id} className={`flex ${m.sender === "firm" ? "justify-end" : "justify-start"}`}>
+              <span className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${m.sender === "firm" ? "bg-ec-ink text-ec-paper" : "bg-ec-paper-3 text-ec-ink-2"}`}>{m.body}</span>
+            </li>
+          )) : <li className="py-6 text-center text-sm text-ec-ink-3">{t("noMessages")}</li>}
+        </ul>
+        <div className="border-t border-ec-hair px-5 py-3"><FirmComposer clientId={client.id} /></div>
+      </div>
+
+      {/* Activity — this client's matters only (bounded, tenant + client scoped). The reference's
+          own final section; kept last here too. */}
       <div className="ec-card">
         <div className="border-b border-ec-hair px-5 py-4"><h2 className="font-display text-base font-medium text-ec-ink">{td("activityHeading")}</h2></div>
         {activity && activity.length ? (
@@ -332,19 +353,6 @@ export default async function ClientDetailPage({
         ) : (
           <p className="px-5 py-8 text-center text-sm text-ec-ink-3">{td("activityEmpty")}</p>
         )}
-      </div>
-
-      {/* Secure messaging (same thread the client sees in the portal) */}
-      <div className="ec-card overflow-hidden">
-        <div className="border-b border-ec-hair px-5 py-3"><h2 className="font-display text-base font-medium text-ec-ink">{t("messagesHeading")}</h2></div>
-        <ul className="max-h-72 space-y-2 overflow-y-auto px-5 py-4">
-          {messages && messages.length ? messages.map((m) => (
-            <li key={m.id} className={`flex ${m.sender === "firm" ? "justify-end" : "justify-start"}`}>
-              <span className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${m.sender === "firm" ? "bg-ec-ink text-ec-paper" : "bg-ec-paper-3 text-ec-ink-2"}`}>{m.body}</span>
-            </li>
-          )) : <li className="py-6 text-center text-sm text-ec-ink-3">{t("noMessages")}</li>}
-        </ul>
-        <div className="border-t border-ec-hair px-5 py-3"><FirmComposer clientId={client.id} /></div>
       </div>
 
       <Disclaimer />

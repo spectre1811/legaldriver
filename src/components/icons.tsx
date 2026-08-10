@@ -18,7 +18,11 @@ export type IconName =
   | "monitor"
   // WO-331 Cases Daybreak reskin — the Filters drawer's "Saved views" trigger (the reference's
   // lucide Bookmark), the one shape the existing set lacks.
-  | "bookmark";
+  | "bookmark"
+  // WO-333 Wave 2 Clients EXACT-FIDELITY reconcile — the roster row's org-vs-individual glyph
+  // (the reference's lucide Building2 / User); "clients"/"judge" above are both two-person or
+  // court-specific shapes, neither fits a single generic person/organisation mark.
+  | "building" | "person";
 
 const P: Record<IconName, React.ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
@@ -71,6 +75,8 @@ const P: Record<IconName, React.ReactNode> = {
   shield: <><path d="M12 3 4.5 6v6c0 4.4 3 7.5 7.5 9 4.5-1.5 7.5-4.6 7.5-9V6z" /><path d="m8.5 12 2.4 2.4L16 9.5" /></>,
   monitor: <><rect x="2.5" y="4" width="19" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></>,
   bookmark: <><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" /></>,
+  building: <><path d="M6 21V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v16" /><path d="M14 21V9.5l6 2.5v9" /><path d="M9 8h1M9 12h1M9 16h1" /><path d="M17.5 15.5h1M17.5 18.5h1" /><path d="M3 21h18" /></>,
+  person: <><circle cx="12" cy="8" r="4" /><path d="M4.5 21c1-4.7 3.9-7 7.5-7s6.5 2.3 7.5 7" /></>,
 };
 
 export function Icon({ name, className = "h-5 w-5" }: IconProps) {
