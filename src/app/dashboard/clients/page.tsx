@@ -9,12 +9,20 @@ import { Pagination } from "@/components/pagination";
 import { fetchClientsPage } from "./clients-query";
 import { parsePage, clampPerPage } from "@/lib/paginate";
 
-// WO-333 · Clients console page → Daybreak/Chambers. Reskins the roster onto the WO-328 shell
-// using the `ec-*` token classes the sibling Wave-2 pages (cases/documents/calendar) already
-// established — same primitives, no new global CSS. Bound to the real `client` table via
-// clients-query.ts (RLS/tenant-scoped); `q` is a real ilike search, not the mockup's dummy data.
-// The always-open "New client intake" card is now the "+ Add client" modal (add-client-modal.tsx)
-// wrapping the SAME ClientIntake form unmodified.
+// WO-333 Wave 2 · EXACT-FIDELITY RECONCILE against design-mockups/iteration3/console/app.clients.tsx's
+// `ClientsPage` — masthead copy/count style now matches the cases roster's already-reconciled
+// convention (WO-331: honey mono numeral beside the title, not a neutral pill); the "Client" cell
+// carries the reference's org-vs-individual glyph + a real second line (this client's own address,
+// the honest analogue of the reference's dummy `city` — the schema has no separate city field); the
+// Contact cell is the reference's two-line phone/email stack; "Cases"→"Matters" matches the
+// reference's literal column label; the true empty state now uses the reference's `.ec-rule-left`
+// treatment with BOTH its CTAs (Add client / Link from a case), not a generic centred empty-card.
+// The reference's own "Show empty/configured state" DEV TOGGLE is dropped, as in every other
+// reconciled Wave-2 page (see notifications/page.tsx, WO-336) — the real empty state is driven by
+// `total`, never a manual flag. The reference's <Stamp> "CLIENT REGISTER" bar is a founder-directed
+// omission for this WO. Bound to the real `client` table via clients-query.ts (RLS/tenant-scoped);
+// `q` is a real ilike search, not the mockup's dummy data. The always-open "New client intake" card
+// is the "+ Add client" modal (add-client-modal.tsx) wrapping the SAME ClientIntake form unmodified.
 export default async function ClientsPage({ searchParams }: { searchParams: { page?: string; per?: string; q?: string } }) {
   const t = await getTranslations("clients");
   const td = await getTranslations("dashboard.clients");
@@ -35,16 +43,22 @@ export default async function ClientsPage({ searchParams }: { searchParams: { pa
   return (
     <div className="space-y-6">
       <header>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-baseline gap-2.5">
           <h1 className="font-display text-[1.6rem] font-medium leading-tight tracking-tight text-ec-ink">{t("title")}</h1>
-          {total > 0 && <span className="num rounded-ec-s bg-ec-paper-3 px-2 py-0.5 text-sm text-ec-ink-3">{total}</span>}
+          {/* WO-333 Wave 2: the reference renders the count as a honey mono numeral beside the
+              title (Masthead's own title slot), not a neutral pill — matched to the cases roster's
+              already-reconciled convention (WO-331), same header/AppShell adaptation every dashboard
+              list page shares. */}
+          {total > 0 && <span className="num font-mono text-[13px] tracking-[0.08em] text-ec-honey">{total}</span>}
         </div>
         <p className="mt-1 max-w-2xl text-sm text-ec-ink-3">{t("subtitle")}</p>
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
         <ClientsSearch initialQ={q} />
-        <AddClientButton practiceAreas={areas ?? []} />
+        {/* Reference: `{!empty && <button>Add client</button>}` — the roster's own trigger is
+            hidden in the true-empty state, which carries its own "Add client" CTA instead. */}
+        {showRoster && <AddClientButton practiceAreas={areas ?? []} />}
       </div>
 
       {showRoster ? (
@@ -56,25 +70,32 @@ export default async function ClientsPage({ searchParams }: { searchParams: { pa
                 <tr className="border-b border-ec-hair text-left">
                   <th className="ec-label px-5 py-3">{t("colClient")}</th>
                   <th className="ec-label hidden px-5 py-3 md:table-cell">{t("colContact")}</th>
-                  <th className="ec-label px-5 py-3">{t("colCases")}</th>
+                  <th className="ec-label px-5 py-3">{td("colMatters")}</th>
                   <th className="ec-label hidden px-5 py-3 lg:table-cell">{td("lastActivity")}</th>
-                  <th className="ec-label px-5 py-3 text-right">{t("colOutstanding")}</th>
+                  <th className="ec-label px-5 py-3">{t("colOutstanding")}</th>
                 </tr>
               </thead>
               <tbody>
-                {clients.map((c) => (
-                  <tr key={c.id} className="ec-row border-b border-ec-hair last:border-0">
+                {clients.map((c) => {
+                  // Real analogue of the reference's dummy `city` line — the schema has no
+                  // separate city field, so the client's own filed address fills the same slot.
+                  const address = (c.custom as { address?: string } | null)?.address ?? null;
+                  return (
+                  <tr key={c.id} className="ec-row group border-b border-ec-hair last:border-0">
                     <td className="px-5 py-3.5">
-                      <Link href={`/dashboard/clients/${c.id}`} className="font-display text-ec-ink hover:text-ec-bronze">
-                        {c.name}
+                      <Link href={`/dashboard/clients/${c.id}`} className="flex min-w-0 items-center gap-2.5">
+                        <Icon name={c.type === "org" ? "building" : "person"} className="h-3.5 w-3.5 shrink-0 text-ec-ink-3" />
+                        <span className="min-w-0">
+                          <span className="font-display block truncate text-[15px] text-ec-ink transition-colors group-hover:text-ec-bronze">{c.name}</span>
+                          <span className="block truncate text-[11.5px] text-ec-muted-ink">{address ?? "—"}</span>
+                        </span>
                       </Link>
-                      <div className="mt-0.5 flex items-center gap-1.5">
-                        <span className="ec-chip">{c.type === "org" ? t("intake.typeOrg") : t("intake.typeIndividual")}</span>
-                        {c.practiceArea && <span className="text-[11.5px] text-ec-ink-3">{c.practiceArea}</span>}
-                      </div>
                     </td>
-                    <td className="hidden px-5 py-3.5 text-ec-ink-2 md:table-cell">
-                      <span className="num">{c.phones?.[0] ?? c.emails?.[0] ?? "—"}</span>
+                    <td className="hidden px-5 py-3.5 md:table-cell">
+                      <div className="num min-w-0 font-mono text-[11.5px] text-ec-ink-2">
+                        <div className="truncate">{c.phones?.[0] ?? "—"}</div>
+                        {c.emails?.[0] && <div className="truncate text-ec-muted-ink">{c.emails[0]}</div>}
+                      </div>
                     </td>
                     <td className="num px-5 py-3.5 text-ec-ink-2">{c.caseCount}</td>
                     <td className="hidden px-5 py-3.5 text-ec-ink-3 lg:table-cell">
@@ -86,7 +107,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: { pa
                         <span className="text-ec-ink-3">{td("noActivity")}</span>
                       )}
                     </td>
-                    <td className="num px-5 py-3.5 text-right">
+                    <td className="num px-5 py-3.5">
                       {c.outstandingMinor > 0 ? (
                         <span className="text-ec-ink">{fmtMoney(c.outstandingMinor)}</span>
                       ) : (
@@ -94,7 +115,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: { pa
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             </div>
@@ -105,10 +127,20 @@ export default async function ClientsPage({ searchParams }: { searchParams: { pa
           <Pagination page={page} perPage={per} total={total} />
         </>
       ) : (
-        <div className="ec-card flex flex-col items-center gap-3 px-6 py-16 text-center">
-          <span className="rounded-full bg-ec-paper-3 p-3 text-ec-ink-3"><Icon name="clients" className="h-6 w-6" /></span>
-          <p className="font-display text-lg text-ec-ink">{t("emptyTitle")}</p>
-          <p className="max-w-sm text-sm text-ec-ink-3">{t("emptyBody")}</p>
+        // Reference: `.rule-left` bronze-rule emphasis block with the eyebrow + display line +
+        // two CTAs (Add client / Link from a case) — not a centred generic empty-card.
+        <div className="ec-rule-left p-6">
+          <p className="ec-label">{t("emptyTitle")}</p>
+          <p className="mt-2 max-w-lg font-display text-[22px] leading-snug text-ec-ink">{t("emptyBody")}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <AddClientButton practiceAreas={areas ?? []} />
+            <Link
+              href="/dashboard/cases"
+              className="inline-flex items-center gap-1.5 rounded-ec-s border border-ec-line-strong px-4 py-2.5 text-[13px] text-ec-ink-2 transition-colors hover:border-ec-bronze hover:text-ec-bronze"
+            >
+              {td("emptyLinkCase")} <Icon name="chevron" className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
       )}
     </div>
