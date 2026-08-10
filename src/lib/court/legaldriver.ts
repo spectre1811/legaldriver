@@ -75,9 +75,12 @@ function decode(s?: string | null): string {
   return t.trim();
 }
 // On HC cases the API explodes an advocate name string into per-character junk rows
-// ({"name":"P"},{"name":"A"},{"name":"1"}…) — keep only real names.
+// ({"name":"P"},{"name":"A"},{"name":"1"}…) — keep only real names. WO-332: the provider also
+// occasionally sends the literal TEXT "null"/"undefined"/"n/a"/"none" for a missing field (not a
+// real null) — those pass every other check here (real letters, ≥3 chars) so they'd otherwise be
+// stored + rendered as if they were a name (founder-reported "null" under a party's advocate).
 function isRealAdvocate(name: string): boolean {
-  return name.length >= 3 && /[a-z]/i.test(name) && !/^\d+$/.test(name);
+  return name.length >= 3 && /[a-z]/i.test(name) && !/^\d+$/.test(name) && !/^(null|undefined|n\/?a|none)$/i.test(name);
 }
 // Court-process noise that leaks into advocate values on multi-party rows.
 const ADV_NOISE = /\b(NOTICE|RULE|SERVED|UNSERVED|APPEARANCE|EXPARTE|LEGAL HEIR|REPRESENTATIVE|DELETED|ORDER)\b/i;
