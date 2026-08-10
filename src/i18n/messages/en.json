@@ -173,6 +173,269 @@
       "whatsappNote": "WhatsApp cause-list alerts are coming soon — get your cases in now."
     }
   },
+  "dashboard": {
+    "overview": {
+      "tagline": "Tomorrow's hearings before you ask.",
+      "sectionHearings": "Next hearings",
+      "sectionDeadlines": "Deadlines open",
+      "deadlines": {
+        "overdueCount": "{count, plural, =0 {none overdue} one {# overdue} other {# overdue}}",
+        "overdue": "Overdue · {date}",
+        "due": "Due {date}",
+        "empty": "No open deadlines."
+      },
+      "inbox": {
+        "eyebrow": "Inbox needs review",
+        "cta": "Review filings"
+      },
+      "practice": {
+        "title": "Your practice this week",
+        "hearings": "Hearings",
+        "filings": "Filings made",
+        "notTracked": "Not yet tracked",
+        "orders": "Orders on your cases"
+      },
+      "lastSync": {
+        "title": "Last sync",
+        "stamp": "COURT RECORD SYNCED",
+        "never": "Not yet synced"
+      }
+    },
+    "clients": {
+      "searchPlaceholder": "Search clients by name, phone or email…",
+      "searchAria": "Search clients",
+      "addClient": "Add client",
+      "addClientModalTitle": "New client",
+      "addClientModalHelper": "We'll flag any conflicts against existing clients and parties before you save.",
+      "close": "Close",
+      "noMatches": "No client matches “{q}”.",
+      "settled": "settled",
+      "contactHeading": "Contact",
+      "portalActiveDesc": "Active — they can see hearings and filed documents.",
+      "portalNotInvitedDesc": "Not invited yet.",
+      "billingHeading": "Billing",
+      "billed": "Billed",
+      "received": "Received",
+      "due": "Due",
+      "activityHeading": "Activity",
+      "activityEmpty": "No activity yet.",
+      "lastActivity": "Last activity",
+      "noActivity": "—",
+      "portalState": {
+        "notInvited": "Not invited",
+        "invited": "Invited",
+        "active": "Active"
+      },
+      "portalInvitedUntracked": "Not separately tracked — an invite grants access immediately, there's no pending state to show."
+    },
+    "caseFile": {
+      "back": "All cases",
+      "copyCnr": "Copy",
+      "copiedCnr": "Copied",
+      "stagePrefix": "Stage",
+      "moreActions": "More actions",
+      "soon": {
+        "calendar": "Add to calendar",
+        "share": "Share case file",
+        "export": "Export as PDF",
+        "badge": "Soon"
+      },
+      "next": {
+        "today": "today",
+        "tomorrow": "tomorrow",
+        "inDays": "{count, plural, one {in # day} other {in # days}}",
+        "past": "{count, plural, one {# day ago} other {# days ago}}"
+      },
+      "alert": {
+        "wasDue": "was due {date}",
+        "overdueDays": "{count, plural, one {# day overdue} other {# days overdue}}",
+        "reviewCount": "{count, plural, one {# inbox filing for this matter is unreviewed} other {# inbox filings for this matter are unreviewed}}",
+        "reviewLink": "Review filing"
+      },
+      "record": {
+        "title": "Court record",
+        "hide": "Hide",
+        "show": "Show",
+        "synced": "From the court record · synced {time}"
+      },
+      "partiesTitle": "Parties & advocates",
+      "stamp": {
+        "synced": "Synced · {date}"
+      },
+      "client": {
+        "view": "View client"
+      },
+      "notify": {
+        "title": "Notifications",
+        "empty": "No notifications sent for this case yet.",
+        "lastSent": "Last sent {date}"
+      },
+      "allDocuments": "All documents",
+      "inbox": {
+        "title": "From the inbox",
+        "empty": "No inbound mail matched to this case yet.",
+        "review": "Review"
+      },
+      "billing": {
+        "outstanding": "Outstanding"
+      }
+    },
+    "onboarding": {
+      "eyebrow": "Setup",
+      "addEyebrow": "Add an advocate",
+      "rosterEmpty": "No advocates yet.",
+      "viewMatters": "View matters",
+      "sidebar": {
+        "title": "What you get",
+        "calendarLabel": "Calendar",
+        "calendarCount": "{n, plural, one {# hearing this month} other {# hearings this month}}",
+        "calendarEmpty": "No hearings on file yet",
+        "weekdays": [
+          "M",
+          "T",
+          "W",
+          "T",
+          "F",
+          "S",
+          "S"
+        ],
+        "briefHeader": "{brand} · morning brief",
+        "briefNext": "Next on your calendar: {title} — {court}, {date}",
+        "briefEmpty": "Once your practice is assembled, your morning brief appears here.",
+        "briefNote": "WhatsApp delivery is coming soon — for now, check here each morning."
+      }
+    },
+    "inbox": {
+      "toReview": "{count} to review",
+      "connectedPill": "Connected",
+      "upToDate": "Up to date",
+      "scope": {
+        "anyMail": "All mail (minus spam/promotions)"
+      },
+      "ingesting": "Ingesting…",
+      "demoIngest": "Demo ingest",
+      "disconnected": {
+        "eyebrow": "Gmail not connected",
+        "title": "Connect Gmail and case mail files itself.",
+        "point1": "We read only what you forward or label — nothing else.",
+        "point2": "Attachments land in Documents against the matched case; you approve each match.",
+        "point3": "Disconnect at any time — filed copies stay with your case files."
+      },
+      "searchPlaceholder": "Search these emails…",
+      "searchAria": "Search these emails",
+      "sort": {
+        "date": "Date",
+        "sender": "Sender"
+      },
+      "noSearchResults": "Nothing here for “{q}”.",
+      "toLine": "to {account}",
+      "noPreview": "No preview available.",
+      "previewOnlyNote": "Showing Gmail's short preview — the full message text isn't stored.",
+      "attachments": {
+        "heading": "Attachments · {n}",
+        "image": "Image",
+        "file": "File"
+      },
+      "ticks": {
+        "high": "High match",
+        "medium": "Medium match",
+        "low": "Low match"
+      },
+      "bulk": {
+        "fileAll": "File all",
+        "fileAllPending": "Bulk filing is coming soon — file one at a time from the preview.",
+        "ignore": "Ignore"
+      }
+    },
+    "notifications": {
+      "header": {
+        "eyebrow": "Alerts",
+        "title": "Notifications",
+        "channelsOn": "{n, plural, one {# channel on} other {# channels on}}",
+        "meta": "Every alert queued and sent from here — verify delivery on the channel itself."
+      },
+      "empty": {
+        "title": "Nothing configured",
+        "body": "No cases to alert on yet — add one and hearing reminders, stage changes and cause-list alerts start flowing automatically.",
+        "cta": "Add a case"
+      },
+      "channelHealth": {
+        "title": "Channel health",
+        "checked": "Settings saved {ago}",
+        "checkedNever": "Using defaults — not yet customised",
+        "configure": "Configure",
+        "whatsapp": {
+          "name": "WhatsApp",
+          "on": "On · WhatsApp Business API",
+          "needsNumber": "On · add a number to send",
+          "off": "Off",
+          "notAdded": "Not added"
+        },
+        "email": {
+          "name": "Email",
+          "on": "On",
+          "off": "Off"
+        },
+        "inapp": {
+          "name": "In-app",
+          "state": "Always on",
+          "detail": "Console · bell icon"
+        }
+      },
+      "matrix": {
+        "title": "Per-case channels",
+        "note": "Follows your account-wide settings",
+        "colCase": "Case",
+        "col": {
+          "hearing": "Hearing reminder",
+          "order": "Order uploaded",
+          "stage": "Stage change"
+        },
+        "notTracked": "Not tracked yet",
+        "defaultsRow": "Defaults for every case",
+        "defaultsHint": "Applies on sync"
+      },
+      "ledger": {
+        "title": "Delivery ledger",
+        "receipts": "{n, plural, one {# receipt} other {# receipts}}",
+        "note": "“Delivered” and “read” aren't confirmed anywhere yet — sent is as far as we can verify.",
+        "filter": {
+          "all": "All",
+          "whatsapp": "WhatsApp",
+          "email": "Email",
+          "failed": "Failed"
+        },
+        "empty": "No receipts in this filter.",
+        "step": {
+          "queued": "Queued",
+          "sent": "Sent",
+          "delivered": "Delivered",
+          "read": "Read"
+        },
+        "failedAttempt": "{n, plural, one {failed · # attempt} other {failed · # attempts}}",
+        "dead": "failed · not retrying"
+      },
+      "brief": {
+        "title": "Evening brief & quiet hours",
+        "briefAt": "Brief at",
+        "ist": "IST",
+        "digest": "Digest",
+        "instant": "Instant",
+        "instantSoon": "Instant delivery isn't available yet",
+        "quietFrom": "Quiet hours from",
+        "quietTo": "to",
+        "save": "Save",
+        "saving": "Saving…",
+        "chipSaved": "Saves instantly",
+        "chipChannels": "{n, plural, one {# channel on} other {# channels on}}"
+      },
+      "footer": {
+        "stampLine1": "Delivery ledger",
+        "stampLine2": "Updated {date}",
+        "link": "Manage channels in Settings →"
+      }
+    }
+  },
   "causeList": {
     "page": {
       "title": "Cause lists",
@@ -1351,150 +1614,6 @@
       "save": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel"
-    }
-  },
-  "dashboard": {
-    "clients": {
-      "searchPlaceholder": "Search clients by name, phone or email…",
-      "searchAria": "Search clients",
-      "addClient": "Add client",
-      "addClientModalTitle": "New client",
-      "addClientModalHelper": "We'll flag any conflicts against existing clients and parties before you save.",
-      "close": "Close",
-      "noMatches": "No client matches “{q}”.",
-      "settled": "settled",
-      "contactHeading": "Contact",
-      "portalActiveDesc": "Active — they can see hearings and filed documents.",
-      "portalNotInvitedDesc": "Not invited yet.",
-      "billingHeading": "Billing",
-      "billed": "Billed",
-      "received": "Received",
-      "due": "Due",
-      "activityHeading": "Activity",
-      "activityEmpty": "No activity yet.",
-      "lastActivity": "Last activity",
-      "noActivity": "—",
-      "portalState": {
-        "notInvited": "Not invited",
-        "invited": "Invited",
-        "active": "Active"
-      },
-      "portalInvitedUntracked": "Not separately tracked — an invite grants access immediately, there's no pending state to show."
-    },
-    "overview": {
-      "tagline": "Tomorrow's hearings before you ask.",
-      "sectionHearings": "Next hearings",
-      "sectionDeadlines": "Deadlines open",
-      "deadlines": {
-        "overdueCount": "{count, plural, =0 {none overdue} one {# overdue} other {# overdue}}",
-        "overdue": "Overdue · {date}",
-        "due": "Due {date}",
-        "empty": "No open deadlines."
-      },
-      "inbox": {
-        "eyebrow": "Inbox needs review",
-        "cta": "Review filings"
-      },
-      "practice": {
-        "title": "Your practice this week",
-        "hearings": "Hearings",
-        "filings": "Filings made",
-        "notTracked": "Not yet tracked",
-        "orders": "Orders on your cases"
-      },
-      "lastSync": {
-        "title": "Last sync",
-        "stamp": "COURT RECORD SYNCED",
-        "never": "Not yet synced"
-      }
-    },
-    "notifications": {
-      "header": {
-        "eyebrow": "Alerts",
-        "title": "Notifications",
-        "channelsOn": "{n, plural, one {# channel on} other {# channels on}}",
-        "meta": "Every alert queued and sent from here — verify delivery on the channel itself."
-      },
-      "empty": {
-        "title": "Nothing configured",
-        "body": "No cases to alert on yet — add one and hearing reminders, stage changes and cause-list alerts start flowing automatically.",
-        "cta": "Add a case"
-      },
-      "channelHealth": {
-        "title": "Channel health",
-        "checked": "Settings saved {ago}",
-        "checkedNever": "Using defaults — not yet customised",
-        "configure": "Configure",
-        "whatsapp": {
-          "name": "WhatsApp",
-          "on": "On · WhatsApp Business API",
-          "needsNumber": "On · add a number to send",
-          "off": "Off",
-          "notAdded": "Not added"
-        },
-        "email": {
-          "name": "Email",
-          "on": "On",
-          "off": "Off"
-        },
-        "inapp": {
-          "name": "In-app",
-          "state": "Always on",
-          "detail": "Console · bell icon"
-        }
-      },
-      "matrix": {
-        "title": "Per-case channels",
-        "note": "Follows your account-wide settings",
-        "colCase": "Case",
-        "col": {
-          "hearing": "Hearing reminder",
-          "order": "Order uploaded",
-          "stage": "Stage change"
-        },
-        "notTracked": "Not tracked yet",
-        "defaultsRow": "Defaults for every case",
-        "defaultsHint": "Applies on sync"
-      },
-      "ledger": {
-        "title": "Delivery ledger",
-        "receipts": "{n, plural, one {# receipt} other {# receipts}}",
-        "note": "“Delivered” and “read” aren't confirmed anywhere yet — sent is as far as we can verify.",
-        "filter": {
-          "all": "All",
-          "whatsapp": "WhatsApp",
-          "email": "Email",
-          "failed": "Failed"
-        },
-        "empty": "No receipts in this filter.",
-        "step": {
-          "queued": "Queued",
-          "sent": "Sent",
-          "delivered": "Delivered",
-          "read": "Read"
-        },
-        "failedAttempt": "{n, plural, one {failed · # attempt} other {failed · # attempts}}",
-        "dead": "failed · not retrying"
-      },
-      "brief": {
-        "title": "Evening brief & quiet hours",
-        "briefAt": "Brief at",
-        "ist": "IST",
-        "digest": "Digest",
-        "instant": "Instant",
-        "instantSoon": "Instant delivery isn't available yet",
-        "quietFrom": "Quiet hours from",
-        "quietTo": "to",
-        "save": "Save",
-        "saving": "Saving…",
-        "chipSaved": "Saves instantly",
-        "chipChannels": "{n, plural, one {# channel on} other {# channels on}}"
-      },
-      "footer": {
-        "stampLine1": "Delivery ledger",
-        "stampLine2": "Updated {date}",
-        "link": "Manage channels in Settings →"
-      }
     }
   },
   "notices": {

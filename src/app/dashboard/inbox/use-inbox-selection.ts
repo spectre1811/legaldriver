@@ -11,6 +11,10 @@ export function useInboxSelection(order: string[]) {
   const [anchor, setAnchor] = useState<string | null>(null);
 
   const clear = () => { setSelected(new Set()); setAnchor(null); };
+  // WO-335 · the Chambers reference's "select all on this page" checkbox needs to select every
+  // visible row in one shot — driving it through repeated onRowToggle calls in the same tick
+  // would each read the same stale `selected` closure and clobber each other.
+  const selectAll = () => setSelected(new Set(order));
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") clear(); };
@@ -41,5 +45,5 @@ export function useInboxSelection(order: string[]) {
     }
   }
 
-  return { selected, onRowToggle, clear };
+  return { selected, onRowToggle, clear, selectAll };
 }

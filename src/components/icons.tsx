@@ -7,8 +7,12 @@ export type IconName =
   | "menu" | "close" | "trash" | "eye"
   | "clients" | "invoice" | "bulb" | "chart" | "chat" | "mic" | "gauge" | "printer"
   | "sunrise" | "judge" | "scroll"
+  // WO-332 case-file console reskin — two glyphs the Chambers reference needs beyond the existing set.
+  | "copy" | "more"
   // WO-334 Documents Notes/zoom viewer — glyphs the reference needs beyond the existing set.
   | "note" | "minus" | "download"
+  // WO-335 Inbox Daybreak reskin — the disconnected-state reassurance bullets (ShieldCheck).
+  | "shield"
   // WO-336 Notifications Chambers reskin — "in-app" channel glyph (console + bell), the one
   // shape the existing set (gmail=envelope for Email, chat=speech-bubble for WhatsApp) lacks.
   | "monitor";
@@ -55,9 +59,13 @@ const P: Record<IconName, React.ReactNode> = {
   sunrise: <><path d="M6 15a6 6 0 0 1 12 0" /><path d="M2 15h3M19 15h3M12 4v2M5 7l1.5 1.5M19 7l-1.5 1.5" /><path d="M3 20h18M6 22.5h12" /></>,
   judge: <><circle cx="12" cy="8" r="3.2" /><path d="M5.5 20c.8-3.6 3.2-5.5 6.5-5.5s5.7 1.9 6.5 5.5" /></>,
   scroll: <><path d="M6.5 4h10a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7.5" /><path d="M6.5 4A2 2 0 0 0 4.5 6v2.5H9" /><path d="M9 10h6M9 13.5h6M9 17h3" /></>,
+  // WO-332 — copy-to-clipboard + kebab "more actions" trigger.
+  copy: <><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></>,
+  more: <><circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="19" cy="12" r="1.6" /></>,
   note: <><path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10.5a2 2 0 0 0 2-2V8.5z" /><path d="M15 3v4a2 2 0 0 0 2 2h4" /><path d="M8 13h5M8 17h3" /></>,
   minus: <><path d="M5 12h14" /></>,
   download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 11l5 5 5-5M12 4v12" /></>,
+  shield: <><path d="M12 3 4.5 6v6c0 4.4 3 7.5 7.5 9 4.5-1.5 7.5-4.6 7.5-9V6z" /><path d="m8.5 12 2.4 2.4L16 9.5" /></>,
   monitor: <><rect x="2.5" y="4" width="19" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></>,
 };
 
