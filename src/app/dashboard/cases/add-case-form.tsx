@@ -1,11 +1,17 @@
 "use client";
 
+// WO-346 exact-fidelity reconcile vs. design-mockups/iteration3/console/cases.tsx's Add-a-case
+// modal: ONE form whose target action swaps between the CNR lookup and the manual create (the
+// CNR field always stays visible per the reference; the manual toggle just adds fields below it),
+// closing with a single persistent Cancel/Add-case footer — instead of two separately-submitted
+// forms each with their own inline button. Real behaviour is unchanged: CNR-first fetch, manual
+// fallback (auto-revealed on a failed lookup), honest success/error feedback.
 import { useEffect, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { addCaseByCnr, createManualMatter, type ActionResult } from "./actions";
-import { Icon } from "@/components/icons";
+import { Combobox } from "@/components/combobox";
 
 const initial: ActionResult = { ok: false, message: "" };
 const manualInitial: { ok: boolean; message: string; matterId?: string } = { ok: false, message: "" };
@@ -13,19 +19,23 @@ const manualInitial: { ok: boolean; message: string; matterId?: string } = { ok:
 function SubmitButton({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="ec-btn ec-btn-ink shrink-0">
-      <Icon name="plus" className="h-4 w-4" /> {pending ? pendingLabel : label}
+    <button type="submit" disabled={pending} className="ec-btn ec-btn-ink flex-1">
+      {pending ? pendingLabel : label}
     </button>
   );
 }
 
-export function AddCaseForm({ autoCnr, autoFocus }: { autoCnr?: string; autoFocus?: boolean }) {
+export function AddCaseForm({
+  autoCnr, autoFocus, courts, onCancel,
+}: { autoCnr?: string; autoFocus?: boolean; courts: string[]; onCancel: () => void }) {
   const t = useTranslations("cases");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [state, formAction] = useFormState(addCaseByCnr, initial);
   const [manualState, manualAction] = useFormState(createManualMatter, manualInitial);
   const [manualOpen, setManualOpen] = useState(false);
-  const cnrFormRef = useRef<HTMLFormElement>(null);
+  const [court, setCourt] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const autoFired = useRef(false);
 
   // ?track=<CNR> deep link from /login (WO-50/WO-51): submit the prefilled CNR
@@ -33,7 +43,7 @@ export function AddCaseForm({ autoCnr, autoFocus }: { autoCnr?: string; autoFocu
   useEffect(() => {
     if (autoCnr && !autoFired.current) {
       autoFired.current = true;
-      cnrFormRef.current?.requestSubmit();
+      formRef.current?.requestSubmit();
     }
   }, [autoCnr]);
   useEffect(() => {
@@ -41,7 +51,7 @@ export function AddCaseForm({ autoCnr, autoFocus }: { autoCnr?: string; autoFocu
   }, [autoCnr, state.message, router]);
 
   // A failed CNR lookup is the moment the "add it manually" promise must lead somewhere:
-  // reveal the manual form so the advocate never hits a dead end (WO-35 #2).
+  // reveal the manual fields so the advocate never hits a dead end (WO-35 #2).
   const cnrFailed = Boolean(state.message) && !state.ok;
   useEffect(() => {
     if (cnrFailed) setManualOpen(true);
@@ -52,71 +62,86 @@ export function AddCaseForm({ autoCnr, autoFocus }: { autoCnr?: string; autoFocu
     if (manualState.ok && manualState.matterId) router.push(`/dashboard/cases/${manualState.matterId}`);
   }, [manualState.ok, manualState.matterId, router]);
 
+  const activeMessage = manualOpen ? manualState.message : state.message;
+  const activeOk = manualOpen ? manualState.ok : state.ok;
+
   return (
-    <div className="space-y-3">
-      <form ref={cnrFormRef} action={formAction} className="space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <div className="relative flex-1">
-            <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ec-ink-3" />
-            <input
-              name="cnr"
-              required
-              autoFocus={autoFocus}
-              defaultValue={autoCnr}
-              placeholder={t("add.placeholder")}
-              aria-label={t("add.aria")}
-              className="input num pl-9 uppercase"
-            />
-          </div>
-          <SubmitButton label={t("add.cta")} pendingLabel={t("add.fetching")} />
-        </div>
-        {state.message && (
-          <p role="status" className={`rounded-ec-s px-3.5 py-2.5 text-sm ${state.ok ? "bg-ec-success-t text-ec-success" : "bg-ec-warn-t text-ec-warn"}`}>
-            {state.message}
-          </p>
-        )}
-      </form>
-
-      <div className="border-t border-ec-hair pt-3">
-        <button
-          type="button"
-          onClick={() => setManualOpen((v) => !v)}
-          aria-expanded={manualOpen}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-ec-ink-2 hover:text-ec-brass-deep"
-        >
-          <Icon name={manualOpen ? "chevron" : "plus"} className="h-3.5 w-3.5" /> {t("manual.toggle")}
-        </button>
-
-        {manualOpen && (
-          <form action={manualAction} className="mt-3 space-y-3">
-            <p className="text-xs text-ec-ink-3">{t("manual.help")}</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className="ec-label mb-1 block">{t("manual.titleLabel")}</label>
-                <input name="title" required placeholder={t("manual.titlePlaceholder")} className="input" />
-              </div>
-              <div>
-                <label className="ec-label mb-1 block">{t("manual.courtLabel")}</label>
-                <input name="court" placeholder={t("manual.courtPlaceholder")} className="input" />
-              </div>
-              <div>
-                <label className="ec-label mb-1 block">{t("manual.typeLabel")}</label>
-                <input name="case_type" placeholder={t("manual.typePlaceholder")} className="input" />
-              </div>
-              <div>
-                <label className="ec-label mb-1 block">{t("manual.nextLabel")}</label>
-                <input name="next_hearing_date" type="date" className="input" />
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <SubmitButton label={t("manual.cta")} pendingLabel={t("manual.creating")} />
-              {manualState.message && !manualState.ok && (
-                <span role="status" className="text-sm text-ec-warn">{manualState.message}</span>
-              )}
-            </div>
-          </form>
-        )}
+    <form ref={formRef} action={manualOpen ? manualAction : formAction} className="space-y-4">
+      <div>
+        <label htmlFor="cnr" className="ec-label mb-1 flex items-baseline gap-1">
+          {t("add.cnrLabel")} <span className="text-ec-danger">*</span>
+        </label>
+        <input
+          id="cnr"
+          name="cnr"
+          required={!manualOpen}
+          autoFocus={autoFocus}
+          defaultValue={autoCnr}
+          maxLength={16}
+          placeholder={t("add.placeholder")}
+          aria-label={t("add.aria")}
+          className="input num font-mono uppercase tracking-[0.06em]"
+        />
+        <p className="mt-1 text-[11.5px] text-ec-ink-3">{t("add.cnrHint")}</p>
       </div>
-    </div>
+
+      <p className="text-[12.5px] text-ec-ink-3">{t("add.pullBody")}</p>
+
+      <button
+        type="button"
+        onClick={() => setManualOpen((v) => !v)}
+        aria-expanded={manualOpen}
+        className="text-[12.5px] font-medium text-ec-bronze-deep hover:underline"
+      >
+        {manualOpen ? t("manual.toggleHide") : t("manual.toggle")}
+      </button>
+
+      {manualOpen && (
+        <div className="grid gap-3 border-t border-ec-hair pt-4 sm:grid-cols-2">
+          <p className="text-xs text-ec-ink-3 sm:col-span-2">{t("manual.help")}</p>
+          <div className="sm:col-span-2">
+            <label className="ec-label mb-1 flex items-baseline gap-1">
+              {t("manual.titleLabel")} <span className="text-ec-danger">*</span>
+            </label>
+            <input name="title" required placeholder={t("manual.titlePlaceholder")} className="input" />
+          </div>
+          <div>
+            <label className="ec-label mb-1 block">{t("manual.caseNumberLabel")}</label>
+            <input name="case_number" placeholder={t("manual.caseNumberPlaceholder")} className="input num font-mono" />
+          </div>
+          <div>
+            <label className="ec-label mb-1 block">{t("manual.courtLabel")}</label>
+            <Combobox
+              label={t("manual.courtLabel")}
+              placeholder={t("manual.courtSelectPlaceholder")}
+              options={courts.map((c) => ({ value: c, label: c }))}
+              value={court}
+              onChange={setCourt}
+            />
+            <input type="hidden" name="court" value={court ?? ""} />
+          </div>
+          <div>
+            <label className="ec-label mb-1 block">{t("manual.nextLabel")}</label>
+            <input name="next_hearing_date" type="date" className="input num font-mono" />
+          </div>
+        </div>
+      )}
+
+      {activeMessage && (
+        <p role="status" className={`rounded-ec-s px-3.5 py-2.5 text-sm ${activeOk ? "bg-ec-success-t text-ec-success" : "bg-ec-warn-t text-ec-warn"}`}>
+          {activeMessage}
+        </p>
+      )}
+
+      <div className="flex gap-2 border-t border-ec-hair pt-4">
+        <button type="button" onClick={onCancel} className="ec-btn ec-btn-ghost">
+          {tc("actions.cancel")}
+        </button>
+        <SubmitButton
+          label={t("add.cta")}
+          pendingLabel={manualOpen ? t("manual.creating") : t("add.fetching")}
+        />
+      </div>
+    </form>
   );
 }

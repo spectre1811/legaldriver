@@ -127,7 +127,7 @@ export function CasesToolbar(props: Props) {
           onClick={() => setFiltersOpen(true)}
           className="ec-btn ec-btn-ghost px-3 py-2 text-xs"
         >
-          <Icon name="settings" className="h-3.5 w-3.5" /> {t("filters")}
+          <Icon name="sliders" className="h-3.5 w-3.5" /> {t("filters")}
           {panelCount > 0 && (
             <span className="num ml-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-ec-honey px-1 text-[0.6rem] font-bold text-ec-on-honey">
               {panelCount}
@@ -150,7 +150,7 @@ export function CasesToolbar(props: Props) {
 
         {/* Primary action — no reference slot (cases.tsx's own "+ New case" lives in its app-shell's
             global top bar, outside this component); kept here as the only real entry point we have. */}
-        <AddCaseButton autoCnr={autoCnr} autoOpen={autoOpen} />
+        <AddCaseButton autoCnr={autoCnr} autoOpen={autoOpen} courts={props.courts} />
       </div>
 
       {filtersOpen && <FiltersSheet {...props} onClose={() => setFiltersOpen(false)} />}
@@ -159,9 +159,14 @@ export function CasesToolbar(props: Props) {
   );
 }
 
-// ── "Refresh all cases" — honest info modal (WO-309 gate; see the toolbar button above) ───────────
+// ── "Refresh all cases" — honest info modal (WO-309 gate; see the toolbar button above). WO-346:
+// footer matched to the reference's Cancel + primary-CTA layout (cases.tsx's own refresh-all
+// modal) — the primary stays real-honest (disabled + tooltip), since a synchronous fan-out over
+// every matter is exactly what WO-309 ruled out on measured WAF evidence (BP-66), not something
+// this modal can fake as a working button.
 function RefreshAllModal({ onClose }: { onClose: () => void }) {
   const t = useTranslations("cases.toolbar");
+  const tc = useTranslations("common");
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
@@ -179,9 +184,16 @@ function RefreshAllModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <p className="px-5 py-5 text-[13.5px] leading-relaxed text-ec-ink-2">{t("refreshModalBody")}</p>
-        <div className="flex justify-end border-t border-ec-hair px-5 py-4">
-          <button type="button" onClick={onClose} className="rounded-ec-s bg-ec-ink px-3 py-2 text-[13px] font-medium text-ec-paper">
-            {t("refreshModalClose")}
+        <div className="flex gap-2 border-t border-ec-hair px-5 py-4">
+          <button type="button" onClick={onClose} className="ec-btn ec-btn-ghost">{tc("actions.cancel")}</button>
+          <button
+            type="button"
+            disabled
+            title={t("refreshAllTitle")}
+            aria-disabled="true"
+            className="ec-btn ec-btn-ink flex-1 opacity-40"
+          >
+            {t("refreshModalPrimary")}
           </button>
         </div>
       </div>
