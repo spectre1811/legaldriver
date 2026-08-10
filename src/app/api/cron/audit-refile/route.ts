@@ -6,6 +6,11 @@ import { withCronLock } from "@/lib/cron/lock";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+// WO-33 W4 · Scheduled audit-refile. Every tenant that has unfiled / needs-review documents gets
+// them re-matched against its CURRENT clients & cases — a doc that couldn't match last week (the
+// case didn't exist yet) matches now. Match-only: never creates records; a strong match auto-files,
+// a fuzzy one refreshes the Review Inbox suggestion. Service-role client, but every query filters
+// by tenant_id (never cross-tenant).
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {

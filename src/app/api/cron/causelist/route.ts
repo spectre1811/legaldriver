@@ -95,6 +95,12 @@ export async function GET(request: NextRequest) {
         alerted++;
       }
 
+      // WO-264: the morning email digest is RETIRED — the 6 pm IST daily-hearings board
+      // (/api/cron/daily-hearings) is the one board email; enqueuing both would double-email
+      // every listed advocate. In-app alerts + case-feed activity above stay (they carry the
+      // list-confirmed item numbers). Legacy in-flight digest rows still render via notify's
+      // renderNotice fallback until drained.
+
       // Product analytics (WO-15): a cause-list actually matched this tenant's cases — the core
       // "the product delivered value today" signal. Size BUCKET only (never which cases). Per tenant.
       if (matched.length) track("cause_list_alert", tenantId, { bucket: sizeBucket(matched.length) });

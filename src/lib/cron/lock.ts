@@ -16,16 +16,25 @@ export type CronLockClient = {
   };
 };
 
+const warnedJobs = new Set<string>();
+
 export async function withCronLock(
   jobName: string,
   handler: () => Promise<Response>,
   _client?: CronLockClient,
 ): Promise<Response> {
-  const lockEnabled = process.env.CRON_LOCK;
-  if (!lockEnabled) return handler();
+  if (process.env.CRON_LOCK !== "1") return handler();
 
-  const c: CronLockClient = _client ?? (createAdminClient() as unknown as CronLockClient);
   const holder = crypto.randomUUID();
+  if (!_client) {
+    try {
+      _client = createAdminClient() as unknown as CronLockClient;
+    } catch {
+      warnOnce(jobName, `createAdminClient failed — pass-through`);
+      return handler();
+    }
+  }
+  const c = _client;
 
   let acquired = false;
   try {
@@ -36,9 +45,7 @@ export async function withCronLock(
     });
 
     if (error) {
-      console.warn(
-        `[cron-lock] rpc error for ${jobName} — pass-through: ${error.message}`,
-      );
+      warnOnce(jobName, `rpc error — pass-through: ${error.message}`);
       return handler();
     }
 
@@ -51,9 +58,9 @@ export async function withCronLock(
       try {
         await c.from("court_provider_health").upsert(
           {
-            provider: "cron-lock",
+            provider: `cron-lock:${jobName}`,
             ok: true,
-            last_error: `lock-skip:${jobName}`,
+            last_error: `skip`,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "provider" },
@@ -71,9 +78,9 @@ export async function withCronLock(
       try {
         await c.from("court_provider_health").upsert(
           {
-            provider: "cron-lock",
+            provider: `cron-lock:${jobName}`,
             ok: true,
-            last_error: `lease-expiry:${jobName}`,
+            last_error: `stale`,
             updated_at: new Date().toISOString(),
           },
           { onConflict: "provider" },
@@ -99,4 +106,13 @@ export async function withCronLock(
       }
     }
   }
+}
+
+function warnOnce(jobName: string, msg: string) {
+  if (warnedJobs.has(jobName)) {
+    console.debug(`[cron-lock] ${jobName} — ${msg}`);
+    return;
+  }
+  warnedJobs.add(jobName);
+  console.warn(`[cron-lock] ${jobName} — ${msg}`);
 }

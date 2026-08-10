@@ -1,4 +1,5 @@
 -- WO-355 W1 — cron mutual exclusion (lease mutex).
+set lock_timeout = '5s';  -- backend-verification §6: never convoy live traffic on DDL
 -- INERT until founder-applied; code is fail-soft both directions: table/function absent
 -- → handlers run unguarded exactly as today (one warn log); applied table + CRON_LOCK unset
 -- → functions exist but are never called. Rollback: drop the two functions + the table.
@@ -6,18 +7,18 @@
 -- Lease TTL default 900s (15 min = 3× the 5-min notify cadence): a run in the 5–15 min band
 -- keeps its lease (no pile-up — WO-355 W3 acceptance); only a crashed run blocks its job, ≤15 min.
 
-create table if not exists public.cron_lock (
+create table if not exists cron_lock (
   job_name    text primary key,
   lease_until timestamptz not null,
   holder      text not null
 );
 
-comment on table public.cron_lock is
+comment on table cron_lock is
   'WO-355: one row per cron job; a handler holds the lease or exits. Service-role only.';
 
 -- Service-role-only surface: RLS on with NO policies (service_role bypasses RLS; everyone
 -- else is denied). Do not add policies — this table has no user-facing reads.
-alter table public.cron_lock enable row level security;
+alter table cron_lock enable row level security;
 
 -- Atomic acquire-or-nothing. Returns a row {acquired:true, stale:bool} when the lease was
 -- taken; returns NO row (rpc data = null) when a live lease exists — callers treat anything
@@ -58,6 +59,7 @@ $$;
 create index if not exists idx_matter_refresh_scan
   on public.matter (last_synced_at asc nulls first)
   where deleted_at is null and cnr is not null;
+analyze public.matter;  -- fresh stats so the planner sees the partial index immediately
 
 -- Postgres grants EXECUTE on new functions to PUBLIC by default, and PostgREST exposes
 -- public functions as /rpc/* — without these revokes, anon could acquire/hold cron leases

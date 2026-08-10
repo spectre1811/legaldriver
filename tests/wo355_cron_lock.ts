@@ -1,6 +1,6 @@
 // WO-355 W1+W2 — cron lease mutex unit tests.
-// Tests: flag-off · acquire (jsonb) · stale-lease steal · contend (null + {acquired:false})
-//        absent-table · network-error · handler-throws · release-throw
+// Tests: flag-off · CRON_LOCK='0' · acquire · stale-lease steal · contend (null + {acquired:false})
+//        absent-table · network-error · handler-throws · release-throw · warn-once
 // Run: npx tsx tests/wo355_cron_lock.ts
 import { withCronLock, type CronLockClient } from "../src/lib/cron/lock";
 
@@ -10,13 +10,18 @@ const check = (name: string, cond: boolean) => {
   if (!cond) failures++;
 };
 
+type HealthRow = { provider: string; last_error: string };
 function mockClient(overrides: {
   rpcResult?: { data: unknown; error: null | { code?: string; message: string } };
   rpcThrows?: Error;
   healthError?: boolean;
-}): { client: CronLockClient; rpcCalls: { fn: string; params: Record<string, unknown> }[]; healthCalls: string[] } {
+}): {
+  client: CronLockClient;
+  rpcCalls: { fn: string; params: Record<string, unknown> }[];
+  healthRows: HealthRow[];
+} {
   const rpcCalls: { fn: string; params: Record<string, unknown> }[] = [];
-  const healthCalls: string[] = [];
+  const healthRows: HealthRow[] = [];
   const client: CronLockClient = {
     rpc: async (fn, params) => {
       rpcCalls.push({ fn, params });
@@ -25,13 +30,16 @@ function mockClient(overrides: {
     },
     from: (_table) => ({
       upsert: async (values) => {
-        healthCalls.push((values as Record<string, unknown>).provider as string);
+        healthRows.push({
+          provider: (values as Record<string, unknown>).provider as string,
+          last_error: (values as Record<string, unknown>).last_error as string,
+        });
         if (overrides.healthError) throw new Error("health write failed");
         return { error: null };
       },
     }),
   };
-  return { client, rpcCalls, healthCalls };
+  return { client, rpcCalls, healthRows };
 }
 
 async function main() {
@@ -44,15 +52,30 @@ async function main() {
       handlerRan = true;
       return new Response("handler-output");
     });
-    check("flag off → handler runs", handlerRan);
-    check("flag off → handler output preserved", (await res.text()) === "handler-output");
+    check("flag off (unset) → handler runs", handlerRan);
+    check("flag off (unset) → handler output preserved", (await res.text()) === "handler-output");
     if (orig !== undefined) process.env.CRON_LOCK = orig;
   }
 
-  // ── 2. Acquire success {acquired:true, stale:false} → handler runs + release ──
+  // ── 2. CRON_LOCK='0' → kill switch, transparent pass-through ──────
+  {
+    process.env.CRON_LOCK = "0";
+    const { rpcCalls } = mockClient({ rpcResult: { data: { acquired: true, stale: false }, error: null } });
+    let handlerRan = false;
+    const res = await withCronLock("test-job", async () => {
+      handlerRan = true;
+      return new Response("killswitch-ok");
+    }, mockClient({}).client);
+    check("CRON_LOCK='0' → handler runs", handlerRan);
+    check("CRON_LOCK='0' → zero rpc calls", rpcCalls.length === 0);
+    check("CRON_LOCK='0' → handler output preserved", (await res.text()) === "killswitch-ok");
+    delete process.env.CRON_LOCK;
+  }
+
+  // ── 3. Acquire success {acquired:true, stale:false} ────────────────
   {
     process.env.CRON_LOCK = "1";
-    const { client, rpcCalls } = mockClient({
+    const { client, rpcCalls, healthRows } = mockClient({
       rpcResult: { data: { acquired: true, stale: false }, error: null },
     });
     let handlerRan = false;
@@ -60,18 +83,19 @@ async function main() {
       handlerRan = true;
       return new Response("ok");
     }, client);
-    check("acquire (jsonb) → handler runs", handlerRan);
-    check("acquire (jsonb) → rpc acquire called", rpcCalls.some((c) => c.fn === "try_acquire_cron_lock"));
-    check("acquire (jsonb) → correct ttl", rpcCalls[0]?.params?.p_ttl_seconds === 900);
-    check("acquire (jsonb) → release called in finally", rpcCalls.some((c) => c.fn === "release_cron_lock"));
-    check("acquire (jsonb) → handler output preserved", (await res.text()) === "ok");
+    check("acquire → handler runs", handlerRan);
+    check("acquire → rpc acquire called", rpcCalls.some((c) => c.fn === "try_acquire_cron_lock"));
+    check("acquire → correct ttl", rpcCalls[0]?.params?.p_ttl_seconds === 900);
+    check("acquire → release called in finally", rpcCalls.some((c) => c.fn === "release_cron_lock"));
+    check("acquire → handler output preserved", (await res.text()) === "ok");
+    check("acquire → no health row (not stale, not skipped)", healthRows.length === 0);
     delete process.env.CRON_LOCK;
   }
 
-  // ── 3. Stale-lease steal {acquired:true, stale:true} ─────────────────
+  // ── 4. Stale-lease steal {acquired:true, stale:true} ───────────────
   {
     process.env.CRON_LOCK = "1";
-    const { client, rpcCalls, healthCalls } = mockClient({
+    const { client, rpcCalls, healthRows } = mockClient({
       rpcResult: { data: { acquired: true, stale: true }, error: null },
     });
     let handlerRan = false;
@@ -82,15 +106,18 @@ async function main() {
     check("stale-lease → handler runs", handlerRan);
     check("stale-lease → acquire called", rpcCalls.some((c) => c.fn === "try_acquire_cron_lock"));
     check("stale-lease → release called", rpcCalls.some((c) => c.fn === "release_cron_lock"));
-    check("stale-lease → health row written", healthCalls.includes("cron-lock"));
+    check("stale-lease → per-job health provider", healthRows[0]?.provider === "cron-lock:stale-job");
+    check("stale-lease → last_error = stale", healthRows[0]?.last_error === "stale");
     check("stale-lease → handler output preserved", (await res.text()) === "stale-ok");
     delete process.env.CRON_LOCK;
   }
 
-  // ── 4. Contend: data is null (no row returned) → lock-skip ──────────
+  // ── 5. Contend: data is null (no row returned) → lock-skip ────────
   {
     process.env.CRON_LOCK = "1";
-    const { client, rpcCalls } = mockClient({ rpcResult: { data: null, error: null } });
+    const { client, rpcCalls, healthRows } = mockClient({
+      rpcResult: { data: null, error: null },
+    });
     let handlerRan = false;
     const res = await withCronLock("busy-job", async () => {
       handlerRan = true;
@@ -98,15 +125,17 @@ async function main() {
     }, client);
     check("contend (null) → handler NOT run", !handlerRan);
     check("contend (null) → release NOT called", !rpcCalls.some((c) => c.fn === "release_cron_lock"));
-    check("contend (null) → lock_skip true", (await res.json()).lock_skip === true);
+    check("contend (null) → response lock_skip", (await res.json()).lock_skip === true);
     check("contend (null) → 200 status", res.status === 200);
+    check("contend (null) → per-job health provider", healthRows[0]?.provider === "cron-lock:busy-job");
+    check("contend (null) → last_error = skip", healthRows[0]?.last_error === "skip");
     delete process.env.CRON_LOCK;
   }
 
-  // ── 5. Contend: {acquired:false} ────────────────────────────────────
+  // ── 6. Contend: {acquired:false} ──────────────────────────────────
   {
     process.env.CRON_LOCK = "1";
-    const { client } = mockClient({
+    const { client, healthRows } = mockClient({
       rpcResult: { data: { acquired: false }, error: null },
     });
     let handlerRan = false;
@@ -117,10 +146,11 @@ async function main() {
     check("contend {acquired:false} → handler NOT run", !handlerRan);
     check("contend {acquired:false} → lock_skip", res.status === 200);
     check("contend {acquired:false} → lock_skip true", (await res.json()).lock_skip === true);
+    check("contend {acquired:false} → per-job health provider", healthRows[0]?.provider === "cron-lock:busy-job");
     delete process.env.CRON_LOCK;
   }
 
-  // ── 6. Handler throws after acquire → exception propagates, release in finally ──
+  // ── 7. Handler throws after acquire → exception propagates, release in finally ──
   {
     process.env.CRON_LOCK = "1";
     const { client, rpcCalls } = mockClient({
@@ -142,7 +172,7 @@ async function main() {
     delete process.env.CRON_LOCK;
   }
 
-  // ── 7. Handler throws after stale-lease acquire → release in finally ──
+  // ── 8. Handler throws after stale-lease acquire → release in finally ──
   {
     process.env.CRON_LOCK = "1";
     const { client, rpcCalls } = mockClient({
@@ -161,7 +191,7 @@ async function main() {
     delete process.env.CRON_LOCK;
   }
 
-  // ── 8. Health write fails on lock-skip → still returns 200 ─────────
+  // ── 9. Health write fails on lock-skip → still returns 200 ────────
   {
     process.env.CRON_LOCK = "1";
     const { client } = mockClient({
@@ -178,7 +208,7 @@ async function main() {
     delete process.env.CRON_LOCK;
   }
 
-  // ── 9. RPC returns error (absent table/function) → pass-through ──────
+  // ── 10. RPC returns error (absent table/function) → pass-through ───
   {
     process.env.CRON_LOCK = "1";
     const { client, rpcCalls } = mockClient({
@@ -195,10 +225,12 @@ async function main() {
     delete process.env.CRON_LOCK;
   }
 
-  // ── 10. RPC throws (network error) → pass-through ───────────────────
+  // ── 11. RPC throws (network error) → pass-through ──────────────────
   {
     process.env.CRON_LOCK = "1";
-    const { client, rpcCalls } = mockClient({ rpcThrows: new Error("ENOTFOUND") });
+    const { client, rpcCalls } = mockClient({
+      rpcThrows: new Error("ENOTFOUND"),
+    });
     let handlerRan = false;
     const res = await withCronLock("test-job", async () => {
       handlerRan = true;
@@ -210,7 +242,7 @@ async function main() {
     delete process.env.CRON_LOCK;
   }
 
-  // ── 11. Release throw → handler result still returned ───────────────
+  // ── 12. Release throw → handler result still returned ──────────────
   {
     process.env.CRON_LOCK = "1";
     const p_calls: { fn: string }[] = [];
