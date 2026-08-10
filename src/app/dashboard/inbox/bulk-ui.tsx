@@ -4,10 +4,14 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 
 // Shared bulk action row + undo toast for the inbox lists (WO-29). WO-335: restyled to the
-// Chambers reference's inline selected-row (was a floating sticky-bottom pill) — same real
-// actions (archive/delete), the reference's own "File all" is rendered honestly-disabled: bulk
-// filing to each email's own suggestion isn't wired yet (would extend the file-to-case flow,
-// out of this restyle-only WO's scope — flagged in the PR + queue/INBOX.md, not fabricated).
+// Chambers reference's inline selected-row (was a floating sticky-bottom pill) — same node order
+// as the reference (selected count → File all → Ignore → Mark reviewed → Clear). The reference's
+// own "File all" and "Mark reviewed" are rendered honestly-disabled: bulk filing to each email's
+// own suggestion, and a reviewed state, are both real extensions of the file-to-case flow (the
+// latter has no schema backing at all — status is only needs_review/filed/archived/deleted) — out
+// of this restyle-only WO's scope, flagged in the PR + queue/INBOX.md, not fabricated. "Delete" is
+// real pre-existing WO-29 functionality with no reference counterpart, kept and appended after the
+// reference's own nodes rather than dropped.
 export function BulkBar({ count, busy, onArchive, onDelete, onClear }: {
   count: number; busy: boolean; onArchive: () => void; onDelete: () => void; onClear: () => void;
 }) {
@@ -28,6 +32,15 @@ export function BulkBar({ count, busy, onArchive, onDelete, onClear }: {
       </button>
       <button disabled={busy} onClick={onArchive} className="text-[12.5px] text-ec-ink-2 hover:text-ec-bronze disabled:opacity-50">
         {td("bulk.ignore")}
+      </button>
+      <button
+        type="button"
+        disabled
+        title={td("bulk.markReviewedPending")}
+        aria-disabled="true"
+        className="text-[12.5px] text-ec-muted-ink opacity-60"
+      >
+        {td("bulk.markReviewed")}
       </button>
       <button disabled={busy} onClick={onDelete} className="text-[12.5px] text-ec-danger hover:underline disabled:opacity-50">
         {t("bulk.delete")}

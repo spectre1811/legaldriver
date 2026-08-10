@@ -388,7 +388,14 @@
       "bulk": {
         "fileAll": "File all",
         "fileAllPending": "Bulk filing is coming soon — file one at a time from the preview.",
-        "ignore": "Ignore"
+        "ignore": "Ignore",
+        "markReviewed": "Mark reviewed",
+        "markReviewedPending": "Marking reviewed is coming soon — there's no separate reviewed state yet."
+      },
+      "dock": {
+        "docType": "Document type",
+        "docTypeNone": "Not classified yet",
+        "clientHint": "Optional — appears on their page."
       }
     },
     "directory": {
@@ -1066,9 +1073,18 @@
       "footnote": "Court data from the public court record · not legal advice · verify against the official record."
     },
     "trust": {
-      "cases": { "title": "Cases & deadlines", "line": "Every case, hearing & deadline in one calendar" },
-      "inbox": { "title": "Gmail inbox", "line": "Gmail auto-filed against the right client & case" },
-      "notices": { "title": "Notice escalation", "line": "Legal-notice escalation that runs itself" }
+      "cases": {
+        "title": "Cases & deadlines",
+        "line": "Every case, hearing & deadline in one calendar"
+      },
+      "inbox": {
+        "title": "Gmail inbox",
+        "line": "Gmail auto-filed against the right client & case"
+      },
+      "notices": {
+        "title": "Notice escalation",
+        "line": "Legal-notice escalation that runs itself"
+      }
     },
     "google": "Continue with Google",
     "googlePending": "Opening Google…",
@@ -1722,7 +1738,7 @@
   },
   "inbox": {
     "title": "Inbox",
-    "subtitle": "Connect Gmail to auto-file emails & attachments against the right client or case.",
+    "subtitle": "Forward it; it files itself — read the document, then file it to the matter.",
     "connected": "Gmail connected.",
     "state": {
       "connected": "Connected — syncing every 30 min.",
@@ -1796,12 +1812,11 @@
     },
     "confirmAll": "Confirm all high-confidence ({count})",
     "preview": {
-      "none": "Select an email to preview it here.",
+      "none": "Select an email to read it, preview the attachment and file it to a matter.",
       "suggests": "Suggests",
       "noCaseMatch": "No case match",
-      "reply": "Reply",
-      "archive": "Archive",
-      "attachments": "Attachments"
+      "attachments": "Attachments",
+      "closeAria": "Close email"
     },
     "dock": {
       "title": "File this email",
@@ -1809,10 +1824,10 @@
       "case": "Case",
       "clientPlaceholder": "Search clients",
       "casePlaceholder": "Search cases",
-      "skip": "Skip",
-      "file": "File",
+      "file": "File to case",
       "filing": "Filing…",
-      "filed": "Filed to {target}."
+      "filed": "Filed to {target}.",
+      "notThisCase": "Not this case"
     },
     "emptyTab": {
       "filed": "Nothing auto-filed yet.",
