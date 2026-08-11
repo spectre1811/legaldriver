@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import { getMailer, getMailerReadiness } from "@/lib/notify/mailer";
 import { logOutboundEmail } from "@/lib/notify/log";
 import { retryPlan, MAX_SEND_ATTEMPTS } from "@/lib/notify/retry";
+import { runPipeline } from "@/lib/notify/pipeline";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
 
@@ -195,17 +196,60 @@ try {
     check("retry drill: dead/sent rows are never picked again", !pickedForSend(deadRow) && !pickedForSend(row));
   }
 
-  // ── route wiring (source): retry lane, terminal dead, fail-soft fallbacks, dead-man ──
+  // ── WO-358 migrated wiring checks: the 8 invariants previously pinned to
+  // route.ts now live in extracted lib/notify/ modules. Each check carries
+  // a comment naming the original WO-288 check it replaces. See EVIDENCE for
+  // the full mapping table.
   {
-    const route = src("src/app/api/cron/notify/route.ts");
-    check("route: retry pickup exists and is bounded", route.includes('.eq("status", "failed")') && route.includes('.lt("attempts", MAX_SEND_ATTEMPTS)'));
-    check("route: retry pickup is email-only (WhatsApp seam untouched)", /eq\("status", "failed"\)\s*\n?\s*\.eq\("channel", "email"\)/.test(route.replace(/\s+/g, " ")) || route.includes('.eq("channel", "email")'));
-    check("route: terminal dead flip with pre-apply fallback to 'failed'", route.includes('status: "dead"') && route.includes("if (deadErr)"));
-    check("route: failure flip fail-soft (pre-apply plain 'failed')", route.includes("if (upErr)"));
-    check("route: flips are status-guarded (idempotent)", route.includes('.in("status", ["pending", "failed"])'));
-    check("route: send outcome logged WITH the provider error", route.includes("error: res.error"));
-    check("route: dead-man row on court_provider_health (drill i)", route.includes('provider: "email-sendpath"') && route.includes("court_provider_health"));
-    check("route: retryPlan drives the failure transition", route.includes("retryPlan(n.attempts)"));
+    // (1) retry pickup: bounded, picks up failed email rows
+    // Replaces — "route: retry pickup exists and is bounded"
+    const pickup = src("src/lib/notify/pickup.ts");
+    check("pickup: retry pickup exists and is bounded",
+      pickup.includes('.eq("status", "failed")') && pickup.includes('.lt("attempts", MAX_SEND_ATTEMPTS)'));
+
+    // (2) retry pickup is email-only — WhatsApp seam untouched
+    // Replaces — "route: retry pickup is email-only (WhatsApp seam untouched)"
+    check("pickup: retry pickup is email-only (WhatsApp seam untouched)",
+      pickup.includes('.eq("channel", "email")'));
+
+    // (3) terminal dead flip with pre-apply fallback to "failed"
+    // Replaces — "route: terminal dead flip with pre-apply fallback to 'failed'"
+    const deadRefs = src("src/lib/notify/filter/dead-refs.ts");
+    check("filter/dead-refs: terminal dead flip with pre-apply fallback to 'failed'",
+      deadRefs.includes('status: "dead"') && deadRefs.includes("if (deadErr)"));
+
+    // (4) failure flip fail-soft: pre-apply DB rejection of 'attempts' column
+    // Replaces — "route: failure flip fail-soft (pre-apply plain 'failed')"
+    const deliverEmail = src("src/lib/notify/deliver/email.ts");
+    check("deliver/email: failure flip fail-soft (pre-apply plain 'failed')",
+      deliverEmail.includes("if (upErr)"));
+
+    // (5) flips are status-guarded (idempotent) — checked across deliver modules
+    // Replaces — "route: flips are status-guarded (idempotent)"
+    const deliverWhatsapp = src("src/lib/notify/deliver/whatsapp.ts");
+    const deliverInapp = src("src/lib/notify/deliver/inapp.ts");
+    check("deliver/email: flips are status-guarded (idempotent)",
+      deliverEmail.includes('.in("status", ["pending", "failed"])'));
+    check("deliver/whatsapp: flips are idempotent (eq status pending)",
+      deliverWhatsapp.includes('.eq("status", "pending")'));
+    check("deliver/inapp: flips are status-guarded (idempotent)",
+      deliverInapp.includes('.in("status", ["pending", "failed"])'));
+
+    // (6) send outcome logged WITH the provider error
+    // Replaces — "route: send outcome logged WITH the provider error"
+    check("deliver/email: send outcome logged WITH the provider error",
+      deliverEmail.includes("error: res.error"));
+
+    // (7) dead-man row on court_provider_health
+    // Replaces — "route: dead-man row on court_provider_health (drill i)"
+    const healthMod = src("src/lib/notify/health.ts");
+    check("health: dead-man row on court_provider_health (drill i)",
+      healthMod.includes('provider: "email-sendpath"') && healthMod.includes("court_provider_health"));
+
+    // (8) retryPlan drives the failure transition
+    // Replaces — "route: retryPlan drives the failure transition"
+    check("deliver/email: retryPlan drives the failure transition",
+      deliverEmail.includes("retryPlan(row.attempts)"));
   }
 
   // ── access paths (a): no silent swallow left ──
@@ -235,6 +279,144 @@ try {
       check("migration: outbound_email gains error + nullable tenant", sql.includes("add column if not exists error") && sql.includes("drop not null"));
       check("migration: notification gains attempts + dead status", sql.includes("attempts") && sql.includes("'dead'"));
       check("migration: NO RLS policy changes (posture preserved)", !/create policy|alter policy|drop policy/i.test(sql));
+    }
+  }
+  // ── WO-358 behavioral assertion: every picked-up email row produces a
+  // notification mutation (no row silently left pending), and a throwing mailer
+  // writes the email-sendpath health row with ok:false.
+  // Drives runPipeline directly — catches BLOCKER 1 (early-return skips retry
+  // flip, row stays pending) and BLOCKER 2 (catch sets attempt:false → dead-man
+  // short-circuits). Must be impossible to pass vacuously.
+  {
+    // ── Mock helpers (minimal — only the paths this test reaches) ──
+    function chain(): any {
+      const self: any = {};
+      self.eq = () => self; self.neq = () => self; self.in = () => self;
+      self.is = () => self; self.lt = () => self; self.lte = () => self;
+      self.contains = () => self; self.order = () => self;
+      self.select = () => self; self.update = () => self;
+      self.insert = async () => ({ error: null });
+      self.limit = () => self;
+      self.maybeSingle = async () => ({ data: null, error: null });
+      self.upsert = async () => ({ error: null });
+      self.then = (resolve: (v: unknown) => void) => resolve({ data: null, error: null });
+      return self;
+    }
+
+    function mk(overrides?: Record<string, unknown>): any {
+      return Object.assign(chain(), overrides ?? {});
+    }
+
+    const notifMuts: { id: string; status: string; attempts?: number }[] = [];
+    const healthMutations: { provider: string; ok: boolean; last_error?: string | null }[] = [];
+
+    type PendingRow = { id: string; tenant_id: string; user_id: string | null; channel: string; kind: string; payload: Record<string, unknown> };
+    let currentPending: PendingRow[] = [];
+
+    function makeDB(getUserReturnsEmail: boolean) {
+      notifMuts.length = 0;
+      healthMutations.length = 0;
+      return {
+        from: (table: string) => {
+          if (table === "notification") {
+            const n = mk();
+            n.select = () => n;
+            n.update = (vals: Record<string, unknown>) => {
+              n.then = (resolve: (v: unknown) => void) => {
+                // Track mutations by matching eq("id", ...) that was called
+                resolve({ error: null });
+              };
+              // Track idVal from eq("id", ...)
+              let idVal = "";
+              n.eq = (c: string, v: string) => { if (c === "id") idVal = String(v); return n; };
+              n.in = () => n;
+              const origThen = n.then;
+              n.then = (resolve: (v: unknown) => void) => {
+                if (idVal) notifMuts.push({ id: idVal, status: vals.status as string, attempts: vals.attempts as number | undefined });
+                resolve({ error: null });
+              };
+              return n;
+            };
+            n.then = (resolve: (v: unknown) => void) => resolve({ data: currentPending, error: null });
+            return n;
+          }
+          if (table === "matter") {
+            const m = mk();
+            m.then = (resolve: (v: unknown) => void) => resolve({ data: [{ id: "m1" }], error: null });
+            return m;
+          }
+          if (table === "outbound_email") {
+            return mk({ insert: async () => ({ error: null }) });
+          }
+          if (table === "court_provider_health") {
+            return mk({
+              upsert: async (row: Record<string, unknown>) => {
+                healthMutations.push({
+                  provider: (row as any).provider,
+                  ok: (row as any).ok,
+                  last_error: (row as any).last_error,
+                });
+                return { error: null };
+              },
+            });
+          }
+          if (table === "profile") {
+            return mk({ then: (resolve: (v: unknown) => void) => resolve({ data: null, error: null }) });
+          }
+          return mk();
+        },
+        auth: { admin: { getUserById: async () => ({ data: { user: getUserReturnsEmail ? { email: "test@test.com" } : null }, error: null }) } },
+        rpc: async () => ({ data: null, error: null }),
+      } as any;
+    }
+
+    class ThrowingMailer {
+      readonly channel = "email";
+      async send() { throw new Error("simulated provider crash"); }
+    }
+
+    class OkMailer {
+      readonly channel = "email";
+      async send() { return { ok: true, id: "em_ok" }; }
+    }
+
+    // ── (a) Unresolvable recipient → flipFailed writes the row out of pending ──
+    {
+      const row: PendingRow = {
+        id: "r-a", tenant_id: "t1", user_id: "u1",
+        channel: "email", kind: "case_update",
+        payload: { matterId: "m1", title: "A v. B", change: "New order", court: "HC", cnr: "CNR1" },
+      };
+      currentPending = [row];
+      setEnv({ RESEND_API_KEY: "re_test", FROM_EMAIL: "test@mukadma.in" });
+      const { error: pipeErr } = await runPipeline(makeDB(false /* no user */), getMailer(), new Date("2026-08-11T10:00:00Z"));
+      check("behavioral: unresolvable recipient → pipeline did not error", !pipeErr);
+      const rowMut = notifMuts.find((m) => m.id === "r-a");
+      check("behavioral: unresolvable recipient → row produced a mutation (not left pending)", !!rowMut);
+      check("behavioral: unresolvable recipient → mutation status is 'failed'", rowMut?.status === "failed");
+      check("behavioral: unresolvable recipient → attempts incremented", (rowMut?.attempts ?? 0) >= 1);
+    }
+
+    // ── (b) Throwing mailer → catch runs flipFailed + dead-man fires ──
+    {
+      const row: PendingRow = {
+        id: "r-b", tenant_id: "t1", user_id: "u1",
+        channel: "email", kind: "case_update",
+        payload: { matterId: "m1", title: "B v. C", change: "New order", court: "HC", cnr: "CNR2" },
+      };
+      currentPending = [row];
+      notifMuts.length = 0;
+      healthMutations.length = 0;
+      setEnv({ RESEND_API_KEY: "re_test", FROM_EMAIL: "test@mukadma.in" });
+      const { error: pipeErr } = await runPipeline(makeDB(true /* user has email */), new ThrowingMailer() as any, new Date("2026-08-11T10:00:00Z"));
+      check("behavioral: throwing mailer → pipeline did not error", !pipeErr);
+      const rowMut = notifMuts.find((m) => m.id === "r-b");
+      check("behavioral: throwing mailer → row produced a mutation (not left pending)", !!rowMut);
+      check("behavioral: throwing mailer → mutation status is 'failed'", rowMut?.status === "failed");
+      check("behavioral: throwing mailer → attempts incremented", (rowMut?.attempts ?? 0) >= 1);
+      const dm = healthMutations.find((m) => m.provider === "email-sendpath");
+      check("behavioral: throwing mailer → email-sendpath health row written", !!dm);
+      check("behavioral: throwing mailer → health row ok is false", dm?.ok === false);
     }
   }
 } finally {
