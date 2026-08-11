@@ -1,17 +1,18 @@
-import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { handleExport } from "@/lib/export/handler";
 
-// GET /api/export — DPDP "download my data": the signed-in user's tenant data as a JSON file.
-// Every query goes through the RLS server client (scoped to the caller's tenant) — NO service-role.
-// Document/voice BLOBS are not included (those are separate Storage objects) — only their metadata.
-//
-// WO-365 W1 · safety bound: a generous per-table row cap (env dial EXPORT_ROW_LIMIT, default 10 000)
-// guards against a memory/timeout blowup on a large tenant. If ANY table hits the cap the response
-// carries `truncated: true` + per-table `truncations` (returned / omitted / total) — the calling
-// user ALWAYS knows the download was partial. Telemetry lands via console.warn so ops learns from
-// the log before the user complains. Pagination/continuation is the eventual correct fix, not this
-// wave.
-const EXPORT_ROW_LIMIT = Number(process.env.EXPORT_ROW_LIMIT || "10000");
+const DEFAULT_EXPORT_ROW_LIMIT = 10_000;
+
+function resolveExportRowLimit(): number {
+  const raw = process.env.EXPORT_ROW_LIMIT;
+  if (!raw) return DEFAULT_EXPORT_ROW_LIMIT;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) {
+    console.warn(`[export] invalid EXPORT_ROW_LIMIT="${raw}" — using default ${DEFAULT_EXPORT_ROW_LIMIT}`);
+    return DEFAULT_EXPORT_ROW_LIMIT;
+  }
+  return n;
+}
 
 const TABLES = [
   "tenant", "profile", "advocate", "matter", "client", "document",
@@ -19,42 +20,11 @@ const TABLES = [
   "notification_prefs", "audit_event",
 ] as const;
 
+// GET /api/export — DPDP "download my data": the signed-in user's tenant data as a JSON file.
+// Every query goes through the RLS server client (scoped to the caller's tenant) — NO service-role.
+// Document/voice BLOBS are not included (those are separate Storage objects) — only their metadata.
 export async function GET() {
+  const cap = resolveExportRowLimit();
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
-
-  const out: Record<string, unknown> = {
-    exported_at: new Date().toISOString(),
-    user: { id: user.id, email: user.email },
-  };
-  let truncated = false;
-  const truncations: Record<string, { returned: number; omitted: number; total: number }> = {};
-  const cap = EXPORT_ROW_LIMIT;
-
-  for (const tbl of TABLES) {
-    const { data, count } = await supabase.from(tbl).select("*", { count: "exact" }).limit(cap);
-    const rows = data ?? [];
-    const total = count ?? rows.length;
-    const omitted = total - rows.length;
-    out[tbl] = rows;
-    if (omitted > 0) {
-      truncated = true;
-      truncations[tbl] = { returned: rows.length, omitted, total };
-      console.warn(`[export] table ${tbl} truncated: returned ${rows.length}, omitted ${omitted}, total ${total} (cap: ${cap})`);
-    }
-  }
-
-  if (truncated) {
-    out.truncated = true;
-    out.truncations = truncations;
-  }
-
-  return new NextResponse(JSON.stringify(out, null, 2), {
-    headers: {
-      "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="mukadma-data-export.json"`,
-      "Cache-Control": "no-store",
-    },
-  });
+  return handleExport(supabase, cap, TABLES as unknown as readonly string[]);
 }
