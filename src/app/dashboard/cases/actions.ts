@@ -542,7 +542,10 @@ export async function refreshCase(matterId: string): Promise<ActionResult> {
   }
 
   try {
-    await upsertCase(supabase, tenantId, normalized);
+    const res = await upsertCase(supabase, tenantId, normalized);
+    // WO-359: writes-per-refresh in the summary log — the live-verification dial for the
+    // DIFF_SYNC rollout (diff path should read ~0 on a no-change refresh; old path won't).
+    console.log("[refreshCase] writes", { matterId, cnr: matter.cnr, writeCount: res?.writeCount });
   } catch (e) {
     // WO-156: a failed write must NOT masquerade as a dead/no-op button — surface it as an
     // honest error (and log the detail server-side) instead of throwing an unhandled rejection.
