@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
@@ -9,7 +8,6 @@ import { CasesNavProvider, PendingDim } from "./cases-nav-provider";
 import { CasesPagination } from "./cases-pagination";
 import { fetchCasesPage, fetchViewCounts, fetchTierCounts, type CasesFilters } from "./cases-query";
 import type { SavedView } from "./cases-nav";
-import { parseDensity, DENSITY_COOKIE } from "./density";
 import { parsePage, clampPerPage } from "@/lib/paginate";
 import { sanitizeTrack } from "@/lib/auth/redirects";
 import { Reveal } from "../motion";
@@ -33,8 +31,6 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const page = parsePage(searchParams.page);
   const per = clampPerPage(searchParams.per);
   const today = isoDay(new Date());
-  // WO-54 W4: per-user list density from the cookie → correct first paint (no hydration flash).
-  const density = parseDensity(cookies().get(DENSITY_COOKIE)?.value);
 
   // WO-54 W2b: the facet option lists are scoped to the ACTIVE TIER (uses matter_tier_idx) so the
   // dropdowns adapt per tier — on the High Court tab you only see HC courts/case-types, etc.
@@ -108,7 +104,10 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
         <PendingDim>
           {total > 0 ? (
             <div className="space-y-6">
-              <CasesTable rows={matters} today={today} stages={stages} initialDensity={density} />
+              {/* WO-405 C4: density is no longer server-seeded (was cookie-read here) — the shared
+                  usePersistedState hook hydrates the localStorage value client-side right after
+                  mount; CasesTable's own `initialDensity` default ("comfortable") covers first paint. */}
+              <CasesTable rows={matters} today={today} stages={stages} />
               <CasesPagination page={page} perPage={per} total={total} />
             </div>
           ) : (

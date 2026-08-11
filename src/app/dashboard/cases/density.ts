@@ -1,12 +1,14 @@
-// WO-54 W4 · Cases-list density preference (per-user, cookie-persisted). Pure + shared by the server
-// page (reads the cookie → correct first paint, no hydration flash) and the client table (writes it),
-// mirroring the app's cookie-resolved locale pattern. No DB migration — device-scoped preference.
+// WO-54 W4 · Cases-list density preference. WO-405 C4 (audit §4.4/§10 PRE-4) migrated the
+// persistence mechanism off a cookie (4KB budget, sent on every HTTP request for a UI-only
+// preference — audit §4.4 verdict) onto the shared `usePersistedState` localStorage hook. The
+// server page no longer seeds this from a cookie for first paint; the client hook hydrates it
+// right after mount (documented tradeoff — see use-persisted-state.ts's file comment).
 // WO-331 EXACT-FIDELITY: the reference (cases.tsx) toggles only "comfortable"/"compact" — the third
-// "cozy" middle ground was our own addition, dropped here to match. A cookie still holding the old
-// "cozy" value just falls back to the default below (parseDensity), never crashes.
+// "cozy" middle ground was our own addition, dropped here to match. A stored value that isn't one
+// of these (e.g. the old "cozy") just falls back to the default below (parseDensity), never crashes.
 export type Density = "comfortable" | "compact";
 export const DENSITIES: Density[] = ["comfortable", "compact"];
-export const DENSITY_COOKIE = "cases_density";
+export const DENSITY_STORAGE_KEY = "mukadma:cases:density";
 export const DEFAULT_DENSITY: Density = "comfortable";
 
 export function isDensity(v: unknown): v is Density {

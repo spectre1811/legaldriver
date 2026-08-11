@@ -5,7 +5,9 @@
       "cancel": "Cancel",
       "add": "Add",
       "search": "Search",
-      "retry": "Try again"
+      "retry": "Try again",
+      "close": "Close",
+      "dismiss": "Dismiss"
     },
     "states": {
       "loading": "Loading…",
