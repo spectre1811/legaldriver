@@ -110,6 +110,7 @@ const OFFLINE = [
   "wo326_public_proxy",
   "wo329_forwarded_host",
   "wo341_redirect_origin",
+  "wo355_cron_lock",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the

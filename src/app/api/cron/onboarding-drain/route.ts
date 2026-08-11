@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { drainOnboarding } from "@/lib/services/onboarding/orchestrator";
+import { withCronLock } from "@/lib/cron/lock";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -34,33 +35,35 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const admin = createAdminClient();
-  const staleBefore = new Date(Date.now() - STALE_MINUTES * 60_000).toISOString();
+  return withCronLock("onboarding-drain", async () => {
+    const admin = createAdminClient();
+    const staleBefore = new Date(Date.now() - STALE_MINUTES * 60_000).toISOString();
 
-  // Stalest-first so the most-abandoned runs get unblocked first; status='running' ⟹ non-terminal
-  // (done/error runs carry those statuses), so we only ever pick up genuinely-incomplete work.
-  const { data: runs, error } = await admin
-    .from("onboarding_run")
-    .select("id, updated_at")
-    .eq("status", "running")
-    .lt("updated_at", staleBefore)
-    .order("updated_at", { ascending: true })
-    .limit(MAX_RUNS_PER_TICK);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // Stalest-first so the most-abandoned runs get unblocked first; status='running' ⟹ non-terminal
+    // (done/error runs carry those statuses), so we only ever pick up genuinely-incomplete work.
+    const { data: runs, error } = await admin
+      .from("onboarding_run")
+      .select("id, updated_at")
+      .eq("status", "running")
+      .lt("updated_at", staleBefore)
+      .order("updated_at", { ascending: true })
+      .limit(MAX_RUNS_PER_TICK);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const started = Date.now();
-  let picked = 0, completed = 0, advanced = 0, deferred = 0;
-  for (const run of runs ?? []) {
-    if (Date.now() - started > TICK_BUDGET_MS) { deferred++; continue; } // out of budget → next tick
-    picked++;
-    try {
-      const res = await drainOnboarding(admin, admin, run.id, { budgetMs: PER_RUN_BUDGET_MS });
-      if (res.done) completed++; else advanced++; // advanced-but-not-done → finishes on a later tick/client
-    } catch {
-      // Never let one bad run fail the whole tick; its state is persisted + resumable.
-      deferred++;
+    const started = Date.now();
+    let picked = 0, completed = 0, advanced = 0, deferred = 0;
+    for (const run of runs ?? []) {
+      if (Date.now() - started > TICK_BUDGET_MS) { deferred++; continue; } // out of budget → next tick
+      picked++;
+      try {
+        const res = await drainOnboarding(admin, admin, run.id, { budgetMs: PER_RUN_BUDGET_MS });
+        if (res.done) completed++; else advanced++; // advanced-but-not-done → finishes on a later tick/client
+      } catch {
+        // Never let one bad run fail the whole tick; its state is persisted + resumable.
+        deferred++;
+      }
     }
-  }
 
-  return NextResponse.json({ ok: true, stale: (runs ?? []).length, picked, completed, advanced, deferred });
+    return NextResponse.json({ ok: true, stale: (runs ?? []).length, picked, completed, advanced, deferred });
+  });
 }

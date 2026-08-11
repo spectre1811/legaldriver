@@ -11,6 +11,7 @@ import { renderEmail, renderNotice, type RenderedEmail } from "@/lib/email/templ
 import { appUrl, composeCaseUpdate, hearingWhenLabel, istFriendlyDate, matterIdOf, type CaseUpdatePayload } from "@/lib/notify/email-render";
 import { caseDetailHref } from "@/lib/court/case-links";
 import { brand } from "@/lib/brand";
+import { withCronLock } from "@/lib/cron/lock";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -25,9 +26,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const supabase = createAdminClient();
-  const mailer = getMailer();
-  const nowIso = new Date().toISOString();
+  return withCronLock("notify", async () => {
+    const supabase = createAdminClient();
+    const mailer = getMailer();
+    const nowIso = new Date().toISOString();
 
   const { data: due, error } = await supabase
     .from("notification")
@@ -267,6 +269,7 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, channel: mailer.channel, whatsapp: messagingConfigured() ? "live" : "dark", considered: rows.length, retried: retryRows.length, sent, failed, dead, skipped, stale, deadRefs, roundups });
+  });
 }
 
 type DigestCase = { title?: string; cnr?: string; itemNo?: string; type?: string; judge?: string };
