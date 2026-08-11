@@ -114,35 +114,16 @@ export async function liveRefreshCaseInner(
 }
 
 // ── WO-359 W2: in-flight coalescing ──────────────────────────────────────────
-
-const REFRESH_LOCK_TTL_S = 30;
-const POLL_BASE_MS = 250;
-const POLL_MAX_MS = 2000;
-const POLL_BACKOFF = 1.6;
-
-const coalesceWarned = new Set<string>();
-function coalesceWarnOnce(key: string, msg: string) {
-  if (coalesceWarned.has(key)) {
-    console.debug(`[refresh-coalesce] ${key} — ${msg}`);
-    return;
-  }
-  coalesceWarned.add(key);
-  console.warn(`[refresh-coalesce] ${key} — ${msg}`);
-}
-
-// Force a LIVE re-scrape of ONE case (the user-clicked "Refresh" button) via the provider's
-// POST /refresh — NOT the cached GET. This is what makes "Refresh" actually go to eCourts, and
-// lets us tell the user the truth: on a live hit we write through + report "Refreshed"; when the
-// provider is reached but returns no live record (e.g. eCourts serves a null history — WO-191) or
-// errors, we fall back to the last-synced copy and flag `stale` so the caller can say "couldn't
-// get an update" instead of a false "Refreshed". The nightly cron stays on the cached bulk path.
 //
-// WO-359 W2: when REFRESH_COALESCE=1, concurrent calls for the same CNR are gated by a lock-row
-// table — ONE caller becomes the leader (does the live refresh), the rest poll with exponential
-// backoff and reap the leader's persisted cache result. Without coalescing, duplicate eCourts calls
-// + duplicate change-detection alerts fire — the W1 DIFF_SYNC path ensures the waiter's downstream
-// upsertCase sees zero changes (leader already persisted everything), so the acceptance criterion
-// (ZERO duplicate notification rows) holds.
+// When REFRESH_COALESCE=1, concurrent liveRefreshCase calls for the same CNR
+// are gated by a lock-row table. ONE caller becomes the leader (does the live
+// eCourts refresh), the rest poll with exponential backoff and reap the leader's
+// persisted cache result. The win: one upstream eCourts call instead of N, which
+// directly reduces per-IP pressure (the estate's binding constraint — WO-309).
+//
+// W1's DIFF_SYNC already prevents duplicate notification rows on re-upsert
+// (tested), so coalescing is a cost/scaling optimisation, not a correctness
+// fix for alerting.
 //
 // _admin and _client are injection seams for tests — omit in production.
 export async function liveRefreshCase(
@@ -159,7 +140,35 @@ export async function liveRefreshCase(
   }
 
   const holder = crypto.randomUUID();
-  const WAIT_MAX_MS = Number(process.env.REFRESH_COALESCE_WAIT_MS ?? "30000");
+  // Default 20s — below the cron's 25s live-lane deadline (liveDeadlineMs caps at
+  // 25s; live-lane.ts:36), so a waiter killed by withDeadline still gets our honest
+  // stale:true fallback at the end, not an abrupt thrown error with no return.
+  const WAIT_MAX_MS = Number(process.env.REFRESH_COALESCE_WAIT_MS ?? "20000");
+
+  // Lock TTL must be ≥ the wait window so a live leader doesn't get stolen
+  // mid-refresh by a waiter whose poll timed out.
+  //
+  // Orphan rows (crashed leader): the next caller for this CNR steals the lease
+  // via ON CONFLICT DO UPDATE WHERE lease_until < now() in try_acquire_refresh_lock.
+  // A CNR that is NEVER refreshed again after a crash leaves a permanent row —
+  // idx_refresh_lock_expired is pre-placed for a future reaper (W3 or later).
+  const REFRESH_LOCK_TTL_S = 30;
+  const POLL_BASE_MS = 250;
+  const POLL_MAX_MS = 2000;
+  const POLL_BACKOFF = 1.6;
+
+  const coalesceWarned = new Set<string>();
+  function coalesceWarnOnce(mode: string, msg: string) {
+    if (coalesceWarned.has(mode)) {
+      console.debug(`[refresh-coalesce] ${mode} — ${msg}`);
+      return;
+    }
+    coalesceWarned.add(mode);
+    console.warn(`[refresh-coalesce] ${mode} — ${msg}`);
+  }
+  function warnRelease(cnrKey: string) {
+    coalesceWarnOnce("release-failed", `release_refresh_lock failed for ${cnrKey} — lock will expire at TTL`);
+  }
 
   // ── Fail-soft: try the lock; if the RPC is unreachable, proceed unguarded ──
   // The RPC functions + refresh_lock table are not yet in database.types.ts
@@ -182,21 +191,24 @@ export async function liveRefreshCase(
       p_ttl_seconds: REFRESH_LOCK_TTL_S,
     });
     if (error) {
-      coalesceWarnOnce(key, `try_acquire_refresh_lock rpc error — pass-through: ${error.message}`);
+      coalesceWarnOnce("acquire-rpc-error", `try_acquire_refresh_lock rpc error for ${key} — pass-through: ${error.message}`);
       return liveRefreshCaseInner(key, admin, client);
     }
     lockResult = data;
   } catch (e) {
-    coalesceWarnOnce(key, `try_acquire_refresh_lock unexpected error — pass-through: ${String(e)}`);
+    coalesceWarnOnce("acquire-throw", `try_acquire_refresh_lock unexpected error for ${key} — pass-through: ${String(e)}`);
     return liveRefreshCaseInner(key, admin, client);
   }
 
   // ── Leader ──
-  if (lockResult && (lockResult as { acquired: boolean }).acquired) {
+  // try_acquire_refresh_lock also returns `stale: bool` — set to true when we stole
+  // an expired lease (previous leader crashed). Not branched on today; surfaced here
+  // for observability (a future cron sweep can aggregate stale-theft events).
+  if (lockResult && (lockResult as { acquired: boolean; stale?: boolean }).acquired) {
     try {
       return await liveRefreshCaseInner(key, admin, client);
     } finally {
-      void a.rpc("release_refresh_lock", { p_cnr: key, p_holder: holder });
+      a.rpc("release_refresh_lock", { p_cnr: key, p_holder: holder }).catch(() => warnRelease(key));
     }
   }
 
@@ -212,19 +224,26 @@ export async function liveRefreshCase(
       if (error) pollErr = error;
       else lockRow = data;
     } catch (e) {
-      coalesceWarnOnce(key, `refresh_lock poll error — pass-through: ${String(e)}`);
+      coalesceWarnOnce("poll-throw", `refresh_lock poll error for ${key} — pass-through: ${String(e)}`);
       return liveRefreshCaseInner(key, admin, client);
     }
 
     if (pollErr) {
-      coalesceWarnOnce(key, `refresh_lock table error — pass-through: ${String((pollErr as { message?: string }).message ?? pollErr)}`);
+      coalesceWarnOnce("table-missing", `refresh_lock table error for ${key} — pass-through: ${String((pollErr as { message?: string }).message ?? pollErr)}`);
       return liveRefreshCaseInner(key, admin, client);
     }
 
     if (!lockRow) {
       const cached = await readCache(admin, "case", key);
       if (cached) {
-        return { case: cached.normalized, cacheHit: true, stale: false, source: cached.normalized.source };
+        // The cache row must have been written AFTER our wait began — otherwise
+        // the leader released without writing (error / no-record paths) and we
+        // would be claiming "Refreshed" over a row from hours ago.
+        if (cached.ageMs < Date.now() - waitStart) {
+          return { case: cached.normalized, cacheHit: true, stale: false, source: cached.normalized.source };
+        }
+        // Cache predates our wait → treat as stale (leader couldn't refresh).
+        return { case: cached.normalized, cacheHit: true, stale: true, source: cached.normalized.source };
       }
       break;
     }
@@ -251,11 +270,11 @@ export async function liveRefreshCase(
       try {
         return await liveRefreshCaseInner(key, admin, client);
       } finally {
-        void a.rpc("release_refresh_lock", { p_cnr: key, p_holder: holder });
+        a.rpc("release_refresh_lock", { p_cnr: key, p_holder: holder }).catch(() => warnRelease(key));
       }
     }
   } catch {
-    coalesceWarnOnce(key, "retry acquire failed — degrading honestly");
+    coalesceWarnOnce("retry-acquire-failed", `retry acquire failed for ${key} — degrading honestly`);
   }
 
   // ── Honest degradation: waiter couldn't acquire within the window ──
