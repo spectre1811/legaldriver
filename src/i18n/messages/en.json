@@ -279,7 +279,8 @@
       "notify": {
         "title": "Notifications",
         "empty": "No notifications sent for this case yet.",
-        "lastSent": "Last sent {date}"
+        "lastSent": "Last sent {date}",
+        "manage": "Manage"
       },
       "allDocuments": "All documents",
       "inbox": {
@@ -979,7 +980,8 @@
     },
     "parties": {
       "title": "Parties",
-      "empty": "No party details on record."
+      "empty": "No party details on record.",
+      "representedBy": "Represented by"
     },
     "hearings": {
       "title": "Hearing history",
