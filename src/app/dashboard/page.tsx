@@ -13,7 +13,6 @@ function one<T>(v: T | T[] | null): T | null {
 
 export default async function OverviewPage() {
   const supabase = createClient();
-  const tc = await getTranslations("common");
   const now = new Date();
   const today = isoDay(now);
 
@@ -95,9 +94,6 @@ export default async function OverviewPage() {
           hasCases: (matterCount.count ?? 0) > 0,
         }}
       />
-      <p className="flex items-center gap-1.5 text-xs text-ec-ink-3">
-        <Icon name="alert" className="h-3.5 w-3.5" /> {tc("disclaimer")}
-      </p>
     </div>
   );
 }

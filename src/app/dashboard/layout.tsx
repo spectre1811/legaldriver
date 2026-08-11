@@ -33,14 +33,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const initial = (profile?.full_name ?? user.email ?? "?").slice(0, 1).toUpperCase();
   const avatarUrl = await signAvatar(profile?.photo_url);
 
-  // WO-345 — Inbox sidebar badge (real needs-review count, honest: NavLinks omits it at 0) and
-  // the top-bar bell dropdown's "Latest alerts" (real recent `notification` rows, i18n'd here
-  // server-side since TopBar/BellMenu take plain resolved strings — see notifications/page.tsx
+  // WO-345 — top-bar bell dropdown's "Latest alerts" (real recent `notification` rows, i18n'd
+  // here server-side since TopBar/BellMenu take plain resolved strings — see notifications/page.tsx
   // for the same kind/payload shape this reuses).
-  const [{ count: needsReviewCount }, { data: alertRows }] = await Promise.all([
-    supabase.from("email_message").select("id", { count: "exact", head: true }).eq("status", "needs_review"),
-    supabase.from("notification").select("id, kind, payload, created_at").order("created_at", { ascending: false }).limit(5),
-  ]);
+  const { data: alertRows } = await supabase
+    .from("notification")
+    .select("id, kind, payload, created_at")
+    .order("created_at", { ascending: false })
+    .limit(5);
   const tKind = await getTranslations("notifications");
   const alerts = (alertRows ?? []).map((n) => {
     const payload = (n.payload ?? {}) as { title?: string };
@@ -76,7 +76,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </Link>
 
         <div className="mt-7 flex-1 overflow-y-auto">
-          <NavLinks isAdmin={isAdmin} inboxCount={needsReviewCount ?? 0} />
+          <NavLinks isAdmin={isAdmin} />
         </div>
         <SidebarFooter />
       </aside>
@@ -89,7 +89,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
           fullName={profile?.full_name ?? null}
           designation={profile?.designation ?? null}
           photoUrl={avatarUrl}
-          inboxCount={needsReviewCount ?? 0}
         />
         <TopBar
           email={user.email ?? ""}

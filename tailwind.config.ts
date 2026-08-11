@@ -100,6 +100,14 @@ const config: Config = {
         focus: "0 0 0 3px rgba(74,79,214,0.18)",
         "ec-1": "var(--e1)",
         "ec-2": "var(--e2)",
+        "ec-3": "var(--e3)",
+      },
+      zIndex: {
+        "ec-sticky": "var(--z-sticky)",
+        "ec-dropdown": "var(--z-dropdown)",
+        "ec-drawer": "var(--z-drawer)",
+        "ec-modal": "var(--z-modal)",
+        "ec-toast": "var(--z-toast)",
       },
       keyframes: {
         "fade-in": { from: { opacity: "0", transform: "translateY(4px)" }, to: { opacity: "1", transform: "translateY(0)" } },

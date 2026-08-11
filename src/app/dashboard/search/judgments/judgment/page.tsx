@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Disclaimer } from "@/components/ui";
 import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { judgmentPdfUrl, courtLabel, caseDetailByCnr } from "@/lib/court/corpus-athena";
@@ -144,7 +143,6 @@ export default async function JudgmentReaderPage({
         </div>
       )}
 
-      <Disclaimer />
       <p className="flex items-start gap-1.5 text-xs text-ec-ink-3">
         <Icon name="alert" className="mt-px h-3.5 w-3.5 shrink-0" />
         {t("sourceJudgment")}

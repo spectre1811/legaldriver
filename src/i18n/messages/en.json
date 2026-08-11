@@ -72,7 +72,6 @@
       "action": {
         "addCase": "Add a case",
         "newNotice": "New notice",
-        "draft": "Draft a document",
         "upload": "Upload a document",
         "addAdvocate": "Add an advocate"
       }
@@ -274,10 +273,6 @@
         "synced": "From the court record · synced {time}"
       },
       "partiesTitle": "Parties & advocates",
-      "stamp": {
-        "title": "Public court record",
-        "synced": "Synced · {date}"
-      },
       "client": {
         "view": "View client"
       },
@@ -727,9 +722,7 @@
     "noDate": "no date",
     "row": {
       "aria": "Case {title} — press Enter for details, arrow keys to move",
-      "causeList": "View cause list",
-      "addNote": "Add note",
-      "addNoteTitle": "Coming soon"
+      "causeList": "View cause list"
     },
     "view": {
       "aria": "List or agenda view",
@@ -926,7 +919,7 @@
       "yourDiary": "(your diary)"
     },
     "source": {
-      "line": "Source: {source} · last refreshed {time}",
+      "line": "<b>Source: {source}</b> · last refreshed {time}",
       "never": "never",
       "note": "Court data comes from the official court record — it can lag or contain errors.",
       "verify": "Always verify against the official record; not legal advice.",
@@ -2065,7 +2058,6 @@
       "filteredBody": "Try a different search or clear the filters.",
       "emptyBody": "Connect Gmail and forward or label mail Mukadma, or upload your first document."
     },
-    "storageNote": "Files are stored in a private bucket; downloads use short-lived signed URLs scoped to your tenant.",
     "source": {
       "gmail": "Gmail",
       "upload": "Upload",
@@ -2436,8 +2428,7 @@
       "checkNeedsYear": "Add the enrolment year — e.g. G/702/2020. The year is what pulls your exact court roster.",
       "checkReady": "Ready — {council} · serial {serial} · enrolled {year}. We'll pull your exact court roster.",
       "checkParsed": "{council} · serial {serial} · enrolled {year}. Live roster search isn't live for this State Bar Council yet — we'll add by name + cause list.",
-      "checkParsedNoCouncil": "{canonical} looks valid — pick your State Bar Council below, or we'll add by name + cause list.",
-      "hint": "Enter your full State Bar Council enrolment number — <b>state, serial and year</b> (e.g. G/702/2020). The year is what lets us pull your exact court case roster; a ✓ marks councils with live roster search today."
+      "checkParsedNoCouncil": "{canonical} looks valid — pick your State Bar Council below, or we'll add by name + cause list."
     },
     "billing": {
       "heading": "Billing & GST",

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { Disclaimer } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { cleanPurpose } from "@/lib/court/code-labels";
 import { AddEntry } from "./add-entry";
@@ -106,7 +105,6 @@ function DayCell({ date, events, isToday, isWeekend, dim, max, t }: { date: Date
 
 export default async function DiaryPage({ searchParams }: { searchParams: { month?: string; view?: string } }) {
   const t = await getTranslations("calendar");
-  const tc = await getTranslations("common");
   const now = new Date();
   const view: View = searchParams.view === "week" ? "week" : searchParams.view === "list" ? "list" : "month";
   const month = searchParams.month ?? now.toISOString().slice(0, 7);
@@ -306,8 +304,6 @@ export default async function DiaryPage({ searchParams }: { searchParams: { mont
           </aside>
         </div>
       )}
-
-      <Disclaimer text={tc("disclaimer")} />
     </div>
   );
 }

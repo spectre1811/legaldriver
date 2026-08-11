@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "@/components/icons";
 import { isDisabled } from "./modules"; // WO-206: hide voice/messages/portfolio/notices behind one flag.
 
-type NavEntry = { href: string; label: string; icon: IconName; badgeKey?: "inbox" };
+type NavEntry = { href: string; label: string; icon: IconName };
 
 // WO-345 — prototype fidelity (design-mockups/iteration3/console/app-shell.tsx:28-37,280-308):
 // ONE flat "Console" list, exact order Overview→Onboarding. Supersedes WO-328's "onboarding
@@ -18,7 +18,7 @@ const NAV_ALL: NavEntry[] = [
   { href: "/dashboard/cases", label: "cases", icon: "cases" },
   { href: "/dashboard/clients", label: "clients", icon: "clients" },
   { href: "/dashboard/documents", label: "documents", icon: "documents" },
-  { href: "/dashboard/inbox", label: "inbox", icon: "gmail", badgeKey: "inbox" },
+  { href: "/dashboard/inbox", label: "inbox", icon: "gmail" },
   { href: "/dashboard/notifications", label: "notifications", icon: "bell" },
   { href: "/dashboard/directory", label: "directory", icon: "scale" },
   { href: "/dashboard/onboarding", label: "onboarding", icon: "sparkles" },
@@ -49,12 +49,10 @@ export function useIsActive() {
 function NavItem({
   item,
   active,
-  badge,
   t,
 }: {
   item: NavEntry;
   active: boolean;
-  badge?: number;
   t: (k: string) => string;
 }) {
   return (
@@ -71,16 +69,11 @@ function NavItem({
         className={`h-[1.15rem] w-[1.15rem] shrink-0 ${active ? "text-ec-bronze-deep" : "text-ec-ink-3 group-hover:text-ec-brass-deep"}`}
       />
       <span className="min-w-0 flex-1 truncate">{t(`item.${item.label}`)}</span>
-      {!!badge && (
-        <span className="num shrink-0 rounded bg-ec-honey px-1.5 font-mono text-[10px] text-ec-honey-ink">
-          {badge}
-        </span>
-      )}
     </Link>
   );
 }
 
-export function NavLinks({ isAdmin = false, inboxCount = 0 }: { isAdmin?: boolean; inboxCount?: number }) {
+export function NavLinks({ isAdmin = false }: { isAdmin?: boolean }) {
   const t = useTranslations("nav");
   const isActive = useIsActive();
   const items = isAdmin ? [...NAV, ...ADMIN_ITEMS] : NAV;
@@ -93,13 +86,7 @@ export function NavLinks({ isAdmin = false, inboxCount = 0 }: { isAdmin?: boolea
       <div className="mt-1.5 h-[3px] border-y border-ec-line" />
       <nav aria-label={t("ariaMain")} className="mt-2 flex flex-col gap-0.5">
         {items.map((item) => (
-          <NavItem
-            key={item.href}
-            item={item}
-            active={isActive(item.href)}
-            badge={item.badgeKey === "inbox" ? inboxCount : undefined}
-            t={t}
-          />
+          <NavItem key={item.href} item={item} active={isActive(item.href)} t={t} />
         ))}
       </nav>
     </>
