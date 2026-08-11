@@ -46,6 +46,7 @@ const OFFLINE = [
   "wo01_refresh_priority",
   "wo01_sync_contract",
   "wo359_diff_sync",
+  "wo359_refresh_coalesce",
   "wo286_live_lane",
   "wo15_analytics",
   "wo27_export",

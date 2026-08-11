@@ -57,6 +57,7 @@ export const TENANCY_EXEMPT = {
   court_cache: "shared court-data cache (public court record); service-role writes, RLS on, no client policy.",
   court_provider_health: "shared provider telemetry; service-role only, RLS on, no client policy.",
   cron_lock: "WO-355 cron lease mutex — infra table, service-role rpc only; RLS on, no policies by design.",
+  refresh_lock: "WO-359 in-flight refresh coalescing lock — infra table keyed on CNR (public court data, not tenant-owned); service-role rpc only, RLS on, no policies by design.",
   legal_reference: "public statutory reference spine (IPC↔BNS maps); world-readable by design.",
   corpus_judgment: "public CC-BY court judgments; world-readable by design, service-role writes.",
   corpus_source_batch: "corpus ingest bookkeeping; service-role only, RLS on, no client policy.",
