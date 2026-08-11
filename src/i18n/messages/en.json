@@ -92,6 +92,9 @@
   },
   "nav": {
     "ariaMain": "Navigation",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
+    "resizeSidebar": "Resize sidebar",
     "heading": {
       "console": "Console",
       "practice": "Practice",

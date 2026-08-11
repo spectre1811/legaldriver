@@ -92,6 +92,9 @@
   },
   "nav": {
     "ariaMain": "मुख्य नेविगेशन",
+    "collapseSidebar": "साइडबार संक्षिप्त करें",
+    "expandSidebar": "साइडबार विस्तृत करें",
+    "resizeSidebar": "साइडबार का आकार बदलें",
     "heading": {
       "console": "कंसोल",
       "practice": "प्रैक्टिस",
