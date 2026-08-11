@@ -289,9 +289,8 @@ export function CasesTable({
                       ones — merged here to match. "Open" is real (the existing drawer). "Cause list"
                       is real — legaldriver already has /dashboard/cause-list; not deep-linked per row
                       (no reliable court-id on the record to scope it), still a genuine destination.
-                      "Add note" has no backing capability anywhere in the app (checked actions.ts) —
-                      kept visible per the prototype but disabled/"soon" rather than faked, same
-                      treatment as the refresh controls. */}
+                      WO-376 B8: the disabled "Add note / Coming soon" action removed — no backing
+                      capability anywhere in the app, and the founder cut it rather than keep it faked. */}
                   <td className="hidden px-3 py-3.5 text-right lg:table-cell">
                     <div className="flex items-center justify-end gap-1">
                       <div className="flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
@@ -311,15 +310,6 @@ export function CasesTable({
                         >
                           <Icon name="calendar" className="h-4 w-4" />
                         </Link>
-                        <button
-                          type="button"
-                          disabled
-                          aria-label={t("row.addNote")}
-                          title={t("row.addNoteTitle")}
-                          className="rounded-full p-1.5 text-ec-ink-3 opacity-40"
-                        >
-                          <Icon name="edit" className="h-4 w-4" />
-                        </button>
                       </div>
                       <span
                         title={syncedTitle}

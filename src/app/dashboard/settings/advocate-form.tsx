@@ -147,7 +147,6 @@ export function AdvocateForm({ ctaLabel }: { ctaLabel?: string } = {}) {
               onChange={(v) => { setCouncilTouched(true); setCouncilId(v ?? ""); }}
             />
           </div>
-          <p className="text-xs text-ec-ink-3">{t.rich("advocates.hint", { b: (c) => <strong>{c}</strong> })}</p>
         </>
       )}
 

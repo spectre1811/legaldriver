@@ -175,18 +175,12 @@ export default async function DocumentsPage({
   return (
     <div className="space-y-6">
       {/* WO-342: dark ink engraved masthead — matches Overview/Directory's shipped treatment
-          (today-view.tsx) instead of forking a light header; count moves into the honey mono
-          pill on the ink-chip token (AppMasthead's title-slot count, design-mockups/iteration3/
-          console/app-shell.tsx). Trash's "back" link restyles for the dark surface with the
-          case-actions.tsx ink-border pattern rather than the light .ec-btn-ghost. */}
+          (today-view.tsx) instead of forking a light header. Trash's "back" link restyles for
+          the dark surface with the case-actions.tsx ink-border pattern rather than the light
+          .ec-btn-ghost. */}
       <Reveal as="div" className="mk-engraved flex flex-wrap items-start justify-between gap-3 rounded-xl bg-ec-ink px-5 py-7 text-ec-paper sm:px-8">
         <header className="min-w-0">
-          <div className="flex flex-wrap items-baseline gap-3">
-            <h1 className="font-display text-[28px] leading-tight text-ec-paper sm:text-[32px]">{isTrash ? t("trash.title") : t("title")}</h1>
-            {!isTrash && (grandTotal ?? 0) > 0 && (
-              <span className="num rounded-md bg-ec-ink-chip px-2 py-0.5 font-mono text-[12px] text-ec-honey">{grandTotal}</span>
-            )}
-          </div>
+          <h1 className="font-display text-[28px] leading-tight text-ec-paper sm:text-[32px]">{isTrash ? t("trash.title") : t("title")}</h1>
           <p className="mt-1.5 text-[13px] text-ec-line-strong">{isTrash ? t("trash.subtitle") : t("subtitle")}</p>
         </header>
         {isTrash && (
@@ -261,9 +255,6 @@ export default async function DocumentsPage({
             <Link href="/dashboard/documents?trash=1" className="inline-flex items-center gap-1.5 hover:text-ec-bronze">
               <Icon name="trash" className="h-3.5 w-3.5" /> {t("trash.link", { n: trashCount ?? 0 })}
             </Link>
-            <span className="inline-flex items-center gap-1.5">
-              <Icon name="documents" className="h-3.5 w-3.5" /> {t("storageNote")}
-            </span>
           </div>
         </>
       )}

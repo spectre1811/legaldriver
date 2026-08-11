@@ -23,7 +23,6 @@ type Search = CasesFilters & { page?: string; per?: string; track?: string; add?
 export default async function CasesPage({ searchParams }: { searchParams: Search }) {
   const supabase = createClient();
   const t = await getTranslations("cases");
-  const tc = await getTranslations("common");
   const { q, tier, court, case_type, stage, status, statuses, advocate, act, judge, next, sort } = searchParams;
   // WO-331 EXACT-FIDELITY: the reference's status segment starts on "Open" and the list is
   // ACTUALLY filtered to it (not just the segmented control's active pixel) — an absent `status`
@@ -123,10 +122,6 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
           )}
         </PendingDim>
       </CasesNavProvider>
-
-      <p className="flex items-center gap-1.5 text-xs text-ec-ink-3">
-        <Icon name="alert" className="h-3.5 w-3.5" /> {tc("disclaimer")}
-      </p>
     </div>
   );
 }

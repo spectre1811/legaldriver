@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { Disclaimer, fmtSize, fmtMoney, fmtAgo } from "@/components/ui";
+import { fmtSize, fmtMoney, fmtAgo } from "@/components/ui";
 import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
@@ -411,8 +411,6 @@ export default async function ClientDetailPage({
           <p className="py-8 text-center text-sm text-ec-ink-3">{td("activityEmpty")}</p>
         )}
       </section>
-
-      <Disclaimer />
     </div>
   );
 }

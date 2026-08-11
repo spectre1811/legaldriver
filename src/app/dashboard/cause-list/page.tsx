@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { Icon } from "@/components/icons";
-import { EmptyCell, Disclaimer } from "@/components/court";
+import { EmptyCell } from "@/components/court";
 import { type ComboOption } from "@/components/combobox";
 import { STATE_BAR_COUNCILS } from "@/lib/court/bar-councils.data";
 import {
@@ -346,10 +346,6 @@ export default async function CauseListPage({
         <h2 id="uploader-heading" className="mb-3 text-sm font-semibold text-ec-ink">{t("uploader.heading")}</h2>
         <CauseListUploader />
       </section>
-
-      <div className="print:hidden">
-        <Disclaimer text={tc("disclaimer")} />
-      </div>
     </div>
   );
 }

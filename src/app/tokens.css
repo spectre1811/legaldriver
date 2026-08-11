@@ -80,6 +80,14 @@
   --e2: 0 18px 40px -20px rgba(26,28,30,.35);                          /* raised: dropdowns, dialogs */
   --e3: 0 24px 60px -24px rgba(26,28,30,.55);                          /* deepest modal */
 
+  /* z-index scale (WO-376 §Foundation) — named layers, never a raw z-[N] in new work.
+     Scale only: existing overlays (z-[60]/z-[70] etc.) are NOT rewired by this WO. */
+  --z-sticky:   30;
+  --z-dropdown: 40;
+  --z-drawer:   50;
+  --z-modal:    60;
+  --z-toast:    70;
+
   /* motion — micro-interactions only; respect prefers-reduced-motion */
   --motion-fast: 120ms;
   --motion-base: 150ms;

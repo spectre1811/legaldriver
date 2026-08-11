@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { Disclaimer, fmtSize } from "@/components/ui";
+import { fmtSize } from "@/components/ui";
 import { formatCourtDate } from "@/components/court";
 import { Icon } from "@/components/icons";
 import { DocActions } from "@/components/doc-actions";
@@ -171,8 +171,6 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
           <span className="num">{doc.created_at ? new Date(doc.created_at).toLocaleString("en-IN") : "—"}</span>
         </p>
       </div>
-
-      <Disclaimer />
     </div>
   );
 }

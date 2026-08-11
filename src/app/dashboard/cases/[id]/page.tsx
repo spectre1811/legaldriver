@@ -37,7 +37,6 @@ const NOTIFY_CHANNEL_LABEL: Record<string, string> = { whatsapp: "WA", email: "E
 export default async function CaseDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
   const t = await getTranslations("caseDetail");
-  const tc = await getTranslations("common");
   const te = await getTranslations("enum");
   const tf = await getTranslations("dashboard.caseFile");
   const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
@@ -103,11 +102,6 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   // is "not on record at eCourts" the honest empty state; a manual case has no eCourts record to
   // compare against, so we don't render a 16-field "not on record" mirror for it (BP-24).
   const isCourtSourced = !!matter.source && matter.source !== "manual";
-  // WO-348 · the registrar Stamp reads "Public court record" — a narrower claim than
-  // isCourtSourced above (which also covers "mock"/demo-provider matters, honestly disclosed
-  // elsewhere on this page as "demo data · not a real court record"). Stamping a demo case as a
-  // public record would contradict that disclosure right above it, so this excludes "mock".
-  const isPublicRecord = isCourtSourced && matter.source !== "mock";
   // Product voice (WO-132): the user never sees the internal pipeline name ("legaldriver") — a
   // court-synced case reads as "the court record", a hand-entered one as "added manually", the demo
   // seed as "demo data". Founder 2026-07-22: the raw "via legaldriver" leaked here.
@@ -344,7 +338,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         {/* provenance/freshness — non-negotiable on every court-data surface (repo CLAUDE.md §3);
             the reference is dummy content with no such disclosure, but this stays: never optional. */}
         <Reveal as="div" delay={80} className="mb-7 flex flex-wrap items-center justify-between gap-3 ec-card px-5 py-3">
-          <p className="num text-sm text-ec-ink-3">{t("source.line", { source: sourceLabel, time: refreshed })}</p>
+          <p className="num text-sm text-ec-ink-3">
+            {t.rich("source.line", { source: sourceLabel, time: refreshed, b: (c) => <span className="font-medium text-ec-ink">{c}</span> })}
+          </p>
           <MatterDiaryDate matterId={matter.id} synced={matter.next_hearing_date} override={matter.next_hearing_override ?? null} />
         </Reveal>
 
@@ -390,19 +386,6 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 <div className="ec-card px-5 py-8 text-center text-sm text-ec-ink-3">{t("parties.empty")}</div>
               )}
             </Reveal>
-
-            {/* registrar "Stamp" (WO-348 restore) — the prototype's own bronze/honey provenance
-                mark, right after Parties. Court-sourced + actually synced matters only: it reads
-                "Public court record", which would be a false claim for a manually-entered case. */}
-            {isPublicRecord && matter.last_synced_at && (
-              <div className="flex justify-start">
-                <div className="relative -rotate-2 rounded-[8px] border-[1.5px] border-ec-bronze px-4 pb-2.5 pt-3 text-center text-ec-bronze opacity-75">
-                  <span className="absolute left-1/2 top-[5px] h-[5px] w-[5px] -translate-x-1/2 rounded-full bg-ec-honey" />
-                  <div className="mk-stamp-line">{tf("stamp.title")}</div>
-                  <div className="num mk-stamp-line">{tf("stamp.synced", { date: refreshed })}</div>
-                </div>
-              </div>
-            )}
 
             {/* AI briefing — hideable + persisted (founder ask), see AiBriefingSection */}
             <Reveal as="section" id="ai-briefing" delay={160} className="scroll-mt-28">
@@ -665,10 +648,6 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             </Reveal>
           </aside>
         </div>
-
-        <p className="mt-9 flex items-center gap-1.5 text-xs text-ec-ink-3">
-          <Icon name="alert" className="h-3.5 w-3.5" /> {tc("disclaimer")}
-        </p>
       </div>
     </div>
   );

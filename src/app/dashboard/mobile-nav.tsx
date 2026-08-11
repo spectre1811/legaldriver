@@ -27,7 +27,6 @@ type Props = {
   fullName?: string | null;
   designation?: string | null;
   photoUrl?: string | null;
-  inboxCount?: number;
 };
 
 export function MobileNav({
@@ -37,7 +36,6 @@ export function MobileNav({
   fullName = null,
   designation = null,
   photoUrl = null,
-  inboxCount = 0,
 }: Props) {
   const [open, setOpen] = useState(false);
   const t = useTranslations("shell");
@@ -98,7 +96,7 @@ export function MobileNav({
               </button>
             </div>
             <p className="mt-1.5 truncate px-2 text-xs text-ec-ink-3" title={brand.nameDevanagari} lang="hi">{brand.nameDevanagari}</p>
-            <div className="mt-6 flex-1 overflow-y-auto"><NavLinks isAdmin={isAdmin} inboxCount={inboxCount} /></div>
+            <div className="mt-6 flex-1 overflow-y-auto"><NavLinks isAdmin={isAdmin} /></div>
             <SidebarFooter />
             {/* Full account block — parity with the desktop profile dropdown (same order:
                 header · Profile · Billing · Language · Sign out · Sign out everywhere). */}

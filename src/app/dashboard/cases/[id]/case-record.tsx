@@ -46,7 +46,10 @@ export function CaseRecord({
         <dl className="text-[13px]">
           {rows.map((r) => (
             <div key={r.label} className="grid gap-1 border-b border-ec-hair py-2.5 sm:grid-cols-[210px_minmax(0,1fr)]">
-              <dt className="ec-label">{r.label}</dt>
+              {/* WO-376 C3: raised off the shared .ec-label's default ink-3 to ink-2 — CASE TYPE /
+                  REGISTRATION NO. etc. were reading too faint; still mono small-caps, still the
+                  shared .ec-label class (only the color is overridden, scoped to this component). */}
+              <dt className="ec-label text-ec-ink-2">{r.label}</dt>
               <dd className="num text-[12.5px] text-ec-ink-2">
                 <CourtField value={r.value} emptyReason={r.emptyReason} emptyLabel={r.emptyLabel} maskedLabel={maskedLabel} field={r.label} />
               </dd>
