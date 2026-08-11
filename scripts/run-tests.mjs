@@ -106,6 +106,7 @@ const OFFLINE = [
   "wo323_step_up",
   "wo290_reminder_feeder",
   "wo358_channel_isolation",
+  "wo358_notify_wake",
   "wo311_webhook_tenant",
   "profile_error_states",
   "wo326_public_proxy",
