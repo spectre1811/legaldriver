@@ -39,7 +39,7 @@ eq("negative: undefined", isStopMessage(undefined), false);
 // source assertion (this repo's contract-pinning idiom; cf. wo01_sync_contract's
 // surface pinning — the send paths have no injectable seam to stub instead). ──
 const sendSrc = readFileSync("src/app/dashboard/messages/actions.ts", "utf8");
-const cronSrc = readFileSync("src/app/api/cron/notify/route.ts", "utf8");
+const cronSrc = readFileSync("src/lib/notify/deliver/whatsapp.ts", "utf8"); // WO-358: moved from route.ts to whatsapp deliver module
 eq("wiring: sendMessage gates on canSendWhatsApp", sendSrc.includes("canSendWhatsApp("), true);
 eq("wiring: cron notify gates on canSendWhatsApp", cronSrc.includes("canSendWhatsApp("), true);
 
