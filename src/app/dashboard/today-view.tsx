@@ -133,7 +133,7 @@ export async function TodayView({
             {week.map((d) => (
               <div key={d.iso} aria-current={d.isToday ? "date" : undefined} className={`px-2 py-3 text-center ${d.isToday ? "bg-ec-bronze-tint/40" : ""}`}>
                 <div className="ec-label">{wd(d.iso, { weekday: "short", timeZone: "UTC" })}</div>
-                <div className="font-display num mt-1 text-[20px] leading-none text-ec-ink">{d.iso.slice(8, 10)}</div>
+                <div className="font-display figures mt-1 text-[20px] leading-none text-ec-ink">{d.iso.slice(8, 10)}</div>
                 <div className={`mt-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] ${d.isToday ? "text-ec-bronze-deep" : "text-ec-ink-3"}`}>
                   {d.count === 0 ? "—" : t("listed", { count: d.count })}
                 </div>
@@ -232,7 +232,7 @@ export async function TodayView({
             <Reveal delay={180} as="aside" className="min-w-0 space-y-6">
               <Link href="/dashboard/inbox" className="ec-card block p-4 transition-colors hover:bg-ec-bronze-tint/25">
                 <div className="ec-label">{to("inbox.eyebrow")}</div>
-                <div className="font-display num mt-1 text-[30px] leading-none text-ec-ink">
+                <div className="font-display figures mt-1 text-[30px] leading-none text-ec-ink">
                   <CountUp value={inboxReview} />
                 </div>
                 <span className="mt-2 inline-flex items-center gap-1 text-[12.5px] text-ec-bronze-deep">
@@ -246,7 +246,7 @@ export async function TodayView({
                 <dl className="divide-y divide-ec-hair border-b border-ec-hair">
                   <div className="flex items-baseline justify-between py-2.5">
                     <dt className="text-[13px] text-ec-ink-2">{to("practice.hearings")}</dt>
-                    <dd className="font-display num text-[18px] text-ec-ink">
+                    <dd className="font-display figures text-[18px] text-ec-ink">
                       <CountUp value={week.reduce((sum, d) => sum + d.count, 0)} />
                     </dd>
                   </div>
@@ -255,13 +255,13 @@ export async function TodayView({
                       rather than a fabricated count (WO-330 founder direction). */}
                   <div className="flex items-baseline justify-between py-2.5">
                     <dt className="text-[13px] text-ec-ink-2">{to("practice.filings")}</dt>
-                    <dd className="font-display num text-[18px] text-ec-ink-3" aria-label={to("practice.notTracked")} title={to("practice.notTracked")}>
+                    <dd className="font-display figures text-[18px] text-ec-ink-3" aria-label={to("practice.notTracked")} title={to("practice.notTracked")}>
                       —
                     </dd>
                   </div>
                   <div className="flex items-baseline justify-between py-2.5">
                     <dt className="text-[13px] text-ec-ink-2">{to("practice.orders")}</dt>
-                    <dd className="font-display num text-[18px] text-ec-ink">
+                    <dd className="font-display figures text-[18px] text-ec-ink">
                       <CountUp value={ordersThisWeek} />
                     </dd>
                   </div>
