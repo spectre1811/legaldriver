@@ -35,11 +35,18 @@ export default async function DocumentsPage({
 
   // Matters carry client_id so we can resolve a document's client even when it's only tagged to
   // a case; cnr backs the restored viewer panel's eyebrow + the ref's per-case-section caption.
-  const { data: matters } = await supabase.from("matter").select("id, title, client_id, cnr");
+  // WO-401 A4: `detail` too — the case number (matter.detail.registrationNumber; there's no
+  // dedicated case_number column) lives on the matter row, and the search below needs it.
+  const { data: matters } = await supabase.from("matter").select("id, title, client_id, cnr, detail");
   const matterClient = new Map((matters ?? []).map((m) => [m.id, m.client_id]));
   const matterCnr = new Map((matters ?? []).map((m) => [m.id, m.cnr]));
   const matterOpts = (matters ?? []).map((m) => ({ id: m.id, label: m.title }));
   const matterName = new Map((matters ?? []).map((m) => [m.id, m.title]));
+  const registrationNumberOf = (detail: unknown): string | null => {
+    if (!detail || typeof detail !== "object" || Array.isArray(detail)) return null;
+    const v = (detail as Record<string, unknown>).registrationNumber;
+    return typeof v === "string" ? v : null;
+  };
 
   // WO-56: numbered-page pagination (range + exact count) — the whole library is reachable, one
   // page at a time (the reference's toy dataset doesn't paginate; a real tenant's can grow past
@@ -49,7 +56,19 @@ export default async function DocumentsPage({
     .select("id, filename, doc_type, category, source, client_id, matter_id, mime, size_bytes, storage_path, parsed_text, portal_shared, created_at, extracted", { count: "exact" })
     .order("created_at", { ascending: false })
     .range(from, to);
-  if (q) query = query.textSearch("fts", q, { type: "websearch" });
+  if (q) {
+    // WO-401 A4 — a pasted CNR/case number lives on the linked MATTER row (cnr /
+    // detail.registrationNumber), never in the document's own `fts` text, so a plain
+    // textSearch never found it. When the search term matches a matter that way, widen to an
+    // OR: the document's own text OR its matter is one of the matches.
+    const needle = q.toUpperCase();
+    const matchingMatterIds = (matters ?? [])
+      .filter((m) => (m.cnr && m.cnr.toUpperCase().includes(needle)) || (registrationNumberOf(m.detail)?.toUpperCase().includes(needle)))
+      .map((m) => m.id);
+    query = matchingMatterIds.length
+      ? query.or(`fts.wfts."${q.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}",matter_id.in.(${matchingMatterIds.join(",")})`)
+      : query.textSearch("fts", q, { type: "websearch" });
+  }
   if (source) query = query.eq("source", source);
   if (category) query = query.eq("category", category);
   if (matter) query = query.eq("matter_id", matter);

@@ -8,6 +8,7 @@
 // is no per-document page-thumbnail extraction, so both the Notes aside and the page rail
 // render an HONEST pending state in the prototype's exact chrome, never a fabricated one.
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
@@ -18,36 +19,78 @@ const ZOOM_MIN = 70;
 const ZOOM_MAX = 160;
 const ZOOM_STEP = 15;
 
+const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function DocViewerPanel({ doc, onClose }: { doc: DocRow; onClose: () => void }) {
   const t = useTranslations("documents");
   const [zoom, setZoom] = useState(100);
   const [shown, setShown] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+  // Latest onClose via a ref (not an effect dep) — documents-browser.tsx/documents-list.tsx pass
+  // a fresh inline arrow every render, and this effect must stay mount-once (matches the original
+  // behaviour) rather than re-arming its Escape listener / re-stealing focus on every parent
+  // re-render while the panel is open.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+  useEffect(() => setMounted(true), []);
 
   // Entrance transition (backdrop fade + panel slide-in-from-right), the same plain-CSS
   // convention as add-client-modal.tsx — mirrors the reference's `animate-in fade-in` /
   // `slide-in-from-right` without pulling in an animation library. Reduced-motion is already
   // neutralised globally (globals.css collapses every transition to ~0).
+  // WO-401 A3: also owns ESC-to-close and a focus trap so it behaves correctly regardless of
+  // which caller mounts it (documents-browser.tsx / documents-list.tsx) — focus moves into the
+  // panel on open and returns to whatever triggered it on close. Gated on `mounted` (not `[]`)
+  // because the portal below only renders real DOM — and attaches closeBtnRef/panelRef — once
+  // `mounted` flips true; running this a render early would try to focus a ref that's still null.
   useEffect(() => {
+    if (!mounted) return;
+    restoreFocusRef.current = document.activeElement as HTMLElement | null;
     const raf = requestAnimationFrame(() => setShown(true));
     closeBtnRef.current?.focus();
     document.body.style.overflow = "hidden";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { onCloseRef.current(); return; }
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+
     return () => {
       cancelAnimationFrame(raf);
       document.body.style.overflow = "";
+      document.removeEventListener("keydown", onKey);
+      restoreFocusRef.current?.focus?.();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onClose read via onCloseRef, not a dep
+  }, [mounted]);
 
   const meta = [doc.caseLabel, doc.sourceLabel, doc.dateLabel].filter(Boolean).join(" · ");
 
-  return (
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label={doc.filename}>
+  // Portal to `document.body` (the shared Dialog's fix for the same class of bug, WO-340): a
+  // `fixed inset-0` descendant of a `transform`/`filter`/`backdrop-filter` ancestor pins itself
+  // to that ancestor's box instead of the viewport, not full-screen. Documents page.tsx wraps
+  // both callers in <Reveal> (transform-based mount animation) — portaling sidesteps the class
+  // of bug entirely rather than depending on animation timing.
+  if (!mounted) return null;
+  return createPortal(
+    <div ref={panelRef} className="fixed inset-0 z-ec-modal" role="dialog" aria-modal="true" aria-label={doc.filename}>
       <div
         className={`absolute inset-0 bg-ec-ink/45 backdrop-blur-sm transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"}`}
         onClick={onClose}
       />
       <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-4xl flex-col border-l border-ec-line-strong bg-ec-paper shadow-ec-2 transition-all duration-200 ease-out ${
+        className={`absolute inset-y-0 right-0 flex w-full max-w-4xl flex-col border-l border-ec-line-strong bg-ec-paper shadow-ec-3 transition-all duration-200 ease-out ${
           shown ? "translate-x-0 opacity-100" : "translate-x-6 opacity-0"
         }`}
       >
@@ -151,6 +194,7 @@ export function DocViewerPanel({ doc, onClose }: { doc: DocRow; onClose: () => v
           </aside>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

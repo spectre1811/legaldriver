@@ -237,9 +237,11 @@ function FiltersSheet({
   );
 
   return (
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={t("sheetTitle")}>
+    <div className="fixed inset-0 z-ec-drawer" role="dialog" aria-modal="true" aria-label={t("sheetTitle")}>
       <div className="absolute inset-0 bg-ec-ink/40" onClick={onClose} />
-      <div className="absolute inset-y-0 right-0 flex w-full max-w-[380px] flex-col border-l border-ec-hair bg-ec-paper shadow-ec-2">
+      {/* WO-401 A5: shadow-ec-2 (a subtle dropdown shadow) read as flat against a full-height
+          drawer — shadow-ec-3 (the deep-modal shadow, WO-400) gives it real elevation. */}
+      <div className="absolute inset-y-0 right-0 flex w-full max-w-[380px] flex-col border-l border-ec-hair bg-ec-paper shadow-ec-3">
         <div className="flex items-start justify-between border-b border-ec-hair px-5 py-4">
           <div className="flex items-center gap-2">
             <h2 className="font-display text-lg font-medium text-ec-ink">{t("sheetTitle")}</h2>

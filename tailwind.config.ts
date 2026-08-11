@@ -40,7 +40,9 @@ const config: Config = {
           "paper-2": "var(--paper-2)",
           "paper-3": "var(--paper-3)",
           band: "var(--band)",
-          ink: "var(--ink)",
+          // WO-401: rgb()+<alpha-value> (not a bare `var(--ink)`) so opacity modifiers
+          // (bg-ec-ink/40, backdrop overlays) actually compile — see tokens.css --ink-rgb.
+          ink: "rgb(var(--ink-rgb) / <alpha-value>)",
           "ink-2": "var(--ink-2)",
           "ink-3": "var(--ink-3)",
           // v2 canonical names (Graphite & Bronze). Prefer these in new work.

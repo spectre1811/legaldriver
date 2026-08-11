@@ -63,7 +63,10 @@ export async function dismissDeadline(deadlineId: string): Promise<ActionResult>
   return { ok: true, message: "Deadline dismissed." };
 }
 
-export type ActionResult = { ok: boolean; message: string };
+// WO-401 A2: `matterId` is optional so every other ActionResult return site (dozens, unrelated
+// to case-add) stays untouched — only addCaseByCnr populates it, so the form can redirect on
+// success exactly like the manual-create path already does.
+export type ActionResult = { ok: boolean; message: string; matterId?: string };
 
 // Generate (or refresh) the AI summary + next steps for a case. Uses the classifier
 // backend (local Claude CLI or API). Stored on matter.ai_summary.
@@ -319,6 +322,7 @@ export async function addCaseByCnr(_prev: ActionResult, formData: FormData): Pro
   const staleNote = fetched.stale ? " — served from cache (live provider was unavailable; refresh later to verify)" : "";
   return {
     ok: true,
+    matterId,
     message: `${isNew ? "Added" : "Re-synced"} ${normalized.title} — next hearing ${
       normalized.nextHearingDate ?? "n/a"
     } (source: ${normalized.source})${staleNote}.`,
