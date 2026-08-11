@@ -10,6 +10,7 @@ import { MobileNav } from "./mobile-nav";
 import { TopBar } from "./top-bar";
 import { BrandMark } from "@/components/brand-mark";
 import { brand } from "@/lib/brand";
+import { ToastProvider } from "@/components/toast";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
@@ -55,51 +56,55 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const t = await getTranslations("shell");
 
   return (
-    <div className="flex min-h-screen bg-ec-paper text-ec-ink">
-      <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-ec-line bg-ec-card px-4 py-5 md:flex">
-        <Link
-          href="/dashboard"
-          aria-label={t("home")}
-          className="flex items-center gap-2.5 rounded-ec-s px-2 py-1 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
-        >
-          {/* Brand mark (letter tile) + typographic wordmark — the "date underline" motif.
-              WO-345: kept the live lowercase mukadma lockup (founder trademark call) but laid it
-              out like app-shell.tsx's Wordmark slot, with मुक़दमा as the subtitle line
-              (previously the tenant/workspace name). */}
-          <BrandMark size={32} tone="dark" className="shrink-0" />
-          <div className="leading-tight">
-            <p className="ec-underline inline-block font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink">
-              {brand.name}
-            </p>
-            <p className="mt-1.5 truncate text-xs text-ec-ink-3" lang="hi">{brand.nameDevanagari}</p>
+    // WO-405 C2 — the app's ONE toast system, mounted once here so every dashboard client
+    // component can call useToast() (@/components/toast). See ToastProvider's file comment.
+    <ToastProvider>
+      <div className="flex min-h-screen bg-ec-paper text-ec-ink">
+        <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-ec-line bg-ec-card px-4 py-5 md:flex">
+          <Link
+            href="/dashboard"
+            aria-label={t("home")}
+            className="flex items-center gap-2.5 rounded-ec-s px-2 py-1 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+          >
+            {/* Brand mark (letter tile) + typographic wordmark — the "date underline" motif.
+                WO-345: kept the live lowercase mukadma lockup (founder trademark call) but laid it
+                out like app-shell.tsx's Wordmark slot, with मुक़दमा as the subtitle line
+                (previously the tenant/workspace name). */}
+            <BrandMark size={32} tone="dark" className="shrink-0" />
+            <div className="leading-tight">
+              <p className="ec-underline inline-block font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink">
+                {brand.name}
+              </p>
+              <p className="mt-1.5 truncate text-xs text-ec-ink-3" lang="hi">{brand.nameDevanagari}</p>
+            </div>
+          </Link>
+
+          <div className="mt-7 flex-1 overflow-y-auto">
+            <NavLinks isAdmin={isAdmin} />
           </div>
-        </Link>
+          <SidebarFooter />
+        </aside>
 
-        <div className="mt-7 flex-1 overflow-y-auto">
-          <NavLinks isAdmin={isAdmin} />
-        </div>
-        <SidebarFooter />
-      </aside>
-
-      <main className="min-w-0 flex-1 pb-16 md:pb-0">
-        <MobileNav
-          email={user.email ?? ""}
-          initial={initial}
-          isAdmin={isAdmin}
-          fullName={profile?.full_name ?? null}
-          designation={profile?.designation ?? null}
-          photoUrl={avatarUrl}
-        />
-        <TopBar
-          email={user.email ?? ""}
-          initial={initial}
-          fullName={profile?.full_name ?? null}
-          designation={profile?.designation ?? null}
-          photoUrl={avatarUrl}
-          alerts={alerts}
-        />
-        <div className="mx-auto max-w-6xl animate-fade-in px-5 py-8 sm:px-8 lg:py-10">{children}</div>
-      </main>
-    </div>
+        <main className="min-w-0 flex-1 pb-16 md:pb-0">
+          <MobileNav
+            email={user.email ?? ""}
+            initial={initial}
+            isAdmin={isAdmin}
+            fullName={profile?.full_name ?? null}
+            designation={profile?.designation ?? null}
+            photoUrl={avatarUrl}
+          />
+          <TopBar
+            email={user.email ?? ""}
+            initial={initial}
+            fullName={profile?.full_name ?? null}
+            designation={profile?.designation ?? null}
+            photoUrl={avatarUrl}
+            alerts={alerts}
+          />
+          <div className="mx-auto max-w-6xl animate-fade-in px-5 py-8 sm:px-8 lg:py-10">{children}</div>
+        </main>
+      </div>
+    </ToastProvider>
   );
 }

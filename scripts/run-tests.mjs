@@ -112,6 +112,10 @@ const OFFLINE = [
   "wo329_forwarded_host",
   "wo341_redirect_origin",
   "wo355_cron_lock",
+  "wo405_persisted_state",
+  "wo405_toast",
+  "wo405_confirm_action",
+  "wo405_dialog",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the

@@ -17,8 +17,9 @@ import {
   useSelection, useUndo, BulkBar, bulkBtn, RowCheckbox, SelectAllCheckbox, UndoToast,
 } from "@/components/selection";
 import { CaseDetailDrawer, UrgencyChip } from "@/components/cases/case-detail-drawer";
+import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { hearingUrgency, courtCaseNo } from "./cases-row";
-import { DENSITIES, DENSITY_COOKIE, type Density } from "./density";
+import { DENSITIES, DENSITY_STORAGE_KEY, parseDensity, type Density } from "./density";
 import { parseSort, toCasesCsv } from "./cases-query";
 import type { MatterRow } from "./cases-query";
 import { useCasesNav } from "./cases-nav";
@@ -55,15 +56,13 @@ export function CasesTable({
   const sel = useSelection(orderedIds);
   const { undo, show: showUndo, dismiss: dismissUndo } = useUndo();
   const [busy, setBusy] = useState(false);
-  // WO-54 W4: per-user list density. Seeded from the server cookie (no flash); applied instantly on
-  // change (client state) and persisted to the cookie so the next visit renders it server-side.
-  const [density, setDensity] = useState<Density>(initialDensity);
-  const changeDensity = (d: Density) => {
-    setDensity(d);
-    if (typeof document !== "undefined") {
-      document.cookie = `${DENSITY_COOKIE}=${d}; path=/; max-age=31536000; SameSite=Lax`;
-    }
-  };
+  // WO-405 C4: per-user list density, persisted via the shared usePersistedState hook
+  // (mukadma:cases:density in localStorage — was a cookie, see density.ts). `initialDensity` seeds
+  // the first render (SSR-matching); the hook hydrates the real stored value right after mount.
+  // usePersistedState doesn't validate the stored shape (a generic hook, by design) — parseDensity
+  // guards a corrupted/stale localStorage value the same way page.tsx's old cookie read did.
+  const [storedDensity, changeDensity] = usePersistedState<Density>(DENSITY_STORAGE_KEY, initialDensity);
+  const density = parseDensity(storedDensity);
   // WO-54 W3: the row's "peek" — a right-side drawer with the fuller record (progressive disclosure).
   const [drawerRow, setDrawerRow] = useState<MatterRow | null>(null);
   // Prior stages captured by the last bulk stage-change, so its Undo can restore per-row values.
