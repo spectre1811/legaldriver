@@ -36,6 +36,7 @@ const OFFLINE = [
   "wo190_fmtdate_migration",
   "design_tokens_smoke",
   "i18n_coverage",
+  "wo365_client_subset",
   "wo82_directory_nav",
   "wo206_module_trim",
   "timeline_sort",

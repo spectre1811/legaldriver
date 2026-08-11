@@ -8,52 +8,19 @@
 // E.g. "cases.attention" is covered by "cases"; "dashboard.onboarding.lead"
 // is covered by "dashboard.onboarding".
 //
-// Dynamic-key calls (template literals, variables) are listed as warnings
-// but do NOT fail — they cannot be checked statically and MUST be reviewed
-// manually when the whitelist changes.
+// ANY non-literal argument to useTranslations() (variable, expression,
+// template literal) causes a hard failure — all 162 current call sites use
+// string literals, so there is zero cost today, and failing closed prevents
+// a one-token refactor from silently defeating the guard.
 //
 // Usage: node scripts/check-i18n-client-namespaces.mjs
-//
-// Keep this whitelist synchronised with src/lib/i18n-client-subset.ts.
 
 import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import NAMES from "../src/lib/CLIENT_NAMESPACE_PATHS.json" with { type: "json" };
 
-const WHITELIST = new Set([
-  "assistant",
-  "auth",
-  "calendar",
-  "caseDetail",
-  "casePreview",
-  "cases",
-  "causeList",
-  "clients",
-  "combobox",
-  "common",
-  "comms",
-  "copilot",
-  "dashboard.clients",
-  "dashboard.inbox",
-  "dashboard.onboarding",
-  "documents",
-  "draft",
-  "enum",
-  "inbox",
-  "invoices",
-  "ip",
-  "landing",
-  "messages",
-  "nav",
-  "notices",
-  "pagination",
-  "portal",
-  "requestAccess",
-  "research",
-  "search",
-  "settings",
-  "shell",
-  "voice",
-]);
+const WHITELIST = new Set(NAMES);
 
 function isCovered(ns) {
   if (WHITELIST.has(ns)) return true;
@@ -79,12 +46,16 @@ function walkFiles(dir, exts) {
 }
 
 const STATIC_NS_RE = /useTranslations\(\s*["']([^"']+)["']\s*\)/g;
-const DYNAMIC_NS_RE = /useTranslations\(\s*`/g;
+
+// Any useTranslations( call whose first argument is NOT a quoted string
+// literal (single or double) — including template literals, variables,
+// expressions — is non-literal and cannot be statically checked.
+const NON_LITERAL_RE = /useTranslations\(\s*(?![)"'])/g;
 
 const files = walkFiles("src", [".tsx", ".ts"]);
 
 const violations = new Map();
-const dynamicWarnings = [];
+const nonLiteral = [];
 
 for (const file of files) {
   let src;
@@ -94,20 +65,21 @@ for (const file of files) {
     continue;
   }
 
+  // Skip the whitelist definition files themselves
+  if (file.includes("i18n-client-subset") || file.includes("CLIENT_NAMESPACE_PATHS")) continue;
+
   // Static string namespaces
   for (const match of src.matchAll(STATIC_NS_RE)) {
     const ns = match[1];
-    // Skip the whitelist file's own documentation example
-    if (file.includes("i18n-client-subset")) continue;
     if (!isCovered(ns)) {
       const key = `${ns} (in ${file})`;
       if (!violations.has(key)) violations.set(key, file);
     }
   }
 
-  // Dynamic (template literal) — warn, don't fail
-  if (DYNAMIC_NS_RE.test(src)) {
-    dynamicWarnings.push(file);
+  // Non-literal argument — hard fail
+  if (NON_LITERAL_RE.test(src)) {
+    nonLiteral.push(file);
   }
 }
 
@@ -115,7 +87,9 @@ let exitCode = 0;
 
 if (violations.size) {
   console.error(
-    "NAMESPACES NOT COVERED BY WHITELIST — add them to src/lib/i18n-client-subset.ts:"
+    "NAMESPACES NOT COVERED BY WHITELIST — add them to " +
+      "src/lib/CLIENT_NAMESPACE_PATHS.json, or if the caller is server-only, " +
+      "switch it to getTranslations() so the namespace never crosses the RSC boundary:"
   );
   for (const [key] of violations) console.error(`  ${key}`);
   console.error(
@@ -126,12 +100,18 @@ if (violations.size) {
   exitCode = 1;
 }
 
-if (dynamicWarnings.length) {
-  console.warn(
-    `::warning title=WO-365 dynamic namespace::` +
-      `${dynamicWarnings.length} file(s) use a template literal as a useTranslations() ` +
-      `argument — these cannot be checked statically: ${dynamicWarnings.join(", ")}`
+if (nonLiteral.length) {
+  console.error(
+    "NON-LITERAL useTranslations() ARGUMENTS — these cannot be checked " +
+      "statically and defeat the namespace guard.  Switch to a string literal " +
+      "or, if truly necessary, add an explicit allow-list entry:"
   );
+  for (const f of nonLiteral) console.error(`  ${f}`);
+  console.error(
+    `\n${nonLiteral.length} file(s) with non-literal useTranslations() arguments. ` +
+      "Failing closed — all 162 current call sites use string literals.\n"
+  );
+  exitCode = 1;
 }
 
 if (exitCode === 0) {

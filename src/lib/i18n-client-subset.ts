@@ -1,49 +1,15 @@
 import type { AbstractIntlMessages } from "next-intl";
+import CLIENT_NAMESPACE_PATHS from "./CLIENT_NAMESPACE_PATHS.json";
 
 // WO-365 W1 · Only namespaces actually consumed by client components cross the
 // RSC boundary.  Server components read the full catalog independently via
 // getTranslations(), so dropping server-only namespaces from the provider has
-// no effect on SSR.  28 % of the serialized message payload was server-only.
+// no effect on SSR.  ~28 % of the serialized message payload was server-only.
 //
-// ADDING A NAMESPACE:  when a new client component calls useTranslations("ns"),
-// add the dot-separated path here.  The CI namespace-guard script
-// (scripts/check-i18n-client-namespaces.mjs) will fail the build if you forget.
-
-const CLIENT_NAMESPACE_PATHS = [
-  "assistant",
-  "auth",
-  "calendar",
-  "caseDetail",
-  "casePreview",
-  "cases",
-  "causeList",
-  "clients",
-  "combobox",
-  "common",
-  "comms",
-  "copilot",
-  "dashboard.clients",
-  "dashboard.inbox",
-  "dashboard.onboarding",
-  "documents",
-  "draft",
-  "enum",
-  "inbox",
-  "invoices",
-  "ip",
-  "landing",
-  "messages",
-  "nav",
-  "notices",
-  "pagination",
-  "portal",
-  "requestAccess",
-  "research",
-  "search",
-  "settings",
-  "shell",
-  "voice",
-] as const;
+// The canonical namespace list lives in ./CLIENT_NAMESPACE_PATHS.json — a
+// single source of truth shared with the two CI gate scripts.  Adding a client
+// component that calls useTranslations("ns")?  Add the dot-separated path to
+// that JSON file.  The CI namespace-guard will fail the build if you forget.
 
 export function selectClientMessages(
   messages: AbstractIntlMessages,

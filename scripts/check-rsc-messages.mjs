@@ -9,52 +9,16 @@
 // Usage: node scripts/check-rsc-messages.mjs
 
 import { readFileSync } from "node:fs";
+import PATHS from "../src/lib/CLIENT_NAMESPACE_PATHS.json" with { type: "json" };
 
 const BUDGET_FILE = "rsc-messages-budget.json";
 const EN_PATH = "src/i18n/messages/en.json";
 const HI_PATH = "src/i18n/messages/hi.json";
 const DEFAULT_WARN_PCT = 5;
 
-// Mirrors src/lib/i18n-client-subset.ts — keep in sync.
-const CLIENT_PATHS = [
-  "assistant",
-  "auth",
-  "calendar",
-  "caseDetail",
-  "casePreview",
-  "cases",
-  "causeList",
-  "clients",
-  "combobox",
-  "common",
-  "comms",
-  "copilot",
-  "dashboard.clients",
-  "dashboard.inbox",
-  "dashboard.onboarding",
-  "documents",
-  "draft",
-  "enum",
-  "inbox",
-  "invoices",
-  "ip",
-  "landing",
-  "messages",
-  "nav",
-  "notices",
-  "pagination",
-  "portal",
-  "requestAccess",
-  "research",
-  "search",
-  "settings",
-  "shell",
-  "voice",
-];
-
 function selectClientMessages(messages) {
   const result = {};
-  for (const path of CLIENT_PATHS) {
+  for (const path of PATHS) {
     const parts = path.split(".");
     let src = messages;
     let dst = result;
