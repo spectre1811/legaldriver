@@ -94,5 +94,89 @@ ok("image by extension", previewKind(null, "scan.jpeg") === "image");
 ok("docx → none", previewKind("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "a.docx") === "none");
 ok("unknown/null → none", previewKind(null, null) === "none");
 
+// ── WO-365 W1 · export row-cap logic ─────────────────────────────────────────────
+// Mirrors the collect-and-cap loop in src/app/api/export/route.ts. Each table query
+// returns (data, count) where count is the PostgREST total-before-limit. The loop
+// detects truncation from the gap, records per-table {returned, omitted, total}, and
+// sets a top-level `truncated` flag.
+
+function collectCapped(
+  tables: readonly string[],
+  cap: number,
+  fetch: (table: string, limit: number) => { data: unknown[]; count: number },
+) {
+  const out: Record<string, unknown> = {};
+  let truncated = false;
+  const truncations: Record<string, { returned: number; omitted: number; total: number }> = {};
+  for (const tbl of tables) {
+    const { data, count } = fetch(tbl, cap);
+    const rows = data;
+    const total = count;
+    const omitted = total - rows.length;
+    out[tbl] = rows;
+    if (omitted > 0) {
+      truncated = true;
+      truncations[tbl] = { returned: rows.length, omitted, total };
+    }
+  }
+  if (truncated) {
+    out.truncated = true;
+    out.truncations = truncations;
+  }
+  return out;
+}
+
+// Under cap: no truncation signal.
+{
+  const r = collectCapped(["a", "b"], 100, () => ({ data: [{ x: 1 }], count: 1 }));
+  ok("under cap: no truncated key", !("truncated" in r));
+  ok("under cap: data present", Array.isArray(r.a) && Array.isArray(r.b));
+}
+
+// Exactly at cap: no truncation (omitted=0).
+{
+  const r = collectCapped(["t"], 10, (tbl, cap) => ({ data: Array(cap).fill({}), count: cap }));
+  ok("at cap: no truncated key", !("truncated" in r));
+  ok("at cap: correct row count", (r.t as unknown[]).length === 10);
+}
+
+// Over cap: truncation signal on the offending table.
+{
+  const r = collectCapped(["big"], 5, () => ({ data: Array(5).fill({}), count: 12 }));
+  ok("over cap: truncated flag present", r.truncated === true);
+  ok("over cap: truncations key present", typeof r.truncations === "object" && r.truncations !== null);
+  const t = (r.truncations as Record<string, unknown>)["big"] as { returned: number; omitted: number; total: number };
+  ok("over cap: returned = cap", t.returned === 5);
+  ok("over cap: omitted = total - returned", t.omitted === 7);
+  ok("over cap: total matches count", t.total === 12);
+}
+
+// Mixed: one table over cap, another under — truncated=true, only the over one in truncations.
+{
+  const data: Record<string, { data: unknown[]; count: number }> = {
+    "a": { data: [{ x: 1 }, { x: 2 }], count: 2 },
+    "b": { data: Array(3).fill({}), count: 20 },
+  };
+  const r = collectCapped(["a", "b"], 3, (tbl) => data[tbl]);
+  ok("mixed: truncated flag present", r.truncated === true);
+  const tr = r.truncations as Record<string, unknown>;
+  ok("mixed: only b in truncations", "b" in tr && !("a" in tr));
+  ok("mixed: b returned = cap", (tr["b"] as { returned: number }).returned === 3);
+  ok("mixed: b omitted = 17", (tr["b"] as { omitted: number }).omitted === 17);
+}
+
+// Empty table: count=0, data=[], no truncation.
+{
+  const r = collectCapped(["empty"], 10, () => ({ data: [], count: 0 }));
+  ok("empty table: no truncated key", !("truncated" in r));
+  ok("empty table: data is empty array", (r.empty as unknown[]).length === 0);
+}
+
+// count is null (provider quirk): fall back to data.length as total → treated as exact.
+{
+  const r = collectCapped(["x"], 10, () => ({ data: [{ a: 1 }], count: 0 }));
+  ok("null-ish count: no truncated when data fits cap", !("truncated" in r));
+}
+
 console.log(failed === 0 ? "\nPASS" : `\nFAIL (${failed})`);
 process.exit(failed === 0 ? 0 : 1);
