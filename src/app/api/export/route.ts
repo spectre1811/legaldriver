@@ -1,34 +1,30 @@
-import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { handleExport } from "@/lib/export/handler";
 
-// GET /api/export — DPDP "download my data": the signed-in user's tenant data as a JSON file.
-// Every query goes through the RLS server client (scoped to the caller's tenant) — NO service-role.
-// Document/voice BLOBS are not included (those are separate Storage objects) — only their metadata.
+const DEFAULT_EXPORT_ROW_LIMIT = 10_000;
+
+function resolveExportRowLimit(): number {
+  const raw = process.env.EXPORT_ROW_LIMIT;
+  if (!raw) return DEFAULT_EXPORT_ROW_LIMIT;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) {
+    console.warn(`[export] invalid EXPORT_ROW_LIMIT="${raw}" — using default ${DEFAULT_EXPORT_ROW_LIMIT}`);
+    return DEFAULT_EXPORT_ROW_LIMIT;
+  }
+  return n;
+}
+
 const TABLES = [
   "tenant", "profile", "advocate", "matter", "client", "document",
   "invoice", "invoice_line", "notice", "hearing", "time_entry", "expense",
   "notification_prefs", "audit_event",
 ] as const;
 
+// GET /api/export — DPDP "download my data": the signed-in user's tenant data as a JSON file.
+// Every query goes through the RLS server client (scoped to the caller's tenant) — NO service-role.
+// Document/voice BLOBS are not included (those are separate Storage objects) — only their metadata.
 export async function GET() {
+  const cap = resolveExportRowLimit();
   const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
-
-  const out: Record<string, unknown> = {
-    exported_at: new Date().toISOString(),
-    user: { id: user.id, email: user.email },
-  };
-  for (const tbl of TABLES) {
-    const { data } = await supabase.from(tbl).select("*");
-    out[tbl] = data ?? [];
-  }
-
-  return new NextResponse(JSON.stringify(out, null, 2), {
-    headers: {
-      "Content-Type": "application/json",
-      "Content-Disposition": `attachment; filename="mukadma-data-export.json"`,
-      "Cache-Control": "no-store",
-    },
-  });
+  return handleExport(supabase, cap, TABLES as unknown as readonly string[]);
 }
