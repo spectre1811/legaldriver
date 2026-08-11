@@ -46,9 +46,21 @@ export function AddCaseForm({
       formRef.current?.requestSubmit();
     }
   }, [autoCnr]);
+  // A failed autoCnr attempt still strips the `track` param so a refresh doesn't re-fire the
+  // lookup, but leaves the advocate in the modal — the "add manually" fallback below reveals
+  // itself via the cnrFailed effect. A SUCCESSFUL attempt is handled by the redirect effect
+  // below instead (WO-401 A2): it navigates away, which unmounts this page's `track` param too.
   useEffect(() => {
-    if (autoCnr && state.message) router.replace("/dashboard/cases", { scroll: false });
-  }, [autoCnr, state.message, router]);
+    if (autoCnr && state.message && !state.ok) router.replace("/dashboard/cases", { scroll: false });
+  }, [autoCnr, state.message, state.ok, router]);
+
+  // WO-401 A2 — on a SUCCESSFUL CNR add (manual submit or the ?track= auto-submit), the case
+  // now exists: go straight to its page, mirroring the manual-create path below, instead of
+  // leaving the modal open on an inline "Re-synced…" message. Navigating away unmounts the
+  // modal too, so no separate close call is needed.
+  useEffect(() => {
+    if (state.ok && state.matterId) router.push(`/dashboard/cases/${state.matterId}`);
+  }, [state.ok, state.matterId, router]);
 
   // A failed CNR lookup is the moment the "add it manually" promise must lead somewhere:
   // reveal the manual fields so the advocate never hits a dead end (WO-35 #2).

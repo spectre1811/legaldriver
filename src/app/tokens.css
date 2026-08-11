@@ -23,6 +23,14 @@
   --ink:        #1A1C1E;   /* primary text */
   --ink-2:      #4A4A45;   /* secondary text */
   --ink-3:      #8B8578;   /* tertiary text, placeholders (decorative only) */
+  /* WO-401: RGB triplet of --ink, so Tailwind can generate opacity-modified utilities
+     (bg-ec-ink/40 etc.) via `rgb(var(--ink-rgb) / <alpha-value>)`. Tailwind can't inject an
+     alpha channel into a bare `var(--ink)` hex reference at build time — every `bg-ec-ink/NN`
+     / `text-ec-ink/NN` / `border-ec-ink/NN` utility in the app was silently compiling to
+     NOTHING (verified: doc-viewer-panel's backdrop, add-case-modal's, FiltersSheet's, and
+     mobile-nav's overlays were all invisible for this reason, not a z-index issue as guessed).
+     Keep in sync with --ink by hand (no CSS way to derive one from the other). */
+  --ink-rgb:    26 28 30;
 
   /* colour — bronze (primary interactive: links, active nav, eyebrows) */
   --bronze:      #78582B;

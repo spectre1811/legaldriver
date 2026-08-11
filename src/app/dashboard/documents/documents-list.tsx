@@ -7,7 +7,7 @@
 // reference's fabricated `doc.filed` boolean is the same "needs review" definition the Review
 // Inbox count already uses (WO-33), and its 3-way order/pleading/annexure icon is the document's
 // real classified category icon (lib/docs/categories.ts).
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Icon, type IconName } from "@/components/icons";
 import { DocViewerPanel } from "./doc-viewer-panel";
@@ -21,13 +21,9 @@ type Props =
   | { mode: "client"; sections: ClientSection[] };
 
 export function DocumentsList(props: Props) {
+  // WO-401 A3: Escape-to-close now lives inside DocViewerPanel itself (self-contained, works
+  // regardless of caller) — this component no longer needs its own listener.
   const [preview, setPreview] = useState<DocRow | null>(null);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPreview(null); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   return (
     <>
