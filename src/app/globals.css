@@ -282,6 +282,16 @@ html[lang="hi"] .tracking-\[0\.08em\] {
    Applied precisely to numeric/identifier spans; not layer-scoped so it's always available. */
 .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
 
+/* WO-404 · serif display figures (Chambers prototype `figures` utility, styles.css:178-182) —
+   tabular alignment WITHOUT a font-family, so `.font-display.figures` stays serif. `.num` sets a
+   mono font-family and was landing after Tailwind's `.font-display` utility in the compiled CSS
+   (both un-layered .num beats the layered .font-display, or plain source order once un-layered
+   too — either way .num's font-family always won), so any element wearing BOTH classes for
+   "serif tabular figures" silently rendered mono instead (WO-400 root cause). Use `.figures`
+   wherever the number should read serif; `.num` stays reserved for genuine mono data (CNRs, case
+   numbers, dates, ₹ amounts, serials). */
+.figures { font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum" 1; }
+
 /* ============================================================
    WO-324 W2 — Daybreak landing motion (founder-flagged regression:
    "no animations, search bar animation lost"). Ported from

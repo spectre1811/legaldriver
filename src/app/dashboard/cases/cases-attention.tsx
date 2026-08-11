@@ -74,7 +74,7 @@ export function CasesAttention({ counts }: { counts: ViewCounts }) {
                     : "border-ec-hair bg-ec-paper hover:border-ec-hair-strong hover:bg-ec-paper-3"
                 }`}
               >
-                <span className="font-display num text-[19px] font-semibold leading-none text-ec-ink">
+                <span className="font-display figures text-[19px] font-semibold leading-none text-ec-ink">
                   {counts[b.key]}
                 </span>
                 <span className={`text-[12.5px] ${on ? "font-medium text-ec-ink" : "text-ec-ink-2"}`}>
