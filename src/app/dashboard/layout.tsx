@@ -1,15 +1,12 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAllowedAdmin } from "@/lib/access/validate";
 import { signAvatar } from "@/lib/profile/avatar";
 import { fmtAgo } from "@/components/ui";
-import { NavLinks, SidebarFooter } from "./nav";
+import { Sidebar } from "./nav";
 import { MobileNav } from "./mobile-nav";
 import { TopBar } from "./top-bar";
-import { BrandMark } from "@/components/brand-mark";
-import { brand } from "@/lib/brand";
 import { ToastProvider } from "@/components/toast";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -60,30 +57,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     // component can call useToast() (@/components/toast). See ToastProvider's file comment.
     <ToastProvider>
       <div className="flex min-h-screen bg-ec-paper text-ec-ink">
-        <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-ec-line bg-ec-card px-4 py-5 md:flex">
-          <Link
-            href="/dashboard"
-            aria-label={t("home")}
-            className="flex items-center gap-2.5 rounded-ec-s px-2 py-1 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
-          >
-            {/* Brand mark (letter tile) + typographic wordmark — the "date underline" motif.
-                WO-345: kept the live lowercase mukadma lockup (founder trademark call) but laid it
-                out like app-shell.tsx's Wordmark slot, with मुक़दमा as the subtitle line
-                (previously the tenant/workspace name). */}
-            <BrandMark size={32} tone="dark" className="shrink-0" />
-            <div className="leading-tight">
-              <p className="ec-underline inline-block font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink">
-                {brand.name}
-              </p>
-              <p className="mt-1.5 truncate text-xs text-ec-ink-3" lang="hi">{brand.nameDevanagari}</p>
-            </div>
-          </Link>
-
-          <div className="mt-7 flex-1 overflow-y-auto">
-            <NavLinks isAdmin={isAdmin} />
-          </div>
-          <SidebarFooter />
-        </aside>
+        {/* WO-406 D4 — collapsible & resizable sidebar; the logo/nav/footer composition that
+            used to be inline here now lives in the client-side Sidebar (needs hooks for
+            collapse/resize/persistence, which a server component can't hold). `shrink-0` +
+            <main>'s `flex-1` is what makes the content area reflow to whatever width Sidebar
+            renders — no coordination needed on this side. */}
+        <Sidebar isAdmin={isAdmin} homeLabel={t("home")} />
 
         <main className="min-w-0 flex-1 pb-16 md:pb-0">
           <MobileNav

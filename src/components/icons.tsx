@@ -29,7 +29,12 @@ export type IconName =
   // WO-346 Overview/Cases exact-fidelity — the reference's lucide SlidersHorizontal (Cases
   // toolbar's Filters trigger, distinct from the gear "settings" glyph) and ArrowRight (the
   // Overview inbox card's "Review filings →" affordance, a real icon instead of a "→" glyph).
-  | "sliders" | "arrow";
+  | "sliders" | "arrow"
+  // WO-406 D4 sidebar — founder tweak (11 Aug): the collapse control needs a real
+  // "collapse-the-panel" affordance (a sidebar rectangle with a chevron inside it), not a lone
+  // `‹`. Mirrored pair: panelCollapse (chevron points left, into the rail) for the expanded
+  // control, panelExpand (chevron points right) for the collapsed-rail control.
+  | "panelCollapse" | "panelExpand";
 
 const P: Record<IconName, React.ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
@@ -87,6 +92,9 @@ const P: Record<IconName, React.ReactNode> = {
   language: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.6 2.6 2.6 15.4 0 18M12 3c-2.6 2.6-2.6 15.4 0 18" /></>,
   sliders: <><path d="M4 6h9M17 6h3" /><circle cx="14" cy="6" r="2" /><path d="M4 12h3M11 12h9" /><circle cx="8" cy="12" r="2" /><path d="M4 18h11M19 18h1" /><circle cx="16" cy="18" r="2" /></>,
   arrow: <><path d="M5 12h14M13 6l6 6-6 6" /></>,
+  // WO-406 — sidebar-rectangle-with-a-chevron "collapse the panel" glyph (see IconName above).
+  panelCollapse: <><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M9.5 4v16" /><path d="M7.6 9.3 5.4 12l2.2 2.7" /></>,
+  panelExpand: <><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M9.5 4v16" /><path d="M5.6 9.3 7.8 12l-2.2 2.7" /></>,
 };
 
 export function Icon({ name, className = "h-5 w-5" }: IconProps) {

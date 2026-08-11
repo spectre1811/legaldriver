@@ -116,6 +116,7 @@ const OFFLINE = [
   "wo405_toast",
   "wo405_confirm_action",
   "wo405_dialog",
+  "wo406_sidebar",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the
