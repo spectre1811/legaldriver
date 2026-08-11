@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { brand } from "@/lib/brand";
 import { stripGatedPricing } from "@/lib/i18n-gate";
+import { selectClientMessages } from "@/lib/i18n-client-subset";
 import "./globals.css";
 
 // v2 UI sans (design-system-v2 §3). Work Sans + Noto Devanagari/Gujarati pairing.
@@ -55,7 +56,8 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
-  const messages = stripGatedPricing(await getMessages());
+  const fullMessages = stripGatedPricing(await getMessages());
+  const messages = selectClientMessages(fullMessages);
   const fontVars = `${sans.variable} ${serif.variable} ${mono.variable} ${notoDeva.variable} ${notoGuj.variable}`;
   return (
     <html lang={locale} className={fontVars}>
