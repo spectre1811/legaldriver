@@ -32,13 +32,26 @@ const str = (v: unknown) => {
 };
 // short "02 Jul" from the shared day-first formatter (drop the year for the compact aside lists).
 const shortDate = (v: string | null | undefined) => formatCourtDate(v)?.replace(/ \d{4}$/, "") ?? null;
-const NOTIFY_CHANNEL_LABEL: Record<string, string> = { whatsapp: "WA", email: "EM", sms: "SMS", inapp: "IN", in_app: "IN" };
+
+// C5 (WO-402, DESIGN.md ref Lovable /mocks Mockup 2): the Notifications card's Email row needs a
+// two-tone envelope (flap stroke `var(--honey)`) — the shared `Icon` set's single-stroke `gmail`
+// glyph can't give that without recoloring `gmail` everywhere it's already used (settings/inbox/
+// invoices), so this is a one-off inline glyph rather than a fork of the shared primitive.
+function EnvelopeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" />
+      <path d="m2 7 10 7 10-7" stroke="var(--honey)" />
+    </svg>
+  );
+}
 
 export default async function CaseDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
   const t = await getTranslations("caseDetail");
   const te = await getTranslations("enum");
   const tf = await getTranslations("dashboard.caseFile");
+  const tn = await getTranslations("notifications"); // C5: existing channel/kind vocabulary (WO-336) — reused, not forked
   const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
   const { data: matter } = await supabase.from("matter").select("*").eq("id", params.id).maybeSingle();
   if (!matter) notFound();
@@ -165,6 +178,12 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const stageLabel = cleanPurpose(matter.stage) || null;
   const judgeOnRecord = hearings?.find((h) => h.judge)?.judge ?? null;
   const courtNo = hearings?.find((h) => h.court_no)?.court_no ?? null;
+  // D2(b): district eCourts data often carries the judge name AS the court designation itself
+  // (e.g. "4th ADDL CIVIL JUDGE & JMFC"), so `judgeOnRecord` can be a case-only variant of
+  // `matter.court` — printing both in the masthead then reads as a stutter ("X · X"). De-duplicate
+  // case-insensitively so the redundant copy never renders.
+  const courtValue = str(matter.court);
+  const coramDuplicatesCourt = !!judgeOnRecord && !!courtValue && judgeOnRecord.trim().toLowerCase() === courtValue.trim().toLowerCase();
   const emptyOnRecord = isCourtSourced ? t("empty.onRecord") : t("empty.notSet");
   // Case type (matter.case_type, expanded) is a separate real field from the eCourts detail.category
   // row already inside caseDetails — kept as its own leading row in the Court record card rather
@@ -246,7 +265,10 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
       {/* header — the page's own dark "engraved" masthead panel (not shell chrome; WO-328's
           shell/top-bar/nav are untouched above this) */}
       <Reveal as="div" className="mk-engraved -mx-5 rounded-[14px] bg-ec-ink px-5 py-6 sm:-mx-8 sm:px-7 sm:py-7">
-        <Link href="/dashboard/cases" className="inline-flex items-center gap-1.5 text-[12px] text-ec-line-strong transition-colors hover:text-ec-honey">
+        {/* D2(a): was a bare 12px text link — easy to miss against the dark masthead. Upgraded to
+            the same ink-bordered chip family as the header's own action buttons (case-actions.tsx),
+            matching the Documents Trash page's dark-surface back-link precedent. */}
+        <Link href="/dashboard/cases" className="inline-flex items-center gap-1.5 rounded-md border border-ec-ink-border px-3 py-1.5 text-[12.5px] text-ec-paper transition-colors hover:border-ec-honey hover:text-ec-honey">
           <Icon name="back" className="h-3.5 w-3.5" /> {tf("back")}
         </Link>
 
@@ -266,7 +288,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             <p className="mt-2.5 text-[13px] text-ec-line-strong">
               <CourtField value={matter.court} emptyLabel={emptyOnRecord} maskedLabel={t("masked")} field={t("info.court")} className="text-ec-line-strong" />
               {courtNo && <> · {tf("courtNo", { no: courtNo })}</>}
-              {judgeOnRecord && !isMaskedName(judgeOnRecord) && (
+              {judgeOnRecord && !isMaskedName(judgeOnRecord) && !coramDuplicatesCourt && (
                 <> · <Link href={`/dashboard/search/directory?q=${encodeURIComponent(judgeOnRecord)}`} className="text-ec-honey hover:underline">{judgeOnRecord}</Link></>
               )}
             </p>
@@ -363,19 +385,23 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                           <div className="font-display text-[16px] text-ec-ink">
                             <CourtField value={p.name ?? null} maskedLabel={t("masked")} emptyLabel={t("parties.empty")} field="party" />
                           </div>
-                          {/* WO-332: `p.advocate` is already cleaned (page-level `parties` map, above) —
+                          {/* D3: `p.advocate` is already cleaned (page-level `parties` map, above) —
                               a literal "null"/"undefined" string can never reach here, so this stays a
                               plain truthy check, not a special-cased render (no fabricated placeholder
-                              text either; the line simply doesn't print when there's nothing real). */}
-                          {p.advocate && !isMaskedName(p.advocate) && (
-                            <div className="mt-2 text-[13px]">
-                              <Link href={`/dashboard/search/directory?q=${encodeURIComponent(p.advocate)}`} className="text-ec-bronze-deep hover:underline">
-                                {p.advocate}
-                              </Link>
+                              text either; the block simply doesn't print when there's nothing real).
+                              The "Represented by" eyebrow makes it read as THIS party's advocate,
+                              not a second, unrelated name floating under the party. */}
+                          {p.advocate && (
+                            <div className="mt-2.5">
+                              <div className="ec-label">{t("parties.representedBy")}</div>
+                              {!isMaskedName(p.advocate) ? (
+                                <Link href={`/dashboard/search/directory?q=${encodeURIComponent(p.advocate)}`} className="mt-0.5 block text-[13px] text-ec-bronze-deep hover:underline">
+                                  {p.advocate}
+                                </Link>
+                              ) : (
+                                <div className="mt-0.5 text-[13px] text-ec-ink-2">{p.advocate}</div>
+                              )}
                             </div>
-                          )}
-                          {p.advocate && isMaskedName(p.advocate) && (
-                            <div className="mt-2 text-[13px] text-ec-ink-2">{p.advocate}</div>
                           )}
                         </div>
                       ))}
@@ -534,19 +560,30 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
             <Reveal as="section" delay={160}>
               <SectionLabel>{tf("notify.title")}</SectionLabel>
               <div className="ec-card p-4">
+                {/* C5 (DESIGN.md, Lovable /mocks Mockup 2 "after"): a readable list, data-driven —
+                    only channel/kind pairs this matter actually has real notification rows for
+                    (`notifySeen`, built above from `notification` receipts) ever render; the honest
+                    empty state below is unchanged when there are none. */}
                 {notifySeen.size > 0 ? (
                   <>
-                    <div className="flex flex-wrap gap-1.5">
+                    <ul className="divide-y divide-ec-line">
                       {[...notifySeen.values()].map((n) => (
-                        <span key={`${n.channel}:${n.kind}`} title={n.kind.replace(/_/g, " ")} className="num inline-flex items-center gap-1 rounded border border-ec-bronze bg-ec-bronze-tint px-1.5 py-[3px] text-[10px] uppercase tracking-[0.08em] text-ec-bronze-deep">
-                          {NOTIFY_CHANNEL_LABEL[n.channel] ?? n.channel.slice(0, 2).toUpperCase()} · {n.kind.replace(/_/g, " ")}
-                        </span>
+                        <li key={`${n.channel}:${n.kind}`} className="flex items-center gap-2.5 py-[7px] first:pt-0 last:pb-0">
+                          {n.channel === "email" ? (
+                            <EnvelopeIcon className="h-[15px] w-[15px] shrink-0 text-ec-ink-2" />
+                          ) : (
+                            <Icon name="bell" className="h-[15px] w-[15px] shrink-0 text-ec-ink-2" />
+                          )}
+                          <span className="shrink-0 text-[12.5px] font-medium text-ec-ink">{tn.has(`channel.${n.channel}`) ? tn(`channel.${n.channel}`) : n.channel}</span>
+                          <span className="min-w-0 truncate text-[12.5px] text-ec-muted-ink">{tn.has(`kind.${n.kind}`) ? tn(`kind.${n.kind}`) : n.kind.replace(/_/g, " ")}</span>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                     {lastNotify && (
-                      <p className="mt-2.5 text-[12.5px] text-ec-ink-3">
-                        {tf("notify.lastSent", { date: lastNotify.sent_at ? new Date(lastNotify.sent_at).toLocaleString("en-IN") : "—" })} — {te.has(`status.${lastNotify.status}`) ? te(`status.${lastNotify.status}`) : lastNotify.status}
-                      </p>
+                      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-ec-line pt-2.5 text-[12.5px] text-ec-muted-ink">
+                        <span>{tf("notify.lastSent", { date: lastNotify.sent_at ? new Date(lastNotify.sent_at).toLocaleString("en-IN") : "—" })}</span>
+                        <Link href="/dashboard/notifications" className="shrink-0 text-ec-bronze hover:underline">{tf("notify.manage")} →</Link>
+                      </div>
                     )}
                   </>
                 ) : (
@@ -555,7 +592,23 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               </div>
             </Reveal>
 
-            <Reveal as="section" delay={200}>
+            {/* D1: Documents moved above Deadlines (was Deadlines → Documents). */}
+            <Reveal as="section" id="documents" delay={200} className="scroll-mt-28">
+              <SectionLabel>{t("documents.title")}</SectionLabel>
+              <div className="ec-card">
+                <div className="border-b border-ec-hair px-3 py-2.5"><AddDocumentForm matterId={matter.id} /></div>
+                {docRows.length ? (
+                  <DocumentsCard docs={docRows} matterId={matter.id} matterOpts={matterOpts} clientOpts={clientOpts} />
+                ) : (
+                  <p className="px-4 py-6 text-center text-sm text-ec-ink-3">{t("documents.empty")}</p>
+                )}
+                <Link href="/dashboard/documents" className="block border-t border-ec-hair px-4 py-2.5 text-[12.5px] text-ec-bronze-deep hover:underline">
+                  {tf("allDocuments")} →
+                </Link>
+              </div>
+            </Reveal>
+
+            <Reveal as="section" delay={240}>
               <SectionLabel>{t("deadlines.title")}</SectionLabel>
               <div className="ec-card divide-y divide-ec-hair">
                 {(() => {
@@ -587,21 +640,6 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                 <div className="p-4">
                   <DeadlineRuleForm matterId={matter.id} rules={deadlineRules ?? []} />
                 </div>
-              </div>
-            </Reveal>
-
-            <Reveal as="section" id="documents" delay={240} className="scroll-mt-28">
-              <SectionLabel>{t("documents.title")}</SectionLabel>
-              <div className="ec-card">
-                <div className="border-b border-ec-hair px-3 py-2.5"><AddDocumentForm matterId={matter.id} /></div>
-                {docRows.length ? (
-                  <DocumentsCard docs={docRows} matterId={matter.id} matterOpts={matterOpts} clientOpts={clientOpts} />
-                ) : (
-                  <p className="px-4 py-6 text-center text-sm text-ec-ink-3">{t("documents.empty")}</p>
-                )}
-                <Link href="/dashboard/documents" className="block border-t border-ec-hair px-4 py-2.5 text-[12.5px] text-ec-bronze-deep hover:underline">
-                  {tf("allDocuments")} →
-                </Link>
               </div>
             </Reveal>
 
