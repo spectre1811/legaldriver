@@ -64,8 +64,10 @@ async function main() {
   ok("auth/callback: imports requestOrigin", cb.includes('import { requestOrigin, sanitizeNext } from "@/lib/auth/redirects"'));
   ok("auth/callback: origin comes from requestOrigin(request.headers)", cb.includes("const origin = requestOrigin(request.headers);"));
   ok(
-    "auth/callback: the Google→dashboard redirect (`${origin}${next}`) uses the fixed origin",
-    /const res = NextResponse\.redirect\(`\$\{origin\}\$\{next\}`\);/.test(cb),
+    // WO-403 D6 renamed the local from `next` to `dest` (first-run override lands new
+    // accounts on /dashboard) — same fixed-origin contract, updated variable name.
+    "auth/callback: the Google→dashboard redirect (`${origin}${dest}`) uses the fixed origin",
+    /const res = NextResponse\.redirect\(`\$\{origin\}\$\{dest\}`\);/.test(cb),
   );
   ok(
     "auth/callback: no redirect origin still built off new URL(request.url).origin",

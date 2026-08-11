@@ -46,11 +46,23 @@ export async function GET(request: NextRequest) {
     return errorPage("exchange");
   }
 
-  const res = NextResponse.redirect(`${origin}${next}`);
+  const { data: { user } } = await supabase.auth.getUser();
+  const provider = user?.app_metadata?.provider;
+  // First OAuth sign-in ≈ account just created (created_at within a minute of now).
+  // ponytail: 60s created_at heuristic for first-vs-returning OAuth; upgrade to a real
+  // "first session" flag if the split ever needs to be exact.
+  const isNewAccount =
+    !!user && (provider === "email" || Date.now() - new Date(user.created_at).getTime() < 60_000);
+
+  // WO-403 D6: a brand-new account has no context for a deep-linked page yet — send it
+  // to Overview instead of wherever ?next= pointed. Reuses the same new-account signal
+  // as the registration_completed tracking below; password recovery is never overridden.
+  const dest = isNewAccount && next !== "/reset-password" ? "/dashboard" : next;
+
+  const res = NextResponse.redirect(`${origin}${dest}`);
   // Seed the UI locale from the user's stored preference so the first authed
   // render uses their language (profile.locale is the durable source; cookie
   // is the per-request fast path). WO-03.
-  const { data: { user } } = await supabase.auth.getUser();
   if (user) {
     const { data: prof } = await supabase.from("profile").select("locale").eq("id", user.id).maybeSingle();
     if (prof?.locale && isLocale(prof.locale)) {
@@ -61,16 +73,10 @@ export async function GET(request: NextRequest) {
     //  • email-confirmation link → provider "email", fires exactly once → registration_completed.
     //  • OAuth (Google) return → always a login; a brand-new account is also a registration.
     if (next !== "/reset-password") {
-      const provider = user.app_metadata?.provider;
       if (provider === "email") {
         track("registration_completed", user.id, { method: "email" });
       } else {
-        // First OAuth sign-in ≈ account just created (created_at within a minute of now).
-        // ponytail: 60s created_at heuristic for first-vs-returning OAuth; upgrade to a real
-        // "first session" flag if the split ever needs to be exact.
-        if (Date.now() - new Date(user.created_at).getTime() < 60_000) {
-          track("registration_completed", user.id, { method: "oauth" });
-        }
+        if (isNewAccount) track("registration_completed", user.id, { method: "oauth" });
         track("login", user.id, { method: "oauth" });
       }
     }

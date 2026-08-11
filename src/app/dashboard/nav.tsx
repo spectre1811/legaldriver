@@ -8,20 +8,20 @@ import { isDisabled } from "./modules"; // WO-206: hide voice/messages/portfolio
 
 type NavEntry = { href: string; label: string; icon: IconName };
 
-// WO-345 — prototype fidelity (design-mockups/iteration3/console/app-shell.tsx:28-37,280-308):
-// ONE flat "Console" list, exact order Overview→Onboarding. Supersedes WO-328's "onboarding
-// pinned first" note (this order is the founder-approved one now). WO-206 module-hiding still
-// applies below (none of these 8 are currently disabled, but the flag stays live so a future
-// "have it later" module still hides cleanly without touching this order).
+// WO-403 (§D5) — Onboarding moved to 2nd position, right after Overview. Supersedes WO-345's
+// "exact order Overview→Onboarding" note (that described the list's span, not adjacency — this
+// is the new founder-approved order). WO-206 module-hiding still applies below (none of these 8
+// are currently disabled, but the flag stays live so a future "have it later" module still hides
+// cleanly without touching this order).
 const NAV_ALL: NavEntry[] = [
   { href: "/dashboard", label: "overview", icon: "overview" },
+  { href: "/dashboard/onboarding", label: "onboarding", icon: "sparkles" },
   { href: "/dashboard/cases", label: "cases", icon: "cases" },
   { href: "/dashboard/clients", label: "clients", icon: "clients" },
   { href: "/dashboard/documents", label: "documents", icon: "documents" },
   { href: "/dashboard/inbox", label: "inbox", icon: "gmail" },
   { href: "/dashboard/notifications", label: "notifications", icon: "bell" },
   { href: "/dashboard/directory", label: "directory", icon: "scale" },
-  { href: "/dashboard/onboarding", label: "onboarding", icon: "sparkles" },
 ];
 export const NAV: NavEntry[] = NAV_ALL.filter((i) => !isDisabled(i.href));
 
