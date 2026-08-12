@@ -22,19 +22,23 @@ export function BrandMark({
   className?: string;
   title?: string;
 }) {
-  const tile = tone === "light" ? "#FAF7F1" : "#191926";
-  const glyph = tone === "light" ? "#191926" : "#FAF7F1";
+  // WO-410 F4: was hardcoded hex (#FAF7F1/#191926/#A8823C) that had drifted from the live
+  // ec-* palette (tokens.css --paper/--ink/--honey) — the mark's own "rendering" bug. Now
+  // reads the same CSS custom properties every other surface does, so a palette change
+  // (tokens.css) moves the mark too instead of leaving it stuck on a stale colourway.
+  const tile = tone === "light" ? "var(--paper)" : "var(--ink)";
+  const glyph = tone === "light" ? "var(--ink)" : "var(--paper)";
   return (
     <svg width={size} height={size} viewBox="0 0 128 128" role="img" aria-label={title} className={className}>
       <rect
         x="5" y="5" width="118" height="118" rx="27"
         fill={tile}
-        stroke={tone === "light" ? "#191926" : "none"}
+        stroke={tone === "light" ? "var(--ink)" : "none"}
         strokeOpacity={tone === "light" ? 0.12 : 0}
         strokeWidth="2"
       />
       <path d={GLYPH_PATH} fill={glyph} />
-      <rect x="34" y="84" width="56" height="6" rx="3" fill="#A8823C" />
+      <rect x="34" y="84" width="56" height="6" rx="3" fill="var(--honey)" />
     </svg>
   );
 }

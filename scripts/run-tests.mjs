@@ -118,6 +118,8 @@ const OFFLINE = [
   "wo405_dialog",
   "wo406_sidebar",
   "wo407_columns",
+  "wo408_clients_bulk",
+  "wo409_documents_filters",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the
