@@ -17,9 +17,14 @@ import {
   useSelection, useUndo, BulkBar, bulkBtn, RowCheckbox, SelectAllCheckbox, UndoToast,
 } from "@/components/selection";
 import { CaseDetailDrawer, UrgencyChip } from "@/components/cases/case-detail-drawer";
+import { ColumnPicker } from "@/components/cases/column-picker";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { hearingUrgency, courtCaseNo } from "./cases-row";
 import { DENSITIES, DENSITY_STORAGE_KEY, parseDensity, type Density } from "./density";
+import {
+  COLUMNS_STORAGE_KEY, DEFAULT_COLUMNS_STATE, parseColumnsState, visibleColumns,
+  type ColumnId, type ColumnsState,
+} from "./columns";
 import { parseSort, toCasesCsv } from "./cases-query";
 import type { MatterRow } from "./cases-query";
 import { useCasesNav } from "./cases-nav";
@@ -45,6 +50,9 @@ export function CasesTable({
   initialDensity?: Density;
 }) {
   const t = useTranslations("cases");
+  // WO-407 E1: reuses the Filters drawer's existing Stage/Advocate/Case-type labels (cases.console)
+  // for the column picker + new headers — no duplicate translation of strings that already exist.
+  const tc = useTranslations("cases.console");
   const te = useTranslations("enum");
   const tcd = useTranslations("caseDetail");
   const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
@@ -63,6 +71,22 @@ export function CasesTable({
   // guards a corrupted/stale localStorage value the same way page.tsx's old cookie read did.
   const [storedDensity, changeDensity] = usePersistedState<Density>(DENSITY_STORAGE_KEY, initialDensity);
   const density = parseDensity(storedDensity);
+  // WO-407 E1: which columns show + their order, persisted the same way (mukadma:cases:columns).
+  // parseColumnsState repairs a corrupt/stale/schema-drifted value the same way parseDensity does
+  // above — usePersistedState itself doesn't validate shape (use-persisted-state.ts).
+  const [storedColumns, changeColumns] = usePersistedState<ColumnsState>(COLUMNS_STORAGE_KEY, DEFAULT_COLUMNS_STATE);
+  const columns = parseColumnsState(storedColumns);
+  const visibleCols = visibleColumns(columns).filter((id): id is Exclude<ColumnId, "case"> => id !== "case");
+  const columnLabels: Record<ColumnId, string> = {
+    case: t("th.case"),
+    court: t("th.court"),
+    next: t("th.next"),
+    stage: tc("stage"),
+    advocate: tc("advocate"),
+    caseType: tc("caseType"),
+    filedOn: t("columns.filedOn"),
+    lastSynced: t("columns.lastSynced"),
+  };
   // WO-54 W3: the row's "peek" — a right-side drawer with the fuller record (progressive disclosure).
   const [drawerRow, setDrawerRow] = useState<MatterRow | null>(null);
   // Prior stages captured by the last bulk stage-change, so its Undo can restore per-row values.
@@ -166,6 +190,23 @@ export function CasesTable({
     else if (e.key === "Enter") { e.preventDefault(); setDrawerRow(m); }
   }
 
+  // WO-407 E1 · the column-picker-controlled headers, in the user's chosen order. Case/Court/Next
+  // stay sortable (SortHeader, unchanged behaviour); Stage joins them (sortKeyOf already mapped
+  // "stage" before this WO). Advocate/Case type/Filed on/Last synced have no query-layer sort key
+  // (cases-query.ts), so they render as plain headers — not a regression, never wired to begin with.
+  function renderColumnHeader(id: Exclude<ColumnId, "case">) {
+    switch (id) {
+      case "court":
+        return <SortHeader key={id} label={columnLabels.court} col="court" active={active} onSort={setSort} className="hidden lg:table-cell" />;
+      case "next":
+        return <SortHeader key={id} label={columnLabels.next} col="next" active={active} onSort={setSort} className="w-44" />;
+      case "stage":
+        return <SortHeader key={id} label={columnLabels.stage} col="stage" active={active} onSort={setSort} className="hidden lg:table-cell" />;
+      default:
+        return <th key={id} className="ec-label hidden px-5 py-3 lg:table-cell">{columnLabels[id]}</th>;
+    }
+  }
+
   return (
     <>
       {/* WO-331 EXACT-FIDELITY: the reference's density row is list-view-only, right-aligned, plain
@@ -211,13 +252,16 @@ export function CasesTable({
                 />
               </th>
               <SortHeader label={t("th.case")} col="title" active={active} onSort={setSort} />
-              <SortHeader label={t("th.court")} col="court" active={active} onSort={setSort} className="hidden lg:table-cell" />
-              <SortHeader label={t("th.next")} col="next" active={active} onSort={setSort} className="w-44" />
+              {visibleCols.map(renderColumnHeader)}
               {/* WO-331 EXACT-FIDELITY: the reference's 5th grid column (row actions + the synced
                   dot, combined) has no visible header label at all — matched here; "Synced" stays
                   as an sr-only label so the column keeps a real accessible name. */}
               <th className="hidden w-20 px-3 py-3 text-right lg:table-cell">
                 <span className="sr-only">{t("th.synced")}</span>
+              </th>
+              {/* WO-407 E1 · the column picker trigger, right end of the header row. */}
+              <th className="w-10 px-3 py-3 text-right">
+                <ColumnPicker columns={columns} onChange={changeColumns} labels={columnLabels} />
               </th>
             </tr>
           </thead>
@@ -240,6 +284,49 @@ export function CasesTable({
               const syncedTitle = m.last_synced_at
                 ? t("th.syncedTitle", { source: m.source ?? t("th.manualSource"), ago: relativeAge(m.last_synced_at) })
                 : t("th.neverSynced");
+              // WO-407 E1 · the column-picker-controlled cells, same id set/order as renderColumnHeader
+              // above. Every value here is a real stored field (advocate_names/case_type/detail —
+              // same source cases-row.ts's courtCaseNo already reads) — never a fabricated column.
+              const renderColumnCell = (id: Exclude<ColumnId, "case">) => {
+                switch (id) {
+                  case "court":
+                    return <td key={id} className="hidden px-5 py-3.5 text-ec-ink-2 lg:table-cell">{m.court ?? "—"}</td>;
+                  case "next":
+                    return (
+                      <td key={id} className="num px-5 py-3.5">
+                        {eff ? (
+                          <span className="inline-flex flex-wrap items-center gap-1.5">
+                            <span className={overdue ? "font-medium text-ec-danger" : "text-ec-ink-2"}>{(formatCourtDate(eff) ?? "—")}</span>
+                            {m.next_hearing_override && <span className="text-[0.7rem] text-ec-ink-3">{t("diary")}</span>}
+                            <UrgencyChip urg={urg} t={t} />
+                          </span>
+                        ) : <span className="text-xs text-ec-ink-3">{t("noDate")}</span>}
+                      </td>
+                    );
+                  case "stage":
+                    return <td key={id} className="hidden px-5 py-3.5 text-ec-ink-2 lg:table-cell">{m.stage ? cleanPurpose(m.stage) : "—"}</td>;
+                  case "advocate": {
+                    const names = (m.advocate_names ?? []).filter(Boolean);
+                    return (
+                      <td key={id} className="hidden max-w-[180px] px-5 py-3.5 text-ec-ink-2 lg:table-cell">
+                        <span className="block truncate">{names.length ? names.join(", ") : "—"}</span>
+                      </td>
+                    );
+                  }
+                  case "caseType":
+                    return <td key={id} className="hidden px-5 py-3.5 text-ec-ink-2 lg:table-cell">{m.case_type ?? "—"}</td>;
+                  case "filedOn": {
+                    const filed = typeof detail.filingDate === "string" && detail.filingDate.trim() ? detail.filingDate.trim() : null;
+                    return <td key={id} className="num hidden px-5 py-3.5 text-ec-ink-2 lg:table-cell">{filed ? (formatCourtDate(filed) ?? "—") : "—"}</td>;
+                  }
+                  case "lastSynced":
+                    return (
+                      <td key={id} className="num hidden px-5 py-3.5 text-ec-ink-2 lg:table-cell">
+                        {m.last_synced_at ? relativeAge(m.last_synced_at) : t("th.neverSynced")}
+                      </td>
+                    );
+                }
+              };
               return (
                 <tr
                   key={m.id}
@@ -273,16 +360,7 @@ export function CasesTable({
                       {[m.court, eff ? (formatCourtDate(eff) ?? null) : t("noDate")].filter(Boolean).join(" · ")}
                     </div>
                   </td>
-                  <td className="hidden px-5 py-3.5 text-ec-ink-2 lg:table-cell">{m.court ?? "—"}</td>
-                  <td className="num px-5 py-3.5">
-                    {eff ? (
-                      <span className="inline-flex flex-wrap items-center gap-1.5">
-                        <span className={overdue ? "font-medium text-ec-danger" : "text-ec-ink-2"}>{(formatCourtDate(eff) ?? "—")}</span>
-                        {m.next_hearing_override && <span className="text-[0.7rem] text-ec-ink-3">{t("diary")}</span>}
-                        <UrgencyChip urg={urg} t={t} />
-                      </span>
-                    ) : <span className="text-xs text-ec-ink-3">{t("noDate")}</span>}
-                  </td>
+                  {visibleCols.map(renderColumnCell)}
                   {/* WO-331 EXACT-FIDELITY: the reference combines the row-hover action cluster and
                       the synced dot into ONE trailing column (its 78px grid track), not two separate
                       ones — merged here to match. "Open" is real (the existing drawer). "Cause list"
@@ -317,6 +395,8 @@ export function CasesTable({
                       />
                     </div>
                   </td>
+                  {/* Matches the header's trailing column-picker <th> so column counts stay aligned. */}
+                  <td className="w-10 px-3 py-3.5" />
                 </tr>
               );
             })}

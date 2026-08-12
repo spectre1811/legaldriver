@@ -723,6 +723,14 @@
       "neverSynced": "Not yet synced from the court record",
       "manualSource": "manual entry"
     },
+    "columns": {
+      "trigger": "Add or reorder columns",
+      "heading": "Columns",
+      "reorderHint": "Use the arrow keys to move focus, space to show or hide a column, and Alt+Arrow to reorder.",
+      "reset": "Reset to default",
+      "filedOn": "Filed on",
+      "lastSynced": "Last synced"
+    },
     "diary": "diary",
     "past": "past",
     "noDate": "no date",

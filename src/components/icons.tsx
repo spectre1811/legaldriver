@@ -34,7 +34,11 @@ export type IconName =
   // "collapse-the-panel" affordance (a sidebar rectangle with a chevron inside it), not a lone
   // `‹`. Mirrored pair: panelCollapse (chevron points left, into the rail) for the expanded
   // control, panelExpand (chevron points right) for the collapsed-rail control.
-  | "panelCollapse" | "panelExpand";
+  | "panelCollapse" | "panelExpand"
+  // WO-407 E1 column picker — a real table-column glyph with a small "+" (not a bare `+`, which
+  // already exists as "plus" and reads as a generic add action) for the cases-table header's
+  // add/reorder-columns trigger; "grip" is the popover row's drag handle (DESIGN.md's IconGrip).
+  | "plusColumns" | "grip";
 
 const P: Record<IconName, React.ReactNode> = {
   overview: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
@@ -95,6 +99,10 @@ const P: Record<IconName, React.ReactNode> = {
   // WO-406 — sidebar-rectangle-with-a-chevron "collapse the panel" glyph (see IconName above).
   panelCollapse: <><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M9.5 4v16" /><path d="M7.6 9.3 5.4 12l2.2 2.7" /></>,
   panelExpand: <><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M9.5 4v16" /><path d="M5.6 9.3 7.8 12l-2.2 2.7" /></>,
+  // WO-407 — a 3-column table with a small "+" badge (column picker trigger); "grip" is a
+  // vertical 2x3 dot handle (popover row drag affordance).
+  plusColumns: <><rect x="2" y="5" width="13" height="14" rx="1.5" /><path d="M7 5v14M12 5v14" /><path d="M18 14v6M15 17h6" /></>,
+  grip: <><circle cx="9" cy="6" r="1" /><circle cx="15" cy="6" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="9" cy="18" r="1" /><circle cx="15" cy="18" r="1" /></>,
 };
 
 export function Icon({ name, className = "h-5 w-5" }: IconProps) {
