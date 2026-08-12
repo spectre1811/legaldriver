@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTenantId } from "@/lib/court/sync";
 import { checkConflicts, type ConflictHit } from "@/lib/conflict";
 import { logActivity } from "@/lib/activity";
+import { partitionByLinkedMatters } from "./cascade";
 
 export type IntakeResult = { ok: boolean; message: string; conflicts?: ConflictHit[] };
 
@@ -158,4 +159,82 @@ export async function updateClient(_prev: IntakeResult, formData: FormData): Pro
   revalidatePath("/dashboard/clients");
   revalidatePath(`/dashboard/clients/${id}`);
   return { ok: true, message: `Saved ${name}.` };
+}
+
+// ── WO-408 E3 · Clients bulk actions — reversible, guarded delete ────────────────────────────
+// Soft-delete via a `custom.deletedAt` flag (the same no-migration tactic as documents' Trash —
+// see documents/actions.ts's `setDeletedAt`); clients-query.ts hides flagged rows. No Trash view
+// ships in this WO, so the ONLY way back is the delete toast's Undo — once that dismisses there is
+// no further recovery affordance in this UI. That's the honest boundary: never offer an Undo that
+// doesn't actually work.
+//
+// This is a DIFFERENT, stricter delete than the client-detail page's existing `deleteClient`
+// ([id]/actions.ts) — that one hard-deletes and deliberately allows it even with linked matters
+// (their FKs SET NULL; cases survive, unlinked — see its own comment + copy "kept (unlinked)").
+// The list/bulk surface here is a new, more conservative rule: never let a bulk action silently
+// orphan a client's matters — so a client with ANY linked matter is blocked outright, not unlinked.
+// Both are intentional, coexisting behaviours for two different entry points.
+async function setClientDeletedAt(supabase: ReturnType<typeof createClient>, ids: string[], value: string | null) {
+  const { data: rows } = await supabase.from("client").select("id, custom").in("id", ids); // RLS-scoped
+  const okIds: string[] = [];
+  for (const r of rows ?? []) {
+    const custom = { ...((r.custom as Record<string, unknown>) ?? {}) };
+    if (value) custom.deletedAt = value;
+    else delete custom.deletedAt;
+    const { error } = await supabase.from("client").update({ custom: custom as never }).eq("id", r.id);
+    if (!error) okIds.push(r.id);
+  }
+  return okIds;
+}
+
+export type DeleteClientsResult = {
+  ok: boolean;
+  message: string;
+  /** The ids actually soft-deleted (server-verified) — the caller's Undo restores exactly these,
+   *  never the full requested list (a blocked id was never touched, so it has nothing to undo). */
+  deletedIds: string[];
+  /** How many of the requested ids the guard refused (still have a linked matter). */
+  blockedCount: number;
+};
+
+// The guard is RE-VERIFIED here from a fresh `matter` query every call — never trusts whatever
+// partition the caller (the confirm dialog) computed off possibly-stale page data. A client that
+// picked up a matter link between "open the dialog" and "click Delete" is refused here too.
+export async function deleteClients(ids: string[]): Promise<DeleteClientsResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant.", deletedIds: [], blockedCount: 0 };
+  if (!ids.length) return { ok: false, message: "Nothing selected.", deletedIds: [], blockedCount: 0 };
+
+  const { data: linkedRows } = await supabase.from("matter").select("client_id").in("client_id", ids);
+  const linkedIds = new Set((linkedRows ?? []).map((m) => m.client_id).filter((v): v is string => !!v));
+  const { deletable, blocked } = partitionByLinkedMatters(
+    ids.map((id) => ({ id })),
+    linkedIds,
+  );
+  if (!deletable.length) {
+    return { ok: false, message: "No clients could be deleted — all have linked matters.", deletedIds: [], blockedCount: blocked.length };
+  }
+
+  const okIds = await setClientDeletedAt(supabase, deletable.map((c) => c.id), new Date().toISOString());
+  if (okIds.length) {
+    await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "client.trash", entity: "client", after: { count: okIds.length, ids: okIds } });
+  }
+  revalidatePath("/dashboard/clients");
+  return {
+    ok: okIds.length > 0,
+    message: `${okIds.length} client${okIds.length === 1 ? "" : "s"} deleted.`,
+    deletedIds: okIds,
+    blockedCount: blocked.length,
+  };
+}
+
+// The bulk/inline-delete toast's Undo — restores exactly the ids it's given.
+export async function undoDeleteClients(ids: string[]): Promise<{ ok: boolean; count: number }> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId || !ids.length) return { ok: false, count: 0 };
+  const okIds = await setClientDeletedAt(supabase, ids, null);
+  revalidatePath("/dashboard/clients");
+  return { ok: okIds.length > 0, count: okIds.length };
 }

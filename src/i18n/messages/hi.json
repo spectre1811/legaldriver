@@ -1785,6 +1785,23 @@
       "save": "बदलाव सहेजें",
       "saving": "सहेजा जा रहा है…",
       "cancel": "रद्द करें"
+    },
+    "bulk": {
+      "selectAll": "सभी मुवक्किल चुनें",
+      "selectRow": "{name} चुनें",
+      "selected": "{n} चुने गए",
+      "clear": "साफ़ करें",
+      "deleteSelected": "चयनित हटाएँ",
+      "confirmTitle": "{n, plural, one {# मुवक्किल हटाएँ?} other {# मुवक्किल हटाएँ?}}",
+      "blockedHeading": "{k, plural, one {# मुवक्किल नहीं हटाया जा सकता — उससे मुकदमे जुड़े हैं:} other {# मुवक्किल नहीं हटाए जा सकते — उनसे मुकदमे जुड़े हैं:}}",
+      "deletableLine": "{n, plural, one {# मुवक्किल हटाया जाएगा। इसे पूर्ववत नहीं किया जा सकता।} other {# मुवक्किल हटाए जाएँगे। इसे पूर्ववत नहीं किया जा सकता।}}",
+      "confirmDelete": "{n, plural, one {# मुवक्किल हटाएँ} other {# मुवक्किल हटाएँ}}",
+      "deletedToast": "{n, plural, one {# मुवक्किल हटाया गया।} other {# मुवक्किल हटाए गए।}}",
+      "undo": "पूर्ववत करें",
+      "deleteRow": "हटाएँ",
+      "deleteRowAria": "{name} हटाएँ",
+      "inlineConfirm": "{name} हटाएँ?",
+      "inlineBlocked": "{n, plural, one {हटाया नहीं जा सकता — # मुकदमे से जुड़ा है।} other {हटाया नहीं जा सकता — # मुकदमों से जुड़ा है।}}"
     }
   },
   "notices": {
