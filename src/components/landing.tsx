@@ -73,10 +73,14 @@ export async function Landing() {
       <header className="sticky top-0 z-50 border-b border-ec-hair bg-ec-paper/85 backdrop-blur">
         <nav className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3.5">
           <Link href="/" className="flex items-center gap-2.5">
-            <BrandMark size={34} tone="dark" />
+            <BrandMark size={32} tone="dark" />
             <span className="leading-tight">
               <b className="ec-underline block font-display text-xl font-medium lowercase tracking-tight">{brand.name}</b>
-              <span className="block text-[11px] text-ec-ink-3">{brand.nameDevanagari}</span>
+              {/* WO-410 F4: mt-1.5 clears the honey underline (globals.css .ec-underline::after,
+                  4px below the wordmark's own line box) before मुक़दमा's shirorekha/nukta — same
+                  gap nav.tsx's sidebar lockup already uses; landing was missing it and the bar cut
+                  straight through the Devanagari. */}
+              <span className="mt-1.5 block text-[11px] text-ec-ink-3" lang="hi">{brand.nameDevanagari}</span>
             </span>
           </Link>
           <div className="ml-6 hidden items-center gap-1 sm:flex">
