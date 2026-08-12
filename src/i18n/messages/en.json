@@ -1785,6 +1785,23 @@
       "save": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel"
+    },
+    "bulk": {
+      "selectAll": "Select all clients",
+      "selectRow": "Select {name}",
+      "selected": "{n} selected",
+      "clear": "Clear",
+      "deleteSelected": "Delete selected",
+      "confirmTitle": "{n, plural, one {Delete # client?} other {Delete # clients?}}",
+      "blockedHeading": "{k, plural, one {# client can't be deleted — it has linked matters:} other {# clients can't be deleted — they have linked matters:}}",
+      "deletableLine": "{n, plural, one {# client will be deleted. This can't be undone.} other {# clients will be deleted. This can't be undone.}}",
+      "confirmDelete": "{n, plural, one {Delete # client} other {Delete # clients}}",
+      "deletedToast": "{n, plural, one {# client deleted.} other {# clients deleted.}}",
+      "undo": "Undo",
+      "deleteRow": "Delete",
+      "deleteRowAria": "Delete {name}",
+      "inlineConfirm": "Delete {name}?",
+      "inlineBlocked": "{n, plural, one {Can't delete — linked to # matter.} other {Can't delete — linked to # matters.}}"
     }
   },
   "notices": {
