@@ -27,6 +27,10 @@ export interface ConfirmActionProps {
   variant?: ConfirmVariant;
   /** Disables both buttons + swaps the confirm label for a busy indicator (server action in flight). */
   busy?: boolean;
+  /** WO-408 — disables just the confirm button (Cancel stays live), independent of `busy`: the
+   *  "nothing left to actually confirm" case (e.g. every selected row was blocked by a cascade
+   *  guard). Doesn't touch the label, unlike `busy`. */
+  confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -34,7 +38,7 @@ export interface ConfirmActionProps {
 const TITLE_ID = "confirm-action-title";
 
 export function ConfirmAction({
-  open, title, body, cascade, confirmLabel, cancelLabel, variant = "default", busy = false, onConfirm, onCancel,
+  open, title, body, cascade, confirmLabel, cancelLabel, variant = "default", busy = false, confirmDisabled = false, onConfirm, onCancel,
 }: ConfirmActionProps) {
   const t = useTranslations("common.actions");
   const cancel = cancelLabel ?? t("cancel");
@@ -56,7 +60,7 @@ export function ConfirmAction({
           >
             {cancel}
           </button>
-          <button type="button" disabled={busy} onClick={onConfirm} className={confirmButtonClasses(variant)}>
+          <button type="button" disabled={busy || confirmDisabled} onClick={onConfirm} className={confirmButtonClasses(variant)}>
             {/* "…" not a translated word (matches confirm-delete.tsx's existing busy glyph) — locale-invariant, no new i18n key needed. */}
             {busy ? "…" : confirmLabel}
           </button>

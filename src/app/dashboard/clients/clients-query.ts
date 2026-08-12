@@ -45,6 +45,9 @@ export async function fetchClientsPage(
   let query = supabase
     .from("client")
     .select("id, name, type, emails, phones, custom", { count: "exact" })
+    // WO-408 E3 — hides soft-deleted rows (the bulk/inline delete's `custom.deletedAt` flag, same
+    // no-migration tactic as documents' Trash — see clients/actions.ts).
+    .filter("custom->>deletedAt", "is", null)
     .order("name", { ascending: true });
   if (q) query = query.ilike("name", `%${q}%`);
   const { data, count, error } = await query.range(from, to);
