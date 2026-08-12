@@ -83,6 +83,34 @@ function ok(name: string, cond: boolean) {
   process.env.SUPABASE_SERVICE_ROLE_KEY = saved;
 }
 
+// ── signing-secret precedence: dedicated SHARE_LINK_SECRET wins, else service-role fallback ──
+{
+  const savedSvc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  // Dedicated-secret path: a token minted under SHARE_LINK_SECRET verifies under it.
+  process.env.SHARE_LINK_SECRET = "dedicated-share-link-secret-0123456789";
+  const dedicated = signShareToken("tenant-A", "matter-1", 3600);
+  ok("dedicated SHARE_LINK_SECRET signs + verifies", verifyShareToken(dedicated.token).ok);
+
+  // Precedence is real: with the dedicated secret gone (only the service-role key left), a token
+  // signed under the dedicated secret must NOT verify — proving the dedicated one was actually used.
+  delete process.env.SHARE_LINK_SECRET;
+  ok("token signed under SHARE_LINK_SECRET does NOT verify under the service-role key (precedence real)", !verifyShareToken(dedicated.token).ok);
+
+  // Fallback path: with SHARE_LINK_SECRET unset, signing uses SUPABASE_SERVICE_ROLE_KEY and round-trips.
+  const fallback = signShareToken("tenant-A", "matter-1", 3600);
+  ok("falls back to SUPABASE_SERVICE_ROLE_KEY when SHARE_LINK_SECRET is unset", verifyShareToken(fallback.token).ok);
+
+  // Fail-closed when BOTH are unset.
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  let threw = false;
+  try { signShareToken("t", "m"); } catch { threw = true; }
+  ok("fail-closed when BOTH signing secrets are unset", threw);
+
+  delete process.env.SHARE_LINK_SECRET; // was never set originally
+  process.env.SUPABASE_SERVICE_ROLE_KEY = savedSvc;
+}
+
 // ── docs/pdf.ts: real PDF structure ───────────────────────────────────────────
 {
   const bytes = buildPdf([{ kind: "h1", text: "Hello (World)" }, { kind: "text", text: "line two" }]);
