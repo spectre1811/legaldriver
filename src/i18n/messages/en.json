@@ -255,8 +255,6 @@
       "moreActions": "More actions",
       "soon": {
         "calendar": "Add to calendar",
-        "share": "Share case file",
-        "export": "Export as PDF",
         "badge": "Soon"
       },
       "next": {
@@ -1130,6 +1128,45 @@
       "notSet": "not set",
       "client": "no client linked",
       "scheduled": "none scheduled"
+    }
+  },
+  "caseActions": {
+    "share": {
+      "menuLabel": "Share case file",
+      "dialogTitle": "Share this case",
+      "permissions": "Anyone with this link can view this case's parties, hearings, orders and deadlines — read-only, no sign-in needed. No other case or client data is visible.",
+      "generating": "Creating your link…",
+      "copyLink": "Copy link",
+      "copied": "Link copied",
+      "copyFailed": "Couldn't copy — select and copy the link manually.",
+      "expires": "Expires {date}",
+      "noRevoke": "This link can't be revoked early — it stops working on its own at the expiry above.",
+      "view": {
+        "invalidTitle": "This link doesn't work",
+        "invalidBody": "It may have been mistyped, or the case it points to no longer exists.",
+        "expiredTitle": "This link has expired",
+        "expiredBody": "Ask whoever shared it to send you a new one.",
+        "badge": "Shared read-only view",
+        "scopeNote": "You're viewing a read-only copy of this case — parties, hearings, orders and deadlines. Nothing else on {brand} is visible from this link.",
+        "expiresNote": "This link expires {date}.",
+        "partiesTitle": "Parties & advocates",
+        "hearingsOrders": "Hearings & orders",
+        "deadlinesTitle": "Deadlines",
+        "hearing": "Hearing",
+        "order": "Order",
+        "empty": {
+          "parties": "No parties on record.",
+          "events": "No hearings or orders on record.",
+          "deadlines": "No deadlines on record."
+        },
+        "poweredBy": "Shared via {brand}"
+      }
+    },
+    "export": {
+      "menuLabel": "Export as PDF",
+      "preparing": "Preparing…",
+      "done": "Case file exported.",
+      "failed": "Couldn't export the PDF. Try again."
     }
   },
   "auth": {
