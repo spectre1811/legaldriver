@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Combobox, type ComboOption, RENDER_ALL_MAX } from "@/components/combobox";
+import { Icon } from "@/components/icons";
 import { CATEGORIES } from "@/lib/docs/categories";
+import { DOC_SORT_OPTIONS, parseSortBy, type DocSortBy } from "@/lib/docs/list-query";
 import { DocumentsUpload } from "./documents-upload";
 
 type Opt = { id: string; label: string };
@@ -21,11 +24,13 @@ type Opt = { id: string; label: string };
 // status without a separate toggle) — not in the reference, per the WO's "add nothing not in the
 // ref" / discard-prior-adaptations directive.
 export function DocumentsToolbar({
-  groupBy, matterOpts, showUpload,
+  groupBy, matterOpts, showUpload, trashCount,
 }: {
   groupBy: "case" | "client";
   matterOpts: Opt[];
   showUpload: boolean;
+  /** Real trash count (page.tsx) — drives the toolbar Trash button's honey badge. */
+  trashCount: number;
 }) {
   const t = useTranslations("documents");
   const router = useRouter();
@@ -100,7 +105,51 @@ export function DocumentsToolbar({
           { value: "upload", label: t("filter.source.upload") },
           { value: "court_order", label: t("filter.source.court_order") },
         ], "min-w-[9rem] max-w-[11rem]")}
-        {showUpload && <DocumentsUpload className="ml-auto" />}
+        {/* WO-409 · Date from / Date to — native date inputs (no picker lib), real range filter
+            server-side (page.tsx → lib/docs/list-query.ts dateBounds). */}
+        <input
+          type="date"
+          value={sp.get("dateFrom") ?? ""}
+          onChange={(e) => setParam("dateFrom", e.target.value)}
+          aria-label={t("filter.dateFromAria")}
+          className="rounded-md border border-ec-hair bg-ec-card px-2.5 py-1.5 text-[12.5px] text-ec-ink-2 outline-none transition-colors focus:border-ec-bronze"
+        />
+        <input
+          type="date"
+          value={sp.get("dateTo") ?? ""}
+          onChange={(e) => setParam("dateTo", e.target.value)}
+          aria-label={t("filter.dateToAria")}
+          className="rounded-md border border-ec-hair bg-ec-card px-2.5 py-1.5 text-[12.5px] text-ec-ink-2 outline-none transition-colors focus:border-ec-bronze"
+        />
+        {/* Sort by — always has a value (no clear affordance), maps to a real .order() column
+            (lib/docs/list-query.ts sortColumn), not just newest-first cosmetics. */}
+        <Combobox<DocSortBy>
+          label={t("filter.sortAria")}
+          options={DOC_SORT_OPTIONS.map((v) => ({ value: v, label: t(`filter.sort.${v}`) }))}
+          value={parseSortBy(sp.get("sortBy"))}
+          onChange={(v) => setParam("sortBy", v && v !== "date_desc" ? v : "")}
+          clearable={false}
+          className="min-w-[10rem] max-w-[12rem]"
+        />
+        <div className="ml-auto flex items-center gap-2">
+          {showUpload && <DocumentsUpload />}
+          {/* Prominent icon-only Trash entry point — the reversible-delete home. Hover-scale
+              respects prefers-reduced-motion via the global transition-duration override
+              (globals.css) rather than a second, motion-specific class. */}
+          <Link
+            href="/dashboard/documents?trash=1"
+            aria-label={t("trash.title")}
+            title={t("trash.title")}
+            className="relative inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-ec-s border border-ec-line bg-ec-card text-ec-ink-3 transition-transform hover:scale-105 hover:border-ec-bronze hover:text-ec-bronze"
+          >
+            <Icon name="trash" className="h-4 w-4" />
+            {trashCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-ec-honey px-1 text-[10px] font-semibold text-ec-ink">
+                {trashCount}
+              </span>
+            )}
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import { DocumentsBrowser, type DocRow } from "./documents-browser";
 import { DocumentsList, type CaseSection, type ClientSection } from "./documents-list";
 import { Pagination } from "@/components/pagination";
 import { parsePage, clampPerPage, rangeFor } from "@/lib/paginate";
+import { parseSortBy, sortColumn, dateBounds } from "@/lib/docs/list-query";
 import { Reveal } from "../motion";
 
 const CATEGORY_ICON: Record<string, string> = Object.fromEntries(CATEGORIES.map((c) => [c.key, c.icon]));
@@ -18,7 +19,10 @@ const CATEGORY_ICON: Record<string, string> = Object.fromEntries(CATEGORIES.map(
 export default async function DocumentsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; source?: string; category?: string; matter?: string; trash?: string; group?: string; page?: string; per?: string };
+  searchParams: {
+    q?: string; source?: string; category?: string; matter?: string; trash?: string; group?: string; page?: string; per?: string;
+    sortBy?: string; dateFrom?: string; dateTo?: string;
+  };
 }) {
   const t = await getTranslations("documents");
   const isTrash = searchParams.trash === "1";
@@ -51,11 +55,17 @@ export default async function DocumentsPage({
   // WO-56: numbered-page pagination (range + exact count) — the whole library is reachable, one
   // page at a time (the reference's toy dataset doesn't paginate; a real tenant's can grow past
   // one page, so this stays — dropping it would silently reintroduce the pre-WO-56 hidden cap).
+  // WO-409: real "Sort by" + "Date from"/"Date to" toolbar filters — both server-side, both
+  // backed by pure/unit-tested helpers (lib/docs/list-query.ts) rather than ad-hoc string math.
+  const sort = sortColumn(parseSortBy(searchParams.sortBy));
+  const { fromIso, toIso } = dateBounds(searchParams.dateFrom, searchParams.dateTo);
   let query = supabase
     .from("document")
     .select("id, filename, doc_type, category, source, client_id, matter_id, mime, size_bytes, storage_path, parsed_text, portal_shared, created_at, extracted", { count: "exact" })
-    .order("created_at", { ascending: false })
+    .order(sort.column, { ascending: sort.ascending })
     .range(from, to);
+  if (fromIso) query = query.gte("created_at", fromIso);
+  if (toIso) query = query.lte("created_at", toIso);
   if (q) {
     // WO-401 A4 — a pasted CNR/case number lives on the linked MATTER row (cnr /
     // detail.registrationNumber), never in the document's own `fts` text, so a plain
@@ -223,12 +233,15 @@ export default async function DocumentsPage({
             <span className="rounded-full bg-ec-paper-3 p-3 text-ec-ink-3"><Icon name="trash" className="h-6 w-6" /></span>
             <p className="font-display text-lg text-ec-ink">{t("trash.emptyTitle")}</p>
             <p className="max-w-sm text-sm text-ec-ink-3">{t("trash.emptyBody")}</p>
+            <Link href="/dashboard/documents" className="mt-1 inline-flex items-center gap-1.5 rounded-md border border-ec-line px-3 py-1.5 text-[12.5px] text-ec-ink-2 transition-colors hover:border-ec-bronze hover:text-ec-bronze">
+              <Icon name="back" className="h-3.5 w-3.5" /> {t("trash.back")}
+            </Link>
           </Reveal>
         )
       ) : (
         <>
           <Reveal delay={60}>
-            <DocumentsToolbar groupBy={listGroupBy} matterOpts={matterOpts} showUpload={!trueEmpty} />
+            <DocumentsToolbar groupBy={listGroupBy} matterOpts={matterOpts} showUpload={!trueEmpty} trashCount={trashCount ?? 0} />
           </Reveal>
 
           {trueEmpty ? (
@@ -269,12 +282,6 @@ export default async function DocumentsPage({
               )}
             </>
           )}
-
-          <div className="flex flex-wrap items-center gap-4 border-t border-ec-hair pt-4 text-[12.5px] text-ec-muted-ink">
-            <Link href="/dashboard/documents?trash=1" className="inline-flex items-center gap-1.5 hover:text-ec-bronze">
-              <Icon name="trash" className="h-3.5 w-3.5" /> {t("trash.link", { n: trashCount ?? 0 })}
-            </Link>
-          </div>
         </>
       )}
     </div>
