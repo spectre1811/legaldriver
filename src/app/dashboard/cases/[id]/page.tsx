@@ -316,7 +316,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               deleteLabel={t("delete")}
               deleteConfirmLabel={t("deleteConfirm")}
               deleteNote={t("deleteNote")}
-              soonItems={[tf("soon.calendar"), tf("soon.share"), tf("soon.export")]}
+              calendarSoonLabel={tf("soon.calendar")}
               soonLabel={tf("soon.badge")}
             />
           </div>

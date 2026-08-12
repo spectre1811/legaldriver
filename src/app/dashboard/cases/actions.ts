@@ -19,6 +19,7 @@ import { renderEmail } from "@/lib/email/templates";
 import { appUrl, istFriendlyDate } from "@/lib/notify/email-render";
 import { caseDetailHref } from "@/lib/court/case-links";
 import { maskTitle } from "@/lib/court/mask";
+import { signShareToken } from "@/lib/court/share-token";
 import type { Database } from "@/lib/db/database.types";
 
 // Set (or clear) the advocate's diary next-hearing date — overrides a stale/wrong
@@ -402,6 +403,30 @@ export async function applyDeadlineRule(matterId: string, ruleId: string, baseDa
   revalidatePath(`/dashboard/cases/${matterId}`);
   revalidatePath("/dashboard/calendar");
   return { ok: true, message: `Deadline set: ${rule.kind.replace(/_/g, " ")} due ${due} (${rule.jurisdiction}). Verify against the bare act.` };
+}
+
+// WO-411 · "Share case file" — mints a stateless, signed read-only link (see share-token.ts for
+// why: this repo founder-gates DB/RLS, so a share_token table + revoke list was a hard no for this
+// WO). Verifies the caller can actually see this matter (RLS-scoped select, same guard every other
+// action here uses) BEFORE signing anything — the token itself carries no authority the caller
+// didn't already have.
+export type ShareLinkResult = ActionResult & { url?: string; expiresAt?: string };
+
+export async function generateShareLink(matterId: string): Promise<ShareLinkResult> {
+  const supabase = createClient();
+  const tenantId = await getTenantId(supabase);
+  if (!tenantId) return { ok: false, message: "No tenant." };
+  const { data: matter } = await supabase.from("matter").select("id").eq("id", matterId).maybeSingle(); // RLS-scoped
+  if (!matter) return { ok: false, message: "Case not found." };
+
+  let token: string, expiresAt: string;
+  try {
+    ({ token, expiresAt } = signShareToken(tenantId, matterId));
+  } catch {
+    return { ok: false, message: "Share links aren't available right now — try again shortly." };
+  }
+  await supabase.from("audit_event").insert({ tenant_id: tenantId, action: "case.share_link_created", entity: "matter", entity_id: matterId });
+  return { ok: true, message: "Share link created.", url: appUrl(`/share/case/${token}`), expiresAt };
 }
 
 // Delete a case. The DB FKs do the right thing: hearings, deadlines, time, expenses,
