@@ -2,16 +2,22 @@
 
 // WO-334 · restores the Chambers prototype's Notes/zoom document viewer
 // (design-mockups/iteration3/console/app.documents.tsx `DocViewer`) — dropped when the
-// Documents page first shipped. Faithful to the reference's layout (right-hand slide-over,
-// page rail, zoomable canvas, Notes aside) with every value bound to real data. The
-// `document` table has no `notes` column (no schema change in this WO — non-goal), and there
-// is no per-document page-thumbnail extraction, so both the Notes aside and the page rail
-// render an HONEST pending state in the prototype's exact chrome, never a fabricated one.
-import { useEffect, useRef, useState } from "react";
+// Documents page first shipped. Faithful to the reference's layout (page rail, zoomable canvas,
+// Notes aside) with every value bound to real data. The `document` table has no `notes` column
+// (no schema change in this WO — non-goal), and there is no per-document page-thumbnail
+// extraction, so both the Notes aside and the page rail render an HONEST pending state in the
+// prototype's exact chrome, never a fabricated one.
+//
+// WO-409 E4 · refactored onto the shared `Dialog` primitive (center variant, WO-405) instead of
+// hand-rolling its own portal/backdrop/focus-trap/scroll-lock — the exact follow-up the primitive's
+// own top comment flagged this file for. Was a right-hand slide-over; DESIGN.md's E4 spec calls
+// for the PRE Dialog's center variant, so all of that chrome now comes from one shared place.
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
+import { Dialog } from "@/components/ui/dialog";
 import { DocPreview } from "@/components/doc-preview";
 import type { DocRow } from "./documents-browser";
 
@@ -19,85 +25,30 @@ const ZOOM_MIN = 70;
 const ZOOM_MAX = 160;
 const ZOOM_STEP = 15;
 
-const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 export function DocViewerPanel({ doc, onClose }: { doc: DocRow; onClose: () => void }) {
   const t = useTranslations("documents");
   const [zoom, setZoom] = useState(100);
-  const [shown, setShown] = useState(false);
+  // Gates the ESC-hint portal below to the client — this component only ever mounts from a
+  // client click (preview state starts null), but never assume that from inside a shared file:
+  // `document.body` doesn't exist during any server render pass.
   const [mounted, setMounted] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const closeBtnRef = useRef<HTMLButtonElement>(null);
-  const restoreFocusRef = useRef<HTMLElement | null>(null);
-  // Latest onClose via a ref (not an effect dep) — documents-browser.tsx/documents-list.tsx pass
-  // a fresh inline arrow every render, and this effect must stay mount-once (matches the original
-  // behaviour) rather than re-arming its Escape listener / re-stealing focus on every parent
-  // re-render while the panel is open.
-  const onCloseRef = useRef(onClose);
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
-
   useEffect(() => setMounted(true), []);
-
-  // Entrance transition (backdrop fade + panel slide-in-from-right), the same plain-CSS
-  // convention as add-client-modal.tsx — mirrors the reference's `animate-in fade-in` /
-  // `slide-in-from-right` without pulling in an animation library. Reduced-motion is already
-  // neutralised globally (globals.css collapses every transition to ~0).
-  // WO-401 A3: also owns ESC-to-close and a focus trap so it behaves correctly regardless of
-  // which caller mounts it (documents-browser.tsx / documents-list.tsx) — focus moves into the
-  // panel on open and returns to whatever triggered it on close. Gated on `mounted` (not `[]`)
-  // because the portal below only renders real DOM — and attaches closeBtnRef/panelRef — once
-  // `mounted` flips true; running this a render early would try to focus a ref that's still null.
-  useEffect(() => {
-    if (!mounted) return;
-    restoreFocusRef.current = document.activeElement as HTMLElement | null;
-    const raf = requestAnimationFrame(() => setShown(true));
-    closeBtnRef.current?.focus();
-    document.body.style.overflow = "hidden";
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { onCloseRef.current(); return; }
-      if (e.key !== "Tab" || !panelRef.current) return;
-      const focusables = panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    };
-    document.addEventListener("keydown", onKey);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      document.body.style.overflow = "";
-      document.removeEventListener("keydown", onKey);
-      restoreFocusRef.current?.focus?.();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onClose read via onCloseRef, not a dep
-  }, [mounted]);
 
   const meta = [doc.caseLabel, doc.sourceLabel, doc.dateLabel].filter(Boolean).join(" · ");
 
-  // Portal to `document.body` (the shared Dialog's fix for the same class of bug, WO-340): a
-  // `fixed inset-0` descendant of a `transform`/`filter`/`backdrop-filter` ancestor pins itself
-  // to that ancestor's box instead of the viewport, not full-screen. Documents page.tsx wraps
-  // both callers in <Reveal> (transform-based mount animation) — portaling sidesteps the class
-  // of bug entirely rather than depending on animation timing.
-  if (!mounted) return null;
-  return createPortal(
-    <div ref={panelRef} className="fixed inset-0 z-ec-modal" role="dialog" aria-modal="true" aria-label={doc.filename}>
-      <div
-        className={`absolute inset-0 bg-ec-ink/45 backdrop-blur-sm transition-opacity duration-200 ${shown ? "opacity-100" : "opacity-0"}`}
-        onClick={onClose}
-      />
-      <div
-        className={`absolute inset-y-0 right-0 flex w-full max-w-4xl flex-col border-l border-ec-line-strong bg-ec-paper shadow-ec-3 transition-all duration-200 ease-out ${
-          shown ? "translate-x-0 opacity-100" : "translate-x-6 opacity-0"
-        }`}
+  return (
+    <>
+      <Dialog
+        open
+        onClose={onClose}
+        variant="center"
+        labelledBy="doc-viewer-title"
+        className="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden p-0"
       >
         <div className="flex items-start justify-between gap-4 border-b border-ec-line bg-ec-card px-5 py-4">
           <div className="min-w-0">
             <div className="ec-label">{doc.cnr ?? doc.caseLabel ?? t("unfiled")}</div>
-            <h2 className="mt-0.5 truncate font-display text-[19px] text-ec-ink">{doc.filename}</h2>
+            <h2 id="doc-viewer-title" className="mt-0.5 truncate font-display text-[19px] text-ec-ink">{doc.filename}</h2>
             {meta && <p className="truncate text-[12px] text-ec-muted-ink">{meta}</p>}
           </div>
           <div className="flex shrink-0 items-center gap-1">
@@ -141,7 +92,6 @@ export function DocViewerPanel({ doc, onClose }: { doc: DocRow; onClose: () => v
               </a>
             )}
             <button
-              ref={closeBtnRef}
               type="button"
               onClick={onClose}
               aria-label={t("preview.close")}
@@ -193,8 +143,21 @@ export function DocViewerPanel({ doc, onClose }: { doc: DocRow; onClose: () => v
             <p className="mt-3 text-[11.5px] text-ec-muted-ink">{t("viewer.notesComingSoon")}</p>
           </aside>
         </div>
-      </div>
-    </div>,
-    document.body,
+      </Dialog>
+
+      {/* WO-409 · "ESC" hint chip, top-right of the viewport — a SEPARATE portal (not a child of
+          Dialog's panel) because the panel carries a `translate-*` transform during/after its
+          entrance transition, which establishes a containing block for any `fixed` descendant
+          (the exact class of bug doc-viewer-panel's own prior implementation called out fixing —
+          portaling straight to `document.body` sidesteps it here too). */}
+      {mounted && createPortal(
+        <div className="pointer-events-none fixed right-4 top-4 z-ec-modal">
+          <span className="eyebrow rounded-ec-s bg-ec-ink/60 px-2 py-1 text-ec-paper/70 backdrop-blur-sm">
+            {t("viewer.escHint")}
+          </span>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }

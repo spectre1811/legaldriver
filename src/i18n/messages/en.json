@@ -2006,6 +2006,9 @@
     "bulk": {
       "selected": "{n} selected",
       "selectAll": "Select all",
+      "selectOne": "Select {name}",
+      "download": "Download",
+      "moveToTrash": "Move to trash",
       "export": "Export (.zip)",
       "exporting": "Preparing…",
       "exportFailed": "Export failed. Please try again.",
@@ -2021,7 +2024,6 @@
     "trash": {
       "title": "Trash",
       "subtitle": "Deleted documents are kept here and can be restored. Empty them permanently anytime.",
-      "link": "Trash ({n})",
       "back": "Back to Documents",
       "count": "{docs} in Trash",
       "emptyTitle": "Trash is empty",
@@ -2152,7 +2154,15 @@
       "all": "All",
       "filed": "Filed",
       "unfiled": "Unfiled",
-      "noMatch": "Nothing matches “{q}” in any document text."
+      "noMatch": "Nothing matches “{q}” in any document text.",
+      "dateFromAria": "Date from",
+      "dateToAria": "Date to",
+      "sortAria": "Sort by",
+      "sort": {
+        "date_desc": "Newest first",
+        "date_asc": "Oldest first",
+        "name_asc": "Name (A–Z)"
+      }
     },
     "docActions": {
       "open": "Open",
@@ -2179,7 +2189,8 @@
       "notes": "Notes",
       "notesPlaceholder": "Add a short note for this document…",
       "notesComingSoon": "Notes aren't saved yet — this is coming soon.",
-      "pagesUnavailable": "Page thumbnails aren't available yet"
+      "pagesUnavailable": "Page thumbnails aren't available yet",
+      "escHint": "ESC to close"
     }
   },
   "notifications": {
