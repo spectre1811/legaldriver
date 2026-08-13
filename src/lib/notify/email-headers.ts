@@ -22,6 +22,7 @@ export const EMAIL_KINDS = [
   "case_update",
   "daily_hearings",
   "cause_list_alert",
+  "trackConfirm",
   "security",
   "otp",
   "invoice",
@@ -42,6 +43,7 @@ const TRANSACTIONAL_KINDS: Record<EmailKind, boolean> = {
   case_update: false,
   daily_hearings: false,
   cause_list_alert: false,
+  trackConfirm: false,
   security: true,
   otp: true,
   invoice: true,
@@ -101,7 +103,10 @@ export function buildEmailHeaders(ctx: EmailHeaderContext): Record<string, strin
     try {
       const token = signUnsubscribeToken(ctx.tenantId, ctx.profileId, "email");
       const url = appUrl(`/unsubscribe/${token}`);
-      headers["List-Unsubscribe"] = `<mailto:unsubscribe@${domain}?subject=unsub-${token}>, <${url}>`;
+      // https one-click only (RFC 8058 requires the https URI + Post; mailto is optional). A mailto
+      // may be added IF a monitored inbox ever exists — pointing it at an unread address would
+      // silently swallow the request, the same defect this WO removes.
+      headers["List-Unsubscribe"] = `<${url}>`;
       headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
     } catch {
       // signing secret unconfigured — omit rather than emit a broken link (see header comment)

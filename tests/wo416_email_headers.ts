@@ -114,8 +114,8 @@ function ok(name: string, cond: boolean) {
 // ── classification is exhaustive: exactly the five transactional kinds ───────
 {
   const transactional = ["security", "otp", "invoice", "receipt", "welcome"];
-  const nonTransactional = ["hearing_reminder", "deadline_reminder", "notice_escalation", "ipr_renewal", "case_update", "daily_hearings", "cause_list_alert"];
-  ok("EMAIL_KINDS is the exact union (12 kinds, no extras)", EMAIL_KINDS.length === 12 && [...transactional, ...nonTransactional].every((k) => (EMAIL_KINDS as readonly string[]).includes(k)));
+  const nonTransactional = ["hearing_reminder", "deadline_reminder", "notice_escalation", "ipr_renewal", "case_update", "daily_hearings", "cause_list_alert", "trackConfirm"];
+  ok("EMAIL_KINDS is the exact union (13 kinds, no extras)", EMAIL_KINDS.length === 13 && [...transactional, ...nonTransactional].every((k) => (EMAIL_KINDS as readonly string[]).includes(k)));
 
   for (const k of transactional) ok(`transactional: ${k}`, isTransactionalKind(k as (typeof EMAIL_KINDS)[number]));
   for (const k of nonTransactional) ok(`non-transactional: ${k}`, !isTransactionalKind(k as (typeof EMAIL_KINDS)[number]));
@@ -135,7 +135,7 @@ function ok(name: string, cond: boolean) {
   ok("matter-linked: carries References to the stable matter root", matterLinked["References"] === "<matter.matter-9f86@mukadma.in>");
   ok("matter-linked (non-transactional): carries List-Unsubscribe", "List-Unsubscribe" in matterLinked);
   ok("matter-linked: carries List-Unsubscribe-Post (RFC 8058)", matterLinked["List-Unsubscribe-Post"] === "List-Unsubscribe=One-Click");
-  ok("matter-linked: List-Unsubscribe has BOTH mailto and https", /^<mailto:[^>]+>, <https:[^>]+>$/.test(matterLinked["List-Unsubscribe"]));
+  ok("matter-linked: List-Unsubscribe is https-only (NO mailto — no monitored inbox)", /^<https:\/\/[^>]+>$/.test(matterLinked["List-Unsubscribe"]) && !matterLinked["List-Unsubscribe"].includes("mailto"));
 
   const unthreaded = buildEmailHeaders({
     kind: "daily_hearings", matterId: null, tenantId: "t1", profileId: "u1", from, messageId: "ROW-X",
@@ -143,6 +143,18 @@ function ok(name: string, cond: boolean) {
   ok("non-matter (daily_hearings): NO Message-ID", !("Message-ID" in unthreaded));
   ok("non-matter (daily_hearings): NO References", !("References" in unthreaded));
   ok("non-matter (daily_hearings): still carries List-Unsubscribe (non-transactional)", "List-Unsubscribe" in unthreaded);
+}
+
+// ── trackConfirm threads to the SAME matter root as a later reminder ─────────
+{
+  const from = "notify@mukadma.in";
+  const matterId = "00000000-0000-4000-8000-00000000000aa";
+  const track = buildEmailHeaders({ kind: "trackConfirm", matterId, tenantId: "t1", profileId: "u1", from, messageId: "row-track" });
+  const remind = buildEmailHeaders({ kind: "hearing_reminder", matterId, tenantId: "t1", profileId: "u1", from, messageId: "row-remind" });
+
+  ok("trackConfirm: threads to the SAME matter root as a later hearing_reminder", track["References"] === remind["References"] && track["References"] === `<matter.${matterId}@mukadma.in>`);
+  ok("trackConfirm: carries its own distinct Message-ID (no cross-matter collision)", track["Message-ID"] !== remind["Message-ID"] && track["Message-ID"] === "<n.row-track@mukadma.in>");
+  ok("trackConfirm: non-transactional → carries List-Unsubscribe", "List-Unsubscribe" in track && "List-Unsubscribe-Post" in track);
 }
 
 // ── header building: transactional kinds carry NO unsubscribe header ─────────
@@ -172,6 +184,7 @@ function ok(name: string, cond: boolean) {
 {
   ok("suppress: non-transactional + channel_email=false → skip", shouldSuppressEmail("case_update", false));
   ok("suppress: non-transactional + channel_email=true → send", !shouldSuppressEmail("case_update", true));
+  ok("suppress: trackConfirm (non-transactional) + off → skip", shouldSuppressEmail("trackConfirm", false));
   ok("suppress: unknown kind + off → skip (fail-safe)", shouldSuppressEmail("future_kind", false));
   for (const k of ["security", "otp", "invoice", "receipt", "welcome"] as const) {
     ok(`suppress: transactional ${k} NEVER skipped even when off`, !shouldSuppressEmail(k, false));
