@@ -26,7 +26,7 @@ export function SettingsTabs({ sections, children }: { sections: { id: string; l
                 key={s.id}
                 aria-current={on ? "page" : undefined}
                 onClick={() => setActive(s.id)}
-                className={`flex shrink-0 items-center gap-2.5 rounded-ec-s px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo md:w-full ${
+                className={`flex shrink-0 items-center gap-2.5 rounded-ec-s px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey md:w-full ${
                   on ? "bg-ec-ink font-medium text-ec-paper" : "text-ec-ink-2 hover:bg-ec-paper-3 hover:text-ec-ink"
                 }`}
               >

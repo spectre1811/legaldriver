@@ -65,11 +65,11 @@ export function MobileNav({
           onClick={() => setOpen(true)}
           aria-label={t("openNav")}
           aria-expanded={open}
-          className="flex h-9 w-9 items-center justify-center rounded-ec-s text-ec-ink-2 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+          className="flex h-9 w-9 items-center justify-center rounded-ec-s text-ec-ink-2 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
         >
           <Icon name="menu" className="h-5 w-5" />
         </button>
-        <Link href="/dashboard" aria-label={t("home")} className="ec-underline font-display text-xl font-semibold lowercase tracking-tight text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo">{brand.name}</Link>
+        <Link href="/dashboard" aria-label={t("home")} className="ec-underline font-display text-xl font-semibold lowercase tracking-tight text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey">{brand.name}</Link>
         {/* WO-328: the ONE "+ New case" action needs a path below md too — the desktop top bar
             (with its button) is hidden here, and no nav item covers "add a case". */}
         <Link
@@ -86,11 +86,11 @@ export function MobileNav({
           <div className="absolute inset-0 bg-ec-ink/40" onClick={() => setOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col border-r border-ec-hair bg-ec-paper px-4 py-5 shadow-ec-2">
             <div className="flex items-center justify-between px-2">
-              <Link href="/dashboard" aria-label={t("home")} className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo">{brand.name}</Link>
+              <Link href="/dashboard" aria-label={t("home")} className="ec-underline font-display text-2xl font-semibold lowercase tracking-tight text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey">{brand.name}</Link>
               <button
                 onClick={() => setOpen(false)}
                 aria-label={t("closeNav")}
-                className="flex h-9 w-9 items-center justify-center rounded-ec-s text-ec-ink-3 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+                className="flex h-9 w-9 items-center justify-center rounded-ec-s text-ec-ink-3 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
               >
                 <Icon name="close" className="h-5 w-5" />
               </button>

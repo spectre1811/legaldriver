@@ -53,7 +53,7 @@ export function OnboardingLead({
             <div className="font-display mt-1 truncate text-[20px] text-ec-ink">{a.bar}</div>
             {a.councilLabel && <div className="num mt-0.5 font-mono text-[11.5px] text-ec-ink-3">{a.councilLabel}</div>}
           </div>
-          <span className="num font-display text-[20px] text-ec-bronze">{a.percent}%</span>
+          <span className="figures font-display text-[20px] text-ec-bronze">{a.percent}%</span>
         </div>
 
         <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-ec-paper-3">

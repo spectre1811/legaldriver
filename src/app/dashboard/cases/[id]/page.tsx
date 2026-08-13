@@ -316,7 +316,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               deleteLabel={t("delete")}
               deleteConfirmLabel={t("deleteConfirm")}
               deleteNote={t("deleteNote")}
-              soonItems={[tf("soon.calendar"), tf("soon.share"), tf("soon.export")]}
+              calendarSoonLabel={tf("soon.calendar")}
               soonLabel={tf("soon.badge")}
             />
           </div>
@@ -360,7 +360,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
         {/* provenance/freshness — non-negotiable on every court-data surface (repo CLAUDE.md §3);
             the reference is dummy content with no such disclosure, but this stays: never optional. */}
         <Reveal as="div" delay={80} className="mb-7 flex flex-wrap items-center justify-between gap-3 ec-card px-5 py-3">
-          <p className="num text-sm text-ec-ink-3">
+          {/* WO-413 C4: raised off ink-3 to ink-2 — was reading as disabled, matches the WO-376 C3
+              treatment of court-record labels. */}
+          <p className="num text-sm text-ec-ink-2">
             {t.rich("source.line", { source: sourceLabel, time: refreshed, b: (c) => <span className="font-medium text-ec-ink">{c}</span> })}
           </p>
           <MatterDiaryDate matterId={matter.id} synced={matter.next_hearing_date} override={matter.next_hearing_override ?? null} />
@@ -500,7 +502,6 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
                         <div className="flex flex-wrap gap-1.5">{ai.sources.map((s, i) => <span key={i} className="ec-chip">{s}</span>)}</div>
                       </div>
                     )}
-                    <p className="mt-4 border-t border-ec-hair pt-3 text-[11.5px] text-ec-ink-3">{t("ai.disclaimer")}</p>
                   </>
                 ) : (
                   <p className="text-sm text-ec-ink-3">{t("ai.empty")}</p>

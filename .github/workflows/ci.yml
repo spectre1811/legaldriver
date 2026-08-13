@@ -27,6 +27,10 @@ jobs:
       # WO-132 W2 · fail fast if a data-source-mechanics term (eCourts/NIC/NJDG/scrape/crawl)
       # reappears on a user surface (i18n catalogs or copy-bearing components).
       - run: npm run guard:copy
+      # WO-365 W1 · hard-fail if a client component's useTranslations() references a
+      # namespace not whitelisted in src/lib/i18n-client-subset.ts (prevents silent
+      # raw-key rendering when a namespace is dropped from the RSC payload).
+      - run: node scripts/check-i18n-client-namespaces.mjs
       - run: npm run build
         env:
           # Public env needed for the build; non-secret placeholders are fine for compilation.
@@ -35,6 +39,10 @@ jobs:
       # WO-353 W2 · advisory bundle-size budget check — compares .next/static JS total
       # against web-perf-budget.json, emits a ::warning:: if over warn_pct%, always exit 0.
       - run: node scripts/check-bundle-size.mjs
+      # WO-365 W1 · hard-fail assertion — measures the serialized JSON size of the
+      # client-message subset and exits non-zero if it exceeds the committed
+      # rsc-messages-budget.json baseline + warn_pct%.
+      - run: node scripts/check-rsc-messages.mjs
       # WO-11 · secret-free test suite (mocked; no network, no .env). Runs INSIDE the
       # `build` job on purpose: automerge's label path only gates on the check whose
       # name contains "build", so tests must ride that check to actually gate merges.

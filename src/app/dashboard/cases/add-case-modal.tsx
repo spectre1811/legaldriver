@@ -65,7 +65,7 @@ export function AddCaseButton({
                 <p className="ec-label">{t("add.eyebrow")}</p>
                 <h2 id="add-case-title" className="font-display mt-0.5 text-lg font-medium text-ec-ink">{t("add.modalTitle")}</h2>
               </div>
-              <button type="button" onClick={close} aria-label={t("add.close")} className="shrink-0 rounded p-1 text-ec-ink-3 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo">
+              <button type="button" onClick={close} aria-label={t("add.close")} className="shrink-0 rounded p-1 text-ec-ink-3 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey">
                 <Icon name="close" className="h-4 w-4" />
               </button>
             </div>

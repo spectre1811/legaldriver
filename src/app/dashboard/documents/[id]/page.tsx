@@ -134,7 +134,6 @@ export default async function DocumentDetailPage({ params }: { params: { id: str
           </div>
           <div className="px-5 py-5">
             <p className="text-[0.95rem] leading-relaxed text-ec-ink-2">{summary}</p>
-            <p className="mt-3 text-xs text-ec-ink-3">{t("summaryDisclaimer")}</p>
           </div>
         </section>
       )}

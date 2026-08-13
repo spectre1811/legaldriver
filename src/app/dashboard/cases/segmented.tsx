@@ -36,8 +36,13 @@ export function Segmented({
             onClick={() => onChange(o.value)}
             aria-pressed={active}
             disabled={disabled}
-            className={`inline-flex items-center gap-1.5 rounded-ec-s px-2.5 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo disabled:opacity-60 ${
-              active ? "bg-ec-bronze-tint text-ec-bronze-deep" : "text-ec-ink-2 hover:bg-ec-paper-3 hover:text-ec-ink"
+            className={`inline-flex items-center gap-1.5 rounded-ec-s px-2.5 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey disabled:opacity-60 ${
+              // WO-404 C2 re-check: inactive options were text-ec-ink-2 (#4A4A45, near-black) —
+              // almost as dark as the active option's text-ec-bronze-deep (#5E461F), so an inactive
+              // tab (e.g. "Agenda") visually competed with the active one instead of receding
+              // (founder-flagged "uneven"). The reference Segmented (ui.tsx) uses muted-ink for the
+              // resting state and only steps up to ink-2 on hover — matched here.
+              active ? "bg-ec-bronze-tint text-ec-bronze-deep" : "text-ec-muted-ink hover:bg-ec-paper-3 hover:text-ec-ink-2"
             }`}
           >
             {o.label}

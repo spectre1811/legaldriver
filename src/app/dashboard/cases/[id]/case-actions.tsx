@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { LogTimeExpense } from "./time-expense";
 import { SectionLabel } from "./case-section";
+import { ShareCaseButton, ExportPdfButton } from "./share-export";
 import { generateCaseSummary, addCaseDocument, updateCase, refreshCase, confirmDeadline, dismissDeadline, setDiaryDate, deleteMatter } from "../actions";
 
 // WO-332 · founder ask: the AI briefing card is long and dense — make it hideable, and remember the
@@ -168,16 +169,16 @@ export function CopyCnrButton({ cnr, label, copiedLabel }: { cnr: string; label:
   );
 }
 
-// WO-332 · the header's "More actions" menu. Only "Delete" is a real, wired capability today
-// (existing soft-delete via ConfirmDelete/deleteMatter); the reference's calendar/share/export
-// items have no backing route in this app (non-goal: no new endpoints in a reskin WO) — shown
-// disabled with a "Soon" mark rather than silently dropped or wired to a no-op, matching the
-// WO-331 precedent for an un-shippable-yet reference control.
+// WO-332 · the header's "More actions" menu. "Delete" (existing soft-delete via ConfirmDelete/
+// deleteMatter) is joined by two real WO-411 actions — Share and Export — both wired to a live
+// backend now (see share-export.tsx). Only "Add to calendar" has no backing route in this app yet
+// — shown disabled with a "Soon" mark rather than silently dropped or wired to a no-op, matching
+// the WO-331 precedent for an un-shippable-yet reference control.
 export function CaseMenu({
-  matterId, label, deleteLabel, deleteConfirmLabel, deleteNote, soonItems, soonLabel,
+  matterId, label, deleteLabel, deleteConfirmLabel, deleteNote, calendarSoonLabel, soonLabel,
 }: {
   matterId: string; label: string; deleteLabel: string; deleteConfirmLabel: string; deleteNote: string;
-  soonItems: string[]; soonLabel: string;
+  calendarSoonLabel: string; soonLabel: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -190,19 +191,22 @@ export function CaseMenu({
       >
         <Icon name="more" className="h-4 w-4" />
       </button>
-      {open && (
-        <div className="absolute right-0 z-40 mt-1.5 w-56 rounded-[10px] border border-ec-line bg-ec-card p-1.5 shadow-ec-2 motion-safe:animate-fade-in">
-          {soonItems.map((l) => (
-            <div key={l} className="flex items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] text-ec-ink-3">
-              <span>{l}</span>
-              <span className="ec-chip shrink-0 !text-[9px]">{soonLabel}</span>
-            </div>
-          ))}
-          <div className="mt-1 border-t border-ec-line pt-1">
-            <ConfirmDelete action={deleteMatter} id={matterId} label={deleteLabel} confirmLabel={deleteConfirmLabel} note={deleteNote} redirectTo="/dashboard/cases" size="md" />
-          </div>
+      {/* Always mounted once opened once (not `{open && ...}`) — ShareCaseButton/ExportPdfButton
+          own a portal <Dialog>/toast that must outlive THIS small dropdown closing (onDone closes
+          it the instant either action is clicked, in the same render as the dialog opening; an
+          unmount here would tear the dialog down with it). Only visibility toggles with `open`;
+          the portaled content renders elsewhere in the DOM and is unaffected by it. */}
+      <div className={`absolute right-0 z-40 mt-1.5 w-56 rounded-[10px] border border-ec-line bg-ec-card p-1.5 shadow-ec-2 ${open ? "block motion-safe:animate-fade-in" : "hidden"}`}>
+        <ShareCaseButton matterId={matterId} onDone={() => setOpen(false)} />
+        <ExportPdfButton matterId={matterId} onDone={() => setOpen(false)} />
+        <div className="flex items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] text-ec-ink-3">
+          <span>{calendarSoonLabel}</span>
+          <span className="ec-chip shrink-0 !text-[9px]">{soonLabel}</span>
         </div>
-      )}
+        <div className="mt-1 border-t border-ec-line pt-1">
+          <ConfirmDelete action={deleteMatter} id={matterId} label={deleteLabel} confirmLabel={deleteConfirmLabel} note={deleteNote} redirectTo="/dashboard/cases" size="md" />
+        </div>
+      </div>
     </div>
   );
 }

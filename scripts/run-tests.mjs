@@ -36,6 +36,7 @@ const OFFLINE = [
   "wo190_fmtdate_migration",
   "design_tokens_smoke",
   "i18n_coverage",
+  "wo365_client_subset",
   "wo82_directory_nav",
   "wo206_module_trim",
   "timeline_sort",
@@ -113,6 +114,15 @@ const OFFLINE = [
   "wo329_forwarded_host",
   "wo341_redirect_origin",
   "wo355_cron_lock",
+  "wo405_persisted_state",
+  "wo405_toast",
+  "wo405_confirm_action",
+  "wo405_dialog",
+  "wo406_sidebar",
+  "wo407_columns",
+  "wo408_clients_bulk",
+  "wo409_documents_filters",
+  "wo411_share_export",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the

@@ -5,7 +5,9 @@
       "cancel": "Cancel",
       "add": "Add",
       "search": "Search",
-      "retry": "Try again"
+      "retry": "Try again",
+      "close": "Close",
+      "dismiss": "Dismiss"
     },
     "states": {
       "loading": "Loading…",
@@ -90,6 +92,9 @@
   },
   "nav": {
     "ariaMain": "Navigation",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
+    "resizeSidebar": "Resize sidebar",
     "heading": {
       "console": "Console",
       "practice": "Practice",
@@ -250,8 +255,6 @@
       "moreActions": "More actions",
       "soon": {
         "calendar": "Add to calendar",
-        "share": "Share case file",
-        "export": "Export as PDF",
         "badge": "Soon"
       },
       "next": {
@@ -337,25 +340,6 @@
       "disclosure": {
         "heading": "How this works — honestly",
         "body": "We read the same public sources you would: the court record, High Court case status and daily cause lists. We match on your Bar enrolment number, then on name where the record has no Bar number — so a small number of matters can be missed or wrongly attributed. Nothing is filed, and nothing is sent to any court on your behalf. You can remove an advocate at any time and the assembled file goes with it."
-      },
-      "sidebar": {
-        "title": "What you get",
-        "calendarLabel": "Calendar",
-        "calendarCount": "{n, plural, one {# hearing this month} other {# hearings this month}}",
-        "calendarEmpty": "No hearings on file yet",
-        "weekdays": [
-          "M",
-          "T",
-          "W",
-          "T",
-          "F",
-          "S",
-          "S"
-        ],
-        "briefHeader": "{brand} · morning brief",
-        "briefNext": "Next on your calendar: {title} — {court}, {date}",
-        "briefEmpty": "Once your practice is assembled, your morning brief appears here.",
-        "briefNote": "WhatsApp delivery is coming soon — for now, check here each morning."
       },
       "notify": {
         "title": "Onboarding complete",
@@ -447,7 +431,7 @@
       "typeMore": "Type at least 2 characters to search.",
       "searchErrorTitle": "Search temporarily unavailable",
       "searchErrorBody": "This search is too heavy for the current engine right now — try a more specific query, or try again shortly.",
-      "footer": "Source: Mukadma / public court records (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy. Not legal advice — verify against the official record."
+      "footer": "Source: Mukadma / public court records (Gujarat, expanding). A judge can appear under multiple bench combinations; advocates without a bar id can't be opened; party matches are fuzzy."
     },
     "notifications": {
       "header": {
@@ -718,21 +702,19 @@
       "neverSynced": "Not yet synced from the court record",
       "manualSource": "manual entry"
     },
+    "columns": {
+      "trigger": "Add or reorder columns",
+      "heading": "Columns",
+      "reorderHint": "Use the arrow keys to move focus, space to show or hide a column, and Alt+Arrow to reorder.",
+      "reset": "Reset to default",
+      "filedOn": "Filed on",
+      "lastSynced": "Last synced"
+    },
     "diary": "diary",
     "past": "past",
     "noDate": "no date",
     "row": {
-      "aria": "Case {title} — press Enter for details, arrow keys to move",
-      "causeList": "View cause list"
-    },
-    "view": {
-      "aria": "List or agenda view",
-      "list": "List",
-      "agenda": "Agenda"
-    },
-    "agenda": {
-      "count": "{n, plural, one {# hearing} other {# hearings}}",
-      "empty": "No upcoming hearings in this view."
+      "aria": "Case {title} — press Enter for details, arrow keys to move"
     },
     "density": {
       "aria": "Row density",
@@ -898,7 +880,6 @@
       "watch": "Watch",
       "arguments": "Arguments — for & against",
       "present": "What to present at the next hearing",
-      "disclaimer": "AI-generated from this case record — informational, not legal advice. Verify against the official record.",
       "empty": "Generate a plain-language briefing with suggested next steps and risk flags from everything on this case.",
       "sources": "Grounded in",
       "stale": "This case was refreshed after this briefing — regenerate for the latest.",
@@ -923,7 +904,6 @@
       "line": "<b>Source: {source}</b> · last refreshed {time}",
       "never": "never",
       "note": "Court data comes from the official court record — it can lag or contain errors.",
-      "verify": "Always verify against the official record; not legal advice.",
       "diaryHint": "Set your own diary date above if the court record is wrong or stale."
     },
     "sourceName": {
@@ -1117,6 +1097,45 @@
       "notSet": "not set",
       "client": "no client linked",
       "scheduled": "none scheduled"
+    }
+  },
+  "caseActions": {
+    "share": {
+      "menuLabel": "Share case file",
+      "dialogTitle": "Share this case",
+      "permissions": "Anyone with this link can view this case's parties, hearings, orders and deadlines — read-only, no sign-in needed. No other case or client data is visible.",
+      "generating": "Creating your link…",
+      "copyLink": "Copy link",
+      "copied": "Link copied",
+      "copyFailed": "Couldn't copy — select and copy the link manually.",
+      "expires": "Expires {date}",
+      "noRevoke": "This link can't be revoked early — it stops working on its own at the expiry above.",
+      "view": {
+        "invalidTitle": "This link doesn't work",
+        "invalidBody": "It may have been mistyped, or the case it points to no longer exists.",
+        "expiredTitle": "This link has expired",
+        "expiredBody": "Ask whoever shared it to send you a new one.",
+        "badge": "Shared read-only view",
+        "scopeNote": "You're viewing a read-only copy of this case — parties, hearings, orders and deadlines. Nothing else on {brand} is visible from this link.",
+        "expiresNote": "This link expires {date}.",
+        "partiesTitle": "Parties & advocates",
+        "hearingsOrders": "Hearings & orders",
+        "deadlinesTitle": "Deadlines",
+        "hearing": "Hearing",
+        "order": "Order",
+        "empty": {
+          "parties": "No parties on record.",
+          "events": "No hearings or orders on record.",
+          "deadlines": "No deadlines on record."
+        },
+        "poweredBy": "Shared via {brand}"
+      }
+    },
+    "export": {
+      "menuLabel": "Export as PDF",
+      "preparing": "Preparing…",
+      "done": "Case file exported.",
+      "failed": "Couldn't export the PDF. Try again."
     }
   },
   "auth": {
@@ -1780,6 +1799,23 @@
       "save": "Save changes",
       "saving": "Saving…",
       "cancel": "Cancel"
+    },
+    "bulk": {
+      "selectAll": "Select all clients",
+      "selectRow": "Select {name}",
+      "selected": "{n} selected",
+      "clear": "Clear",
+      "deleteSelected": "Delete selected",
+      "confirmTitle": "{n, plural, one {Delete # client?} other {Delete # clients?}}",
+      "blockedHeading": "{k, plural, one {# client can't be deleted — it has linked matters:} other {# clients can't be deleted — they have linked matters:}}",
+      "deletableLine": "{n, plural, one {# client will be deleted. This can't be undone.} other {# clients will be deleted. This can't be undone.}}",
+      "confirmDelete": "{n, plural, one {Delete # client} other {Delete # clients}}",
+      "deletedToast": "{n, plural, one {# client deleted.} other {# clients deleted.}}",
+      "undo": "Undo",
+      "deleteRow": "Delete",
+      "deleteRowAria": "Delete {name}",
+      "inlineConfirm": "Delete {name}?",
+      "inlineBlocked": "{n, plural, one {Can't delete — linked to # matter.} other {Can't delete — linked to # matters.}}"
     }
   },
   "notices": {
@@ -1984,6 +2020,9 @@
     "bulk": {
       "selected": "{n} selected",
       "selectAll": "Select all",
+      "selectOne": "Select {name}",
+      "download": "Download",
+      "moveToTrash": "Move to trash",
       "export": "Export (.zip)",
       "exporting": "Preparing…",
       "exportFailed": "Export failed. Please try again.",
@@ -1999,7 +2038,6 @@
     "trash": {
       "title": "Trash",
       "subtitle": "Deleted documents are kept here and can be restored. Empty them permanently anytime.",
-      "link": "Trash ({n})",
       "back": "Back to Documents",
       "count": "{docs} in Trash",
       "emptyTitle": "Trash is empty",
@@ -2084,7 +2122,6 @@
       "close": "Close preview"
     },
     "summaryHeading": "Summary",
-    "summaryDisclaimer": "AI-generated from this document — informational, not legal advice.",
     "extractedHeading": "Extracted text",
     "extracted": {
       "parsed": "Parsed contents used for search",
@@ -2130,7 +2167,15 @@
       "all": "All",
       "filed": "Filed",
       "unfiled": "Unfiled",
-      "noMatch": "Nothing matches “{q}” in any document text."
+      "noMatch": "Nothing matches “{q}” in any document text.",
+      "dateFromAria": "Date from",
+      "dateToAria": "Date to",
+      "sortAria": "Sort by",
+      "sort": {
+        "date_desc": "Newest first",
+        "date_asc": "Oldest first",
+        "name_asc": "Name (A–Z)"
+      }
     },
     "docActions": {
       "open": "Open",
@@ -2157,7 +2202,8 @@
       "notes": "Notes",
       "notesPlaceholder": "Add a short note for this document…",
       "notesComingSoon": "Notes aren't saved yet — this is coming soon.",
-      "pagesUnavailable": "Page thumbnails aren't available yet"
+      "pagesUnavailable": "Page thumbnails aren't available yet",
+      "escHint": "ESC to close"
     }
   },
   "notifications": {
@@ -2251,7 +2297,7 @@
     "daysAgo": "{d}d ago",
     "never": "never",
     "caseFallback": "case",
-    "footer": "Risk signals are computed from tracked cases + court data — indicative, not legal advice. Verify against the official record."
+    "footer": "Risk signals are computed from tracked cases + court data — indicative."
   },
   "analytics": {
     "title": "Analytics",
@@ -2540,7 +2586,7 @@
     "emptyTitle": "Search orders and judgments",
     "noMatchBody": "Try a different search term.",
     "emptyBody": "Search by party name, case detail, or judge.",
-    "sourceListing": "Source: the court record — order and judgment text held for your tracked courts. Reference only; not legal advice — verify against the official record.",
+    "sourceListing": "Source: the court record — order and judgment text held for your tracked courts. Reference only.",
     "searchErrorTitle": "Search temporarily unavailable",
     "searchErrorBody": "This search is too heavy for the current engine right now — try a more specific query, or try again shortly.",
     "trackedBadge": "Tracked",
@@ -2566,7 +2612,7 @@
     "loadErrorTitle": "Couldn't load this judgment's text",
     "textNotAvailableTitle": "Text not available",
     "textNotAvailableBody": "This judgment's text couldn't be extracted (it may be a scanned image). Open the original PDF above.",
-    "sourceJudgment": "Source: Indian Court Judgments (AWS Open Data, CC-BY 4.0). Reference only — not legal advice; verify against the certified copy.",
+    "sourceJudgment": "Source: Indian Court Judgments (AWS Open Data, CC-BY 4.0). Reference only.",
     "judgePlaceholder": "Filter by judge name…",
     "judgeAria": "Judge",
     "disposalAria": "Disposition",
@@ -2607,7 +2653,7 @@
     "noTurns": "No turns in this conversation yet.",
     "emptyTitle": "Ask the Copilot",
     "emptyBody": "Ask about a case, a section (IPC↔BNS / CrPC↔BNSS), limitation, or next steps — answers are grounded in your matters + a maintained law pack, and cited.",
-    "disclaimer": "Assistive only — grounded and cited where possible. Not legal advice; verify against the official record and the bare act.",
+    "disclaimer": "Assistive only — grounded and cited where possible.",
     "placeholder": "Ask about a case, a section (IPC↔BNS / CrPC↔BNSS), limitation, or next steps…",
     "askAria": "Ask the agent",
     "thinking": "Thinking…",
@@ -2664,7 +2710,7 @@
     "operativePoints": "Operative points",
     "citations": "Citations",
     "citationSource": "source",
-    "disclaimer": "Assistive draft — not legal advice. Verify against the bare act and the official record before use.",
+    "disclaimer": "Assistive draft.",
     "noDraftYet": "No draft generated yet. Confirm the sections above and click “Generate draft”.",
     "versionHistory": "Version history",
     "yourEdit": "your edit",
@@ -2791,7 +2837,7 @@
     "emptyDecisions": "No dated decisions in the sample",
     "dataGapLabel": "DATA GAP:",
     "dataGapDisposalNature": "Disposal-nature is not present for cases in this sample — the API may not have captured it.",
-    "provenance": "Analytics over the latest {returned} of {count} cases. Source: Mukadma / court records. Indicative only — not legal advice."
+    "provenance": "Analytics over the latest {returned} of {count} cases. Source: Mukadma / court records. Indicative only."
   },
   "advocate": {
     "backToLookup": "Judges & advocates",
@@ -2828,7 +2874,7 @@
     "tracked": "tracked",
     "emptyTitle": "No cases on record",
     "emptyBody": "No cases on the public record for this bar code yet.",
-    "sourceNote": "Source: Mukadma / court records. Coverage is Gujarat (HC + district), expanding. Not legal advice — verify against the official record."
+    "sourceNote": "Source: Mukadma / court records. Coverage is Gujarat (HC + district), expanding."
   },
   "privacy": {
     "title": "Privacy",
@@ -2979,7 +3025,7 @@
     },
     "cached": "cached",
     "failed": "failed",
-    "footer": "Assistive AI — grounded and cited where possible, not legal advice. Costs are gateway-metered per tenant."
+    "footer": "Assistive AI — grounded and cited where possible. Costs are gateway-metered per tenant."
   },
   "pagination": {
     "loadMore": "Load more",

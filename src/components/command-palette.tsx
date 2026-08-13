@@ -88,29 +88,33 @@ export function CommandPalette({ compact = false }: { compact?: boolean } = {}) 
 
   const cmdCount = filteredCmds.length;
   const heading = (key: string, label: string) => (
-    <p key={key} className="px-4 pb-1 pt-2 text-[0.65rem] font-medium uppercase tracking-wide text-ink-faint">{label}</p>
+    <p key={key} className="px-4 pb-1 pt-2 text-[0.65rem] font-medium uppercase tracking-wide text-ec-muted-ink">{label}</p>
   );
   const row = (it: Item, i: number) => (
     <button
       key={it.href + i} onClick={() => go(it)} onMouseEnter={() => setActive(i)}
-      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm ${i === active ? "bg-brand-50" : ""}`}
+      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm ${i === active ? "bg-ec-bronze-tint" : ""}`}
     >
-      {it.icon ? <Icon name={it.icon} className="h-4 w-4 shrink-0 text-ink-faint" /> : <span className="w-4 shrink-0" />}
-      <span className="min-w-0 flex-1 truncate font-medium text-ink">{it.label}</span>
+      {it.icon ? <Icon name={it.icon} className="h-4 w-4 shrink-0 text-ec-muted-ink" /> : <span className="w-4 shrink-0" />}
+      <span className="min-w-0 flex-1 truncate font-medium text-ec-ink">{it.label}</span>
       {/* On entity results the sub is the identifier (CNR / ₹amount) — show it in mono. On commands
           the sub is filter keywords, so it stays hidden. */}
-      {it.kind === "result" && it.sub && <span className="shrink-0 truncate font-mono text-[0.7rem] text-ink-faint">{it.sub}</span>}
-      <span className="shrink-0 text-[0.7rem] text-ink-faint">{it.type}</span>
+      {it.kind === "result" && it.sub && <span className="shrink-0 truncate font-mono text-[0.7rem] text-ec-muted-ink">{it.sub}</span>}
+      <span className="shrink-0 text-[0.7rem] text-ec-muted-ink">{it.type}</span>
     </button>
   );
 
   return (
     <>
       <CommandTrigger onClick={() => setOpen(true)} compact={compact} />
-      <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/30 px-4 pt-[12vh] backdrop-blur-sm" onClick={() => setOpen(false)}>
-        <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-surface shadow-lift" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center gap-2 border-b border-line px-4">
-            <Icon name="search" className="h-4 w-4 text-ink-faint" />
+      {/* WO-413 · ⌘K reskin — migrated off the legacy surface/line/ink-faint tokens to the ec-*
+          system (bg-ec-card matches surface's exact value — --card aliases --paper-2, same as the
+          legacy `surface` token — border-ec-hair/z-ec-modal/bg-ec-ink-40 match every other overlay
+          in the app, e.g. components/ui/dialog.tsx). */}
+      <div className="fixed inset-0 z-ec-modal flex items-start justify-center bg-ec-ink/40 px-4 pt-[12vh] backdrop-blur-sm" onClick={() => setOpen(false)}>
+        <div className="w-full max-w-xl overflow-hidden rounded-ec-l border border-ec-hair bg-ec-card shadow-ec-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-2 border-b border-ec-hair px-4">
+            <Icon name="search" className="h-4 w-4 text-ec-muted-ink" />
             <input
               ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)}
               onKeyDown={(e) => {
@@ -119,13 +123,13 @@ export function CommandPalette({ compact = false }: { compact?: boolean } = {}) 
                 if (e.key === "Enter" && items[active]) go(items[active]);
               }}
               placeholder={t("commandPalette.placeholder")}
-              className="flex-1 bg-transparent py-3.5 text-sm outline-none placeholder:text-ink-faint"
+              className="flex-1 bg-transparent py-3.5 text-sm outline-none placeholder:text-ec-muted-ink"
             />
-            <kbd className="rounded border border-line px-1.5 py-0.5 text-[0.65rem] text-ink-faint">esc</kbd>
+            <kbd className="rounded border border-ec-hair px-1.5 py-0.5 text-[0.65rem] text-ec-muted-ink">esc</kbd>
           </div>
           <div className="max-h-[52vh] overflow-y-auto py-1">
             {items.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-ink-faint">
+              <p className="px-4 py-6 text-center text-sm text-ec-muted-ink">
                 {loading ? t("commandPalette.searching") : t("commandPalette.noMatches")}
               </p>
             ) : (
@@ -135,7 +139,7 @@ export function CommandPalette({ compact = false }: { compact?: boolean } = {}) 
                 {hits.length > 0 && heading("results", t("commandPalette.resultsHeading"))}
                 {hits.map((it, j) => row(it, cmdCount + j))}
                 {loading && hits.length === 0 && q.trim().length >= 2 && (
-                  <p className="px-4 py-3 text-center text-xs text-ink-faint">{t("commandPalette.searching")}</p>
+                  <p className="px-4 py-3 text-center text-xs text-ec-muted-ink">{t("commandPalette.searching")}</p>
                 )}
               </>
             )}
@@ -156,7 +160,7 @@ function CommandTrigger({ onClick, compact = false }: { onClick: () => void; com
       <button
         onClick={onClick}
         aria-label={t("commandPalette.trigger")}
-        className="flex h-9 items-center gap-2 rounded-ec-s border border-ec-hair bg-ec-paper px-2.5 text-sm text-ec-ink-3 transition hover:border-ec-hair-strong hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+        className="flex h-9 items-center gap-2 rounded-ec-s border border-ec-hair bg-ec-paper px-2.5 text-sm text-ec-ink-3 transition hover:border-ec-hair-strong hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
       >
         <Icon name="search" className="h-4 w-4" />
         <span className="text-left">{t("commandPalette.trigger")}</span>
@@ -165,10 +169,10 @@ function CommandTrigger({ onClick, compact = false }: { onClick: () => void; com
     );
   }
   return (
-    <button onClick={onClick} className="mb-3 flex w-full items-center gap-2 rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink-faint transition hover:border-brand-300 hover:text-ink">
+    <button onClick={onClick} className="mb-3 flex w-full items-center gap-2 rounded-xl border border-ec-hair bg-ec-paper px-3 py-2 text-sm text-ec-muted-ink transition hover:border-ec-hair-strong hover:text-ec-ink">
       <Icon name="search" className="h-4 w-4" />
       <span className="flex-1 text-left">{t("commandPalette.trigger")}</span>
-      <kbd className="rounded border border-line px-1.5 py-0.5 text-[0.65rem]">⌘K</kbd>
+      <kbd className="rounded border border-ec-hair px-1.5 py-0.5 text-[0.65rem]">⌘K</kbd>
     </button>
   );
 }

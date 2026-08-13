@@ -12,7 +12,7 @@
 // shared via context, so a single `isPending` covers every control and can dim the whole results
 // region (PendingDim) — not per-hook state that only knew about its own navigation.
 import { useRouter, useSearchParams, type ReadonlyURLSearchParams } from "next/navigation";
-import { createContext, useCallback, useContext, useState, useTransition } from "react";
+import { createContext, useCallback, useContext, useTransition } from "react";
 
 // A saved view: a named snapshot of the filter query (was defined in the deleted console.tsx).
 export type SavedView = { id: string; name: string; query: Record<string, string | string[]> };
@@ -26,13 +26,6 @@ export const PANEL_FACETS = ["court", "case_type", "stage", "statuses", "advocat
 // The keys a saved view snapshots/restores (the query axes, minus the `tier` court-segment).
 export const VIEW_KEYS = ["q", "court", "case_type", "stage", "status", "statuses", "advocate", "act", "judge", "next", "sort"] as const;
 
-// WO-331 Daybreak reskin · List/Agenda (reference: cases.tsx's `view` state) lives here — not the
-// URL — because the reference treats it as local UI state, not a shareable query axis. It's shared
-// through this ONE nav context (not lifted separately) so the toolbar's command row (where the
-// reference puts the toggle) and the table (which renders the two layouts) read/write the same value
-// without threading a prop through <CasesNavProvider>'s unrelated children.
-export type CasesView = "list" | "agenda";
-
 export type CasesNav = {
   sp: ReadonlyURLSearchParams;
   isPending: boolean;
@@ -42,8 +35,6 @@ export type CasesNav = {
   clearAll: () => void;
   clearPanel: () => void;
   applyQuery: (query: Record<string, string | string[]>) => void;
-  view: CasesView;
-  setView: (v: CasesView) => void;
 };
 
 // Built ONCE by <CasesNavProvider>. The single shared transition means `isPending` reflects any
@@ -54,7 +45,6 @@ export function useBuildCasesNav(): CasesNav {
   // Transition keeps the current list on screen (no loading flash / layout shift) while the soft-nav
   // refetches; isPending → the shared dim state, exposed through context.
   const [isPending, startTransition] = useTransition();
-  const [view, setView] = useState<CasesView>("list");
 
   // Any filter change returns to page 1 (an old page number is meaningless against a new set).
   const commit = useCallback(
@@ -128,7 +118,7 @@ export function useBuildCasesNav(): CasesNav {
     [router],
   );
 
-  return { sp, isPending, setParam, setMulti, removeValue, clearAll, clearPanel, applyQuery, view, setView };
+  return { sp, isPending, setParam, setMulti, removeValue, clearAll, clearPanel, applyQuery };
 }
 
 export const CasesNavContext = createContext<CasesNav | null>(null);

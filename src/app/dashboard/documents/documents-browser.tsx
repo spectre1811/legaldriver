@@ -14,6 +14,7 @@ import { DocViewerPanel } from "./doc-viewer-panel";
 import {
   bulkDeleteDocuments, restoreDocuments, purgeDocuments, bulkFileToClient, bulkFileToCase,
 } from "./actions";
+import { downloadDocumentsZip } from "./export-zip";
 
 export type DocRow = {
   id: string; filename: string; docType: string | null; mime: string | null;
@@ -93,23 +94,8 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
     setExportErr(false);
     setBusy(true);
     try {
-      const res = await fetch("/api/documents/export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: [...sel.selected] }),
-      });
-      if (!res.ok) { setExportErr(true); return; }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "documents-export.zip";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      setExportErr(true);
+      const ok = await downloadDocumentsZip([...sel.selected]);
+      if (!ok) setExportErr(true);
     } finally {
       setBusy(false);
     }
@@ -158,7 +144,10 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
                         label={t("bulk.selectAll")}
                       />
                     </th>
-                    <th className="px-3 py-3"><span className="ec-label">{t("field.file")}</span></th>
+                    {/* WO-409 · fixed-width name column (was auto-sized, which let a long
+                        unbroken filename stretch the whole table) — capped + break-words so a
+                        long name wraps onto a second line instead. */}
+                    <th className="w-[34%] px-3 py-3"><span className="ec-label">{t("field.file")}</span></th>
                     <th className="hidden px-4 py-3 sm:table-cell"><span className="ec-label">{t("field.type")}</span></th>
                     <th className="px-4 py-3"><span className="ec-label">{t("field.filedUnder")}</span></th>
                     <th className="hidden px-4 py-3 md:table-cell"><span className="ec-label">{t("field.source")}</span></th>
@@ -176,13 +165,13 @@ export function DocumentsBrowser({ sections, orderedIds, matterOpts, clientOpts,
                           <RowCheckbox
                             checked={checked}
                             onSelect={(shift) => sel.onRowClick(d.id, shift)}
-                            label={`Select ${d.filename}`}
+                            label={t("bulk.selectOne", { name: d.filename })}
                           />
                         </td>
-                        <td className="px-3 py-3.5">
-                          <Link href={`/dashboard/documents/${d.id}`} className="group flex items-center gap-2.5">
-                            <Icon name="documents" className="h-4 w-4 shrink-0 text-ec-ink-3" />
-                            <span className="font-medium text-ec-ink group-hover:text-ec-bronze group-hover:underline">{d.filename}</span>
+                        <td className="w-[34%] px-3 py-3.5">
+                          <Link href={`/dashboard/documents/${d.id}`} className="group flex items-start gap-2.5">
+                            <Icon name="documents" className="mt-0.5 h-4 w-4 shrink-0 text-ec-ink-3" />
+                            <span className="whitespace-normal break-words font-medium text-ec-ink group-hover:text-ec-bronze group-hover:underline">{d.filename}</span>
                           </Link>
                         </td>
                         <td className="hidden px-4 py-3.5 sm:table-cell">{d.docType ? <span className="ec-chip">{d.docType}</span> : <span className="text-ec-ink-3">—</span>}</td>
