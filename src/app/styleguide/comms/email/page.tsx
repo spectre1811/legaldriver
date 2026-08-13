@@ -142,12 +142,14 @@ function Meta({ tkey }: { tkey: EmailKey }) {
 
 function Pane({ label, rendered }: { label: string; rendered: { subject: string; html: string } | null }) {
   if (!rendered) return <div className="text-ec-warn text-sm">— subject slot missing → no email —</div>;
+  const len = rendered.subject.length;
   return (
     <div className="min-w-0">
       <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-ec-ink-3">{label}</div>
       <div className="mb-2 flex items-baseline gap-2">
         <span className="font-mono text-[11px] text-ec-ink-2">subject:</span>
         <span className="text-sm text-ec-ink">{rendered.subject}</span>
+        <span className={`ml-auto text-[11px] tabular-nums ${len > 78 ? "text-ec-warn" : "text-ec-ink-3"}`}>{len}/78 chars</span>
       </div>
       <iframe title={label} srcDoc={rendered.html} className="w-full rounded-md border border-ec-hair" style={{ height: 400 }} />
     </div>
@@ -155,9 +157,11 @@ function Pane({ label, rendered }: { label: string; rendered: { subject: string;
 }
 
 function EmailPreview({ tkey }: { tkey: EmailKey }) {
+  // P2: the today board is derived STRICTLY from the cron's real meta shape ({ date, count } only —
+  // the cron never passes `orders`, so a today board must not render the orders line).
   const todayRendered =
     tkey === "dailyHearings"
-      ? renderDailyHearings(BOARD_TODAY, { date: TODAY.dailyHearings.date, count: TODAY.dailyHearings.count, orders: 2 })
+      ? renderDailyHearings(BOARD_TODAY, { date: TODAY.dailyHearings.date, count: TODAY.dailyHearings.count })
       : renderEmail(tkey, TODAY[tkey]);
   const enrichedRendered =
     tkey === "dailyHearings"
@@ -177,6 +181,10 @@ function EmailPreview({ tkey }: { tkey: EmailKey }) {
 }
 
 export default function EmailStyleguide() {
+  // P4: the weekly slot-drop demo — money/filings aggregates unavailable → those stat cells drop,
+  // never a fabricated "₹0". The visual proof for the honesty rule.
+  const dropDemo = renderEmail("weekly", { hearings: 5, orders: 2 });
+
   return (
     <main className="mx-auto max-w-6xl px-6 py-12 text-ec-ink">
       <header className="mb-10 border-b border-ec-hair pb-6">
@@ -190,9 +198,8 @@ export default function EmailStyleguide() {
           informative subjects, preheaders, and a footer &ldquo;why you got this&rdquo; + settings link
           (founder gallery, 2026-08-11). Each template renders twice: <b>&ldquo;Today&rsquo;s payload&rdquo;</b> —
           what production actually sends — beside <b>&ldquo;With WO-415 enrichment&rdquo;</b>, the wider slot set
-          that lands when the producer widens. The enriched rows (what-changed blocks, stats deltas,
-          date banners, last-listed) slot-drop until then; the &ldquo;today&rdquo; column is what the founder is
-          signing off on.
+          that lands when the producer widens. The enriched rows (stats deltas, date banners, last-listed)
+          slot-drop until then; the &ldquo;today&rdquo; column is what the founder is signing off on.
         </p>
       </header>
 
@@ -208,11 +215,19 @@ export default function EmailStyleguide() {
         <h2 className="mb-1 text-xs font-semibold uppercase tracking-widest text-ec-brass-deep">Honesty rule — live</h2>
         <p className="mb-4 text-xs text-ec-ink-3">
           The two columns above are the honest demo: in &ldquo;Today&rsquo;s payload&rdquo; the enriched rows drop rather
-          than fake a value. Specifically — <b>caseUpdate</b> drops the what-changed block and the
-          &ldquo;Hearing moved &hellip;&rdquo; diff (no prev-hearing yet); <b>disposalNotice</b> drops the
-          &ldquo;Was listed &hellip;&rdquo; diff; <b>hearingReminder</b> drops the date banner and last-listed history.
-          No &ldquo;₹0&rdquo;, no invented date, no half-empty line — a missing slot drops its line.
+          than fake a value. Specifically — <b>caseUpdate</b> keeps its &ldquo;New order&rdquo; row (the change label
+          is the genuine new-order signal) but drops the Hearing/Bench diff rows (no prev-hearing/prev-bench
+          yet); <b>disposalNotice</b> drops the &ldquo;Was listed &hellip;&rdquo; diff; <b>hearingReminder</b> drops the
+          date banner, last-listed history and the &ldquo;Since the last listing&rdquo; block.
         </p>
+        {dropDemo && (
+          <>
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-ec-ink-3">
+              Weekly — money + filings aggregates unavailable
+            </div>
+            <iframe title="weekly-drop-demo" srcDoc={dropDemo.html} className="w-full rounded-md border border-ec-hair" style={{ height: 380 }} />
+          </>
+        )}
       </section>
     </main>
   );

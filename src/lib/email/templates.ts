@@ -370,10 +370,13 @@ function bodyLines(key: EmailKey, sec: Record<string, string>, data: EmailData):
         const callTail = pair(sec, "calloutTail", data);
         add(roleBlock({ html: callLead.html + (callTail?.html ?? ""), text: callLead.text + (callTail?.text ?? "") }, "callout"));
       }
+      // P6: CNR (fact4) stays the LAST fact row, as in the gallery — the "Latest order" fact slots
+      // in before it, never after the mono CNR row.
       const factsSpec: [string, string, boolean?][] = [
-        ["fact0l", "fact0v"], ["fact1l", "fact1v"], ["fact2l", "fact2v"], ["fact3l", "fact3v"], ["fact4l", "fact4v", true],
+        ["fact0l", "fact0v"], ["fact1l", "fact1v"], ["fact2l", "fact2v"], ["fact3l", "fact3v"],
+        ...(newOrder ? [] : [["fact5l", "fact5v"] as [string, string, boolean?]]),
+        ["fact4l", "fact4v", true],
       ];
-      if (!newOrder) factsSpec.push(["fact5l", "fact5v"]);
       const f = factsItems(sec, data, factsSpec);
       if (f.length) add(facts(f));
       s("detail", "muted");

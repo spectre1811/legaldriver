@@ -70,15 +70,21 @@ for (const k of EMAIL_KEYS) {
   if (r) check(`${k}.subject ≤ 78 chars ("${r.subject}" = ${r.subject.length})`, r.subject.length <= 78);
 }
 
-// --- D3(a): the case-bearing subjects keep their fixed (non-slot) prefix ≤ 40 chars, so the case
-// title begins early enough to survive Gmail's visual truncation. (Measured 10/3/25/17 — a regression
-// guard. syncFailure/assembled/weekly have long fixed prefixes BY DESIGN because they carry no case
-// title, so this rule does NOT apply to them.) ---
-const CASE_SUBJECTS = ["hearingReminder", "caseUpdate", "disposalNotice", "trackConfirm"] as const;
+// --- D3(a): the case-bearing subjects keep their fixed (non-slot) prefix so the case title begins
+// early enough to survive Gmail's visual truncation. These four subjects are transcribed from a
+// frozen approved spec, so the fixed portion is asserted EXACTLY per template (not a shared ceiling —
+// a loose ≤40 ceiling would let caseUpdate regress 3 → 35 chars, a 12× blow-up, silently). If the
+// approved subject copy legitimately changes, update the expected number in the SAME change. ---
+const CASE_SUBJECT_FIXED: Record<"hearingReminder" | "caseUpdate" | "disposalNotice" | "trackConfirm", number> = {
+  hearingReminder: 10,
+  caseUpdate: 3,
+  disposalNotice: 25,
+  trackConfirm: 17,
+};
 const fixedPortion = (tpl: string) => tpl.replace(/\{[a-zA-Z0-9_]+\}/g, "");
-for (const k of CASE_SUBJECTS) {
+for (const k of Object.keys(CASE_SUBJECT_FIXED) as (keyof typeof CASE_SUBJECT_FIXED)[]) {
   const fixed = fixedPortion(en.emails[k].subject);
-  check(`${k} subject fixed (non-slot) portion ≤ 40 chars (${fixed.length})`, fixed.length <= 40);
+  check(`${k} subject fixed (non-slot) portion = ${CASE_SUBJECT_FIXED[k]} (got ${fixed.length})`, fixed.length === CASE_SUBJECT_FIXED[k]);
 }
 
 // --- honesty: missing money/count aggregates DROP their stat cell; never a fabricated 0 ---
