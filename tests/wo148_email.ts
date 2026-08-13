@@ -116,8 +116,18 @@ check("trackConfirm without court uses subjectFallback ('Now tracking {case}')",
 // --- NIT-8(b): a dropped preheader emits NO hidden div ---
 const withPre = renderEmail("security", { code: "123456" });
 check("filled preheader emits a hidden div", !!withPre && /display:none/.test(withPre.html));
-const droppedPre = renderEmail("caseUpdate", { change: "Bench changed", case: "X v. Y", court: "C", cnr: "Z" });
+// trackConfirm's preheader needs {nextHearingDate}+{stage}; drop both and there is no preheader (and
+// no fallback) → no hidden div.
+const droppedPre = renderEmail("trackConfirm", { case: "X v. Y", court: "C" });
 check("dropped preheader emits no hidden div", !!droppedPre && !/display:none/.test(droppedPre.html));
+
+// --- F1: the three case emails emit a preheader div on a TODAY-shaped payload (preheaderFallback) ---
+const todayCaseUpdate = renderEmail("caseUpdate", { change: "Bench changed", case: "X v. Y", court: "Gujarat HC", cnr: "GJHC010012342026" });
+check("caseUpdate emits a preheader on today's payload (fallback)", !!todayCaseUpdate && /display:none/.test(todayCaseUpdate.html) && /Gujarat HC · CNR GJHC010012342026/.test(todayCaseUpdate.html));
+const todayDisposal = renderEmail("disposalNotice", { change: "No next date on record", case: "X v. Y", court: "Family Court", stage: "Fresh", cnr: "GJVD020098412026" });
+check("disposalNotice emits a preheader on today's payload (fallback)", !!todayDisposal && /display:none/.test(todayDisposal.html) && /Family Court · CNR GJVD020098412026/.test(todayDisposal.html));
+const todayReminder = renderEmail("hearingReminder", { when: "tomorrow", case: "X v. Y", court: "Gujarat HC", cnr: "GJHC010012342026", date: "14 Aug" });
+check("hearingReminder emits a preheader on today's payload (fallback)", !!todayReminder && /display:none/.test(todayReminder.html) && /14 Aug · Gujarat HC/.test(todayReminder.html));
 
 // --- Gmail 102KB clip budget: every rendered email stays well under ---
 for (const k of EMAIL_KEYS) {

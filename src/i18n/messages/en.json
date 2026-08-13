@@ -3229,6 +3229,7 @@
     "caseUpdate": {
       "subject": "{change} — {case}",
       "preheader": "Hearing moved {prevHearingDate} → {nextHearingDate} · {court} · CNR {cnr}",
+      "preheaderFallback": "{court} · CNR {cnr}",
       "why": "You receive updates when a case you track changes on the record.",
       "chip": "{change}",
       "title": "{case}",
@@ -3291,6 +3292,7 @@
       "subject": "Hearing {when}: {case}",
       "subjectFallback": "Hearing {when}",
       "preheader": "{date} · {court} · Court {courtNo} · {purpose}",
+      "preheaderFallback": "{date} · {court}",
       "why": "You receive hearing reminders for matters you track on Mukadma.",
       "chip": "Listed {when}",
       "title": "{case}",
@@ -3321,6 +3323,7 @@
     "disposalNotice": {
       "subject": "No next date on record — {case}",
       "preheader": "Was listed {prevHearingDate} · possibly disposed — verify against the record.",
+      "preheaderFallback": "{court} · CNR {cnr}",
       "why": "You receive updates when a case you track changes on the record.",
       "chip": "{change}",
       "title": "{case}",

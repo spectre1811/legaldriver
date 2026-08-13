@@ -499,7 +499,10 @@ export function renderEmail(key: EmailKey, data: EmailData, ctaUrl = APP_ROOT): 
     fillText(sec, "subject", data) ?? (sec.subjectFallback ? fillText(sec, "subjectFallback", data) : null);
   if (subject === null) return null;
 
-  const preheader = fillHtml(sec, "preheader", data);
+  // F1: preheader resolves preheader → preheaderFallback → no div, exactly like the subject. The
+  // fallback binds only TODAY's slots, so a case email always lands a preview line even before
+  // WO-415 widens the payload (e.g. caseUpdate's primary preheader needs {prevHearingDate}).
+  const preheader = fillHtml(sec, "preheader", data) ?? fillHtml(sec, "preheaderFallback", data);
   const whyHtml = fillHtml(sec, "why", data);
   const whyText = fillText(sec, "why", data);
 
