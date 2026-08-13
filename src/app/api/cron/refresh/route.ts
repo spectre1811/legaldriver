@@ -25,8 +25,9 @@ const REFRESH_MAX_PER_RUN = Number(process.env.REFRESH_MAX_PER_RUN ?? "100");
 const REFRESH_LIVE_MAX_PER_RUN = liveLaneSize(process.env.REFRESH_LIVE_MAX_PER_RUN);
 const REFRESH_LIVE_BUDGET_MS = Number(process.env.REFRESH_LIVE_BUDGET_MS ?? "25000");
 
-// WO-286 W2 — the ≤55s latency budget (maxDuration=60s is Vercel's HARD kill; nothing below it
-// may run past that wall):
+// WO-286 W2 — the ≤55s latency budget. (WO-378 correction: `maxDuration = 60` is NOT a kill on
+// this estate — it is a Vercel-only hint and a no-op self-hosted since WO-323. RUN_DEADLINE_MS
+// below is the only thing that actually stops this run, which is why it is enforced in-code.)
 //   • live lane FIRST: ≤3 real provider POST /refresh calls, cumulative-budget-capped at
 //     REFRESH_LIVE_BUDGET_MS (25s) via liveBudgetOpen — worst case the lane burns ~25s, never
 //     more, regardless of how slow any single call is (each call is ALSO deadline-capped to the

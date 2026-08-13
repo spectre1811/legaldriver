@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  return withCronLock("daily-hearings", async () => {
+  return withCronLock("daily-hearings", async (lease) => {
     const supabase = createAdminClient();
     const mailer = getMailer();
     const date = istDate(1); // tomorrow, IST calendar day
@@ -63,7 +63,12 @@ export async function GET(request: NextRequest) {
     let skippedEmpty = 0;
     let already = 0;
     let failed = 0;
+    let fenced = false;
     for (const [tenantId, list] of byTenant) {
+      // WO-378: same lease fence as the notify pipeline — this loop also sends BEFORE it writes
+      // its idempotency row, so an overrun run racing its successor would double-send a board.
+      if (!(await lease.ok())) { fenced = true; break; }
+
       // Idempotency: one board per tenant per date, even across re-runs.
       const { data: prior } = await supabase
         .from("notification")
@@ -108,6 +113,6 @@ export async function GET(request: NextRequest) {
       sent++;
     }
 
-    return NextResponse.json({ ok: true, date, tenants: byTenant.size, sent, skippedEmpty, already, failed });
+    return NextResponse.json({ ok: true, date, tenants: byTenant.size, sent, skippedEmpty, already, failed, fenced });
   });
 }

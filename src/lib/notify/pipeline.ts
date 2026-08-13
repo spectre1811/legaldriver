@@ -14,6 +14,7 @@ import { deliverInApp } from "@/lib/notify/deliver/inapp";
 import { writeDeadManSignal } from "@/lib/notify/health";
 import { messagingConfigured } from "@/lib/services/messaging/client";
 import type { CaseUpdatePayload } from "@/lib/notify/email-render";
+import type { CronLease } from "@/lib/cron/lock";
 
 type AdminDB = SupabaseClient<Database>;
 
@@ -30,12 +31,15 @@ export type PipelineResult = {
   stale: number;
   deadRefs: number;
   roundups: number;
+  /** WO-378: true ⇒ the run stopped early because it no longer held the cron lease. */
+  fenced: boolean;
 };
 
 export async function runPipeline(
   supabase: AdminDB,
   mailer: Mailer,
   now = new Date(),
+  lease?: CronLease,
 ): Promise<{ result: PipelineResult; error?: string }> {
   const nowIso = now.toISOString();
 
@@ -69,8 +73,15 @@ export async function runPipeline(
   let lastSendError: string | null = null;
 
   // ── Deliver loop ──
+  let fenced = false;
   for (const row of rows) {
     if (handled.has(row.id)) continue; // delivered as part of a caseUpdate roundup
+
+    // WO-378: lease fence. `try_acquire_cron_lock` STEALS an expired lease, so a run that
+    // overran its TTL is racing its own successor over the same still-`pending` rows — and
+    // sending happens BEFORE the status flip, so the flip guard stops a double flip, never a
+    // double SEND. Checked before every row: a lost lease stops this run at the next row.
+    if (lease && !(await lease.ok())) { fenced = true; break; }
 
     switch (row.channel) {
       case "whatsapp": {
@@ -124,7 +135,7 @@ export async function runPipeline(
       whatsapp,
       considered: rows.length,
       retried: retryCount,
-      sent, failed, dead, skipped, stale, deadRefs, roundups,
+      sent, failed, dead, skipped, stale, deadRefs, roundups, fenced,
     },
   };
 }
@@ -136,6 +147,6 @@ function zeroResult(mailer: Mailer, considered: number, retried: number): Pipeli
     whatsapp: messagingConfigured() ? "live" : "dark",
     considered,
     retried,
-    sent: 0, failed: 0, dead: 0, skipped: 0, stale: 0, deadRefs: 0, roundups: 0,
+    sent: 0, failed: 0, dead: 0, skipped: 0, stale: 0, deadRefs: 0, roundups: 0, fenced: false,
   };
 }
