@@ -24,6 +24,11 @@ export function buildCaseUpdateRoundup(
   return group;
 }
 
+// WO-414 · the disposal notice is a `case_update` variant — bound off the existing
+// closed-set change label until WO-415 lands the structured payload.disposal flag (which
+// replaces this single check). The notification kind stays `case_update`.
+export const DISPOSAL_CHANGE_LABEL = "No next date on record";
+
 // Compose one caseUpdate email for a group of rows. Returns null for legacy rows
 // without a change label — caller falls back to renderNotice.
 export function composeCaseUpdateEmail(
@@ -32,7 +37,8 @@ export function composeCaseUpdateEmail(
 ): RenderedEmail | null {
   const composed = composeCaseUpdate(group && group.length ? group : [p]);
   if (!composed) return null;
-  return renderEmail("caseUpdate", composed.data, appUrl(composed.ctaPath));
+  const key = composed.data.change === DISPOSAL_CHANGE_LABEL ? "disposalNotice" : "caseUpdate";
+  return renderEmail(key, composed.data, appUrl(composed.ctaPath));
 }
 
 // Whether a roundup actually composed (siblings may only be flipped when the
