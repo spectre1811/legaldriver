@@ -86,16 +86,37 @@ export async function getCaseCached(cnr: string, opts?: { maxAgeMs?: number; for
   }
 }
 
+// WO-373: a short "just-refreshed" window — read-at-call-time (DIFF_SYNC's pattern, sync.ts:248)
+// so tests can override per-call without an env/module-reload dance. Default OFF (0 disables;
+// NaN/garbage also disables — fail-safe, same convention as liveLaneSize).
+const REFRESH_COLLAPSE_WINDOW_MS = () => Number(process.env.REFRESH_COLLAPSE_WINDOW_MS ?? 0);
+
 // Force a LIVE re-scrape of ONE case (the user-clicked "Refresh" button) via the provider's
 // POST /refresh — NOT the cached GET. This is what makes "Refresh" actually go to eCourts, and
 // lets us tell the user the truth: on a live hit we write through + report "Refreshed"; when the
 // provider is reached but returns no live record (e.g. eCourts serves a null history — WO-191) or
 // errors, we fall back to the last-synced copy and flag `stale` so the caller can say "couldn't
 // get an update" instead of a false "Refreshed". The nightly cron stays on the cached bulk path.
-export async function liveRefreshCase(cnr: string): Promise<CaseFetch> {
+//
+// WO-373: the cron live lane is strictly sequential (`await` inside the loop) — two matters on
+// different tenants tracking the same CNR, drained back-to-back in one run, used to each pay a
+// real upstream call. `readCache`'s `ageMs` already tells us whether SOMEONE just fetched this
+// CNR moments ago; `writeCache` is only ever called on a genuinely fresh provider response (never
+// on a stale fallback — see both call sites below and in getCaseCached), so a row inside the
+// window is exactly as fresh as the call that wrote it. Reusing it and reporting `stale: false` is
+// the SAME freshness guarantee the original caller got — never a false "Refreshed" over a row this
+// call didn't itself fetch (the WO-359 B2 defect this WO exists to avoid). `admin` is injectable
+// (defaults to a real client) purely so offline tests can drive this function for real.
+export async function liveRefreshCase(cnr: string, admin: Admin = createAdminClient(), opts?: { collapseWindowMs?: number }): Promise<CaseFetch> {
   const key = cnr.toUpperCase();
-  const admin = createAdminClient();
   const client = getCourtDataClient();
+  const windowMs = opts?.collapseWindowMs ?? REFRESH_COLLAPSE_WINDOW_MS();
+  if (windowMs > 0) {
+    const recent = await readCache(admin, "case", key);
+    if (recent && recent.ageMs <= windowMs) {
+      return { case: recent.normalized, cacheHit: true, stale: false, source: recent.normalized.source };
+    }
+  }
   try {
     const fresh = (await client.refreshCases([key]))[0] ?? null;
     await markHealth(admin, client.source, true);
