@@ -2,6 +2,8 @@
   "assistant",
   "auth",
   "calendar",
+  "caseActions.export",
+  "caseActions.share",
   "caseDetail",
   "casePreview",
   "cases",
@@ -33,4 +35,3 @@
   "shell",
   "voice"
 ]
-
