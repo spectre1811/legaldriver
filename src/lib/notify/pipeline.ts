@@ -31,6 +31,7 @@ export type PipelineResult = {
   stale: number;
   deadRefs: number;
   roundups: number;
+  suppressed: number;
   /** WO-378: true ⇒ the run stopped early because it no longer held the cron lease. */
   fenced: boolean;
 };
@@ -67,6 +68,7 @@ export async function runPipeline(
   let deadRefs = 0;
   let roundups = 0;
   let dead = 0;
+  let suppressed = 0;
   // WO-288 (f): provider-outcome counters feed the email-sendpath dead-man row below.
   let emailAttempts = 0;
   let emailFailures = 0;
@@ -106,6 +108,7 @@ export async function runPipeline(
         if (r.deadRefs) deadRefs++;
         if (r.stale) stale++;
         if (r.siblings > 0) { sent += r.siblings; roundups++; }
+        if (r.suppressed) suppressed++;
         if (r.attempt) emailAttempts++;
         if (r.attemptFailed) emailFailures++;
         if (r.dead) dead++;
@@ -135,7 +138,7 @@ export async function runPipeline(
       whatsapp,
       considered: rows.length,
       retried: retryCount,
-      sent, failed, dead, skipped, stale, deadRefs, roundups, fenced,
+      sent, failed, dead, skipped, stale, deadRefs, roundups, suppressed, fenced,
     },
   };
 }
@@ -147,6 +150,6 @@ function zeroResult(mailer: Mailer, considered: number, retried: number): Pipeli
     whatsapp: messagingConfigured() ? "live" : "dark",
     considered,
     retried,
-    sent: 0, failed: 0, dead: 0, skipped: 0, stale: 0, deadRefs: 0, roundups: 0, fenced: false,
+    sent: 0, failed: 0, dead: 0, skipped: 0, stale: 0, deadRefs: 0, roundups: 0, suppressed: 0, fenced: false,
   };
 }

@@ -22,7 +22,19 @@ export interface SendResult {
 export interface Mailer {
   readonly channel: "email";
   /** `text` is the plain-text alternative part (WO-264 — every v2 template renders one). */
-  send(to: string, subject: string, html: string, text?: string): Promise<SendResult>;
+  send(
+    to: string,
+    subject: string,
+    html: string,
+    text?: string,
+    opts?: { headers?: Record<string, string> },
+  ): Promise<SendResult>;
+}
+
+// The sender identity's email, one place. `from` anchors the WO-416 Message-ID domain and the
+// mailto unsubscribe address, so header-building call sites need the same default the mailer uses.
+export function senderEmail(): string {
+  return process.env.FROM_EMAIL ?? "onboarding@resend.dev";
 }
 
 const recipientDomain = (to: string) => to.split("@")[1] ?? "?";
@@ -48,7 +60,13 @@ class ResendMailer implements Mailer {
     private readonly from: string,
   ) {}
 
-  async send(to: string, subject: string, html: string, text?: string): Promise<SendResult> {
+  async send(
+    to: string,
+    subject: string,
+    html: string,
+    text?: string,
+    opts?: { headers?: Record<string, string> },
+  ): Promise<SendResult> {
     try {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -56,7 +74,14 @@ class ResendMailer implements Mailer {
           Authorization: `Bearer ${this.apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ from: this.from, to, subject, html, ...(text ? { text } : {}) }),
+        body: JSON.stringify({
+          from: this.from,
+          to,
+          subject,
+          html,
+          ...(text ? { text } : {}),
+          ...(opts?.headers ? { headers: opts.headers } : {}), // WO-416: Resend passes `headers` through
+        }),
         signal: AbortSignal.timeout(sendTimeoutMs()), // WO-378: never hang the cron run
       });
       const body = (await res.json()) as { id?: string; message?: string };
@@ -108,7 +133,7 @@ const isProd = () => (process.env.APP_ENV ?? process.env.VERCEL_ENV) === "produc
 export function getMailer(): Mailer {
   if (isDemoMode()) return new ConsoleMailer(); // never hit Resend in a demo session
   const key = process.env.RESEND_API_KEY;
-  const from = process.env.FROM_EMAIL ?? "onboarding@resend.dev";
+  const from = senderEmail();
   if (key) return new ResendMailer(key, from);
   return isProd() ? new FailMailer() : new ConsoleMailer();
 }
@@ -130,7 +155,7 @@ type DB = SupabaseClient<Database>;
 
 export async function getMailerReadiness(sb?: DB): Promise<MailerReadiness> {
   const key = process.env.RESEND_API_KEY;
-  const from = process.env.FROM_EMAIL ?? "onboarding@resend.dev";
+  const from = senderEmail();
   if (!key) return { status: isProd() && !isDemoMode() ? "misconfigured" : "unconfigured", from };
   if (sb) {
     // Latest real outcomes. Fail-soft: a query error (or pre-migration schema) just

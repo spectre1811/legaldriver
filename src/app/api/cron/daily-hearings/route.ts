@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getMailer } from "@/lib/notify/mailer";
+import { getMailer, senderEmail } from "@/lib/notify/mailer";
 import { logOutboundEmail } from "@/lib/notify/log";
 import { resolveRecipientEmail } from "@/lib/notify/recipients";
+import { buildEmailHeaders, shouldSuppressEmail } from "@/lib/notify/email-headers";
 import { renderDailyHearings } from "@/lib/email/templates";
 import { appUrl, istDate, istFriendlyDate } from "@/lib/notify/email-render";
 import { maskTitle } from "@/lib/court/mask";
@@ -63,6 +64,7 @@ export async function GET(request: NextRequest) {
     let skippedEmpty = 0;
     let already = 0;
     let failed = 0;
+    let suppressed = 0;
     let fenced = false;
     for (const [tenantId, list] of byTenant) {
       // WO-378: same lease fence as the notify pipeline — this loop also sends BEFORE it writes
@@ -98,11 +100,39 @@ export async function GET(request: NextRequest) {
       const rendered = renderDailyHearings(rows, { date: istFriendlyDate(date), count: list.length }, appUrl("/dashboard/calendar"));
       if (!rendered) { skippedEmpty++; continue; } // no honest row survived → no email
 
-      const email = await resolveRecipientEmail(supabase, tenantId);
-      if (!email) { failed++; continue; }
+      const rec = await resolveRecipientEmail(supabase, tenantId);
+      if (!rec) { failed++; continue; }
 
-      const res = await mailer.send(email, rendered.subject, rendered.html, rendered.text);
-      await logOutboundEmail(supabase, { tenantId, to: email, subject: rendered.subject, kind: "reminder", ok: res.ok, providerId: res.id, error: res.error });
+      // WO-416 amendment #1: honour the recipient's channel_email pref (the daily board is bulk,
+      // non-transactional — it carries List-Unsubscribe and must skip an opted-out recipient).
+      {
+        const { data: prefs } = await supabase
+          .from("notification_prefs")
+          .select("channel_email")
+          .eq("id", rec.profileId)
+          .maybeSingle();
+        if (shouldSuppressEmail("daily_hearings", prefs ? prefs.channel_email : true)) {
+          // Terminal idempotency row (status 'dead' — check-constrained, no new status) so the
+          // next run doesn't re-resolve and re-skip forever.
+          await supabase.from("notification").insert({
+            tenant_id: tenantId, channel: "email", kind: "daily_hearings", status: "dead",
+            scheduled_for: new Date().toISOString(),
+            payload: { ref: `dailyhearings:${tenantId}:${date}`, eventDate: date, count: list.length, title: `Tomorrow: ${list.length} hearings` } as Database["public"]["Tables"]["notification"]["Insert"]["payload"],
+          });
+          suppressed++;
+          continue;
+        }
+      }
+
+      const headers = buildEmailHeaders({
+        kind: "daily_hearings",
+        matterId: null, // a multi-matter digest has no single matter id — unthreaded by design
+        tenantId,
+        profileId: rec.profileId,
+        from: senderEmail(),
+      });
+      const res = await mailer.send(rec.email, rendered.subject, rendered.html, rendered.text, { headers });
+      await logOutboundEmail(supabase, { tenantId, to: rec.email, subject: rendered.subject, kind: "reminder", ok: res.ok, providerId: res.id, error: res.error });
       if (!res.ok) { failed++; continue; }
 
       await supabase.from("notification").insert({
@@ -113,6 +143,6 @@ export async function GET(request: NextRequest) {
       sent++;
     }
 
-    return NextResponse.json({ ok: true, date, tenants: byTenant.size, sent, skippedEmpty, already, failed, fenced });
+    return NextResponse.json({ ok: true, date, tenants: byTenant.size, sent, skippedEmpty, already, failed, suppressed, fenced });
   });
 }

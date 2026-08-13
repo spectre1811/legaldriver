@@ -2,12 +2,13 @@
 // Per-channel try/catch isolation: an email throw never blocks WhatsApp or in-app.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
-import type { Mailer } from "@/lib/notify/mailer";
+import { senderEmail, type Mailer } from "@/lib/notify/mailer";
 import { resolveRecipientEmail } from "@/lib/notify/recipients";
 import { logOutboundEmail } from "@/lib/notify/log";
 import { retryPlan } from "@/lib/notify/retry";
-import { hearingWhenLabel } from "@/lib/notify/email-render";
+import { hearingWhenLabel, matterIdOf } from "@/lib/notify/email-render";
 import type { CaseUpdatePayload } from "@/lib/notify/email-render";
+import { buildEmailHeaders, shouldSuppressEmail } from "@/lib/notify/email-headers";
 import type { NotifyRow } from "@/lib/notify/pickup";
 import type { DeadRefFilter } from "@/lib/notify/filter/dead-refs";
 import { composeCaseUpdateEmail, roundupComposed } from "@/lib/notify/compose/case-update";
@@ -34,6 +35,7 @@ export type EmailDeliverResult = {
   attempt: boolean;
   attemptFailed: boolean;
   dead: boolean;
+  suppressed: boolean;
   lastSendError?: string;
 };
 
@@ -108,7 +110,7 @@ export async function deliverEmail(
     const { dead } = await flipFailed(supabase, row);
     return {
       sent: false, failed: true, deadRefs: false, stale: false,
-      siblings: 0, attempt: true, attemptFailed: true, dead,
+      siblings: 0, attempt: true, attemptFailed: true, dead, suppressed: false,
       lastSendError: e instanceof Error ? e.message : "unexpected throw",
     };
   }
@@ -133,20 +135,46 @@ async function deliverEmailInner(
   // deep-link to a 404. Terminal 'dead' (undeliverable by definition, never retried).
   if (deps.isDeadRef(payload)) {
     await deps.flipTerminal(row.id);
-    return { sent: false, failed: false, deadRefs: true, stale: false, siblings: 0, attempt: false, attemptFailed: false, dead: false };
+    return { sent: false, failed: false, deadRefs: true, stale: false, siblings: 0, attempt: false, attemptFailed: false, dead: false, suppressed: false };
   }
 
   // Stale hearing reminder: the hearing date already passed at send time — a late
   // reminder presented as current would be dishonest. Terminal 'dead', count it.
   if (row.kind === "hearing_reminder" && hearingWhenLabel(payload.eventDate ?? "") === null) {
     await deps.flipTerminal(row.id);
-    return { sent: false, failed: false, deadRefs: false, stale: true, siblings: 0, attempt: false, attemptFailed: false, dead: false };
+    return { sent: false, failed: false, deadRefs: false, stale: true, siblings: 0, attempt: false, attemptFailed: false, dead: false, suppressed: false };
   }
 
-  const email = await resolveRecipientEmail(supabase, row.tenant_id, row.user_id);
-  if (!email) {
+  const rec = await resolveRecipientEmail(supabase, row.tenant_id, row.user_id);
+  if (!rec) {
     const { dead } = await flipFailed(supabase, row);
-    return { sent: false, failed: true, deadRefs: false, stale: false, siblings: 0, attempt: false, attemptFailed: false, dead };
+    return { sent: false, failed: true, deadRefs: false, stale: false, siblings: 0, attempt: false, attemptFailed: false, dead, suppressed: false };
+  }
+
+  // WO-416 amendment #1: a recipient who turned email off must be SKIPPED, not sent to — otherwise
+  // the List-Unsubscribe header points at a no-op and the user's next move is the spam button.
+  // Transactional kinds (OTP/security/invoice/receipt/welcome) are NEVER suppressed: a user must
+  // not be able to lock themselves out of sign-in. `shouldSuppressEmail` is the pure gate.
+  {
+    const { data: prefs } = await supabase
+      .from("notification_prefs")
+      .select("channel_email")
+      .eq("id", rec.profileId)
+      .maybeSingle();
+    const channelEmail = prefs ? prefs.channel_email : true; // no prefs row ⇒ default on
+    if (shouldSuppressEmail(row.kind, channelEmail)) {
+      // Terminal (never retried). `notification.status` is check-constrained to
+      // ('pending','sent','failed','dead') — no new status, no migration. A suppressed
+      // recipient is undeliverable-by-definition, so it reuses the terminal 'dead' flip.
+      const { error: deadErr } = await supabase
+        .from("notification")
+        .update({ status: "dead", sent_at: null })
+        .eq("id", row.id)
+        .in("status", ["pending", "failed"]);
+      if (deadErr)
+        await supabase.from("notification").update({ status: "failed", sent_at: null }).eq("id", row.id).eq("status", "pending");
+      return { sent: false, failed: false, deadRefs: false, stale: false, siblings: 0, attempt: false, attemptFailed: false, dead: false, suppressed: true };
+    }
   }
 
   const group = row.kind === "case_update" ? deps.caseUpdateGroup?.get(row.tenant_id) : undefined;
@@ -159,15 +187,25 @@ async function deliverEmailInner(
 
   if (!rendered) {
     const { dead } = await flipFailed(supabase, row);
-    return { sent: false, failed: true, deadRefs: false, stale: false, siblings: 0, attempt: false, attemptFailed: false, dead };
+    return { sent: false, failed: true, deadRefs: false, stale: false, siblings: 0, attempt: false, attemptFailed: false, dead, suppressed: false };
   }
 
-  const res = await mailer.send(email, rendered.subject, rendered.html, rendered.text);
+  // WO-416: threading + List-Unsubscribe headers, computed per kind (pure, tested offline).
+  const headers = buildEmailHeaders({
+    kind: row.kind,
+    matterId: matterIdOf(payload),
+    tenantId: row.tenant_id,
+    profileId: rec.profileId,
+    from: senderEmail(),
+    messageId: row.id,
+  });
+
+  const res = await mailer.send(rec.email, rendered.subject, rendered.html, rendered.text, { headers });
   const ok = res.ok;
 
   await logOutboundEmail(supabase, {
     tenantId: row.tenant_id,
-    to: email,
+    to: rec.email,
     subject: rendered.subject,
     kind: row.kind.includes("reminder") ? "reminder" : "notice",
     ok: res.ok,
@@ -203,7 +241,7 @@ async function deliverEmailInner(
       sent: upErr === null,
       failed: upErr !== null,
       deadRefs: false, stale: false, siblings,
-      attempt: true, attemptFailed: false, dead: false,
+      attempt: true, attemptFailed: false, dead: false, suppressed: false,
     };
   } else {
     const plan = retryPlan(row.attempts);
@@ -228,7 +266,7 @@ async function deliverEmailInner(
     return {
       sent: false, failed: true,
       deadRefs: false, stale: false, siblings,
-      attempt: true, attemptFailed: true, dead: isDead,
+      attempt: true, attemptFailed: true, dead: isDead, suppressed: false,
       lastSendError: res.error ?? "send failed",
     };
   }
