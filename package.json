@@ -47,6 +47,7 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
+    "eslint-plugin-local-rules": "file:./eslint-plugin-local-rules",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.15",
     "knip": "^6.32.1",

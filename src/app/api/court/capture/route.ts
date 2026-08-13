@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, adminFor } from "@/lib/supabase/admin";
 import { parseEcourtsCapture, parseEcourtsCauseList } from "@/lib/court/hitl-parse";
 import { upsertCase } from "@/lib/court/sync";
 import type { Database } from "@/lib/db/database.types";
@@ -34,9 +34,13 @@ export async function POST(request: NextRequest) {
   if (!text || text.length < 40) return NextResponse.json({ ok: false, error: "no page content captured" }, { status: 400, headers: CORS });
 
   const admin = createAdminClient();
+  // Pre-tenant lookup — this is HOW tenantId is discovered, so it can't run through
+  // adminFor() yet. Everything after this line knows tenantId and does.
+  // eslint-disable-next-line local-rules/no-bare-admin-from -- resolves tenantId from the token itself
   const { data: tok } = await admin.from("capture_token").select("tenant_id, revoked").eq("token", token).maybeSingle();
   if (!tok || tok.revoked) return NextResponse.json({ ok: false, error: "invalid or revoked token" }, { status: 401, headers: CORS });
   const tenantId = tok.tenant_id;
+  const scoped = adminFor(tenantId, admin);
 
   const parsed = parseEcourtsCapture(text);
 
@@ -49,7 +53,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, error: parsed.reason ?? "could not recognise a case-details or cause-list page" }, { status: 422, headers: CORS });
     }
     try {
-      const { data: matters } = await admin.from("matter").select("id, title, party_names, detail, next_hearing_date").eq("tenant_id", tenantId).is("deleted_at", null); // admin bypasses RLS — skip trashed (WO-43-W2)
+      const { data: matters } = await scoped.from("matter").select("id, title, party_names, detail, next_hearing_date").is("deleted_at", null); // admin bypasses RLS — skip trashed (WO-43-W2)
       const byParty = new Map<string, string>();
       const byReg = new Map<string, string>();
       for (const m of matters ?? []) {
@@ -73,12 +77,12 @@ export async function POST(request: NextRequest) {
         const mt = (matters ?? []).find((x) => x.id === mid);
         if (mt) matchedTitles.push(mt.title);
         if (cl.listDate && mt && mt.next_hearing_date !== cl.listDate) {
-          await admin.from("matter").update({ next_hearing_date: cl.listDate, last_synced_at: new Date().toISOString() }).eq("id", mid);
+          await scoped.from("matter").update({ next_hearing_date: cl.listDate, last_synced_at: new Date().toISOString() }).eq("id", mid);
           updated++;
         }
       }
-      await admin.from("audit_event").insert({ tenant_id: tenantId, action: "court.causelist_capture", entity: "tenant", after: { captured: cl.entries.length, matched, updated, date: cl.listDate } });
-      await admin.from("capture_token").update({ last_used_at: new Date().toISOString() }).eq("token", token);
+      await scoped.from("audit_event").insert({ action: "court.causelist_capture", entity: "tenant", after: { captured: cl.entries.length, matched, updated, date: cl.listDate } });
+      await scoped.from("capture_token").update({ last_used_at: new Date().toISOString() }).eq("token", token);
       return NextResponse.json({ ok: true, kind: "causelist", captured: cl.entries.length, matched, updated, date: cl.listDate, matchedTitles: matchedTitles.slice(0, 10) }, { headers: CORS });
     } catch (e) {
       return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "causelist_ingest_failed" }, { status: 500, headers: CORS });
@@ -87,18 +91,22 @@ export async function POST(request: NextRequest) {
   const c = parsed.normalized;
 
   try {
-    // Cache the captured normalized case (shared cache; service-role only).
+    // Cache the captured normalized case (shared cache; service-role only; no tenant_id
+    // column on court_cache — genuinely global, not scoped here).
+    // eslint-disable-next-line local-rules/no-bare-admin-from -- shared cache table, no tenant_id column
     await admin.from("court_cache").upsert(
       { kind: "case", cache_key: c.cnr, provider: c.source, normalized: c as unknown as Database["public"]["Tables"]["court_cache"]["Insert"]["normalized"], fetched_at: c.fetchedAt },
       { onConflict: "kind,cache_key,provider" },
     );
+    // upsertCase (src/lib/court/sync.ts) already hand-scopes every write it makes by
+    // tenantId — reviewed, not converted to adminFor() in this wave (WO-364 W1 INBOX note).
     const { matterId, isNew } = await upsertCase(admin, tenantId, c);
 
     // Fulfil any pending human-refresh requests for this CNR.
-    await admin.from("court_refresh_request").update({ status: "fulfilled", fulfilled_at: new Date().toISOString() })
-      .eq("tenant_id", tenantId).eq("cnr", c.cnr).eq("status", "pending");
-    await admin.from("capture_token").update({ last_used_at: new Date().toISOString() }).eq("token", token);
-    await admin.from("audit_event").insert({ tenant_id: tenantId, action: "court.hitl_capture", entity: "matter", entity_id: matterId, after: { cnr: c.cnr, next_hearing_date: c.nextHearingDate } });
+    await scoped.from("court_refresh_request").update({ status: "fulfilled", fulfilled_at: new Date().toISOString() })
+      .eq("cnr", c.cnr).eq("status", "pending");
+    await scoped.from("capture_token").update({ last_used_at: new Date().toISOString() }).eq("token", token);
+    await scoped.from("audit_event").insert({ action: "court.hitl_capture", entity: "matter", entity_id: matterId, after: { cnr: c.cnr, next_hearing_date: c.nextHearingDate } });
 
     return NextResponse.json({ ok: true, cnr: c.cnr, title: c.title, matterId, isNew, nextHearingDate: c.nextHearingDate ?? null }, { headers: CORS });
   } catch (e) {

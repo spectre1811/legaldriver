@@ -109,6 +109,7 @@ const OFFLINE = [
   "wo290_reminder_feeder",
   "wo358_channel_isolation",
   "wo311_webhook_tenant",
+  "wo364_admin_tenant_scope",
   "profile_error_states",
   "wo326_public_proxy",
   "wo329_forwarded_host",

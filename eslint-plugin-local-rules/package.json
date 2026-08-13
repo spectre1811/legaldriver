@@ -1,0 +1,7 @@
+{
+  "name": "eslint-plugin-local-rules",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "description": "In-repo ESLint rules (WO-364 no-bare-admin-from), installed via a package.json file: dependency so both `next lint` and `next build` resolve it."
+}
