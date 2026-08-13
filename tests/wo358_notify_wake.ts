@@ -3,7 +3,9 @@
 //
 // What is proven here, and what is NOT:
 //   A  preflight fails CLOSED — the pooler-DSN trap (LISTEN is silently dropped on a
-//      transaction pooler) and the CRON_LOCK precondition both park the process.
+//      transaction pooler; a Supavisor SESSION-mode pooler host on port 5432, which would
+//      otherwise pass the port check silently — review decision (a)) and the CRON_LOCK
+//      precondition both park the process.
 //   B  the waker coalesces a NOTIFY burst into one pipeline run and never runs two at once,
 //      but never strands a row inserted mid-run.
 //   C  THE RACE. Two concurrent runs — "listener-triggered" and "cron-triggered" — over ONE
@@ -15,7 +17,10 @@
 //      carries the row id only. This is a TEXT assertion on the .sql file — it proves the
 //      shipped SQL says what the design says, not that Postgres behaves that way. The
 //      transport-level proof (real LISTEN, measured latency) needs a live Postgres and is
-//      run out-of-band; see scripts/notify-listener-verify.mjs.
+//      run out-of-band; see scripts/notify-listener-verify.mjs. D also checks the F3 guard
+//      is present — CORRECTED after review: it catches only a SYNCHRONOUS pg_notify failure,
+//      not a full queue (that fails at COMMIT, after this function has returned — proven with
+//      a deferred-constraint structural analog, recorded in the WO-358 file, not re-run here).
 
 import { readFileSync } from "node:fs";
 import { withCronLock, type CronLockClient } from "@/lib/cron/lock";
@@ -59,6 +64,17 @@ function A() {
   }
   check("A: DSN without sslmode → parked (TLS must be a decision, not a default)",
     preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@db.example.com:5432/postgres" }).ok === false);
+
+  // Review decision (a): Supavisor SESSION-mode pooler also listens on 5432 — same port as
+  // direct, different host. Session mode supports LISTEN, so the port check alone lets it
+  // through silently; the host must be refused explicitly, not left as an unenforced policy.
+  {
+    const r = preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@aws-0-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require" });
+    check("A: Supavisor session-mode pooler host on port 5432 refused (decision (a) — port alone is not enough)",
+      r.ok === false && /pooler/i.test(r.reason ?? ""));
+  }
+  check("A: a direct db.<ref>.supabase.co host on 5432 still passes (the hostname check doesn't over-match)",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@db.abcxyz.supabase.co:5432/postgres?sslmode=require" }).ok === true);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────
@@ -297,15 +313,25 @@ function D() {
     /new\.scheduled_for <= now\(\)/.test(sql) && /new\.scheduled_for is not null/.test(sql));
   check("D: the NOTIFY payload is the row id and nothing else (no PII on the channel)",
     /pg_notify\('notify_wake', new\.id::text\)/.test(sql));
-  // Review finding F3: the async NOTIFY queue is bounded (8GB); once full, pg_notify() raises
-  // FROM INSIDE this trigger, and uncaught that aborts the INSERT that fired it — a
-  // notification that cannot be announced must not be able to destroy the row it was
-  // announcing. This is a text check like the rest of D (it proves the shipped SQL wraps the
-  // call, not that Postgres behaves that way); the runtime proof is a real local-PG
-  // fault-injection (EXECUTE on pg_notify revoked -> a real, deterministic raise at that exact
-  // line): unguarded, the INSERT aborted (row count unchanged); guarded, it logs a WARNING and
-  // the row lands. Recorded in the WO-358 file, not re-run in CI (no live PG in the offline group).
-  check("D: a pg_notify failure inside notify_wake() is caught, never left to abort the INSERT it announces (review F3)",
+  // Review finding F3, CORRECTED after an independent review caught the first pass overclaiming
+  // (full record in the WO-358 file). This text check proves ONLY that the shipped SQL wraps
+  // the pg_notify call in begin/exception/end — it does NOT prove, and the guard does NOT
+  // provide, blanket protection against every pg_notify failure. What is actually true, each
+  // proven live on a throwaway local PG 16 (neither re-run in CI — no live PG in the offline
+  // group):
+  //   • SYNCHRONOUS failures (permission denied, bad argument — an error at the `perform`
+  //     call site itself, exception scope still on the stack) ARE caught: unguarded, the
+  //     INSERT aborted (row count unchanged); guarded, it logs a WARNING and the row lands.
+  //   • A FULL QUEUE is NOT caught and cannot be by this shape: Postgres defers the queue
+  //     write (where the 8GB limit is enforced) to PreCommit_Notify() at COMMIT, after this
+  //     function has already returned — nothing is on the stack to catch it there. Confirmed
+  //     with a structural analog (a DEFERRABLE INITIALLY DEFERRED unique-violation inside the
+  //     identically-shaped guard): the exception branch never ran, and COMMIT rolled back the
+  //     whole transaction, including the row the guard existed to protect.
+  // The full-queue case is mitigated by listener liveness (heartbeat + Restart=always), not by
+  // this guard — see the migration's own header comment. Do not read a green check here as
+  // "F3 fully closed."
+  check("D: a SYNCHRONOUS pg_notify failure inside notify_wake() is caught (does not, and cannot, cover a full-queue failure — that surfaces at COMMIT; review F3, corrected)",
     /begin\s+perform pg_notify\('notify_wake', new\.id::text\);\s+exception when others then\s+raise warning/.test(sql));
 
   const pickup = readFileSync("src/lib/notify/pickup.ts", "utf8");

@@ -40,6 +40,17 @@ const COALESCE_MS = 150;
 // direct DSN is the thing we can state and verify, so that is what we require.)
 const POOLER_PORTS = new Set(["6432", "6543"]);
 
+// WO-358 review decision (a): a port check alone is NOT sufficient. Supabase's Supavisor
+// SESSION-mode pooler also listens on 5432 — same port as the direct connection, DIFFERENT
+// hostname (`aws-0-<region>.pooler.supabase.com` vs `db.<ref>.supabase.co`). Session mode
+// does support LISTEN, so that DSN would not misbehave — but it is a policy deviation
+// ("direct connection, never the pooler") that the port check alone lets through SILENTLY.
+// Refuse the hostname pattern outright instead of leaving this as a comment someone has to
+// remember to re-derive: the policy is enforced in code, not documented as a decision nobody
+// re-checks. If session mode is ever deliberately chosen, that requires editing this refusal,
+// which is itself the "explicit, commented decision" the WO called for — not a quiet DSN swap.
+const POOLER_HOST_SUFFIX = ".pooler.supabase.com";
+
 /**
  * Decide whether this process may run, from env alone. Fails CLOSED: anything unclear
  * parks the process (idle, one loud log line) rather than half-running.
@@ -68,6 +79,8 @@ export function preflight(env) {
   }
   if (POOLER_PORTS.has(url.port))
     return { ok: false, reason: `NOTIFY_PG_URL points at a transaction pooler (port ${url.port}) — LISTEN is silently dropped there; use the direct :5432 DSN` };
+  if (url.hostname.toLowerCase().endsWith(POOLER_HOST_SUFFIX))
+    return { ok: false, reason: `NOTIFY_PG_URL host ${url.hostname} is a Supavisor pooler endpoint — this project requires the DIRECT db.<ref>.supabase.co host regardless of port (a session-mode DSN on 5432 would otherwise pass this check silently; WO-358 review decision (a))` };
   if (!/[?&]sslmode=/.test(dsn))
     return { ok: false, reason: "NOTIFY_PG_URL must state sslmode explicitly (sslmode=require in prod) — TLS is a decision, not a default" };
 
