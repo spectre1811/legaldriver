@@ -3157,7 +3157,7 @@
       "boardCourt": "{court}",
       "boardCourtNo": "Court {courtNo}",
       "boardPurpose": "{purpose}",
-      "boardCnr": "CNR {cnr}",
+      "boardCnr": "{cnr}",
       "boardStage": "Stage: {stage}",
       "boardLast": "Last: {lastListed}",
       "orders": "{orders} orders uploaded today · read on Mukadma",

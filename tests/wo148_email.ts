@@ -8,6 +8,7 @@
 // the Gmail 102KB clip budget.
 import { renderEmail, renderDailyHearings, EMAIL_KEYS, EMAIL_META, type EmailKey, type EmailData } from "@/lib/email/templates";
 import type { Slot } from "@/i18n/comms";
+import en from "@/i18n/messages/en.json";
 
 let ok = true;
 const check = (name: string, cond: boolean) => {
@@ -31,15 +32,15 @@ const SAMPLE: Record<EmailKey, EmailData> = {
   // enriched diff slots (prevHearingDate / prevCoram / deltaDays). `change` is the caller-supplied
   // closed-set label recordCaseChanges emits — "New order"/"New orders" means a genuinely new order.
   caseUpdate: {
-    change: "New order", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026",
+    change: "New order", case: "Rajesh Sharma v. State of Gujarat", court: "Gujarat HC", cnr: "GJHC010012342026",
     detail: "Next hearing on 12 Aug.", nextHearingDate: "12 Aug", stage: "Arguments", purpose: "Final hearing",
     coram: "Justice A. Shah, Justice B. Mehta", regNo: "SCA/1234/2026", orderTitle: "Order", orderDate: "20 Jul",
   },
-  trackConfirm: { case: "Shah v. Mehta", court: "City Civil", stage: "Evidence", status: "active", nextHearingDate: "5 Aug", coram: "Judge R. Iyer" },
+  trackConfirm: { case: "Rajesh Sharma v. State of Gujarat", court: "City Civil", stage: "Evidence", status: "active", nextHearingDate: "5 Aug", coram: "Judge R. Iyer" },
   // {when} is a closed-set send-time label; "in 365 days" is the longest form. + the enriched
   // dateBanner + changes slots so those roles render in the sweep.
   hearingReminder: {
-    when: "in 365 days", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026", purpose: "Arguments",
+    when: "in 365 days", case: "Rajesh Sharma v. State of Gujarat", court: "Gujarat HC", cnr: "GJHC010012342026", purpose: "Arguments",
     date: "30 Jul", courtNo: "7", stage: "Arguments", dayNum: "30", month: "JUL", fullDate: "Thursday, 30 July 2026",
     lastListed: "22 Jul — Arguments (adjourned)", latestOrder: "Order on Civil Application No. 9 · 26 Jul", prevPurpose: "Hearing",
   },
@@ -59,11 +60,25 @@ const render = (k: EmailKey, data: EmailData) =>
 // --- every key has trigger/timing metadata (the "which email, when" matrix, nothing orphaned) ---
 check("EMAIL_META covers every key", EMAIL_KEYS.every((k) => !!EMAIL_META[k]?.trigger && !!EMAIL_META[k]?.timing));
 
-// --- subject ≤ 78 chars (rendered, so interpolated subjects count truly; 78 = Gmail truncation) ---
+// --- subject ≤ 78 chars ---
+// (c) The ≤78 budget holds on the gallery's APPROVED sample set (max ~71 chars). A long REAL case
+// title WILL exceed 78 — Gmail truncates it visually, and that is deliberate: server-side truncation
+// would clip a real case title mid-word and produce a dishonest subject, so we never truncate.
 for (const k of EMAIL_KEYS) {
   const r = render(k, SAMPLE[k]);
   check(`${k}.subject renders`, r !== null);
   if (r) check(`${k}.subject ≤ 78 chars ("${r.subject}" = ${r.subject.length})`, r.subject.length <= 78);
+}
+
+// --- D3(a): the case-bearing subjects keep their fixed (non-slot) prefix ≤ 40 chars, so the case
+// title begins early enough to survive Gmail's visual truncation. (Measured 10/3/25/17 — a regression
+// guard. syncFailure/assembled/weekly have long fixed prefixes BY DESIGN because they carry no case
+// title, so this rule does NOT apply to them.) ---
+const CASE_SUBJECTS = ["hearingReminder", "caseUpdate", "disposalNotice", "trackConfirm"] as const;
+const fixedPortion = (tpl: string) => tpl.replace(/\{[a-zA-Z0-9_]+\}/g, "");
+for (const k of CASE_SUBJECTS) {
+  const fixed = fixedPortion(en.emails[k].subject);
+  check(`${k} subject fixed (non-slot) portion ≤ 40 chars (${fixed.length})`, fixed.length <= 40);
 }
 
 // --- honesty: missing money/count aggregates DROP their stat cell; never a fabricated 0 ---
@@ -93,6 +108,16 @@ check("missing subject slot → null (no email)", renderEmail("assembled", { mat
 check("caseUpdate missing subject slot → null", renderEmail("caseUpdate", { change: null, case: "X", court: "Y", cnr: "Z", detail: "d" }) === null);
 // a missing BODY slot only drops that line — the email still sends (welcome subject has a slotless fallback).
 check("missing body slot drops the line, email still sends", renderEmail("welcome", { name: null }) !== null);
+
+// --- NIT-8(a): subjectFallback is used when the primary subject's slot drops ---
+const trackNoCourt = renderEmail("trackConfirm", { case: "Rajesh Sharma v. State of Gujarat", stage: "Evidence" });
+check("trackConfirm without court uses subjectFallback ('Now tracking {case}')", !!trackNoCourt && trackNoCourt.subject === "Now tracking Rajesh Sharma v. State of Gujarat");
+
+// --- NIT-8(b): a dropped preheader emits NO hidden div ---
+const withPre = renderEmail("security", { code: "123456" });
+check("filled preheader emits a hidden div", !!withPre && /display:none/.test(withPre.html));
+const droppedPre = renderEmail("caseUpdate", { change: "Bench changed", case: "X v. Y", court: "C", cnr: "Z" });
+check("dropped preheader emits no hidden div", !!droppedPre && !/display:none/.test(droppedPre.html));
 
 // --- Gmail 102KB clip budget: every rendered email stays well under ---
 for (const k of EMAIL_KEYS) {
@@ -157,7 +182,7 @@ const enrichedRows: EmailData[] = [
   { court: "Gujarat HC", courtNo: "7", parties: "Patel v. State", cnr: "GJHC010012342026", stage: "Arguments", purpose: "Final hearing" },
 ];
 const enrichedBoard = renderDailyHearings(enrichedRows, { date: "24 Jul", count: 1 });
-check("dailyHearings row carries CNR", !!enrichedBoard && /CNR GJHC010012342026/.test(enrichedBoard.text));
+check("dailyHearings row carries the bare CNR (no 'CNR ' prefix)", !!enrichedBoard && /GJHC010012342026 · Stage: Arguments/.test(enrichedBoard.text) && !/CNR /.test(enrichedBoard.text));
 check("dailyHearings row carries stage", !!enrichedBoard && /Stage: Arguments/.test(enrichedBoard.text));
 check("dailyHearings row carries court no. + purpose", !!enrichedBoard && /Court 7 · Final hearing/.test(enrichedBoard.text));
 
@@ -165,7 +190,7 @@ check("dailyHearings row carries court no. + purpose", !!enrichedBoard && /Court
 // never drops the court/parties line (each sub-line is independently droppable).
 const partialRow = renderDailyHearings([{ court: "City Civil", courtNo: "3", parties: "Shah v. Mehta" }], { date: "24 Jul", count: 1 });
 check("dailyHearings row without enrichment still renders its core listing", !!partialRow && /Shah v\. Mehta/.test(partialRow.text));
-check("dailyHearings row without enrichment carries no CNR line", !!partialRow && !/CNR /.test(partialRow.text));
+check("dailyHearings row without enrichment carries no CNR/stage sub-line", !!partialRow && !/Stage:/.test(partialRow.text) && !/GJHC010012342026/.test(partialRow.text));
 
 // silence the unused import lint if Slot ever drops out of use
 const _slotType: Slot = null;

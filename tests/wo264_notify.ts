@@ -6,7 +6,7 @@
 // renderNotice fallback shell (escaping, disclaimer, text part, single CTA link).
 import { hearingWhenLabel, istDate, istFriendlyDate, composeCaseUpdate, appUrl, matterIdOf } from "@/lib/notify/email-render";
 import { renderNotice, renderDailyHearings, renderEmail } from "@/lib/email/templates";
-import { noticeCopyForKind } from "@/lib/notify/compose/fallback";
+import { noticeCopyForKind, subjectForKind } from "@/lib/notify/compose/fallback";
 import { maskTitle } from "@/lib/court/mask";
 
 let ok = true;
@@ -129,6 +129,12 @@ check("notice_escalation → Notice Escalation + escalation why", noticeCopyForK
 check("cause_list_digest → Cause List + cause-list why", noticeCopyForKind("cause_list_digest").category === "Cause List" && noticeCopyForKind("cause_list_digest").why === "You receive the cause list for matters you track.");
 check("case_update → Case Update + case-update why", noticeCopyForKind("case_update").category === "Case Update" && noticeCopyForKind("case_update").why === "You receive updates when a case you track changes on the record.");
 check("unknown kind → neutral default (never Deadline)", noticeCopyForKind("bogus_kind").category === "Notice" && noticeCopyForKind("bogus_kind").why === "You receive notices about matters you track on Mukadma.");
+
+// --- WO-414 (D4): the fallback subject uses the v3 §04 form and never fakes an empty slot ---
+check("deadline subject uses the v3 form", subjectForKind("deadline_reminder", { title: "Written submissions — Sharma v. State", eventDate: "18 Aug" }) === "Deadline 18 Aug: Written submissions — Sharma v. State");
+check("deadline subject drops missing date (no empty slot)", subjectForKind("deadline_reminder", { title: "Written submissions" }) === "Deadline: Written submissions");
+check("deadline subject drops missing title (no empty slot)", subjectForKind("deadline_reminder", { eventDate: "18 Aug" }) === "Deadline 18 Aug");
+check("deadline subject with neither slot → bare 'Deadline'", subjectForKind("deadline_reminder", {}) === "Deadline");
 
 // --- matterIdOf: the dead-ref guard's parser (a row must be verifiable to be guarded) ---
 const U = "9cd1b8e6-4e2b-444c-ad93-9686eb23ef91";
