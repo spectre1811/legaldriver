@@ -38,8 +38,10 @@ export const dynamic = "force-dynamic";
 //   5. Case-number lookup results have no reference UI at all (the mockup's "Look up" is inert) —
 //      the results list is a necessary, undecorated addition (case row + view-details, the same
 //      pattern every case list in the app already uses).
-//   6. The disclaimer footer is a hard repo rule (CLAUDE.md §3: provenance + "not legal advice" on
-//      all court data) — the reference has none; ours is required regardless.
+//   6. The provenance footer (source + known matching caveats) is a hard repo rule (CLAUDE.md §3) —
+//      the reference has none; ours is required regardless. WO-413 B1: the "not legal advice" clause
+//      dropped from it (founder decision — console surfaces no longer carry that disclaimer; it
+//      stays only on the exported PDF and the public share page).
 //
 // WO-349 WAVE-3 · masthead unrounded to bleed edge-to-edge like notifications/onboarding (was an
 // inset `rounded-xl` card within the shell's padding). Subtitle: the prototype's exact string is

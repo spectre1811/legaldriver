@@ -24,7 +24,9 @@
     font-optical-sizing: auto;
   }
   /* WO-344 · one global honey focus ring (prototype styles.css:108-112) — replaces the
-     inconsistent per-element ring-ec-indigo(bronze)/ring-ec-honey split so focus is honey app-wide. */
+     inconsistent per-element indigo/honey ring split so focus is honey app-wide.
+     WO-413 M12: the last per-element focus-visible:ring-ec-indigo overrides (nav, tabs,
+     modals, cases-toolbar, segmented, command-palette) recolored to ring-ec-honey to match. */
   :focus-visible {
     outline: 2px solid var(--honey);
     outline-offset: 2px;

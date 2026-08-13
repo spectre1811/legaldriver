@@ -25,7 +25,7 @@ export function SearchTabs() {
             key={tab.href}
             href={tab.href}
             aria-current={on ? "page" : undefined}
-            className={`flex items-center gap-2 rounded-ec-s px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo ${
+            className={`flex items-center gap-2 rounded-ec-s px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey ${
               on ? "bg-ec-ink font-medium text-ec-paper" : "text-ec-ink-2 hover:bg-ec-paper-3 hover:text-ec-ink"
             }`}
           >

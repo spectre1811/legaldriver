@@ -301,12 +301,13 @@ export default async function CasePreviewPage({ params }: { params: { cnr: strin
       {/* Orders */}
       <OrdersPanel orders={orderRows} />
 
-      {/* Provenance + disclaimer */}
+      {/* Provenance — WO-413 B1: the "not legal advice" clause dropped (console-only decision;
+          stays on the exported PDF + public share page). */}
       <div className="ec-card px-5 py-4">
         <p className="num text-sm text-ec-ink-3">
           {tcd.rich("source.line", { source: c.source ?? "the court record", time: refreshed, b: (chunks) => <span className="font-medium text-ec-ink">{chunks}</span> })}
         </p>
-        <p className="mt-2 text-xs text-ec-ink-3">{tcd("source.note")} <span className="font-medium text-ec-ink-2">{tcd("source.verify")}</span></p>
+        <p className="mt-2 text-xs text-ec-ink-3">{tcd("source.note")}</p>
       </div>
     </div>
   );
