@@ -80,8 +80,8 @@ function eqTenant<Q>(builder: Q, tenantId: string): Q {
  * `.raw` is the escape hatch — the unscoped admin client, for genuinely cross-tenant
  * work (a cron's own fan-out SELECT across every tenant before it knows which tenant a
  * row belongs to, or a table with no `tenant_id` at all, e.g. `court_provider_health`).
- * The ESLint rule (`eslint-rules/no-bare-admin-from.js`, advisory) flags a bare
- * `.from()` on the admin client elsewhere as a nudge to justify it, not to forbid it.
+ * The ESLint rule (`eslint-plugin-local-rules/no-bare-admin-from.js`, advisory) flags a
+ * bare `.from()` on the admin client elsewhere as a nudge to justify it, not to forbid it.
  */
 export function adminFor(tenantId: string, client: SupabaseClient<Database> = createAdminClient()) {
   const admin = client;
