@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       liveLeft--;
       liveDone.add(m);
       const { outcome, changed: didChange } = await persistOne(supabase, m, () =>
-        withDeadline(liveRefreshCase(m.cnr), liveDeadlineMs(REFRESH_LIVE_BUDGET_MS, Date.now() - liveT0)),
+        withDeadline(liveRefreshCase(m.cnr, supabase), liveDeadlineMs(REFRESH_LIVE_BUDGET_MS, Date.now() - liveT0)),
       );
       if (outcome === "refreshed") { liveRefreshed++; refreshed++; } else { failed++; }
       if (didChange) changed++;
