@@ -297,6 +297,16 @@ function D() {
     /new\.scheduled_for <= now\(\)/.test(sql) && /new\.scheduled_for is not null/.test(sql));
   check("D: the NOTIFY payload is the row id and nothing else (no PII on the channel)",
     /pg_notify\('notify_wake', new\.id::text\)/.test(sql));
+  // Review finding F3: the async NOTIFY queue is bounded (8GB); once full, pg_notify() raises
+  // FROM INSIDE this trigger, and uncaught that aborts the INSERT that fired it — a
+  // notification that cannot be announced must not be able to destroy the row it was
+  // announcing. This is a text check like the rest of D (it proves the shipped SQL wraps the
+  // call, not that Postgres behaves that way); the runtime proof is a real local-PG
+  // fault-injection (EXECUTE on pg_notify revoked -> a real, deterministic raise at that exact
+  // line): unguarded, the INSERT aborted (row count unchanged); guarded, it logs a WARNING and
+  // the row lands. Recorded in the WO-358 file, not re-run in CI (no live PG in the offline group).
+  check("D: a pg_notify failure inside notify_wake() is caught, never left to abort the INSERT it announces (review F3)",
+    /begin\s+perform pg_notify\('notify_wake', new\.id::text\);\s+exception when others then\s+raise warning/.test(sql));
 
   const pickup = readFileSync("src/lib/notify/pickup.ts", "utf8");
   check("D: pickup still selects status=pending + scheduled_for<=now (the predicate the trigger mirrors)",
