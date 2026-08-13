@@ -3,9 +3,12 @@
 //
 // What is proven here, and what is NOT:
 //   A  preflight fails CLOSED — the pooler-DSN trap (LISTEN is silently dropped on a
-//      transaction pooler; a Supavisor SESSION-mode pooler host on port 5432, which would
-//      otherwise pass the port check silently — review decision (a)) and the CRON_LOCK
-//      precondition both park the process.
+//      transaction pooler) and the CRON_LOCK precondition both park the process. Decision (a):
+//      NOTIFY_PG_URL's host must match the direct db.<ref>.supabase.co shape (an ALLOWLIST, not
+//      a denylist — a denylist on "*.pooler.supabase.com" was tried and got past a trailing-dot
+//      FQDN, a CNAME, and a raw IP; matching the genuine shape leaves nothing to evade). This
+//      guarantees a pooler DSN of either mode can't reach the listener; it does not certify
+//      every string a human could type is definitely a working direct connection.
 //   B  the waker coalesces a NOTIFY burst into one pipeline run and never runs two at once,
 //      but never strands a row inserted mid-run.
 //   C  THE RACE. Two concurrent runs — "listener-triggered" and "cron-triggered" — over ONE
@@ -45,7 +48,7 @@ function A() {
     NOTIFY_PUSH: "1",
     CRON_LOCK: "1",
     CRON_SECRET: "s3cret",
-    NOTIFY_PG_URL: "postgres://u:p@db.example.com:5432/postgres?sslmode=require",
+    NOTIFY_PG_URL: "postgres://u:p@db.abcxyz.supabase.co:5432/postgres?sslmode=require",
   };
   check("A: a complete direct-DSN env passes preflight", preflight(base).ok === true);
   check("A: NOTIFY_PUSH unset → parked (rollback path)", preflight({ ...base, NOTIFY_PUSH: undefined }).ok === false);
@@ -58,23 +61,34 @@ function A() {
   // The trap this whole file exists to prevent: a pooler DSN LISTENs "successfully" and
   // then receives nothing, forever, with no error anywhere.
   for (const port of ["6432", "6543"]) {
-    const r = preflight({ ...base, NOTIFY_PG_URL: `postgres://u:p@db.example.com:${port}/postgres?sslmode=require` });
+    const r = preflight({ ...base, NOTIFY_PG_URL: `postgres://u:p@db.abcxyz.supabase.co:${port}/postgres?sslmode=require` });
     check(`A: pooler port ${port} refused with a reason naming the pooler`,
       r.ok === false && /pooler/i.test(r.reason ?? ""));
   }
   check("A: DSN without sslmode → parked (TLS must be a decision, not a default)",
-    preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@db.example.com:5432/postgres" }).ok === false);
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@db.abcxyz.supabase.co:5432/postgres" }).ok === false);
 
-  // Review decision (a): Supavisor SESSION-mode pooler also listens on 5432 — same port as
-  // direct, different host. Session mode supports LISTEN, so the port check alone lets it
-  // through silently; the host must be refused explicitly, not left as an unenforced policy.
-  {
-    const r = preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@aws-0-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require" });
-    check("A: Supavisor session-mode pooler host on port 5432 refused (decision (a) — port alone is not enough)",
-      r.ok === false && /pooler/i.test(r.reason ?? ""));
+  // Review decision (a), round 3 → round 3.1: a denylist (`endsWith(".pooler.supabase.com")`)
+  // was tried first and got past — a trailing-dot FQDN, a CNAME, or a raw IP all reach the
+  // same kind of endpoint while failing `endsWith`. This is an ALLOWLIST instead: only the
+  // genuine `db.<ref>.supabase.co` shape passes, so there is nothing left to evade.
+  const evasions: Array<[string, string]> = [
+    ["Supavisor session-mode pooler host on port 5432 (same port as direct, different host)",
+      "aws-0-ap-south-1.pooler.supabase.com"],
+    ["a trailing-dot FQDN of the pooler host (DNS-identical to the above, `endsWith` says no)",
+      "aws-0-ap-south-1.pooler.supabase.com."],
+    ["a raw IP address (no hostname to pattern-match against at all)", "203.0.113.10"],
+    ["a CNAME-shaped host that is not the direct shape", "some-cname-pointing-elsewhere.example.net"],
+  ];
+  for (const [label, host] of evasions) {
+    const r = preflight({ ...base, NOTIFY_PG_URL: `postgres://u:p@${host}:5432/postgres?sslmode=require` });
+    check(`A: ${label} refused (decision (a) — allowlist, not a denylist)`,
+      r.ok === false && /not the direct/i.test(r.reason ?? ""));
   }
-  check("A: a direct db.<ref>.supabase.co host on 5432 still passes (the hostname check doesn't over-match)",
+  check("A: a direct db.<ref>.supabase.co host on 5432 still passes (the allowlist doesn't over-match)",
     preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@db.abcxyz.supabase.co:5432/postgres?sslmode=require" }).ok === true);
+  check("A: an uppercase direct host still passes (case-insensitive match)",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@DB.ABCXYZ.SUPABASE.CO:5432/postgres?sslmode=require" }).ok === true);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────

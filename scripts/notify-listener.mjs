@@ -45,11 +45,17 @@ const POOLER_PORTS = new Set(["6432", "6543"]);
 // hostname (`aws-0-<region>.pooler.supabase.com` vs `db.<ref>.supabase.co`). Session mode
 // does support LISTEN, so that DSN would not misbehave — but it is a policy deviation
 // ("direct connection, never the pooler") that the port check alone lets through SILENTLY.
-// Refuse the hostname pattern outright instead of leaving this as a comment someone has to
-// remember to re-derive: the policy is enforced in code, not documented as a decision nobody
-// re-checks. If session mode is ever deliberately chosen, that requires editing this refusal,
-// which is itself the "explicit, commented decision" the WO called for — not a quiet DSN swap.
-const POOLER_HOST_SUFFIX = ".pooler.supabase.com";
+//
+// ALLOWLIST, not a denylist: a `.pooler.supabase.com` suffix denylist was tried first and
+// round-3-re-reviewed past — a trailing-dot FQDN (`....pooler.supabase.com.`, which DNS
+// resolves identically), a CNAME, or a raw IP all reach the same endpoint while failing
+// `endsWith`. Matching the genuine direct-connection shape instead means there is nothing to
+// evade: only `db.<ref>.supabase.co` passes, full stop. If session mode is ever deliberately
+// chosen, that requires editing this regex, which is itself the "explicit, commented decision"
+// the WO called for — not a quiet DSN swap. This closes the port-independence gap the WO named
+// (a session-mode DSN on 5432 can no longer pass); it does not certify every possible DSN a
+// human could type is a mistake-free direct connection.
+const DIRECT_HOST_RE = /^db\.[^.]+\.supabase\.co$/;
 
 /**
  * Decide whether this process may run, from env alone. Fails CLOSED: anything unclear
@@ -79,8 +85,8 @@ export function preflight(env) {
   }
   if (POOLER_PORTS.has(url.port))
     return { ok: false, reason: `NOTIFY_PG_URL points at a transaction pooler (port ${url.port}) — LISTEN is silently dropped there; use the direct :5432 DSN` };
-  if (url.hostname.toLowerCase().endsWith(POOLER_HOST_SUFFIX))
-    return { ok: false, reason: `NOTIFY_PG_URL host ${url.hostname} is a Supavisor pooler endpoint — this project requires the DIRECT db.<ref>.supabase.co host regardless of port (a session-mode DSN on 5432 would otherwise pass this check silently; WO-358 review decision (a))` };
+  if (!DIRECT_HOST_RE.test(url.hostname.toLowerCase()))
+    return { ok: false, reason: `NOTIFY_PG_URL host ${url.hostname} is not the direct db.<ref>.supabase.co shape — refused rather than guessed at (a pooler host of either mode, a trailing-dot FQDN, a CNAME, or a raw IP are all refused this way; WO-358 review decision (a))` };
   if (!/[?&]sslmode=/.test(dsn))
     return { ok: false, reason: "NOTIFY_PG_URL must state sslmode explicitly (sslmode=require in prod) — TLS is a decision, not a default" };
 
