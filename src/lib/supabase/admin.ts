@@ -34,11 +34,12 @@ function stampTenant<T extends Record<string, unknown>>(row: T, tenantId: string
   return { ...row, tenant_id: tenantId };
 }
 
-// The caller never supplies tenant_id on an insert/upsert through adminFor() — it's
-// stamped on automatically — so the input type makes it optional (postgrest's own
-// generated `Insert` type requires it, since a bare admin client has no other way to
-// get it there).
+// The caller never supplies tenant_id on an insert/upsert/update through adminFor() —
+// it's stamped on automatically, overwriting anything the caller passed (stampTenant
+// spreads first, sets tenant_id last) — so the input type makes it optional rather than
+// required (postgrest's own generated `Insert`/`Update` types would otherwise demand it).
 type InsertInput<T extends TenantTable> = Omit<Tables[T]["Insert"], "tenant_id"> & { tenant_id?: string };
+type UpdateInput<T extends TenantTable> = Omit<Tables[T]["Update"], "tenant_id"> & { tenant_id?: string };
 
 // Supabase's generated client types every table's columns/filters against the SPECIFIC
 // literal table name passed to `.from(...)`. Once that name is behind our own generic
@@ -82,6 +83,17 @@ function eqTenant<Q>(builder: Q, tenantId: string): Q {
  * row belongs to, or a table with no `tenant_id` at all, e.g. `court_provider_health`).
  * The ESLint rule (`eslint-plugin-local-rules/no-bare-admin-from.js`, advisory) flags a
  * bare `.from()` on the admin client elsewhere as a nudge to justify it, not to forbid it.
+ *
+ * Two known, undefended edges (structural risk — grepped clean today, nobody does either):
+ *  - `.eq("tenant_id", …)` only ever applies to the TOP-LEVEL table. A PostgREST embedded
+ *    select (`.select("*, other_table(*)")`) fetches the related rows through their OWN,
+ *    unscoped join — adminFor() does not (cannot, without parsing the select string)
+ *    filter an embedded resource by tenant.
+ *  - `.or()` / `.filter()` chained after one of these calls are safe only because
+ *    PostgREST ANDs every top-level query param together — that is PostgREST's own
+ *    behaviour, not something this wrapper enforces or verifies. A future embedded
+ *    filter or an `.or()` that itself ORs in a different tenant_id would not be caught
+ *    here.
  */
 export function adminFor(tenantId: string, client: SupabaseClient<Database> = createAdminClient()) {
   const admin = client;
@@ -102,7 +114,13 @@ export function adminFor(tenantId: string, client: SupabaseClient<Database> = cr
             (Array.isArray(values) ? values.map((v) => stampTenant(v, tenantId)) : stampTenant(values, tenantId)) as never,
             opts,
           ),
-        update: (values: Tables[T]["Update"]) => eqTenant(admin.from(table).update(values as never), tenantId),
+        // Stamped like insert/upsert (WO-364 review round 2: this used to pass `values`
+        // through verbatim, so a caller-supplied tenant_id in the payload silently
+        // REPARENTED the row to another tenant even though the WHERE clause below still
+        // correctly limited which row could be touched — a cross-tenant write hole, not
+        // a read hole. Same fix as insert/upsert: stamp wins over anything supplied.
+        update: (values: UpdateInput<T>) =>
+          eqTenant(admin.from(table).update(stampTenant(values, tenantId) as never), tenantId),
         delete: () => eqTenant(admin.from(table).delete(), tenantId),
       };
     },

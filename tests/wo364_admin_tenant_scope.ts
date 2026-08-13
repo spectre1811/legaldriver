@@ -159,6 +159,20 @@ async function main() {
   const { data: bAfterUpdate } = await raw.from("client").select("name").eq("id", "client-b1").maybeSingle();
   check("tenant B's row is UNCHANGED after tenant A's update attempt", bAfterUpdate?.name === "Bravo Client", bAfterUpdate);
 
+  // ── (3b) Cross-tenant WRITE (reparent-by-update) refused ────────────────────────
+  // The WHERE clause alone isn't the whole guarantee: a caller can target its OWN row
+  // (passes the .eq("id", …) + .eq("tenant_id", A) filter) but try to hand it to another
+  // tenant via the payload itself. update() must stamp tenant_id like insert/upsert does,
+  // not pass the payload through verbatim (round-2 review finding).
+  await scopedA.from("client").update({ tenant_id: TENANT_B, name: "reparented" }).eq("id", "client-a1");
+  const { data: a1AfterReparent } = await raw.from("client").select("tenant_id,name").eq("id", "client-a1").maybeSingle();
+  check(
+    "update via adminFor(A) on A's OWN row cannot reparent it to tenant B via the payload",
+    a1AfterReparent?.tenant_id === TENANT_A,
+    a1AfterReparent,
+  );
+  check("...but the rest of the update DID apply (it's a stamp, not a silent no-op)", a1AfterReparent?.name === "reparented", a1AfterReparent);
+
   // ── (4) Cross-tenant WRITE (delete) refused ─────────────────────────────────────
   const { data: deleted } = await scopedA.from("client").delete().eq("id", "client-b1");
   check("delete via adminFor(A) targeting tenant B's row by id affects ZERO rows", (deleted ?? []).length === 0, deleted);
@@ -170,7 +184,7 @@ async function main() {
   // already prove the behavior on real data. Insert doesn't appear here: tenant_id is
   // stamped into the BODY for a POST, not the query string.)
   const scopedCalls = calls.filter((c) => c.table === "client" && c.url.includes(`tenant_id=eq.${TENANT_A}`));
-  check("select/update/delete via adminFor(A) all carried tenant_id=eq.<A> on the wire", scopedCalls.length === 3, scopedCalls.length);
+  check("select/update(x2)/delete via adminFor(A) all carried tenant_id=eq.<A> on the wire", scopedCalls.length === 4, scopedCalls.length);
 
   // ── (6) TenantTable excludes tables with no tenant_id column (compile-time) ─────
   // court_provider_health has no tenant_id — adminFor().from(...) must refuse it at the
