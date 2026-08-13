@@ -3234,7 +3234,7 @@
       "title": "{case}",
       "changesHeading": "What changed on last night's sync",
       "change0tag": "Order",
-      "change0value": "New: {orderTitle} of {regNo} · uploaded {orderDate}",
+      "change0value": "New: {orderTitle} · uploaded {orderDate}",
       "change1tag": "Hearing",
       "change1old": "{prevHearingDate}",
       "change1new": "{nextHearingDate}",
@@ -3254,6 +3254,8 @@
       "fact3v": "{coram}",
       "fact4l": "CNR",
       "fact4v": "{cnr}",
+      "fact5l": "Latest order",
+      "fact5v": "{orderTitle} · {orderDate}",
       "detail": "{detail}",
       "cta": "View the case"
     },

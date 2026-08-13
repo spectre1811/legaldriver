@@ -256,11 +256,12 @@ function changeBlockFrom(
   sec: Record<string, string>,
   data: EmailData,
   headingKey: string,
-  rows: { tagKey: string; kind: "new" | "diff"; valueKey?: string; oldKey?: string; newKey?: string; deltaKey?: string }[],
+  rows: { tagKey: string; kind: "new" | "diff"; valueKey?: string; oldKey?: string; newKey?: string; deltaKey?: string; gate?: (data: EmailData) => boolean }[],
 ): Block | null {
   const heading = pair(sec, headingKey, data);
   const built: { tag: Pair; value: Pair }[] = [];
   for (const r of rows) {
+    if (r.gate && !r.gate(data)) continue;
     const tag = pair(sec, r.tagKey, data);
     if (!tag) continue;
     if (r.kind === "new") {
@@ -277,6 +278,11 @@ function changeBlockFrom(
   if (!heading || !built.length) return null;
   return changes(heading, built);
 }
+
+// The closed-set `change` label recordCaseChanges (sync.ts) emits "New order"/"New orders" precisely
+// when an order genuinely moved this sync. Everything else (bench, next-hearing, disposal) is NOT a new
+// order — and must not assert one in the changes block.
+const isNewOrder = (data: EmailData) => data.change === "New order" || data.change === "New orders";
 
 function bodyLines(key: EmailKey, sec: Record<string, string>, data: EmailData): Block[] {
   const B: Block[] = [];
@@ -349,9 +355,12 @@ function bodyLines(key: EmailKey, sec: Record<string, string>, data: EmailData):
     case "caseUpdate": {
       s("chip", "chip");
       s("title", "title");
+      // D1: the Order row asserts a NEW order — gate it on the change label. When the label is anything
+      // else the order is NOT new, and it renders as the honest "Latest order" fact row instead.
+      const newOrder = isNewOrder(data);
       add(
         changeBlockFrom(sec, data, "changesHeading", [
-          { tagKey: "change0tag", kind: "new", valueKey: "change0value" },
+          { tagKey: "change0tag", kind: "new", valueKey: "change0value", gate: () => newOrder },
           { tagKey: "change1tag", kind: "diff", oldKey: "change1old", newKey: "change1new", deltaKey: "change1delta" },
           { tagKey: "change2tag", kind: "diff", oldKey: "change2old", newKey: "change2new" },
         ]),
@@ -361,7 +370,11 @@ function bodyLines(key: EmailKey, sec: Record<string, string>, data: EmailData):
         const callTail = pair(sec, "calloutTail", data);
         add(roleBlock({ html: callLead.html + (callTail?.html ?? ""), text: callLead.text + (callTail?.text ?? "") }, "callout"));
       }
-      const f = factsItems(sec, data, [["fact0l", "fact0v"], ["fact1l", "fact1v"], ["fact2l", "fact2v"], ["fact3l", "fact3v"], ["fact4l", "fact4v", true]]);
+      const factsSpec: [string, string, boolean?][] = [
+        ["fact0l", "fact0v"], ["fact1l", "fact1v"], ["fact2l", "fact2v"], ["fact3l", "fact3v"], ["fact4l", "fact4v", true],
+      ];
+      if (!newOrder) factsSpec.push(["fact5l", "fact5v"]);
+      const f = factsItems(sec, data, factsSpec);
       if (f.length) add(facts(f));
       s("detail", "muted");
       s("cta", "cta");
@@ -387,12 +400,23 @@ function bodyLines(key: EmailKey, sec: Record<string, string>, data: EmailData):
       const dWk = pair(sec, "dateWk", data);
       const dNote = pair(sec, "dateNote", data);
       if (dDay && dMon && dWk && dNote) add(dateBanner(dDay, dMon, dWk, dNote));
-      const f = factsItems(sec, data, [
-        ["fact0l", "fact0v"], ["fact1l", "fact1v"], ["fact2l", "fact2v"], ["fact3l", "fact3v"], ["fact4l", "fact4v"],
+      // NIT-1: "Latest order" is the most recent order ON FILE; the changes "Order" row claims a NEW
+      // order. Gate them mutually-exclusively on the same signal as D1 so the same order never prints
+      // twice (fact + "new since the last listing").
+      const newOrder = isNewOrder(data);
+      const factsSpec: [string, string, boolean?][] = [
+        ["fact0l", "fact0v"], ["fact1l", "fact1v"], ["fact2l", "fact2v"], ["fact3l", "fact3v"],
+        ...(newOrder ? [] : [["fact4l", "fact4v"] as [string, string, boolean?]]),
         ["fact5l", "fact5v", true],
-      ]);
+      ];
+      const f = factsItems(sec, data, factsSpec);
       if (f.length) add(facts(f));
-      add(changeBlockFrom(sec, data, "changesHeading", [{ tagKey: "change0tag", kind: "new", valueKey: "change0value" }, { tagKey: "change1tag", kind: "diff", oldKey: "change1old", newKey: "change1new" }]));
+      add(
+        changeBlockFrom(sec, data, "changesHeading", [
+          { tagKey: "change0tag", kind: "new", valueKey: "change0value", gate: () => newOrder },
+          { tagKey: "change1tag", kind: "diff", oldKey: "change1old", newKey: "change1new" },
+        ]),
+      );
       s("cta", "cta");
       break;
     }

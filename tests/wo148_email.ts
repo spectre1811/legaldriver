@@ -28,10 +28,10 @@ const SAMPLE: Record<EmailKey, EmailData> = {
   syncFailure: { misses: 2, since: "22 Jul" },
   security: { code: "418 293" },
   // WO-314 fields (next hearing / stage / purpose / full coram / regNo / latest order) + the v3.1
-  // enriched diff slots (prevHearingDate / prevCoram / deltaDays). `change` is a caller-supplied
-  // closed-set label — "New order uploaded" is the longest realistic one.
+  // enriched diff slots (prevHearingDate / prevCoram / deltaDays). `change` is the caller-supplied
+  // closed-set label recordCaseChanges emits — "New order"/"New orders" means a genuinely new order.
   caseUpdate: {
-    change: "New order uploaded", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026",
+    change: "New order", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026",
     detail: "Next hearing on 12 Aug.", nextHearingDate: "12 Aug", stage: "Arguments", purpose: "Final hearing",
     coram: "Justice A. Shah, Justice B. Mehta", regNo: "SCA/1234/2026", orderTitle: "Order", orderDate: "20 Jul",
   },
@@ -121,7 +121,11 @@ check("caseUpdate carries stage", !!caseUpdateFull && /Stage: Arguments/.test(ca
 check("caseUpdate carries purpose", !!caseUpdateFull && /Final hearing/.test(caseUpdateFull.text));
 check("caseUpdate carries the FULL coram, not judges[0]", !!caseUpdateFull && /Coram: Justice A\. Shah, Justice B\. Mehta/.test(caseUpdateFull.text));
 check("caseUpdate carries the registration number", !!caseUpdateFull && /Reg\. No\.: SCA\/1234\/2026/.test(caseUpdateFull.text));
-check("caseUpdate carries the latest order in the changes block", !!caseUpdateFull && /New: Order of SCA\/1234\/2026 · uploaded 20 Jul/.test(caseUpdateFull.text));
+check("caseUpdate carries a new order in the changes block", !!caseUpdateFull && /New: Order · uploaded 20 Jul/.test(caseUpdateFull.text));
+
+// --- D1: when the change label is NOT a new order, the order renders as a plain fact, never "New:" ---
+const benchWithOrder = renderEmail("caseUpdate", { change: "Bench changed", case: "Patel v. State", court: "Gujarat HC", cnr: "GJHC010012342026", orderTitle: "Order", orderDate: "20 Jul" });
+check("bench-change renders 'Latest order' as a fact, not 'New:'", !!benchWithOrder && /Latest order: Order · 20 Jul/.test(benchWithOrder.text) && !/New: /.test(benchWithOrder.text));
 
 // absent enrichment fields degrade gracefully — the email still sends with fewer lines,
 // never a fabricated value (a bench-change alert with no known next date must not print one).
