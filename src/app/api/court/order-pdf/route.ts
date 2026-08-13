@@ -84,6 +84,11 @@ export async function GET(request: NextRequest) {
     case "unavailable":
       // Terminal, honest, 200 — NOT an error and NOT a retry prompt (there is nothing to retry).
       return page("No document on the court record", "The eCourts record has no order PDF filed for this order. There’s nothing to open — the court didn’t publish a document here.", order.matter_id, 200);
+    case "exhausted":
+      // WO-376 W3: terminal, but honest about what actually happened — we tried repeatedly and could
+      // not retrieve it. Unlike "unavailable" above, this is NOT a claim that the document doesn't
+      // exist, so it must never say "no document on the court record".
+      return page("Couldn’t retrieve this document", "We tried several times to fetch this order’s copy from the court portal and weren’t able to. This doesn’t mean the document doesn’t exist — we just couldn’t retrieve it. Please check back later.", order.matter_id, 200);
     case "retrieving":
       return page("Fetching the order…", "This district order’s copy is being retrieved from the court portal — it usually lands within a minute.", order.matter_id, 202);
     case "notFound":

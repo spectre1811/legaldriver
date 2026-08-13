@@ -34,6 +34,18 @@ ok("200 json {unavailable} → unavailable", classifyOrderPdf({ ok: true, status
 ok("unavailable is NOT stream", classifyOrderPdf({ ok: true, status: 200, contentType: "application/json" }, "unavailable") !== "stream");
 ok("unavailable is NOT serviceError (no false retry)", classifyOrderPdf({ ok: true, status: 200, contentType: "application/json" }, "unavailable") !== "serviceError");
 
+// ── WO-376 W3: 'exhausted' — TERMINAL, but NOT the same claim as 'unavailable' ────────────────────
+// The scraper's dead-marker conflated "eCourts confirmed no such document" with "the fleet gave up
+// after budget-exhausting AMBIGUOUS failures" — both used to render as "no document on the court
+// record". `exhausted` is the split: honest that we could not retrieve it, without claiming absence.
+ok("200 json {exhausted} → exhausted", classifyOrderPdf({ ok: true, status: 200, contentType: "application/json" }, "exhausted") === "exhausted");
+ok("exhausted is NOT unavailable (must not claim confirmed absence)", classifyOrderPdf({ ok: true, status: 200, contentType: "application/json" }, "exhausted") !== "unavailable");
+ok("exhausted is NOT stream", classifyOrderPdf({ ok: true, status: 200, contentType: "application/json" }, "exhausted") !== "stream");
+ok("exhausted is NOT serviceError (no false 'try again shortly' retry prompt)", classifyOrderPdf({ ok: true, status: 200, contentType: "application/json" }, "exhausted") !== "serviceError");
+// a non-ok response body carrying the same status string must NOT be read as the terminal state —
+// only a genuine 200 control response from the box counts (mirrors the 'unavailable' precedent).
+ok("502 body {exhausted} is NOT exhausted (res.ok gates it)", classifyOrderPdf({ ok: false, status: 502, contentType: "application/json" }, "exhausted") !== "exhausted");
+
 // ── district async fetch (queued) ────────────────────────────────────────────
 ok("202 → retrieving", classifyOrderPdf({ ok: false, status: 202, contentType: "application/json" }) === "retrieving");
 ok("json {queued} → retrieving", classifyOrderPdf({ ok: true, status: 200, contentType: "application/json" }, "queued") === "retrieving");

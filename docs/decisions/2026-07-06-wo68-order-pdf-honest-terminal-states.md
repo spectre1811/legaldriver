@@ -45,6 +45,17 @@ serve. `classifyOrderPdf` is the one place that decision lives; route through it
 content-type check. Order matters: real bytes win, then terminal `unavailable`, then `retrieving`,
 then `notFound`, and only then the retriable fallback.
 
+## Update — WO-376 W3 (2026-08-13): a fifth state, `exhausted`
+`unavailable` turned out to conflate two different facts on the scraper side: eCourts *confirming*
+there is no such document, and the fleet *giving up* after exhausting its retry budget on ambiguous
+failures (WAF blips, missing request params, upstream races) — with eCourts never actually confirming
+absence. Both used to dead-mark the same way and render as this doc's "No document on the court
+record" copy. WO-376 W3 splits them (`ecourts-scraper`'s `case_service._pdf_task_exhausted`) and adds
+a fifth `classifyOrderPdf` outcome, `exhausted`, with its own honest copy ("Couldn't retrieve this
+document … this doesn't mean the document doesn't exist") that never claims confirmed absence. Same
+rule as above, restated: **a "gave up" must never render as a "confirmed absent," and neither may
+render as a retriable error.**
+
 ## Scope / follow-up
 - No migration, no dependency, no gate. legaldriver still consumes only the **keyed** `/v1/*` surface.
 - The advocate still discovers `unavailable` *on click*. Surfacing `pdf_status` in the orders list /
