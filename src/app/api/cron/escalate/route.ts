@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, adminFor } from "@/lib/supabase/admin";
 import { withCronLock } from "@/lib/cron/lock";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,10 @@ export async function GET(request: NextRequest) {
     const supabase = createAdminClient();
     const nowIso = new Date().toISOString();
 
+    // Genuinely cross-tenant — this fan-out DISCOVERS which tenant each due notice
+    // belongs to (n.tenant_id, below); every write once that's known goes through
+    // adminFor(n.tenant_id).
+    // eslint-disable-next-line local-rules/no-bare-admin-from -- fan-out across all tenants, scoped per-notice below
     const { data: dueNotices, error } = await supabase
       .from("notice")
       .select("id, tenant_id, type, escalation_state, next_escalation_at, matter_id")
@@ -44,8 +48,9 @@ export async function GET(request: NextRequest) {
       const next = NEXT_STATE[n.escalation_state];
       if (!next) continue;
       const nextAt = next === "closed" ? null : isoIn(ESCALATION_INTERVAL_DAYS);
+      const scoped = adminFor(n.tenant_id, supabase);
 
-      const { error: upErr } = await supabase
+      const { error: upErr } = await scoped
         .from("notice")
         .update({ escalation_state: next, next_escalation_at: nextAt })
         .eq("id", n.id)
@@ -53,8 +58,7 @@ export async function GET(request: NextRequest) {
       if (upErr) continue;
       escalated++;
 
-      await supabase.from("audit_event").insert({
-        tenant_id: n.tenant_id,
+      await scoped.from("audit_event").insert({
         action: "notice.escalate",
         entity: "notice",
         entity_id: n.id,
@@ -64,8 +68,7 @@ export async function GET(request: NextRequest) {
 
       // Queue an immediate notification (in-app + email).
       for (const channel of ["inapp", "email"] as const) {
-        await supabase.from("notification").insert({
-          tenant_id: n.tenant_id,
+        await scoped.from("notification").insert({
           channel,
           kind: "notice_escalation",
           payload: {

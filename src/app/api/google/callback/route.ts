@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, adminFor } from "@/lib/supabase/admin";
 import { exchangeCode, GMAIL_SCOPE } from "@/lib/mail/oauth";
 import { getTenantId } from "@/lib/court/sync";
 import { storeSecret } from "@/lib/mail/vault";
@@ -47,23 +47,21 @@ export async function GET(request: NextRequest) {
   const ref = await storeSecret(admin, tokens.refresh_token, `gmail:${tenantId}:${user.id}`);
   if (!ref) return fail("Could not store credential");
 
+  const scoped = adminFor(tenantId, admin);
   // Upsert the connection (one Google connection per user/tenant).
-  await admin
+  await scoped
     .from("oauth_connection")
     .delete()
-    .eq("tenant_id", tenantId)
     .eq("user_id", user.id)
     .eq("provider", "google");
-  await admin.from("oauth_connection").insert({
-    tenant_id: tenantId,
+  await scoped.from("oauth_connection").insert({
     user_id: user.id,
     provider: "google",
     scopes: [GMAIL_SCOPE],
     refresh_token_ref: ref,
     status: "active",
   });
-  await admin.from("audit_event").insert({
-    tenant_id: tenantId,
+  await scoped.from("audit_event").insert({
     actor_id: user.id,
     action: "gmail.connect",
     entity: "oauth_connection",
