@@ -27,6 +27,20 @@ export interface Mailer {
 
 const recipientDomain = (to: string) => to.split("@")[1] ?? "?";
 
+// WO-378 (W1): a bare fetch here had NO timeout — undici's default 300s headers timeout meant a
+// single hung send could eat a third of the 900s cron lease (`src/lib/cron/lock.ts`), and two could
+// eat it whole. `maxDuration` does NOT bound this: it is a Vercel-only hint and a no-op on the
+// self-hosted box we moved to in WO-323.
+//
+// 10s basis (measured 2026-08-12 against prod `outbound_email`): consecutive rows in a real notify
+// run land ~1.1s apart (median of 25 gaps), of which ~430ms is this module's two Supabase writes
+// (one PostgREST round trip from the web box = ~215ms, measured) ⇒ a real Resend send is ~0.7s;
+// the worst row observed in a week was 4.1s. 10s is ~14× the median and ~2.4× that worst row, so it
+// never aborts a live send — an abort would flip the row to `failed` and the retry lane would send
+// it AGAIN, i.e. an aggressive timeout MANUFACTURES the duplicate this WO removes — while cutting
+// the hang ceiling 30×. Run duration is fenced by the lease (W2), not by this number.
+const sendTimeoutMs = () => Number(process.env.NOTIFY_SEND_TIMEOUT_MS ?? "10000");
+
 class ResendMailer implements Mailer {
   readonly channel = "email" as const;
   constructor(
@@ -43,6 +57,7 @@ class ResendMailer implements Mailer {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ from: this.from, to, subject, html, ...(text ? { text } : {}) }),
+        signal: AbortSignal.timeout(sendTimeoutMs()), // WO-378: never hang the cron run
       });
       const body = (await res.json()) as { id?: string; message?: string };
       if (!res.ok) {

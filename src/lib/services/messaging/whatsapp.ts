@@ -50,6 +50,9 @@ export class WhatsAppBspClient implements MessagingClient {
           text: { body: msg.body },
         }),
         cache: "no-store",
+        // WO-378 (W1): same unbounded-fetch defect as the mailer — this send runs inside the
+        // notify cron's row loop, so a hung BSP call would burn the 900s lease. Same env knob.
+        signal: AbortSignal.timeout(Number(process.env.NOTIFY_SEND_TIMEOUT_MS ?? "10000")),
       });
       if (!res.ok) return { status: "failed" };
       const data = (await res.json().catch(() => null)) as { messages?: { id?: string }[] } | null;
