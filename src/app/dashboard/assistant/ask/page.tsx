@@ -214,7 +214,9 @@ export default async function CopilotPage({
         </Card>
       </div>
 
-      {/* Guardrail — assistive only, grounded + cited, not legal advice */}
+      {/* Guardrail — assistive only, grounded + cited. WO-413 B1: the "not legal advice" clause
+          dropped from this console footnote (founder decision — stays only on the exported PDF
+          and the public share page). */}
       <p className="flex items-center gap-1.5 text-xs text-ink-faint">
         <Icon name="alert" className="h-3.5 w-3.5" />
         {t("disclaimer")}

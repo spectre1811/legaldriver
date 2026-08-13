@@ -36,7 +36,7 @@ export function Segmented({
             onClick={() => onChange(o.value)}
             aria-pressed={active}
             disabled={disabled}
-            className={`inline-flex items-center gap-1.5 rounded-ec-s px-2.5 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo disabled:opacity-60 ${
+            className={`inline-flex items-center gap-1.5 rounded-ec-s px-2.5 py-1 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey disabled:opacity-60 ${
               // WO-404 C2 re-check: inactive options were text-ec-ink-2 (#4A4A45, near-black) —
               // almost as dark as the active option's text-ec-bronze-deep (#5E461F), so an inactive
               // tab (e.g. "Agenda") visually competed with the active one instead of receding

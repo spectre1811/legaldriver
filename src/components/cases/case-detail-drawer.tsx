@@ -204,7 +204,6 @@ export function CaseDetailDrawer({
         <footer className="border-t border-ec-hair-strong px-5 py-3">
           <p className="text-[0.7rem] leading-relaxed text-ec-ink-3">
             {row.source && t("drawer.provenance", { source: row.source, ago: relativeAge(row.last_synced_at) })}
-            {" "}{tcd("source.verify")}
           </p>
           <Link
             href={`/dashboard/cases/${row.id}`}

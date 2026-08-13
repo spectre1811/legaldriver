@@ -288,7 +288,7 @@ function FiltersSheet({
               <Icon name="bookmark" className="h-[15px] w-[15px]" />
             </button>
           </div>
-          <button type="button" onClick={onClose} aria-label={t("done")} className="flex h-8 w-8 items-center justify-center rounded-ec-s text-ec-ink-3 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo">
+          <button type="button" onClick={onClose} aria-label={t("done")} className="flex h-8 w-8 items-center justify-center rounded-ec-s text-ec-ink-3 transition hover:bg-ec-paper-3 hover:text-ec-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey">
             <Icon name="close" className="h-4 w-4" />
           </button>
         </div>

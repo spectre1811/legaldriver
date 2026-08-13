@@ -95,10 +95,10 @@ function NavItem({
       aria-label={collapsed ? label : undefined}
       className={
         collapsed
-          ? `group relative flex h-9 w-9 items-center justify-center rounded-ec-s transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo ${
+          ? `group relative flex h-9 w-9 items-center justify-center rounded-ec-s transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey ${
               active ? "bg-ec-bronze-tint text-ec-bronze-deep" : "text-ec-ink-2 hover:bg-ec-band"
             }`
-          : `group relative flex items-center gap-2.5 rounded-ec-s py-2 pl-3 pr-2 text-[13px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo ${
+          : `group relative flex items-center gap-2.5 rounded-ec-s py-2 pl-3 pr-2 text-[13px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey ${
               active ? "bg-ec-bronze-tint font-medium text-ec-bronze-deep" : "text-ec-ink-2 hover:bg-ec-band"
             }`
       }
@@ -155,8 +155,8 @@ export function SidebarFooter({ collapsed = false }: { collapsed?: boolean }) {
         aria-label={collapsed ? label : undefined}
         className={
           collapsed
-            ? "group relative mx-auto flex h-9 w-9 items-center justify-center rounded-ec-s text-ec-muted-ink transition hover:bg-ec-paper-3 hover:text-ec-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
-            : "group relative flex items-center gap-2.5 rounded-ec-s px-3 py-2 text-[13px] text-ec-muted-ink transition hover:bg-ec-paper-3 hover:text-ec-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+            ? "group relative mx-auto flex h-9 w-9 items-center justify-center rounded-ec-s text-ec-muted-ink transition hover:bg-ec-paper-3 hover:text-ec-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
+            : "group relative flex items-center gap-2.5 rounded-ec-s px-3 py-2 text-[13px] text-ec-muted-ink transition hover:bg-ec-paper-3 hover:text-ec-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
         }
       >
         <Icon name="settings" className="h-[1.15rem] w-[1.15rem] shrink-0" />
@@ -233,8 +233,8 @@ export function Sidebar({ isAdmin = false, homeLabel }: { isAdmin?: boolean; hom
         aria-label={homeLabel}
         className={
           collapsed
-            ? "flex items-center justify-center rounded-ec-s py-1 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
-            : "flex items-center gap-2.5 rounded-ec-s px-2 py-1 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+            ? "flex items-center justify-center rounded-ec-s py-1 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
+            : "flex items-center gap-2.5 rounded-ec-s px-2 py-1 transition hover:bg-ec-paper-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
         }
       >
         <BrandMark size={32} tone="dark" className="shrink-0" />
@@ -259,7 +259,7 @@ export function Sidebar({ isAdmin = false, homeLabel }: { isAdmin?: boolean; hom
           type="button"
           onClick={() => setCollapsed((c) => !c)}
           aria-label={collapsed ? t("expandSidebar") : t("collapseSidebar")}
-          className="flex h-7 w-7 items-center justify-center rounded-ec-s border border-ec-line bg-ec-card text-ec-muted-ink transition hover:text-ec-bronze focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-indigo"
+          className="flex h-7 w-7 items-center justify-center rounded-ec-s border border-ec-line bg-ec-card text-ec-muted-ink transition hover:text-ec-bronze focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ec-honey"
         >
           <Icon name={collapsed ? "panelExpand" : "panelCollapse"} className="h-4 w-4" />
         </button>
@@ -283,7 +283,7 @@ export function Sidebar({ isAdmin = false, homeLabel }: { isAdmin?: boolean; hom
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
           onKeyDown={onHandleKeyDown}
-          className={`absolute inset-y-0 right-0 w-[4px] cursor-col-resize touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ec-indigo ${
+          className={`absolute inset-y-0 right-0 w-[4px] cursor-col-resize touch-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ec-honey ${
             dragging ? "bg-ec-bronze-tint" : "bg-ec-band"
           }`}
         >

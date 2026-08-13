@@ -325,9 +325,9 @@ export function CasesTable({
                   {visibleCols.map(renderColumnCell)}
                   {/* WO-331 EXACT-FIDELITY: the reference combines the row-hover action cluster and
                       the synced dot into ONE trailing column (its 78px grid track), not two separate
-                      ones — merged here to match. "Open" is real (the existing drawer). "Cause list"
-                      is real — legaldriver already has /dashboard/cause-list; not deep-linked per row
-                      (no reliable court-id on the record to scope it), still a genuine destination.
+                      ones — merged here to match. "Open" is the existing drawer, the only row action.
+                      WO-413 F1: "View cause list" row action removed (founder decision) — it wasn't
+                      deep-linked per row anyway (no reliable court-id on the record to scope it).
                       WO-376 B8: the disabled "Add note / Coming soon" action removed — no backing
                       capability anywhere in the app, and the founder cut it rather than keep it faked. */}
                   <td className="hidden px-3 py-3.5 text-right lg:table-cell">
@@ -341,14 +341,6 @@ export function CasesTable({
                         >
                           <Icon name="eye" className="h-4 w-4" />
                         </button>
-                        <Link
-                          href="/dashboard/cause-list"
-                          aria-label={t("row.causeList")}
-                          title={t("row.causeList")}
-                          className="rounded-full p-1.5 text-ec-ink-3 transition hover:bg-ec-hair hover:text-ec-brass-deep focus-visible:ring-2 focus-visible:ring-ec-brass"
-                        >
-                          <Icon name="calendar" className="h-4 w-4" />
-                        </Link>
                       </div>
                       <span
                         title={syncedTitle}
