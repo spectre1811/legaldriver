@@ -3,6 +3,9 @@
 // toggle, reorder, the "never a zero-column table" floor — plus source-greps to guard the
 // load-bearing wiring (shared persistence hook, the real plusColumns/grip glyphs, the locked
 // "Case" column, no native <select>).
+// WO-412 E1 fix: the trigger + its persisted state moved out of cases-table.tsx into the toolbar's
+// command row + a shared <CasesColumnsProvider> (columns-provider.tsx) — the trigger was reachable
+// only inside the table's own horizontally-scrolling region, off-screen at both 1024 and 768.
 // Run: npx tsx tests/wo407_columns.ts
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -81,18 +84,28 @@ const emptyVisible = parseColumnsState({ order: REORDERABLE_COLUMNS, visible: []
 check("an explicitly-empty visible list still renders just the locked column, not zero", visibleColumns(emptyVisible).join(",") === "case");
 
 // ── wiring (source-grep, matches the wo406_sidebar.ts convention) ───────────────────────────────
+// WO-412 E1 fix: live render-inspect (1440/1024/768) found the trigger's real bug — it lived as the
+// last <th> inside cases-table.tsx's own `overflow-x-auto` region, off-screen at 1024 AND 768 (only
+// 1440 happened to be wide enough to fit with no overflow). It moved to the toolbar's always-visible
+// command row, so the persisted ColumnsState moved with it — from cases-table.tsx's own local state
+// to <CasesColumnsProvider> (columns-provider.tsx), shared by the toolbar (trigger) and the table
+// (render). The assertions below follow that: same guarantees, now checked at their real location.
 const root = process.cwd();
 const table = readFileSync(join(root, "src/app/dashboard/cases/cases-table.tsx"), "utf8");
+const toolbar = readFileSync(join(root, "src/app/dashboard/cases/cases-toolbar.tsx"), "utf8");
+const provider = readFileSync(join(root, "src/app/dashboard/cases/columns-provider.tsx"), "utf8");
 const picker = readFileSync(join(root, "src/components/cases/column-picker.tsx"), "utf8");
 const icons = readFileSync(join(root, "src/components/icons.tsx"), "utf8");
 const enMsgs = readFileSync(join(root, "src/i18n/messages/en.json"), "utf8");
 const hiMsgs = readFileSync(join(root, "src/i18n/messages/hi.json"), "utf8");
 
 check(
-  "cases-table.tsx persists columns via the shared usePersistedState hook, not hand-rolled localStorage",
-  table.includes("usePersistedState") && table.includes("COLUMNS_STORAGE_KEY") && !table.includes(".setItem(") && !table.includes(".getItem("),
+  "columns-provider.tsx persists columns via the shared usePersistedState hook, not hand-rolled localStorage",
+  provider.includes("usePersistedState") && provider.includes("COLUMNS_STORAGE_KEY") && !provider.includes(".setItem(") && !provider.includes(".getItem("),
 );
-check("cases-table.tsx clamps the loaded value through parseColumnsState (same discipline as parseDensity)", table.includes("parseColumnsState(storedColumns)"));
+check("columns-provider.tsx clamps the loaded value through parseColumnsState (same discipline as parseDensity)", provider.includes("parseColumnsState(storedColumns)"));
+check("the add-columns trigger lives in the toolbar's always-visible command row, not the table's scrolling region", toolbar.includes("<ColumnPicker") && !table.includes("<ColumnPicker"));
+check("the table reads the shared columns state (not a second local copy)", table.includes("useCasesColumns()"));
 check("icons.tsx defines the real plusColumns glyph (not a bare plus reused)", icons.includes("plusColumns:"));
 check("icons.tsx defines the grip drag-handle glyph", icons.includes("grip:"));
 check("the picker trigger uses the plusColumns icon, not the generic plus", picker.includes('"plusColumns"'));
