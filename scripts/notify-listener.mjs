@@ -35,9 +35,11 @@ const COALESCE_MS = 150;
 // Transaction-pooling ports. A LISTEN registered through a transaction pooler is bound to
 // whatever backend served that one transaction and is then silently discarded — the listener
 // connects, subscribes, and receives NOTHING, forever, with no error. This is the documented
-// WO-360 W2 exception: this one connection bypasses the pooler and speaks to Postgres direct
-// on 5432. Do NOT "optimise" it onto the pooler. (Session-mode pooling would work, but the
-// direct DSN is the thing we can state and verify, so that is what we require.)
+// WO-360 W2 exception: this connection bypasses TRANSACTION pooling and speaks either direct
+// on 5432 or through the SESSION-mode pooler on 5432 (round 3.2, below — mukadma-web has no
+// IPv6 egress and the direct host is AAAA-only, so session mode is the reachable option in
+// practice). Do NOT "optimise" this onto transaction-mode pooling (6432/6543) — that is the one
+// substitution this refusal exists to prevent.
 const POOLER_PORTS = new Set(["6432", "6543"]);
 
 // WO-358 review decision (a): a port check alone is NOT sufficient. Supabase's Supavisor
@@ -50,16 +52,44 @@ const POOLER_PORTS = new Set(["6432", "6543"]);
 // round-3-re-reviewed past — a trailing-dot FQDN (`....pooler.supabase.com.`, which DNS
 // resolves identically), a CNAME, or a raw IP all reach the same endpoint while failing
 // `endsWith`. Matching the genuine direct-connection shape instead means there is nothing to
-// evade: only `db.<ref>.supabase.co` passes, full stop. If session mode is ever deliberately
-// chosen, that requires editing this regex, which is itself the "explicit, commented decision"
-// the WO called for — not a quiet DSN swap. This closes the port-independence gap the WO named
-// (a session-mode DSN on 5432 can no longer pass); it does not certify every possible DSN a
-// human could type is a mistake-free direct connection.
+// evade for that shape.
 const DIRECT_HOST_RE = /^db\.[^.]+\.supabase\.co$/;
 
+// Round 3.2 — measured, not assumed, on the actual box (`mukadma-web`, 2026-08-13):
+// `ip -6 addr show scope global` = 0 addresses, `curl -6` egress FAILED. Separately, the
+// project's direct host (`db.<ref>.supabase.co`) is AAAA-only on newer Supabase projects — no
+// A record at all. So DIRECT_HOST_RE, while the right policy in principle, describes a host
+// this box can never actually reach: NOTIFY_PG_URL pointed at it would connect to nothing, and
+// preflight() would still pass it, deferring the failure to pgListen()'s connection attempt —
+// which is a worse failure mode than refusing it here (see park(), below, for why "parks and
+// says nothing again" is the shape this WO exists to eliminate).
+//
+// The narrow, machine-checked exception: allow the Supavisor SESSION-mode pooler, but ONLY on
+// port 5432 (session mode) — 6543 (transaction mode) and 6432 stay refused on ANY host via
+// POOLER_PORTS above, unchanged. Session-mode pooling holds one fixed backend connection for
+// the client's session lifetime (no reset-and-return between statements), so a LISTEN
+// registered through it survives — verified locally (2026-08-13, not assumed and not against
+// the real Supabase endpoint, which needs prod credentials this session doesn't have): a real
+// PgBouncer 1.25 proxy in `pool_mode = session` in front of a throwaway Postgres 16 delivered a
+// NOTIFY sent on a separate direct connection to a client LISTENing through the pooled
+// connection. The identical setup with `pool_mode = transaction` (and Supavisor's own documented
+// `DISCARD ALL` reset between transactions) did NOT deliver it — the negative control needed
+// `server_reset_query` set explicitly; PgBouncer's default is a no-op with no contention, which
+// is a caveat about that control's rigor, not about Supabase's actual (well-documented)
+// transaction-pooling behaviour, which this WO does not revisit.
+//
+// Two heavier alternatives were considered and rejected, not silently: (a) give the box real
+// IPv6 egress (VPC/subnet + egress-only-IGW change) — infra-apply, founder-gated, and solves a
+// problem this narrow exception already solves for $0 and no infra change; (b) Supabase's paid
+// IPv4 add-on — recurring cost for the same outcome. Neither is warranted while (b-of-the-two,
+// i.e. this exception) exists and is machine-checked. Don't reopen this without a reason IPv6
+// egress or the add-on is now cheaper or otherwise necessary.
+const POOLER_SESSION_HOST_RE = /^aws-0-[^.]+\.pooler\.supabase\.com$/;
+const POOLER_SESSION_PORT = "5432";
+
 /**
- * Decide whether this process may run, from env alone. Fails CLOSED: anything unclear
- * parks the process (idle, one loud log line) rather than half-running.
+ * Decide whether this process may run, from env alone. Fails CLOSED: anything unclear parks the
+ * process (idle, LOUD — see park() below, not just one line at boot) rather than half-running.
  */
 export function preflight(env) {
   if (env.NOTIFY_PUSH !== "1") return { ok: false, reason: "NOTIFY_PUSH is not '1' — push wake-up disabled, cron cadence only" };
@@ -84,9 +114,12 @@ export function preflight(env) {
     return { ok: false, reason: "NOTIFY_PG_URL is not a parseable postgres:// URL" };
   }
   if (POOLER_PORTS.has(url.port))
-    return { ok: false, reason: `NOTIFY_PG_URL points at a transaction pooler (port ${url.port}) — LISTEN is silently dropped there; use the direct :5432 DSN` };
-  if (!DIRECT_HOST_RE.test(url.hostname.toLowerCase()))
-    return { ok: false, reason: `NOTIFY_PG_URL host ${url.hostname} is not the direct db.<ref>.supabase.co shape — refused rather than guessed at (a pooler host of either mode, a trailing-dot FQDN, a CNAME, or a raw IP are all refused this way; WO-358 review decision (a))` };
+    return { ok: false, reason: `NOTIFY_PG_URL points at a transaction pooler (port ${url.port}) — LISTEN is silently dropped there; use the direct :5432 DSN or the session-mode pooler DSN` };
+  const host = url.hostname.toLowerCase();
+  const isDirect = DIRECT_HOST_RE.test(host);
+  const isPoolerSession = POOLER_SESSION_HOST_RE.test(host) && url.port === POOLER_SESSION_PORT;
+  if (!isDirect && !isPoolerSession)
+    return { ok: false, reason: `NOTIFY_PG_URL host ${url.hostname} on port ${url.port || "5432"} is neither the direct db.<ref>.supabase.co host nor the Supavisor session-mode pooler host on port 5432 — refused rather than guessed at (a trailing-dot FQDN, a CNAME, or a raw IP are all refused this way too; WO-358 review decision (a), round 3.2)` };
   if (!/[?&]sslmode=/.test(dsn))
     return { ok: false, reason: "NOTIFY_PG_URL must state sslmode explicitly (sslmode=require in prod) — TLS is a decision, not a default" };
 
@@ -196,7 +229,7 @@ async function pgListen({ dsn, onWake, onFatal }) {
 
   await client.connect();
   await client.query(`LISTEN ${CHANNEL}`);
-  console.log(`[notify-listener] LISTEN ${CHANNEL} on a direct connection — up`);
+  console.log(`[notify-listener] LISTEN ${CHANNEL} on ${new URL(dsn).hostname} — up`);
 
   // A TCP connection can die silently (NAT/idle reaper) and a dead LISTEN looks exactly like
   // "nothing happened". Heartbeat so a dead socket becomes a crash, and systemd's
@@ -211,16 +244,27 @@ async function pgListen({ dsn, onWake, onFatal }) {
   };
 }
 
-/** Idle forever without exiting: Restart=always would turn a clean exit into a 5s log loop. */
-function park() {
-  setInterval(() => {}, 1 << 30);
+/**
+ * Idle forever without exiting: Restart=always would turn a clean exit into a 5s log loop.
+ *
+ * Round 3.2: a single log line at boot and then silence is indistinguishable, from
+ * `systemctl is-active`, from a working listener — that IS the 14-day-dead-monitor shape F2 was
+ * raised to eliminate, arriving through a different door. So this repeats the reason on the
+ * SAME cadence as the live heartbeat (HEARTBEAT_MS): `journalctl -u ld-notify-listener` always
+ * shows a recent PARKED line, and the pattern is fixed/greppable for the W3 dead-man to alarm on
+ * once it exists (W3 itself is not built by this WO — see the WO file).
+ */
+export function park(reason, { intervalMs = HEARTBEAT_MS, log = console.error } = {}) {
+  const say = () => log(`[notify-listener] PARKED — ${reason} (still not running; this repeats every ${Math.round(intervalMs / 1000)}s)`);
+  say();
+  const timer = setInterval(say, intervalMs);
+  return () => clearInterval(timer); // main() never calls this — parking is permanent by design; tests do
 }
 
 async function main() {
   const pre = preflight(process.env);
   if (!pre.ok) {
-    console.error(`[notify-listener] PARKED — ${pre.reason}`);
-    return park();
+    return park(pre.reason);
   }
   const { dsn, secret, wakeUrl } = pre.config;
   const waker = createWaker({ run: () => callPipeline({ wakeUrl, secret }) });

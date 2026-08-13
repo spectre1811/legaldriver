@@ -4,11 +4,15 @@
 // What is proven here, and what is NOT:
 //   A  preflight fails CLOSED — the pooler-DSN trap (LISTEN is silently dropped on a
 //      transaction pooler) and the CRON_LOCK precondition both park the process. Decision (a):
-//      NOTIFY_PG_URL's host must match the direct db.<ref>.supabase.co shape (an ALLOWLIST, not
-//      a denylist — a denylist on "*.pooler.supabase.com" was tried and got past a trailing-dot
-//      FQDN, a CNAME, and a raw IP; matching the genuine shape leaves nothing to evade). This
-//      guarantees a pooler DSN of either mode can't reach the listener; it does not certify
-//      every string a human could type is definitely a working direct connection.
+//      NOTIFY_PG_URL's host must match the direct db.<ref>.supabase.co shape, OR — round 3.2 —
+//      the Supavisor SESSION-mode pooler host on port 5432 specifically (measured: mukadma-web
+//      has no IPv6 egress and the direct host is AAAA-only, so direct-only would park forever;
+//      session mode genuinely holds a LISTEN, verified locally against a real PgBouncer
+//      session-mode proxy, not assumed — see the WO file). Transaction-mode ports (6543, 6432)
+//      stay refused on ANY host; a trailing-dot FQDN, a CNAME, or a raw IP are refused too — an
+//      ALLOWLIST of the two legitimate shapes, not a denylist of the illegitimate ones.
+//   A' park() itself — round 3.2: parking must be LOUD (repeats on the heartbeat cadence), not
+//      one line at boot that scrolls away while `systemctl is-active` still reads healthy.
 //   B  the waker coalesces a NOTIFY burst into one pipeline run and never runs two at once,
 //      but never strands a row inserted mid-run.
 //   C  THE RACE. Two concurrent runs — "listener-triggered" and "cron-triggered" — over ONE
@@ -31,7 +35,7 @@ import { runPipeline } from "@/lib/notify/pipeline";
 import type { Mailer, SendResult } from "@/lib/notify/mailer";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
-import { createWaker, preflight } from "../scripts/notify-listener.mjs";
+import { createWaker, preflight, park } from "../scripts/notify-listener.mjs";
 
 let ok = true;
 const check = (name: string, cond: boolean) => {
@@ -68,27 +72,63 @@ function A() {
   check("A: DSN without sslmode → parked (TLS must be a decision, not a default)",
     preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@db.abcxyz.supabase.co:5432/postgres" }).ok === false);
 
-  // Review decision (a), round 3 → round 3.1: a denylist (`endsWith(".pooler.supabase.com")`)
-  // was tried first and got past — a trailing-dot FQDN, a CNAME, or a raw IP all reach the
-  // same kind of endpoint while failing `endsWith`. This is an ALLOWLIST instead: only the
-  // genuine `db.<ref>.supabase.co` shape passes, so there is nothing left to evade.
-  const evasions: Array<[string, string]> = [
-    ["Supavisor session-mode pooler host on port 5432 (same port as direct, different host)",
-      "aws-0-ap-south-1.pooler.supabase.com"],
-    ["a trailing-dot FQDN of the pooler host (DNS-identical to the above, `endsWith` says no)",
+  // Review decision (a), round 3 → 3.1: a denylist (`endsWith(".pooler.supabase.com")`) was
+  // tried first and got past — a trailing-dot FQDN, a CNAME, or a raw IP all reach the same
+  // kind of endpoint while failing `endsWith`. Switched to an ALLOWLIST of the legitimate
+  // shapes instead of a denylist of the illegitimate ones — these three are still refused,
+  // unchanged by round 3.2.
+  const stillRefused: Array<[string, string]> = [
+    ["a trailing-dot FQDN of the pooler host (DNS-identical to the non-dotted form, `endsWith` says no)",
       "aws-0-ap-south-1.pooler.supabase.com."],
     ["a raw IP address (no hostname to pattern-match against at all)", "203.0.113.10"],
-    ["a CNAME-shaped host that is not the direct shape", "some-cname-pointing-elsewhere.example.net"],
+    ["a CNAME-shaped host that is not either legitimate shape", "some-cname-pointing-elsewhere.example.net"],
   ];
-  for (const [label, host] of evasions) {
+  for (const [label, host] of stillRefused) {
     const r = preflight({ ...base, NOTIFY_PG_URL: `postgres://u:p@${host}:5432/postgres?sslmode=require` });
     check(`A: ${label} refused (decision (a) — allowlist, not a denylist)`,
-      r.ok === false && /not the direct/i.test(r.reason ?? ""));
+      r.ok === false && /neither the direct/i.test(r.reason ?? ""));
   }
   check("A: a direct db.<ref>.supabase.co host on 5432 still passes (the allowlist doesn't over-match)",
     preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@db.abcxyz.supabase.co:5432/postgres?sslmode=require" }).ok === true);
   check("A: an uppercase direct host still passes (case-insensitive match)",
     preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@DB.ABCXYZ.SUPABASE.CO:5432/postgres?sslmode=require" }).ok === true);
+
+  // Round 3.2: measured on the actual box — mukadma-web has no IPv6 egress and the direct host
+  // is AAAA-only, so DIRECT_HOST_RE alone would park forever. The narrow exception: the
+  // Supavisor SESSION-mode pooler host, but ONLY on port 5432 — verified locally (see the WO
+  // file) that session mode genuinely preserves a LISTEN; port 5432 vs 6543 is how Supavisor
+  // itself distinguishes session mode from transaction mode.
+  check("A: the session-mode pooler host on port 5432 is ACCEPTED (round 3.2 — the reachable option)",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://postgres:p@aws-0-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require" }).ok === true);
+  check("A: the SAME pooler host on port 6543 (transaction mode) is still refused — port, not host, decides the mode",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://postgres:p@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require" }).ok === false);
+  check("A: the SAME pooler host on port 6432 is still refused too",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://postgres:p@aws-0-ap-south-1.pooler.supabase.com:6432/postgres?sslmode=require" }).ok === false);
+  check("A: an uppercase pooler-session host on 5432 still passes (case-insensitive, same as direct)",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://postgres:p@AWS-0-AP-SOUTH-1.POOLER.SUPABASE.COM:5432/postgres?sslmode=require" }).ok === true);
+  // Supavisor's username form differs on the pooler (`postgres.<ref>` vs plain `postgres`) —
+  // nothing in preflight() inspects the username (checked: only .hostname/.port/sslmode-presence
+  // are read), so this must pass exactly like the plain-username case above.
+  check("A: the pooler-style username form (postgres.<ref>) doesn't trip anything — preflight never reads it",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://postgres.abcxyz:p@aws-0-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require" }).ok === true);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────
+// A' · park() is LOUD — repeats, doesn't log once and go silent
+// ─────────────────────────────────────────────────────────────────────────────────
+async function Aprime() {
+  const lines: string[] = [];
+  const stop = park("test reason", { intervalMs: 20, log: (s: string) => lines.push(s) });
+  await sleep(75); // ~3-4 intervals at 20ms
+  stop();
+  const countAtStop = lines.length;
+  await sleep(60); // stopped — no further lines should appear
+  check("A': park() logs immediately, not just eventually", lines.length >= 1 && lines[0].includes("test reason"));
+  check("A': park() REPEATS the reason (not one line at boot that then goes silent)", countAtStop >= 3);
+  check("A': every parked line names the reason (greppable, not a generic 'parked')",
+    lines.every((l) => l.includes("test reason") && l.includes("PARKED")));
+  check("A': stopping the interval actually stops it (test hygiene, not a park() requirement — main() never stops it)",
+    lines.length === countAtStop);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────
@@ -365,6 +405,7 @@ async function main() {
   process.env.NEXT_PUBLIC_APP_URL = "https://app.mukadma.in";
 
   A();
+  await Aprime();
   await B();
   await C();
   D();
