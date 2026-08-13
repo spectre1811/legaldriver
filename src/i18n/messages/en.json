@@ -736,15 +736,6 @@
       "aria": "Case {title} — press Enter for details, arrow keys to move",
       "causeList": "View cause list"
     },
-    "view": {
-      "aria": "List or agenda view",
-      "list": "List",
-      "agenda": "Agenda"
-    },
-    "agenda": {
-      "count": "{n, plural, one {# hearing} other {# hearings}}",
-      "empty": "No upcoming hearings in this view."
-    },
     "density": {
       "aria": "Row density",
       "comfortable": "Comfortable",

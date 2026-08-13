@@ -5,10 +5,10 @@
 // + 10s Undo), reversible bulk stage-change, CSV export, and sortable column headers. The server
 // page still does the fetch + pagination; this owns the client-side selection/sort interactions.
 
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { cleanPurpose } from "@/lib/court/code-labels";
 import { maskTitle } from "@/lib/court/mask";
@@ -17,17 +17,13 @@ import {
   useSelection, useUndo, BulkBar, bulkBtn, RowCheckbox, SelectAllCheckbox, UndoToast,
 } from "@/components/selection";
 import { CaseDetailDrawer, UrgencyChip } from "@/components/cases/case-detail-drawer";
-import { ColumnPicker } from "@/components/cases/column-picker";
 import { usePersistedState } from "@/lib/hooks/use-persisted-state";
 import { hearingUrgency, courtCaseNo } from "./cases-row";
 import { DENSITIES, DENSITY_STORAGE_KEY, parseDensity, type Density } from "./density";
-import {
-  COLUMNS_STORAGE_KEY, DEFAULT_COLUMNS_STATE, parseColumnsState, visibleColumns,
-  type ColumnId, type ColumnsState,
-} from "./columns";
+import { visibleColumns, type ColumnId } from "./columns";
 import { parseSort, toCasesCsv } from "./cases-query";
 import type { MatterRow } from "./cases-query";
-import { useCasesNav } from "./cases-nav";
+import { useCasesColumns } from "./columns-provider";
 import {
   bulkDeleteMatters, restoreMatters, bulkSetStage, bulkRestoreStages, type StageSnapshot,
 } from "./actions";
@@ -56,7 +52,6 @@ export function CasesTable({
   const te = useTranslations("enum");
   const tcd = useTranslations("caseDetail");
   const st = (v: string) => (te.has(`status.${v}`) ? te(`status.${v}`) : v);
-  const locale = useLocale();
 
   const router = useRouter();
   const sp = useSearchParams();
@@ -71,11 +66,12 @@ export function CasesTable({
   // guards a corrupted/stale localStorage value the same way page.tsx's old cookie read did.
   const [storedDensity, changeDensity] = usePersistedState<Density>(DENSITY_STORAGE_KEY, initialDensity);
   const density = parseDensity(storedDensity);
-  // WO-407 E1: which columns show + their order, persisted the same way (mukadma:cases:columns).
-  // parseColumnsState repairs a corrupt/stale/schema-drifted value the same way parseDensity does
-  // above — usePersistedState itself doesn't validate shape (use-persisted-state.ts).
-  const [storedColumns, changeColumns] = usePersistedState<ColumnsState>(COLUMNS_STORAGE_KEY, DEFAULT_COLUMNS_STATE);
-  const columns = parseColumnsState(storedColumns);
+  // WO-407 E1 / WO-412 E1 fix: which columns show + their order (mukadma:cases:columns). The
+  // persisted state itself now lives in <CasesColumnsProvider> (columns-provider.tsx), shared with
+  // the toolbar's add-columns trigger — this table only reads it, it no longer owns the localStorage
+  // call directly (that moved so the trigger could relocate out of the table's scrolling region;
+  // see cases-toolbar.tsx's file-level note for the actual defect this fixes).
+  const { columns } = useCasesColumns();
   const visibleCols = visibleColumns(columns).filter((id): id is Exclude<ColumnId, "case"> => id !== "case");
   const columnLabels: Record<ColumnId, string> = {
     case: t("th.case"),
@@ -91,34 +87,6 @@ export function CasesTable({
   const [drawerRow, setDrawerRow] = useState<MatterRow | null>(null);
   // Prior stages captured by the last bulk stage-change, so its Undo can restore per-row values.
   const [stageUndo, setStageUndo] = useState<StageSnapshot[] | null>(null);
-
-  // WO-331 Daybreak reskin · List/Agenda view toggle (reference: cases.tsx's `view` state). WO-331
-  // EXACT-FIDELITY: `view` now lives in the shared CasesNav context (cases-nav.ts), not local state
-  // here — the reference puts the toggle in its command row (cases-toolbar.tsx), not above the
-  // table, so toolbar and table have to share one value. Agenda groups the SAME page of `rows` this
-  // component already has by real upcoming hearing date — no second fetch, no full-account scan.
-  // It's honestly scoped to the current filtered/paginated page, same as the table itself; there's
-  // no per-hearing TIME or courtroom field in the data model (the reference's dummy "10:30"/"Court
-  // 12" columns), so those are dropped rather than fabricated.
-  const { view } = useCasesNav();
-  const agenda = useMemo(() => {
-    const upcoming = rows
-      .map((r) => ({ row: r, eff: r.next_hearing_override ?? r.next_hearing_date }))
-      .filter((x): x is { row: MatterRow; eff: string } => x.eff != null && x.eff >= today)
-      .sort((a, b) => (a.eff < b.eff ? -1 : a.eff > b.eff ? 1 : 0));
-    const groups = new Map<string, MatterRow[]>();
-    for (const { row, eff } of upcoming) {
-      const day = eff.slice(0, 10);
-      (groups.get(day) ?? groups.set(day, []).get(day)!).push(row);
-    }
-    return [...groups.entries()].map(([day, items]) => ({ day, items }));
-  }, [rows, today]);
-  // Locale-aware short weekday (native Intl, matches the app's existing today-view.tsx pattern) —
-  // UTC-pinned so the day label never rolls across a client-timezone midnight.
-  const dow = (isoDay: string) =>
-    new Intl.DateTimeFormat(locale === "hi" ? "hi-IN" : "en-IN", { weekday: "short", timeZone: "UTC" }).format(
-      new Date(`${isoDay}T00:00:00Z`),
-    );
 
   const active = parseSort(sp.get("sort") ?? undefined);
 
@@ -209,28 +177,26 @@ export function CasesTable({
 
   return (
     <>
-      {/* WO-331 EXACT-FIDELITY: the reference's density row is list-view-only, right-aligned, plain
-          text buttons (not a bordered pill group) — matched here; List/Agenda itself moved into the
-          toolbar's command row (cases-toolbar.tsx), same as the reference. */}
-      {view === "list" && (
-        <div className="mb-2.5 flex items-center justify-end gap-3" role="group" aria-label={t("density.aria")}>
-          {DENSITIES.map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => changeDensity(d)}
-              aria-pressed={density === d}
-              className={`text-[12px] capitalize transition-colors ${
-                density === d ? "font-medium text-ec-ink" : "text-ec-muted-ink hover:text-ec-ink-2"
-              }`}
-            >
-              {t(`density.${d}`)}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* WO-331 EXACT-FIDELITY: the reference's density row is right-aligned, plain text buttons
+          (not a bordered pill group) — matched here. WO-412 defect 1: the List/Agenda toggle this
+          comment used to reference is REMOVED (founder direction) — the list is the only view now,
+          so this row (and the table below) always renders, no `view` gate. */}
+      <div className="mb-2.5 flex items-center justify-end gap-3" role="group" aria-label={t("density.aria")}>
+        {DENSITIES.map((d) => (
+          <button
+            key={d}
+            type="button"
+            onClick={() => changeDensity(d)}
+            aria-pressed={density === d}
+            className={`text-[12px] capitalize transition-colors ${
+              density === d ? "font-medium text-ec-ink" : "text-ec-muted-ink hover:text-ec-ink-2"
+            }`}
+          >
+            {t(`density.${d}`)}
+          </button>
+        ))}
+      </div>
 
-      {view === "list" ? (
       <div className="ec-card stagger overflow-hidden">
         {/* WO-331 render-inspect @768: our real dashboard shell keeps a fixed 256px sidebar (unlike
             the reference's own AppShell), so the card's content area is narrower than the reference
@@ -258,10 +224,6 @@ export function CasesTable({
                   as an sr-only label so the column keeps a real accessible name. */}
               <th className="hidden w-20 px-3 py-3 text-right lg:table-cell">
                 <span className="sr-only">{t("th.synced")}</span>
-              </th>
-              {/* WO-407 E1 · the column picker trigger, right end of the header row. */}
-              <th className="w-10 px-3 py-3 text-right">
-                <ColumnPicker columns={columns} onChange={changeColumns} labels={columnLabels} />
               </th>
             </tr>
           </thead>
@@ -395,8 +357,6 @@ export function CasesTable({
                       />
                     </div>
                   </td>
-                  {/* Matches the header's trailing column-picker <th> so column counts stay aligned. */}
-                  <td className="w-10 px-3 py-3.5" />
                 </tr>
               );
             })}
@@ -404,45 +364,6 @@ export function CasesTable({
         </table>
         </div>
       </div>
-      ) : (
-        <div className="stagger space-y-6">
-          {agenda.map((g) => (
-            <section key={g.day}>
-              <div className="flex items-baseline gap-3 border-b border-ec-hair pb-2">
-                <h2 className="display text-[19px] uppercase text-ec-ink">
-                  {dow(g.day)} {formatCourtDate(g.day) ?? g.day}
-                </h2>
-                <span className="num font-mono text-[11px] uppercase tracking-[0.1em] text-ec-ink-3">
-                  {t("agenda.count", { n: g.items.length })}
-                </span>
-              </div>
-              <div className="divide-y divide-ec-hair">
-                {g.items.map((r) => {
-                  const rDetail = (r.detail ?? {}) as Record<string, unknown>;
-                  const rCaseNo = courtCaseNo(r.case_type, rDetail) ?? r.cnr;
-                  return (
-                    <Link
-                      key={r.id}
-                      href={`/dashboard/cases/${r.id}`}
-                      className="ec-row block py-3 transition-colors hover:bg-ec-bronze-tint/25"
-                    >
-                      <span className="display block truncate text-[15px] text-ec-ink hover:underline">
-                        {maskTitle(r.title, tcd("maskedTitle"))}
-                      </span>
-                      {(r.court || rCaseNo) && (
-                        <span className="num mt-0.5 block truncate font-mono text-[11px] text-ec-ink-3">
-                          {[r.court, rCaseNo].filter(Boolean).join(" · ")}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-          {agenda.length === 0 && <p className="text-[13px] text-ec-ink-3">{t("agenda.empty")}</p>}
-        </div>
-      )}
 
       {/* Floating bulk-action bar — appears on selection (shared WO-43 primitive). WO-331: retoned
           to the reference's light card (see components/selection/bulk-bar.tsx); this select's own

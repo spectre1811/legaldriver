@@ -8,22 +8,19 @@
 // internals with a tweak (the "never fork a shared primitive" rule), this is a separate, honest
 // page-specific control that speaks the SAME `page`/`per` URL contract (lib/paginate.ts) — so
 // nothing about the underlying pagination mechanism forks, only this page's rendering of it.
+// WO-412 defect 1: always renders now — the reference's List/Agenda toggle (and the `view` gate
+// this file used to read from cases-nav.ts) is REMOVED per founder direction; the list is the only
+// view, so pagination is unconditional again (still gated on `total === 0`, unchanged).
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { PAGE_SIZE_OPTIONS, pageCount } from "@/lib/paginate";
-import { useCasesNav } from "./cases-nav";
 
 export function CasesPagination({ page, perPage, total }: { page: number; perPage: number; total: number }) {
   const t = useTranslations("cases.pageNav");
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
-  // WO-331 EXACT-FIDELITY: the reference nests pagination INSIDE its `view === "list"` branch —
-  // Agenda has no pages, it's every upcoming hearing on the current fetched page. Matched here via
-  // the same shared `view` this page's Toolbar/Table already read, rather than page.tsx threading it
-  // through as a prop.
-  const { view } = useCasesNav();
 
   const totalPages = pageCount(total, perPage);
   const cur = Math.min(Math.max(1, page), totalPages);
@@ -38,7 +35,7 @@ export function CasesPagination({ page, perPage, total }: { page: number; perPag
   const gotoPage = (n: number) => go({ page: String(Math.min(totalPages, Math.max(1, n))) });
   const changePer = (n: number) => go({ per: String(n), page: "1" }); // resizing resets to page 1
 
-  if (total === 0 || view !== "list") return null;
+  if (total === 0) return null;
 
   return (
     <div

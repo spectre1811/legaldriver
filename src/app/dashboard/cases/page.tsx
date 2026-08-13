@@ -5,6 +5,7 @@ import { CasesToolbar } from "./cases-toolbar";
 import { CasesTable } from "./cases-table";
 import { CasesAttention } from "./cases-attention";
 import { CasesNavProvider, PendingDim } from "./cases-nav-provider";
+import { CasesColumnsProvider } from "./columns-provider";
 import { CasesPagination } from "./cases-pagination";
 import { fetchCasesPage, fetchViewCounts, fetchTierCounts, type CasesFilters } from "./cases-query";
 import type { SavedView } from "./cases-nav";
@@ -34,11 +35,13 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
 
   // WO-54 W2b: the facet option lists are scoped to the ACTIVE TIER (uses matter_tier_idx) so the
   // dropdowns adapt per tier — on the High Court tab you only see HC courts/case-types, etc.
-  // WO-331 EXACT-FIDELITY: trimmed to the 3 facets the reference's Filters drawer actually has
-  // (Court / Case type / Stage) — advocate_names/act_names/judge_names/status are no longer
-  // surfaced as editable facets (see cases-toolbar.tsx's file-level trade-off note); dropping them
-  // from the SELECT too so this stays a real, not just cosmetic, simplification.
-  let facetQuery = supabase.from("matter").select("court, case_type, stage").limit(1000);
+  // WO-331 EXACT-FIDELITY: trimmed to the facets the reference's Filters drawer actually has (Court /
+  // Case type / Stage) — act_names/judge_names/status are still not surfaced as editable facets (see
+  // cases-toolbar.tsx's file-level trade-off note), so those stay out of the SELECT. WO-412 E2:
+  // advocate_names rejoins the SELECT — the founder asked for a real Advocate filter and the query
+  // layer already supports it (`.overlaps("advocate_names", …)`, unchanged since WO-54/WO-57); only
+  // the option list + drawer control were missing.
+  let facetQuery = supabase.from("matter").select("court, case_type, stage, advocate_names").limit(1000);
   if (tier) facetQuery = facetQuery.eq("tier", tier);
   const [{ rows: matters, total }, { data: facetRows }, { data: viewRows }, viewCounts, tierCounts] = await Promise.all([
     fetchCasesPage(supabase, filters, page, per),
@@ -57,6 +60,9 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
   const courts = distinct("court");
   const caseTypes = distinct("case_type");
   const stages = distinct("stage");
+  // advocate_names is an array column (a case can have several advocates) — flatten before
+  // deduping, same shape the row itself already stores (cases-table.tsx joins it the same way).
+  const advocates = [...new Set((facetRows ?? []).flatMap((r) => (r.advocate_names ?? []) as string[]).filter(Boolean))].sort();
 
   const views: SavedView[] = (viewRows ?? []).map((v) => ({
     id: v.id,
@@ -85,8 +91,12 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
       </Reveal>
 
       {/* One shared filter-nav transition for every control below → PendingDim can dim the whole
-          results region while a filter change refetches (slice-2 "shared pending"). */}
+          results region while a filter change refetches (slice-2 "shared pending"). WO-412 E1 fix:
+          <CasesColumnsProvider> shares the persisted column-visibility state between the toolbar
+          (which now owns the add-columns trigger) and the table (which renders from it) — see
+          columns-provider.tsx for why that moved out of cases-table.tsx's own local state. */}
       <CasesNavProvider>
+      <CasesColumnsProvider>
         <CasesAttention counts={viewCounts} />
 
         {/* ?track=<CNR> — the login deep link (WO-50/WO-51): the toolbar's Add-case modal auto-opens
@@ -95,6 +105,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
           courts={courts}
           caseTypes={caseTypes}
           stages={stages}
+          advocates={advocates}
           tierCounts={tierCounts}
           views={views}
           autoCnr={sanitizeTrack(searchParams.track) ?? undefined}
@@ -120,6 +131,7 @@ export default async function CasesPage({ searchParams }: { searchParams: Search
             </div>
           )}
         </PendingDim>
+      </CasesColumnsProvider>
       </CasesNavProvider>
     </div>
   );

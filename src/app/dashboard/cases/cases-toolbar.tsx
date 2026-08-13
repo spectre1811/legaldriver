@@ -1,36 +1,55 @@
 "use client";
 
 // WO-331 EXACT-FIDELITY RECONCILE · Rebuilt to reproduce the reference's command row node-for-node
-// (design-mockups/iteration3/console/cases.tsx): search · List/Agenda · Court · Open/Disposed ·
-// Filters (badge) · Refresh all cases — one row, nothing else. The WO-147 toolbar's richer surface
-// (sort menu, save-view button + tab strip, active-filter chip row, advocate/act/judge/statuses
-// multi-selects) doesn't have a slot in the reference and is intentionally NOT reproduced inline —
-// see the file-level trade-off note below. Sorting still works via the table's own column headers
-// (cases-table.tsx SortHeader), which is how the reference sorts too (it has no sort control here).
+// (design-mockups/iteration3/console/cases.tsx): search · Court · Open/Disposed · Filters (badge) ·
+// Refresh all cases — one row, nothing else. The WO-147 toolbar's richer surface (sort menu,
+// save-view button + tab strip, active-filter chip row, act/judge/statuses multi-selects) doesn't
+// have a slot in the reference and is intentionally NOT reproduced inline — see the file-level
+// trade-off note below. Sorting still works via the table's own column headers (cases-table.tsx
+// SortHeader), which is how the reference sorts too (it has no sort control here).
+//
+// WO-412 defect 1: the reference's List/Agenda toggle is REMOVED per founder direction (a prior
+// pass wrongly just recolored it) — the list is the only view now; see cases-table.tsx/cases-nav.ts
+// for the corresponding removal of the `view` state + the Agenda render path.
+// WO-412 defect 2 (E2): Advocate rejoins the Filters sheet below, single(...)-style like Court/Case
+// type/Stage — it has a real backend path (cases-query.ts's `.overlaps("advocate_names", …)`,
+// unchanged since WO-331) that just had no UI since the WO-147/WO-331 trims.
+// WO-412 defect 3 (E1): the add-columns trigger (WO-407 ColumnPicker) moves HERE, into the
+// always-visible command row, next to Filters. Live render-inspect at 1440/1024/768 found the
+// trigger's real bug: it lived as the last <th> inside cases-table.tsx's own horizontally-scrolling
+// `overflow-x-auto` region, and its bounding box sat past the visible right edge at BOTH 1024 and
+// 768 (only 1440 happened to be wide enough for the table to fit with no overflow) — reachable only
+// by already knowing to scroll a table that gives no visible scroll affordance. See
+// columns-provider.tsx for how the persisted ColumnsState now reaches both this trigger and the
+// table it controls (they're siblings, so it can no longer be cases-table.tsx's own local state).
 //
 // Real functionality that had no 1:1 reference slot:
 //  · Saved views (name/save/delete) — the reference's Filters-drawer header has an (inert, in the
 //    mockup) Bookmark icon with no obvious other purpose; wired here to reveal the real saved-views
 //    panel, so the capability keeps a real, deliberate home instead of being deleted outright.
-//  · Advocate / Act / Judge / raw-status multi-selects, the sort dropdown, and the top saved-view
-//    pill strip — genuinely dropped from this surface (no reference slot to place them honestly
-//    without adding UI the reference doesn't have). Existing saved views that reference them still
-//    filter correctly (cases-query.ts is unchanged) — only the editing UI for those specific facets
-//    is gone. Flagged in the PR description for founder review, not silently reintroduced.
+//  · Act / Judge / raw-status multi-selects, the sort dropdown, and the top saved-view pill strip —
+//    genuinely dropped from this surface (no reference slot to place them honestly without adding UI
+//    the reference doesn't have). Existing saved views that reference them still filter correctly
+//    (cases-query.ts is unchanged) — only the editing UI for those specific facets is gone. Flagged
+//    in the PR description for founder review, not silently reintroduced.
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/icons";
 import { Combobox } from "@/components/combobox";
 import { useCasesNav, type SavedView } from "./cases-nav";
+import { useCasesColumns } from "./columns-provider";
 import { saveView, deleteView } from "./view-actions";
 import { Segmented } from "./segmented";
 import { AddCaseButton } from "./add-case-modal";
+import { ColumnPicker } from "@/components/cases/column-picker";
+import type { ColumnId } from "./columns";
 import type { TierCounts } from "./cases-query";
 
 type Props = {
   courts: string[];
   caseTypes: string[];
   stages: string[];
+  advocates: string[];
   tierCounts: TierCounts;
   views: SavedView[];
   autoCnr?: string;
@@ -42,9 +61,23 @@ export function CasesToolbar(props: Props) {
   const t = useTranslations("cases.toolbar");
   const tc = useTranslations("cases.console");
   const tt = useTranslations("cases.tierTabs");
-  const tvw = useTranslations("cases.view");
   const tviews = useTranslations("cases.views");
-  const { sp, setParam, view, setView } = useCasesNav();
+  // WO-412 E1 fix: same "cases"/"cases.console"/"cases.columns" label lookups cases-table.tsx uses
+  // for its column headers — must stay in sync (both render the SAME ColumnId set; a new column id
+  // needs a label added in both places, same as it already needs a header case in cases-table.tsx).
+  const tth = useTranslations("cases");
+  const columnLabels: Record<ColumnId, string> = {
+    case: tth("th.case"),
+    court: tth("th.court"),
+    next: tth("th.next"),
+    stage: tc("stage"),
+    advocate: tc("advocate"),
+    caseType: tc("caseType"),
+    filedOn: tth("columns.filedOn"),
+    lastSynced: tth("columns.lastSynced"),
+  };
+  const { sp, setParam } = useCasesNav();
+  const { columns, setColumns } = useCasesColumns();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [refreshOpen, setRefreshOpen] = useState(false);
 
@@ -83,7 +116,7 @@ export function CasesToolbar(props: Props) {
     { value: "disposed", label: tviews("disposed") },
   ];
 
-  const PANEL_FACETS = ["court", "case_type", "stage", "next"] as const;
+  const PANEL_FACETS = ["court", "case_type", "stage", "advocate", "next"] as const;
   const panelCount = PANEL_FACETS.reduce((n, k) => n + (sp.get(k) ? 1 : 0), 0);
 
   return (
@@ -113,12 +146,6 @@ export function CasesToolbar(props: Props) {
           </span>
         </form>
 
-        <Segmented
-          label={tvw("aria")}
-          value={view}
-          options={[{ value: "list", label: tvw("list") }, { value: "agenda", label: tvw("agenda") }]}
-          onChange={(v) => setView(v as "list" | "agenda")}
-        />
         <Segmented label={tt("label")} value={tier} options={tierOpts} onChange={(v) => setParam("tier", v)} />
         <Segmented label={tc("status")} value={status} options={statusOpts} onChange={(v) => setParam("status", v === "open" ? "" : v)} />
 
@@ -134,6 +161,11 @@ export function CasesToolbar(props: Props) {
             </span>
           )}
         </button>
+
+        {/* WO-412 E1 fix: the add-columns trigger, relocated here from the table's own trailing
+            header cell (see the file-level note above) — always visible, never dependent on
+            scrolling the table's overflow-x-auto region. */}
+        <ColumnPicker columns={columns} onChange={setColumns} labels={columnLabels} />
 
         {/* WO-331 · the reference's "Refresh all cases" control, rendered exactly as it shows it
             (a normal, clickable button — no disabled/"Soon" treatment grafted on). The ACTION stays
@@ -209,7 +241,7 @@ function RefreshAllModal({ onClose }: { onClose: () => void }) {
 // type, so this uses the shared searchable Combobox instead (the reference's own plain dropdown is
 // translated, not copied verbatim — see ui-frontend.md).
 function FiltersSheet({
-  courts, caseTypes, stages, views, onClose,
+  courts, caseTypes, stages, advocates, views, onClose,
 }: Props & { onClose: () => void }) {
   const t = useTranslations("cases.toolbar");
   const tc = useTranslations("cases.console");
@@ -266,6 +298,12 @@ function FiltersSheet({
           {single("court", tc("court"), tc("allCourts"), courts)}
           {single("case_type", tc("caseType"), tc("allTypes"), caseTypes)}
           {single("stage", tc("stage"), tc("allStages"), stages)}
+          {/* WO-412 E2: real backend path (cases-query.ts's `.overlaps("advocate_names", …)`, live
+              since WO-54/WO-57) — the drawer just had no control for it since WO-331 trimmed the
+              Filters sheet to the reference's 3 facets. Same single(...) pattern as Court/Case
+              type/Stage: sets one value; the query layer already treats it as any-of over the row's
+              advocate_names array, so a case with multiple advocates still matches on any one name. */}
+          {single("advocate", tc("advocate"), tc("allAdvocates"), advocates)}
           <div>
             <p className="ec-label mb-1.5">{tc("nextHearing")}</p>
             <Combobox
@@ -304,7 +342,9 @@ function SavedViewsPanel({ views }: { views: SavedView[] }) {
   const [name, setName] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
 
-  const VIEW_KEYS = ["q", "court", "case_type", "stage", "status", "next"] as const;
+  // WO-412 E2: "advocate" rejoins this snapshot list now that the drawer has a control for it again
+  // — otherwise saving a view with an advocate filter applied would silently drop that facet.
+  const VIEW_KEYS = ["q", "court", "case_type", "stage", "status", "advocate", "next"] as const;
   const currentQuery = () => {
     const out: Record<string, string | string[]> = {};
     for (const k of VIEW_KEYS) {
