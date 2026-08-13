@@ -3335,5 +3335,21 @@
       "muted": "We keep watching nightly. If a decision or a fresh listing appears, you will hear from us here.",
       "cta": "Check the case"
     }
+  },
+  "emailNotice": {
+    "category": {
+      "default": "Notice",
+      "deadline_reminder": "Deadline",
+      "notice_escalation": "Notice Escalation",
+      "cause_list_digest": "Cause List",
+      "case_update": "Case Update"
+    },
+    "why": {
+      "default": "You receive notices about matters you track on Mukadma.",
+      "deadline_reminder": "You receive deadline reminders for matters you track on Mukadma.",
+      "notice_escalation": "You receive notices when a matter you track is escalated.",
+      "cause_list_digest": "You receive the cause list for matters you track.",
+      "case_update": "You receive updates when a case you track changes on the record."
+    }
   }
 }

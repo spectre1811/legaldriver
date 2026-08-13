@@ -6,6 +6,7 @@
 // renderNotice fallback shell (escaping, disclaimer, text part, single CTA link).
 import { hearingWhenLabel, istDate, istFriendlyDate, composeCaseUpdate, appUrl, matterIdOf } from "@/lib/notify/email-render";
 import { renderNotice, renderDailyHearings, renderEmail } from "@/lib/email/templates";
+import { noticeCopyForKind } from "@/lib/notify/compose/fallback";
 import { maskTitle } from "@/lib/court/mask";
 
 let ok = true;
@@ -117,6 +118,17 @@ check("renderNotice has one CTA link + one footer settings link", (notice.html.m
 check("no leftover {ctaUrl}", !notice.html.includes("{ctaUrl}"));
 const noCta = renderNotice("Just a note", [{ text: "Body." }]);
 check("renderNotice without ctaUrl carries the footer settings link only", (noCta.html.match(/<a /g) ?? []).length === 1);
+
+// --- WO-414: renderNotice defaults to a neutral category/why — never "Deadline" ---
+check("renderNotice default category is the neutral 'Notice', not 'Deadline'", noCta.html.includes(">Notice<") && !noCta.html.includes(">Deadline<"));
+check("renderNotice default why-line is the neutral notices line", noCta.html.includes("You receive notices about matters you track on Mukadma."));
+
+// --- WO-414: per-kind fallback category/why mapping (a fallback labels itself by what it IS) ---
+check("deadline_reminder → Deadline + deadline why", noticeCopyForKind("deadline_reminder").category === "Deadline" && noticeCopyForKind("deadline_reminder").why === "You receive deadline reminders for matters you track on Mukadma.");
+check("notice_escalation → Notice Escalation + escalation why", noticeCopyForKind("notice_escalation").category === "Notice Escalation" && noticeCopyForKind("notice_escalation").why === "You receive notices when a matter you track is escalated.");
+check("cause_list_digest → Cause List + cause-list why", noticeCopyForKind("cause_list_digest").category === "Cause List" && noticeCopyForKind("cause_list_digest").why === "You receive the cause list for matters you track.");
+check("case_update → Case Update + case-update why", noticeCopyForKind("case_update").category === "Case Update" && noticeCopyForKind("case_update").why === "You receive updates when a case you track changes on the record.");
+check("unknown kind → neutral default (never Deadline)", noticeCopyForKind("bogus_kind").category === "Notice" && noticeCopyForKind("bogus_kind").why === "You receive notices about matters you track on Mukadma.");
 
 // --- matterIdOf: the dead-ref guard's parser (a row must be verifiable to be guarded) ---
 const U = "9cd1b8e6-4e2b-444c-ad93-9686eb23ef91";

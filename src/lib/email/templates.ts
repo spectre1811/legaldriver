@@ -447,6 +447,15 @@ ${opts.inner}
 
 export type RenderedEmail = { subject: string; html: string; text: string };
 
+// Fallback-notice category + why-line, keyed by notification kind (the gallery's fallbackNotice is
+// a deadline EXAMPLE, not a mandate to stamp "Deadline" on every fallback kind). EN-only catalog
+// copy (en.emailNotice) so a notice_escalation never labels itself "Deadline" and never promises a
+// subscription the reader does not have. Unknown kinds fall to the neutral default.
+const NOTICE_CAT = en.emailNotice.category as Record<string, string>;
+const NOTICE_WHY = en.emailNotice.why as Record<string, string>;
+const DEFAULT_NOTICE_CATEGORY = NOTICE_CAT.default;
+const DEFAULT_NOTICE_WHY = NOTICE_WHY.default;
+
 function footerText(whyText: string | null): string {
   const settings = `Notification settings: ${SETTINGS_URL}`;
   return [whyText ? `${whyText} · ${settings}` : settings].join("\n");
@@ -558,12 +567,20 @@ export function renderDailyHearings(rows: EmailData[], meta: { date: Slot; count
 
 /**
  * Generic branded notice — the ONE fallback for notification kinds without a dedicated template
- * (deadline_reminder, notice_escalation, legacy in-flight digest rows). Same shell, same
+ * (deadline_reminder, notice_escalation, cause_list_digest, legacy case_update). Same shell, same
  * disclaimer, same why-line + settings footer. Subject + lines are caller-provided REAL payload
- * data; nothing here fabricates content. Category "Deadline" per the gallery's fallbackNotice.
+ * data; nothing here fabricates content. `category` + `why` default to the neutral fallback pair
+ * ("Notice" / "You receive notices about matters you track on Mukadma."); the composer passes the
+ * honest per-kind pair (en.emailNotice) so a notice-escalation never labels itself "Deadline".
  */
-export function renderNotice(subject: string, lines: { text: string; role?: "lead" | "muted" }[], ctaUrl?: string, ctaLabel = "Open Mukadma"): RenderedEmail {
-  const WHY = "You receive deadline reminders for matters you track on Mukadma.";
+export function renderNotice(
+  subject: string,
+  lines: { text: string; role?: "lead" | "muted" }[],
+  ctaUrl?: string,
+  ctaLabel = "Open Mukadma",
+  category = DEFAULT_NOTICE_CATEGORY,
+  why = DEFAULT_NOTICE_WHY,
+): RenderedEmail {
   const kept = lines.filter((l) => l.text && l.text.trim());
   const blocks: Block[] = kept.map((l, i) => {
     const role = l.role ?? (i === 0 ? "lead" : "para");
@@ -573,7 +590,7 @@ export function renderNotice(subject: string, lines: { text: string; role?: "lea
 
   const inner = blocks.map((b) => b.html).join("\n");
   const preheader = kept.length ? esc(kept[0].text) : null; // the gallery fallback's "first payload line"
-  const html = shell({ category: "Deadline", preheader, inner, why: WHY }).replace(/\{ctaUrl\}/g, esc(ctaUrl ?? APP_ROOT));
+  const html = shell({ category, preheader, inner, why }).replace(/\{ctaUrl\}/g, esc(ctaUrl ?? APP_ROOT));
 
   const text = [
     subject,
@@ -581,7 +598,7 @@ export function renderNotice(subject: string, lines: { text: string; role?: "lea
     ...blocks.map((b) => (b.role === "cta" ? `${b.text}: ${ctaUrl}` : b.text)).filter(Boolean),
     "",
     "Not legal advice — verify against the official record.",
-    footerText(WHY),
+    footerText(why),
   ].join("\n");
   return { subject, html, text };
 }
