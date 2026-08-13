@@ -1,0 +1,1274 @@
+<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>Mukadma Console — Frontend &amp; UI/UX Deep Audit</title><style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{--paper:#faf9f7;--card:#fff;--band:#f1ece1;--line:#ddd5c6;--line2:#c4bba8;--ink:#1a1c1e;--ink2:#4a4a45;--ink3:#8b8578;--bronze:#78582b;--bronze2:#5e461f;--tint:#f7e7c8;--honey:#e8b563;--warn:#8c3b24;--ok:#2e6b45;--danger:#b03a2e;--highlight:#f6c23e}
+*{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--paper);background-image:radial-gradient(rgba(26,28,30,.055) .5px,transparent .5px);background-size:3px 3px;color:var(--ink);font-family:'Work Sans',ui-sans-serif,system-ui,sans-serif;font-size:15px;line-height:1.6}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px 120px}
+.display{font-family:'Fraunces',ui-serif,Georgia,serif;letter-spacing:-.01em;font-weight:600}
+.eyebrow{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
+
+header.hero{background:#1a1c1e;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.04) 0,rgba(255,255,255,.04) 1px,transparent 1px,transparent 7px);color:var(--paper);padding:56px 0 48px;margin-bottom:40px;border-bottom:1px solid var(--line)}
+header.hero .eyebrow{color:var(--honey)}
+.hero h1{font-size:42px;margin:14px 0 10px;line-height:1.05}
+.hero p{color:#c4bba8;max-width:72ch;font-size:16px}
+.hero .meta{margin-top:22px;display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#8b8578}
+.hero .meta b{color:var(--paper);font-weight:600}
+
+.lead{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 28px;margin:0 0 36px;box-shadow:0 1px 2px rgba(26,28,30,.04)}
+.lead h2{margin:.1em 0 .5em;font-size:20px}
+.lead p{color:var(--ink2)}
+.lead ul{margin:.4em 0 0;padding-left:1.2em}
+.lead li{margin:.32em 0}
+
+.toc{background:var(--band);border:1px solid var(--line);border-radius:12px;padding:20px 26px;margin:0 0 36px}
+.toc h3{font-size:16px;margin:0 0 10px;font-family:'IBM Plex Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--bronze2)}
+.toc ol{margin:0;padding-left:1.5em;column-count:2;column-gap:32px;line-height:2.1;font-size:14px}
+.toc a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line2)}
+.toc a:hover{color:var(--bronze);border-color:var(--bronze)}
+
+.group{margin:48px 0 0}
+.group>.gh{border-bottom:2px solid var(--ink);padding-bottom:8px;margin-bottom:12px;display:flex;align-items:baseline;gap:14px}
+.group>.gh .gn{font-family:'IBM Plex Mono',monospace;color:var(--bronze);font-size:15px}
+.group>.gh h2{font-size:25px;margin:0}
+.group>.gd{color:var(--ink2);font-size:14px;margin:6px 0 22px}
+
+.subgroup{margin:34px 0 0}
+.subgroup>.sh{border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:14px;display:flex;align-items:baseline;gap:10px}
+.subgroup>.sh h3{font-size:19px;margin:0;color:var(--ink)}
+.subgroup>.sh .sn{font-family:'IBM Plex Mono',monospace;color:var(--bronze);font-size:13px}
+
+.item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:16px 0;box-shadow:0 1px 2px rgba(26,28,30,.04)}
+.item .top{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.item .id{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--paper);background:var(--ink);border-radius:6px;padding:3px 8px;flex:none;white-space:nowrap}
+.item h4{font-size:17px;margin:0;flex:1 1 340px;line-height:1.3}
+.item .tags{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+.badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:6px;border:1px solid var(--line2);color:var(--ink2);background:var(--card);white-space:nowrap}
+.b-sev{background:#f3ddd5;border-color:#e2b6a8;color:var(--danger)}
+.b-pos{background:#fdf0d5;border-color:#f0d78c;color:#7d5e10}
+.b-pol{background:var(--tint);border-color:var(--honey);color:#4a3410}
+.b-str{background:#d5e8f0;border-color:#a0c8db;color:#2a5f7a}
+.b-rec{background:#e4efe7;border-color:#9dc3ab;color:#2e6b45}
+.b-gap{background:#f3e8f7;border-color:#c9a0db;color:#5a2a7a}
+
+.plan{margin:12px 0 0;color:var(--ink2);line-height:1.55}
+.plan code{font-family:'IBM Plex Mono',monospace;font-size:.88em;background:var(--band);padding:1px 5px;border-radius:4px;color:var(--bronze2)}
+.plan strong{color:var(--ink)}
+.plan ul{margin:.4em 0;padding-left:1.2em}
+.plan li{margin:.22em 0}
+
+.section-body{margin:8px 0 0;padding:8px 16px;background:var(--band);border-radius:8px;line-height:1.55}
+.section-body h5{font-size:12px;font-family:'IBM Plex Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--bronze2);margin:10px 0 6px}
+.section-body .rec{display:flex;gap:10px;padding:6px 0;align-items:flex-start;border-bottom:1px solid var(--line);font-size:14px}
+.section-body .rec:last-child{border-bottom:none}
+.section-body .rec-label{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ok);background:#e4efe7;padding:2px 8px;border-radius:4px;white-space:nowrap;flex:none;margin-top:1px}
+.section-body .rec-label.danger{color:var(--danger);background:#f3ddd5}
+.section-body .rec-label.warn{color:#7d5e10;background:#fdf0d5}
+
+.table-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);padding:8px 12px;text-align:left;border-bottom:2px solid var(--line);background:var(--band)}
+td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+td code{font-family:'IBM Plex Mono',monospace;font-size:.85em;background:var(--band);padding:1px 4px;border-radius:3px;color:var(--bronze2)}
+td.nowrap{white-space:nowrap}
+tr:hover td{background:color-mix(in oklab,var(--tint) 30%,transparent)}
+
+.verdict{background:var(--band);border-left:4px solid var(--bronze);padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0;font-size:14px}
+.verdict strong{color:var(--bronze2)}
+.verdict.danger{border-left-color:var(--danger);background:#fef5f3}
+.verdict.ok{border-left-color:var(--ok);background:#f3f9f5}
+
+.files{margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink3);border-top:1px dashed var(--line);padding-top:10px}
+.files b{color:var(--bronze2);font-weight:500}
+
+.foot{margin-top:64px;border-top:1px solid var(--line);padding-top:20px;color:var(--ink3);font-size:12.5px}
+
+@media(prefers-color-scheme:dark){:root{--paper:#16130e;--card:#1e1a14;--band:#252019;--line:#332c22;--line2:#4a3d2c;--ink:#e8e3d8;--ink2:#b0a590;--ink3:#6b6350;--tint:#3d2e1a}body{background-image:radial-gradient(rgba(232,227,216,.03) .5px,transparent .5px)}.item{box-shadow:0 1px 2px rgba(0,0,0,.2)}.section-body{background:rgba(255,255,255,.02)}td code{background:rgba(255,255,255,.04)}}
+@media(max-width:700px){.hero h1{font-size:28px}.wrap{padding:0 16px 80px}.toc ol{column-count:1}}
+</style>
+<header class=hero><div class=wrap>
+<div class=eyebrow>Mukadma · legaldriver · frontend audit</div>
+<h1 class=display>Console Frontend &amp; UI/UX Deep Audit</h1>
+<p>A systematic review of the Mukadma console's frontend — design system, component architecture, UX patterns, accessibility, and the 33-item fix plan from the founder review. Based on a full read of the legaldriver codebase (+ the four supporting repos), the Console Fix Plan, and established patterns.</p>
+<div class=meta><span><b>Codebase audit</b></span><span>legaldriver main, 979b514</span><span>Aug 11 2026</span><span><b>32</b> new findings beyond the plan</span></div>
+</div></header><div class=wrap>
+
+<div class=toc><h3>Contents</h3>
+<ol>
+<li><a href=#s1>Audit scope &amp; methodology</a>
+<li><a href=#s2>Screenshot attribution corrections</a>
+<li><a href=#s3>Design system audit</a>
+<li><a href=#s4>Component architecture gaps</a>
+<li><a href=#s5>Page-by-page UX deep-dive</a>
+<li><a href=#s6>Missing patterns &amp; anti-patterns</a>
+<li><a href=#s7>Feature-specific design specs</a>
+<li><a href=#s8>Accessibility audit</a>
+<li><a href=#s9>Performance considerations</a>
+<li><a href=#s10>Implementation architecture notes</a>
+<li><a href=#s11>Prioritized action items</a>
+<li><a href=#s12>Wireframing &amp; the Lovable → implement pipeline</a>
+</ol>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SECTION 1 ══════════════════════════════════════════════ -->
+
+<section class=group id=s1><div class=gh><span class=gn>01</span><h2 class=display>Audit scope &amp; methodology</h2></div>
+<div class=gd>What was examined and from what angle.</div>
+
+<div class=item>
+<div class=section-body>
+<p><strong>Codebase examined:</strong> <code>legaldriver/</code> (Next.js 14 App Router, TypeScript, Tailwind CSS, Supabase). The full <code>src/app/dashboard/</code> tree (72 .tsx files), all shared components in <code>src/components/</code>, the complete design token stack (<code>tokens.css</code> → <code>tailwind.config.ts</code> → <code>globals.css</code>), and the 33-item Console Fix Plan.</p>
+
+<p><strong>Angles of review:</strong></p>
+<ol style="margin:.3em 0;padding-left:1.2em">
+<li><strong>Design system</strong> — token consistency, naming, coverage gaps, legacy vs ec-* migration state, dark mode readiness</li>
+<li><strong>Component architecture</strong> — shared primitives (where they exist, where they don't), composition vs duplication, the modal/dialog/drawer family</li>
+<li><strong>UX patterns</strong> — four-state coverage (loading/empty/error/success), feedback loops, confirmation patterns, undo patterns, persistence strategy</li>
+<li><strong>Page-by-page</strong> — every dashboard surface: Cases, Case Detail, Documents, Clients, Onboarding, Settings, Notifications, Sidebar, Top Bar, Shell</li>
+<li><strong>Accessibility</strong> — keyboard nav, screen-reader labels, focus management, reduced motion, color contrast</li>
+<li><strong>Founder feedback synthesis</strong> — cross-references each of the 33 plan items with the codebase for accuracy, risk, and missing context</li>
+</ol>
+</div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ SECTION 2 ══════════════════════════════════════════════ -->
+
+<section class=group id=s2><div class=gh><span class=gn>02</span><h2 class=display>Screenshot attribution corrections</h2></div>
+<div class=gd>The plan document embeds 33 screenshots. Many are assigned to the wrong items — identical JPEG dimensions across completely different pages/states reveal duplicates.</div>
+
+<div class=item>
+<h4 style="margin-bottom:14px">Identical dimension groups — what's actually happening</h4>
+
+<div class=table-wrap>
+<table>
+<thead><tr><th>Group</th><th>Dimensions</th><th>Count</th><th>Items</th><th>Diagnosis</th></tr></thead>
+<tbody>
+<tr>
+<td class=nowrap><code>A</code></td>
+<td class=nowrap><code>1200 × 816</code></td>
+<td class=nowrap>18 items</td>
+<td>A1, A2, A4, A5, B1, B3, B5, B6, B7, B8, C2, C3, D2, E1, E2, E3, E4, F1</td>
+<td><strong>Duplicate</strong>. These span 6 different pages and 4 different states (Cases list, Documents list, Clients table, Filters drawer, ⌘K palette, Onboarding form, Case detail masthead). Cannot all be the same image. Likely a single Cases page screenshot copied 18 times.</td>
+</tr>
+<tr>
+<td class=nowrap><code>B</code></td>
+<td class=nowrap><code>280 × 1200</code></td>
+<td class=nowrap>4 items</td>
+<td>A3, D4, D5, D6</td>
+<td><strong>Duplicate</strong>. A3 should show a document viewer panel (slide-over from right). D4/D5 should show the sidebar. D6 should show the Overview page. Likely a single sidebar screenshot copied 4 times.</td>
+</tr>
+<tr>
+<td class=nowrap><code>C</code></td>
+<td class=nowrap><code>671-670 × 1200</code></td>
+<td class=nowrap>2 items</td>
+<td>D1, F3</td>
+<td><strong>Possibly correct</strong> — both are portrait-orientation elements (case detail right rail, onboarding "What you get"). But D1 should show Deadlines above Documents; F3 should show calendar + morning brief. Verify.</td>
+</tr>
+<tr>
+<td class=nowrap><code>D</code></td>
+<td class=nowrap><code>1200 × 695-703</code></td>
+<td class=nowrap>2 items</td>
+<td>C5, F5</td>
+<td><strong>Possibly correct</strong> — C5 should show notification chips, F5 should show the "not required" cases table element. Both are mid-page sections. Verify.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div class=item>
+<h4 style="margin-bottom:14px">Per-item screenshot classification</h4>
+<p style="color:var(--ink2);margin:0 0 12px">What each screenshot <strong>should</strong> capture, the page/route it should come from, and what state it should be in.</p>
+
+<div class=table-wrap>
+<table>
+<thead><tr><th style=width:50>ID</th><th>Correct page</th><th>Route / component</th><th>State to capture</th></tr></thead>
+<tbody>
+<tr><td>A1</td><td><b>Cases list</b></td><td><code>/dashboard/cases</code></td><td>Top bar visible, cursor over "+ New case" button, console open showing no event listener fired</td></tr>
+<tr><td>A2</td><td><b>Add-by-CNR modal</b></td><td><code>add-case-modal.tsx</code></td><td>Modal open AFTER a successful CNR addition — green confirmation AND modal still visible</td></tr>
+<tr><td>A3</td><td><b>Document viewer panel</b></td><td><code>doc-viewer-panel.tsx</code></td><td>Panel open on Documents page — NO backdrop dim, no shadow, flat against content</td></tr>
+<tr><td>A4</td><td><b>Documents search</b></td><td><code>/dashboard/documents?q=MPHC01...</code></td><td>CNR pasted in search bar, zero results, "no matches" message</td></tr>
+<tr><td>A5</td><td><b>Filters drawer</b></td><td><code>cases-toolbar.tsx</code></td><td>Filters drawer open — flat panel with no elevation/shadow, reads as detached</td></tr>
+<tr><td>B1</td><td><b>Any page footer</b></td><td>Dashboard shell</td><td>Footer visible with "Not legal advice — verify against the official court record" text</td></tr>
+<tr><td>B2</td><td><b>Case detail page</b></td><td><code>/dashboard/cases/[id]</code></td><td>"Public court record · Synced" stamp visible in case file main column</td></tr>
+<tr><td>B3</td><td><b>Documents page</b></td><td><code>/dashboard/documents</code></td><td>Footer area showing "Files are stored in a private bucket..." text</td></tr>
+<tr><td>B4</td><td><b>Sidebar</b></td><td><code>nav.tsx</code></td><td>Sidebar with honey count badge on Inbox row</td></tr>
+<tr><td>B5</td><td><b>Documents header</b></td><td><code>/dashboard/documents</code></td><td>Dark masthead with honey count pill next to "Documents" title</td></tr>
+<tr><td>B6</td><td><b>⌘K palette</b></td><td><code>command-palette.tsx</code></td><td>Palette open, "Draft a document" listed as a quick action</td></tr>
+<tr><td>B7</td><td><b>Onboarding form</b></td><td><code>/dashboard/onboarding</code></td><td>Bar-ID field with long "Enter your full State Bar Council enrolment number..." helper text below</td></tr>
+<tr><td>B8</td><td><b>Cases table row hover</b></td><td><code>/dashboard/cases</code></td><td>Row hovered, showing "Coming soon / Add note" icon among row actions</td></tr>
+<tr><td>C1</td><td><b>Cases attention strip</b></td><td><code>cases-attention.tsx</code></td><td>Stat numbers (11 / 88 / 282) rendered lighter than prototype's bold serif</td></tr>
+<tr><td>C2</td><td><b>Cases toolbar</b></td><td><code>cases-toolbar.tsx</code></td><td>List / Agenda segmented control with uneven typography weights</td></tr>
+<tr><td>C3</td><td><b>Court record section</b></td><td><code>case-record.tsx</code></td><td>Labels (CASE TYPE, REG. NO., etc.) reading too faint</td></tr>
+<tr><td>C4</td><td><b>Case masthead source line</b></td><td><code>/dashboard/cases/[id]</code></td><td>"Source: the court record" label + timestamp — label too faint</td></tr>
+<tr><td>C5</td><td><b>Case right rail — notifications card</b></td><td><code>/dashboard/cases/[id]</code></td><td>Notification chips "EM · CASE UPDATE" / "IN · HEARING"— abbreviations unreadable</td></tr>
+<tr><td>D1</td><td><b>Case right rail</b></td><td><code>/dashboard/cases/[id]</code></td><td>Right rail showing Deadlines section ABOVE Documents section (wrong order)</td></tr>
+<tr><td>D2</td><td><b>Case masthead</b></td><td><code>/dashboard/cases/[id]</code></td><td>Showing duplicate court line: "4th ADDL CIVIL JUDGE & JMFC" appears twice</td></tr>
+<tr><td>D3</td><td><b>Case parties section</b></td><td><code>/dashboard/cases/[id]</code></td><td>Party cards with advocate name in muted mono below party name, no "represented by" label</td></tr>
+<tr><td>D4</td><td><b>Sidebar</b></td><td><code>nav.tsx</code></td><td>Full sidebar — NO collapse/hide button or resize handle</td></tr>
+<tr><td>D5</td><td><b>Sidebar</b></td><td><code>nav.tsx</code></td><td>Nav items list — "Judge & Advocate Search" truncated, Onboarding at wrong position</td></tr>
+<tr><td>D6</td><td><b>Overview / console landing</b></td><td><code>/dashboard</code></td><td>First-time user signed in, landing on Overview page (TodayView)</td></tr>
+<tr><td>E1</td><td><b>Cases table header</b></td><td><code>cases-table.tsx</code></td><td>Table header area — where a column-config icon button should go</td></tr>
+<tr><td>E2</td><td><b>Filters drawer</b></td><td><code>cases-toolbar.tsx</code></td><td>Filters drawer open — NO Advocate filter combobox present</td></tr>
+<tr><td>E3</td><td><b>Clients page</b></td><td><code>/dashboard/clients</code></td><td>Client names truncated with no word-wrap, no bulk select checkboxes</td></tr>
+<tr><td>E4</td><td><b>Documents page</b></td><td><code>/dashboard/documents</code></td><td>Full documents page — Trash icon in a row (not prominent), no filter/sort controls</td></tr>
+<tr><td>F1</td><td><b>Cases table row</b></td><td><code>/dashboard/cases</code></td><td>Row actions showing "View cause list" button (for context of keep/remove decision)</td></tr>
+<tr><td>F2</td><td><b>Case actions menu</b></td><td><code>case-actions.tsx</code></td><td>"..." menu open — showing Add to calendar / Share / Export as PDF (all "SOON")</td></tr>
+<tr><td>F3</td><td><b>Onboarding "What you get"</b></td><td><code>onboarding-ui.tsx</code></td><td>Mini calendar + morning brief preview teasers</td></tr>
+<tr><td>F4</td><td><b>Landing page</b></td><td><code>/</code>(root landing)</td><td>Homepage with the "m" mark/logo — showing what the founder pointed at</td></tr>
+<tr><td>F5</td><td><b>Cases table element</b></td><td><code>/dashboard/cases</code></td><td>Whichever element the founder marked "not required" (Synced column / relative labels / extra icons)</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div class=verdict><strong>Recommendation:</strong> Re-capture all 33 screenshots with the correct page+state before building anything. The current screenshots provide zero visual reference for implementation. Priority: capture A1-A5 and E1-E4 first (highest-risk items where visual correctness matters most). The B-group removals can be verified by diff after the fact.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ SECTION 3 ══════════════════════════════════════════════ -->
+
+<section class=group id=s3><div class=gh><span class=gn>03</span><h2 class=display>Design system audit</h2></div>
+<div class=gd>Token health, consistency gaps, dark mode readiness, and migration debt.</div>
+
+<div class=subgroup><div class=sh><span class=sn>3.1</span><h3>Token architecture — what's excellent</h3></div>
+
+<div class=item>
+<div class=section-body>
+<p>The <code>tokens.css</code> → <code>tailwind.config.ts</code> → <code>globals.css</code> pipeline is well-architected:</p>
+<ul>
+<li><strong>Single source of truth</strong>: all color values are CSS custom properties (no hex in Tailwind config)</li>
+<li><strong>Named for intent, not value</strong>: <code>--ec-honey</code>, not <code>--yellow-500</code>. Good.</li>
+<li><strong>4px spacing grid</strong>: <code>--s1</code> through <code>--s24</code>, consistent</li>
+<li><strong>3-class elevation system</strong>: <code>--e1</code> (cards), <code>--e2</code> (dropdowns), <code>--e3</code> (deep modal)</li>
+<li><strong>Three font stacks</strong>: Work Sans (UI), Fraunces (display), IBM Plex Mono (data)</li>
+<li><strong>Pre-mapped Tailwind classes</strong>: <code>text-ec-ink</code>, <code>bg-ec-bronze-tint</code>, <code>shadow-ec-2</code></li>
+</ul>
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>3.2</span><h3>Token gaps — what's missing</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>GAP 1 — No text-warning / text-success tokens</h5>
+<div class=rec><span class=rec-label>Missing</span><div>The palette defines <code>--success</code> (#2e6b45) and <code>--warn</code> (#8c3b24) but only <code>bg-ec-success</code> and <code>bg-ec-warn</code> background tokens exist. There's no <code>text-ec-success</code> or <code>text-ec-warn</code> for inline text messaging. Currently uses ad-hoc text classes like <code>text-ec-danger</code> (which maps to a different color).</div></div>
+
+<h5>GAP 2 — No disabled-state tokens</h5>
+<div class=rec><span class=rec-label>Missing</span><div>No token for disabled text, disabled background, or disabled border. Components use ad-hoc opacity hacks (<code>opacity-40</code>, <code>opacity-50</code>) inconsistently. A proper <code>--ec-disabled-text</code> and <code>--ec-disabled-bg</code> would ensure consistent disabled states.</div></div>
+
+<h5>GAP 3 — No overlay/backdrop opacity tokens</h5>
+<div class=rec><span class=rec-label>Missing</span><div>The plan's A3 specifically calls for <code>bg-ink/40 backdrop-blur-sm</code> on the document viewer. But different modals use <code>bg-ec-ink/40</code> (add-case-modal), <code>bg-ink/30</code> (command palette), and <code>bg-ec-ink/45</code> (doc-viewer-panel). No single <code>--ec-overlay-opacity</code> or <code>--ec-backdrop</code> token exists.</div></div>
+
+<h5>GAP 4 — Incomplete focus-ring token deployment</h5>
+<div class=rec><span class=rec-label>Inconsistent</span><div>Some components use <code>focus-visible:ring-ec-honey</code>, others use <code>focus-visible:ring-ec-indigo</code> (which shouldn't exist—indigo was killed in the design refresh). The global CSS has one focus ring: <code>2px solid var(--honey)</code>, but components override it inconsistently.</div></div>
+
+<h5>GAP 5 — No transition-duration tokens</h5>
+<div class=rec><span class=rec-label>Missing</span><div>The token file defines <code>--motion-fast: 120ms</code> and <code>--motion-base: 150ms</code>, but no Tailwind mapping exists. Components hardcode durations: <code>duration-200</code>, <code>duration-150</code>, <code>duration-300</code>.</div></div>
+
+<h5>GAP 6 — Legacy token bleeding</h5>
+<div class=rec><span class=rec-label>Debt</span><div>Settings pages still use legacy token names (<code>border-line</code>, <code>text-ink-faint</code>, <code>bg-brand-50</code>, <code>btn-primary</code>). The command palette uses <code>bg-ink/30</code> and <code>bg-surface</code>. These should all migrate to <code>ec-*</code> equivalents.</div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>3.3</span><h3>Dark mode readiness</h3></div>
+
+<div class=item>
+<div class=section-body>
+<p>The token file has NO <code>@media (prefers-color-scheme: dark)</code> block defining dark values. The plan's own HTML has one but the actual app doesn't. The app relies on <code>bg-ec-paper</code> etc. which are defined in <code>:root</code> only (light).</p>
+
+<div class=verdict danger><strong>Finding:</strong> The console has zero dark mode support. The <code>mk-engraved</code> masthead is already dark-ink-on-paper; the rest of the UI would invert poorly without explicit dark token definitions. This is a non-trivial undertaking and should be a tracked work order, not an incidental fix.</div>
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>3.4</span><h3>Typography consistency issues</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>ISSUE — Inconsistent label treatment</h5>
+<div class=rec><span class=rec-label>Bug</span><div>Three competing label patterns exist simultaneously: <code>.ec-label</code> (mono, small-caps, tracking), <code>.eyebrow</code> (same but with different spacing), and raw <code>text-xs font-mono uppercase tracking-wider text-ec-ink-3</code> inline classes. Pick one and enforce it.</div></div>
+
+<h5>ISSUE — Stat number rendering</h5>
+<div class=rec><span class=rec-label>C1</span><div>The <code>cases-attention.tsx</code> renders stat numbers with <code>.num</code> class (mono). The prototype uses bold display serif. This is the C1 fix — but the deeper issue is that <code>.num</code> is mono-everywhere. A <code>.stat</code> class (bold Fraunces, tabular figures, larger size) should exist for this use case.</div></div>
+
+<h5>ISSUE — Devanagari tracking reset</h5>
+<div class=rec><span class=rec-label>OK</span><div><code>html[lang="hi"]</code> resets letter-spacing on tracked labels. Good. But this only works when the lang attribute is set to <code>hi</code> — not when individual Hindi strings appear in English context (like the <code>मुक़दमा</code> wordmark).</div></div>
+
+</div>
+</div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ SECTION 4 ══════════════════════════════════════════════ -->
+
+<section class=group id=s4><div class=gh><span class=gn>04</span><h2 class=display>Component architecture gaps</h2></div>
+<div class=gd>Shared primitives that exist, primitives that should exist but don't, and architectural debt.</div>
+
+<div class=subgroup><div class=sh><span class=sn>4.1</span><h3>The modal/dialog/drawer family — a mess</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<p>The app has <strong>three different modal implementations</strong> that don't share code:</p>
+
+<div class=table-wrap>
+<table>
+<thead><tr><th>Component</th><th>Mechanism</th><th>Features</th><th>Missing</th></tr></thead>
+<tbody>
+<tr>
+<td class=nowrap><code>components/ui/dialog.tsx</code></td>
+<td><code>createPortal</code>, Esc, overlay-click, scroll-lock, transition</td>
+<td>Shared, reusable, good.</td>
+<td>Focus trap, labelledBy enforcement, <code>&lt;dialog&gt;</code> element</td>
+</tr>
+<tr>
+<td class=nowrap><code>add-case-modal.tsx</code></td>
+<td>Hand-rolled inline (no portal)</td>
+<td>Esc, overlay-click, scroll-lock</td>
+<td>Doesn't use the shared <code>Dialog</code>, duplicates scroll-lock logic, no backdrop-blur, no focus trap</td>
+</tr>
+<tr>
+<td class=nowrap><code>case-detail-drawer.tsx</code></td>
+<td>Side-panel (no portal)</td>
+<td>Full-height slide-in</td>
+<td>No backdrop, no Esc handling, no scroll-lock</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class=verdict><strong>Recommendation:</strong> Before building A3 (document viewer backdrop), refactor <code>add-case-modal.tsx</code> to use the shared <code>Dialog</code>. Then fix the shared <code>Dialog</code> to support a <code>variant="drawer"</code> (slides in from right, used by filters drawer, case detail drawer, document viewer panel). One component, three variants: <code>modal</code> | <code>drawer</code> | <code>sheet</code>. This reduces future bugs to one surface.</div>
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>4.2</span><h3>No global toast system</h3></div>
+
+<div class=item>
+<div class=section-body>
+<p>The ONLY toast in the entire app is <code>undo-toast.tsx</code> — a single-purpose component for the bulk selection undo pattern. There is <strong>no shared success/error/info toast provider</strong>.</p>
+
+<p>Where the app currently shows feedback:</p>
+<ul>
+<li>Add-by-CNR success → inline green banner in the modal (A2 complains about this)</li>
+<li>Profile save → inline feedback banner in the form</li>
+<li>Client delete → inline ConfirmDelete with router.refresh</li>
+<li>Stage change → UndoToast (only toasts that exist)</li>
+<li>Case delete → no feedback beyond router navigation</li>
+<li>Document actions → no feedback</li>
+</ul>
+
+<div class=verdict><strong>Recommendation:</strong> Build a minimal <code>ToastProvider</code> + <code>useToast()</code> hook before any of the E-group work. The pattern: <code>toast.success('Case deleted')</code>, <code>toast.error('Failed to sync')</code>. Render at <code>z-[100]</code>, fixed bottom-right, auto-dismiss 6s, stacked. This is ~80 lines. Every feature that mutates data (E1-E4) will need it.</div>
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>4.3</span><h3>Confirmation dialog — good foundation, missing variants</h3></div>
+
+<div class=item>
+<div class=section-body>
+<p>The <code>ConfirmDelete</code> and <code>DeleteButton</code> components follow a consistent two-step pattern. But they only cover deletion.</p>
+
+<p>E3 needs "bulk delete with cascading consequences" warning. E4 needs "move to trash" confirm. F2's "..." menu has a Delete option with no confirmation at all (ref: <code>case-actions.tsx</code> line 128).</p>
+
+<div class=verdict><strong>Recommendation:</strong> Extend the two-step pattern into a generic <code>ConfirmAction</code> component: <code>title</code>, <code>description</code>, <code>confirmLabel</code>, <code>variant: 'danger' | 'warning' | 'default'</code>, <code>children</code> (for rich consequences like "This client has 12 linked cases"). Reuse for case delete, client delete, document delete, bulk delete.</div>
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>4.4</span><h3>Persistence strategy — three-way split</h3></div>
+
+<div class=item>
+<div class=section-body>
+<p>Three persistence mechanisms exist with no unifying strategy:</p>
+<ul>
+<li><strong>Cookie:</strong> Density toggle (<code>DENSITY_COOKIE</code> in <code>cases-table.tsx</code>)</li>
+<li><strong>URL params:</strong> Sort, filter, page, per-page, view (list/agenda), trash toggle</li>
+<li><strong>Server-side:</strong> Notification prefs, profile settings</li>
+<li><strong>E1 proposes:</strong> Cookie for column config</li>
+<li><strong>D4 proposes:</strong> "Per user" for sidebar width</li>
+</ul>
+
+<div class=verdict><strong>Recommendation:</strong> Cookies are wrong for column config (4KB limit, sent on every HTTP request). Use <code>localStorage</code> for UI preferences (density, sidebar width, column config) with a <code>usePersistedState</code> hook that wraps <code>useState</code> + <code>localStorage</code> get/set. URL params remain correct for shareable filter/sort/page state. Server-side remains correct for auth-critical prefs.</div>
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>4.5</span><h3>Missing shared components that every E-group feature needs</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<div class=table-wrap>
+<table>
+<thead><tr><th>Component</th><th>Needed by</th><th>Priority</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td class=nowrap><code>ToastProvider</code></td><td>E1, E2, E3, E4, A2</td><td><span class=badge style=background:var(--danger);color:#fff;border-color:var(--danger)>Critical</td><td>Every mutation action in the plan needs feedback. Build first.</td></tr>
+<tr><td class=nowrap><code>ConfirmAction</code></td><td>E3, E4, F2</td><td><span class=badge style=background:var(--warn);color:var(--paper);border-color:var(--warn)>High</td><td>Generalize the two-step pattern. Handles cascade warnings.</td></tr>
+<tr><td class=nowrap><code>ColumnPicker</code></td><td>E1</td><td><span class=badge>Medium</td><td>Checkbox popover with drag-to-reorder. Persists to localStorage.</td></tr>
+<tr><td class=nowrap><code>ResizablePanel</code></td><td>D4</td><td><span class=badge>Medium</td><td>Drag handle + width persistence. CSS-only if possible, lightweight JS if not.</td></tr>
+<tr><td class=nowrap><code>Combobox</code> (exists)</td><td>E2</td><td><span class=badge>Done</td><td>Already in <code>src/components/combobox/</code>. E2 wires it to advocate filter.</td></tr>
+<tr><td class=nowrap><code>BulkBar</code> (exists)</td><td>E3, E4</td><td><span class=badge>Done</td><td>Already in <code>src/components/selection/</code>. E3/E4 wire it to clients/docs.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ SECTION 5 ══════════════════════════════════════════════ -->
+
+<section class=group id=s5><div class=gh><span class=gn>05</span><h2 class=display>Page-by-page UX deep-dive</h2></div>
+<div class=gd>Every dashboard surface examined for the four-state pattern (loading → empty → error → success), interaction pitfalls, and adherence to plan items.</div>
+
+<div class=subgroup><div class=sh><span class=sn>5.1</span><h3>Cases list (<code>/dashboard/cases</code>)</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>Four-state coverage</h5>
+<div class=rec><span class=rec-label>OK</span><div>Loading: shimmer skeleton (<code>cases/loading.tsx</code>). Empty: <code>EmptyState</code> with upload CTAs. Error: dashboard error boundary. Success: list/agenda table.</div></div>
+
+<h5>A1 — "+ New case" button wiring</h5>
+<div class=rec><span class=rec-label danger>Bug</span><div>Confirmed: <code>top-bar.tsx</code> line 225 dispatches <code>new CustomEvent('mk:new-case')</code>. The cases page listener is in <code>add-case-modal.tsx</code> via a <code>useEffect</code>, but this only fires when the add-case-modal component is mounted. On the cases list page, the modal may not be pre-mounted, so the event is a no-op. The plan's fix (route to <code>/dashboard/cases?add=1</code>) is correct.</div></div>
+
+<h5>A2 — Add-by-CNR modal persistence</h5>
+<div class=rec><span class=rec-label danger>Bug</span><div>Confirmed: <code>add-case-form.tsx</code> runs a server action. On success, it sets state feedback but never closes the modal or navigates. The useEffect at line 103 watches for a redirect flag, but only for manual create — the CNR flow doesn't trigger it.</div></div>
+
+<h5>A5 — Filters drawer shadow</h5>
+<div class=rec><span class=rec-label danger>Bug</span><div>Confirmed: <code>cases-toolbar.tsx</code> FiltersSheet renders at line 290. The drawer panel uses <code>bg-ec-card border-l border-ec-line</code> with <code>shadow-ec-2</code> — BUT <code>shadow-ec-2</code> maps to <code>var(--e2)</code> which is a subtle dropdown shadow (<code>0 4px 12px rgba(26,28,30,.06)</code>). For a full-height right-side drawer, this is visually indistinguishable from flat. Need <code>shadow-ec-3</code> or an explicit <code>shadow-[-12px_0_32px_rgba(26,28,30,.12)]</code>.</div></div>
+
+<h5>C2 — List/Agenda tabs uneven</h5>
+<div class=rec><span class=rec-label>Polish</span><div>The segmented control at <code>cases-toolbar.tsx</code> line 78 uses <code>text-sm font-medium</code>. The prototype uses Freight/mono small-caps. The info is correct; the implementation detail is tweaking font-family and tracking.</div></div>
+
+<h5>Missing — No sortable column indicators</h5>
+<div class=rec><span class=rec-label gap>Gap</span><div>The Cases table has sort by clicking column headers (<code>SortHeader</code> with ascending/descending caret). The Documents page (E4) mentions "no proper filter, sort or anything at all." Before building Documents sort, standardize on one sortable-table pattern from Cases and extract a shared <code>SortableTableHeader</code>.</div></div>
+
+<h5>Missing — Inline editing of hearing date</h5>
+<div class=rec><span class=rec-label gap>Gap</span><div>The agenda view shows hearing dates but no way to edit them inline. The prototype shows this capability. Not in the plan — worth adding.</div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>5.2</span><h3>Case detail (<code>/dashboard/cases/[id]</code>)</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>Architecture note</h5>
+<div class=rec><span class=rec-label>Arch</span><div>675-line server component fetching 15+ parallel queries. This is the most complex page. The right rail has 7 sections. Any reordering (D1) or style changes (C3/C4/C5/D2/D3) touch a single file: <code>page.tsx</code>.</div></div>
+
+<h5>D1 — Documents above Deadlines</h5>
+<div class=rec><span class=rec-label>Layout</span><div>Currently renders: Client → Notifications → Deadlines → Documents → Inbox → Billing → Activity. The plan says Documents above Deadlines. Simple JSX reorder. 5-minute fix.</div></div>
+
+<h5>D2 — Duplicate court line</h5>
+<div class=rec><span class=rec-label danger>Bug</span><div>The masthead at line 180 shows <code>{case.court_name} · {case.coram}</code>. The court-record section also renders <code>{case.court_name}</code>. If <code>court_name</code> and <code>coram</code> are the same string (common in eCourts data where the judge name IS the court designation), it prints twice. The plan is correct: remove the duplicate from the masthead.</div></div>
+
+<h5>D2 — "← All cases" placement</h5>
+<div class=rec><span class=rec-label>Layout</span><div>Currently a small text link at the top-left of the masthead (<code>page.tsx</code> line 175). The plan says to make it more prominent. Options: (a) breadcrumb in top bar (already shows "Home › Cases"), (b) a button-style back link above the masthead, (c) a sidebar highlight. <strong>Recommendation:</strong> Option (b) — a <code>ec-btn ec-btn-ghost</code> with left arrow icon above the masthead, matching the Documents Trash back-link pattern.</div></div>
+
+<h5>D3 — Parties & Advocates labeling</h5>
+<div class=rec><span class=rec-label>Layout</span><div>Currently renders: <code>party.name</code> (display serif) + <code>party.advocate?.name</code> (mono, muted). No "represented by" connector. The fix: add <code>represented by {advocate.name}</code> with a visual connector (small text + bronze tint label).</div></div>
+
+<h5>C5 — Notifications chips unreadable</h5>
+<div class=rec><span class=rec-label>Polish</span><div>The chips "EM · CASE UPDATE" and "IN · HEARING" use abbreviated channel names. Fix: spell out to "Email" and "In-app", or use icons (envelope, bell) with full text. Small redesign of the notification card needed.</div></div>
+
+<h5>B2 — Registrar stamp removal</h5>
+<div class=rec><span class=rec-label>Remove</span><div>The "Public court record · Synced" stamp at <code>page.tsx</code> line 380-400. Removes cleanly. The freshness info is preserved in the source line above.</div></div>
+
+<h5>F2 — "..." menu SOON items</h5>
+<div class=rec><span class=rec-label>Decision</span><div><code>case-actions.tsx</code> lines 165-190 show three disabled items: Add to calendar, Share, Export as PDF — all with "SOON" labels. If the founder removes them, the menu may have only Delete remaining. At that point, consider replacing the "..." menu with a direct Delete button (+ confirm).</div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>5.3</span><h3>Documents page (<code>/dashboard/documents</code>)</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>A3 — Document viewer flaws</h5>
+<div class=rec><span class=rec-label danger>Bug</span><div><code>doc-viewer-panel.tsx</code> already HAS a backdrop (<code>bg-ec-ink/45 backdrop-blur-sm</code>) and shadow (<code>shadow-ec-2</code>). The plan says it doesn't. Two possibilities: (a) the component was fixed but not deployed, (b) the backdrop is there but the z-index clash makes it render behind the page. Need to verify on the live deployment. If the code is correct but the z-layering is broken, the fix is <code>z-[60]</code> → <code>z-[70]</code>, not rewriting the component.</div></div>
+
+<h5>A4 — CNR search returns nothing</h5>
+<div class=rec><span class=rec-label>Bug</span><div>The documents page search uses PostgreSQL FTS via <code>textSearch()</code>. CNRs are stored in the <code>matter.cnr</code> column but the FTS index may not include joined table columns. The plan's fix (extend query to match linked matter's CNR) is correct but underspecified: it needs a specific SQL join in <code>documents-query.ts</code>.</div></div>
+
+<h5>E4 scope — too large for one item</h5>
+<div class=rec><span class=rec-label warn>Risk</span><div>E4 lists 6 sub-items: (1) Trash icon relocation, (2) word-wrap fix, (3) filter controls, (4) sort controls, (5) bulk actions, (6) CNR search fix. This is 3-4 PRs worth of work. Split into: E4a (fixes: word-wrap + CNR search + remove count/storage note → same PR as A4+B3+B5), E4b (filter+sort+trash), E4c (bulk actions), E4d (viewer fix → same PR as A3).</div></div>
+
+<h5>B3/B5 — Storage note + count removal</h5>
+<div class=rec><span class=rec-label>Remove</span><div>Both are one-liner deletions in <code>documents/page.tsx</code>. Combine with A4 in one PR.</div></div>
+
+<h5>Missing — Upload progress</h5>
+<div class=rec><span class=rec-label gap>Gap</span><div>The Documents page has an upload zone but no upload progress indicator. For a "proper, elegant document workspace" (E4), this needs: drag-and-drop zone + file preview + upload progress bar + success/error toast.</div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>5.4</span><h3>Clients page (<code>/dashboard/clients</code>)</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>E3 gaps identified</h5>
+<div class=rec><span class=rec-label>Bug</span><div>Client names are rendered with <code>truncate max-w-[200px]</code> (line 107). Long names like "M/S. Shree Ram Trading & Investment Consultancy Pvt. Ltd." get cut. The fix needs to decide: (a) multi-line rows (consistent row height), (b) truncate + tooltip on hover, (c) expandable rows. <strong>Recommendation:</strong> Option (b) — truncate with hover tooltip showing full name. Multi-line rows break the table scan pattern for lawyers with 50+ clients.</div></div>
+
+<h5>Bulk actions architecture</h5>
+<div class=rec><span class=rec-label>Feature</span><div>The <code>useSelection</code> hook + <code>BulkBar</code> component already exist from the Cases table. E3 needs to: (1) add checkbox column to clients table, (2) wire <code>useSelection</code>, (3) add Delete + View actions to <code>BulkBar</code>. The bulk delete must check for linked matters and warn if any exist. The plan correctly notes this.</div></div>
+
+<h5>Missing — Client detail page</h5>
+<div class=rec><span class=rec-label gap>Gap</span><div>The plan says "no viewing options" for clients. There IS a client detail page at <code>/dashboard/clients/[id]</code> but no row link or "View" button on the list. Add a clickable name that navigates to the detail page.</div></div>
+
+<h5>Missing — Client search scope</h5>
+<div class=rec><span class=rec-label gap>Gap</span><div>The search uses <code>ilike</code> on name only. A lawyer searching by phone number or email gets no results. Add phone/email to the ilike OR.</div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>5.5</span><h3>Shell: Sidebar + Top Bar</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>D4 — Collapsible + resizable sidebar</h5>
+<div class=rec><span class=rec-label>Feature</span><div>Implementation considerations:
+<ul>
+<li><strong>Collapse:</strong> Toggle between <code>w-56</code> (224px, full) and <code>w-14</code> (56px, icons only). Store in localStorage.</li>
+<li><strong>Resize:</strong> A 4px drag handle on the right edge. On <code>pointerdown</code> → track <code>pointermove</code> → update width CSS variable → on <code>pointerup</code>, persist. Clamp between 180px and 400px.</li>
+<li><strong>Animation:</strong> <code>transition-[width] duration-200 ease-out</code> on the aside.</li>
+<li><strong>Icon-only rail:</strong> When collapsed, nav items show only icon (no text), with tooltip on hover. BrandMark stays, wordmark hides.</li>
+<li><strong>Mobile:</strong> The sidebar is already hidden on mobile (<code>hidden md:flex</code>). No change needed — mobile uses the bottom tab bar.</li>
+</ul></div></div>
+
+<h5>D5 — Onboarding nav position</h5>
+<div class=rec><span class=rec-label>Layout</span><div>Currently position 8 in the <code>NAV_ALL</code> array. Move to position 2 (after Overview). 30-second fix.</div></div>
+
+<h5>D5 — Truncated label</h5>
+<div class=rec><span class=rec-label>Bug</span><div>"Judge & Advocate Search" → "Judge & Advocate S…" at 224px sidebar. Fix options: (a) rename to "Directory" (matches the route), (b) allow text wrap with <code>whitespace-normal</code>, (c) widen sidebar. <strong>Recommendation:</strong> (a) rename to "Directory" — it's shorter, matches the route, and is what the page itself is titled.</div></div>
+
+<h5>B4 — Inbox badge removal</h5>
+<div class=rec><span class=rec-label>Remove</span><div>The badge is the <code>badge</code> prop on <code>NavLinks</code>, driven by <code>inboxCount</code> from the layout. Remove the badge rendering from <code>NavItem</code> at <code>nav.tsx</code> line 87.</div></div>
+
+<h5>B1 — Disclaimer removal</h5>
+<div class=rec><span class=rec-label warn>Remove ⚑</span><div>The plan flags this as compliance-relevant. Current location: shared <code>Disclaimer</code> component in <code>components/ui.tsx</code> line 114, used in case detail, documents, and directory pages. <strong>Recommendation:</strong> Don't fully remove. Move to a single <code>/legal</code> route and link it from the sidebar footer Settings area. The "not legal advice" shield has real liability value.</div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>5.6</span><h3>Onboarding</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>B7 — Bar-ID helper text</h5>
+<div class=rec><span class=rec-label>Remove</span><div>The helper paragraph is in <code>advocate-form.tsx</code>. Remove it but KEEP the placeholder text ("e.g. MH/1234/2015") as the only guidance. The plan is correct.</div></div>
+
+<h5>F3 — "What you get" section</h5>
+<div class=rec><span class=rec-label>Decision</span><div>Currently renders a mini calendar (real upcoming hearings) and morning brief preview. The value proposition is low for the console (lawyers know what Mukadma does by the time they reach onboarding). The founder's conservative instinct is right — remove it. If it comes back, put it in a welcome email, not the console.</div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>5.7</span><h3>Settings pages</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>Legacy token debt</h5>
+<div class=rec><span class=rec-label>Debt</span><div>Seven of the 8 settings tab panels still use legacy token names. Not in the plan, but since the plan touches Profile tab (removing B7 from advocate-form), this is a natural cleanup opportunity. ~45 minute migration for all settings pages.</div></div>
+
+<h5>Settings tabs UX</h5>
+<div class=rec><span class=rec-label>Polish</span><div>The vertical sub-nav + hidden panels pattern is correct (preserving form state across tabs). But the mobile horizontal-scroll tabs feel cramped. Consider a dropdown/select for mobile instead.</div></div>
+
+</div>
+</div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ SECTION 6 ══════════════════════════════════════════════ -->
+
+<section class=group id=s6><div class=gh><span class=gn>06</span><h2 class=display>Missing patterns &amp; anti-patterns</h2></div>
+<div class=gd>Cross-cutting issues not covered by any plan item but visible in the codebase.</div>
+
+<div class=subgroup><div class=sh><span class=sn>6.1</span><h3>No date/time locale handling</h3></div>
+
+<div class=item>
+<div class=section-body>
+<div class=rec><span class=rec-label>Bug</span><div>"3/8/2026, 1:19:42 am" appears throughout the case detail page (US format). Indian lawyers expect "08/03/2026" (DD/MM/YYYY). The app uses <code>next-intl</code> — leverage it for date formatting. All court-record surfaces should use <code>Intl.DateTimeFormat('en-IN')</code> or the configured locale.</div></div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>6.2</span><h3>No "Undo" pattern beyond the bulk bar</h3></div>
+
+<div class=item>
+<div class=section-body>
+<div class=rec><span class=rec-label gap>Gap</span><div>The only undo pattern in the app is for bulk stage changes (10-second toast). Case deletion, client deletion, document move-to-trash — all permanent with no undo. Gmail-like "Undo" for destructive actions is table stakes for a lawyer dashboard where a wrong delete could mean losing a client's case data.</div></div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>6.3</span><h3>No optimistic UI updates</h3></div>
+
+<div class=item>
+<div class=section-body>
+<div class=rec><span class=rec-label gap>Gap</span><div>Every mutation in the app — add case, delete case, stage change, client delete, document action — waits for a full server round-trip before updating the UI. The user clicks "Delete" and sees nothing until the server responds. Even a 200ms Supabase latency feels slow. For mutations where failure is unlikely (delete, stage change), use optimistic updates: update local state immediately, roll back on error.</div></div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>6.4</span><h3>Inconsistent row hover/action patterns</h3></div>
+
+<div class=item>
+<div class=section-body>
+<div class=rec><span class=rec-label>Debt</span><div>
+<ul>
+<li><strong>Cases table:</strong> Row hover reveals action icons (Open, Cause list, Add note). Good.</li>
+<li><strong>Clients table:</strong> Row hover does nothing. No actions. The plan's E3 will fix this.</li>
+<li><strong>Documents list:</strong> Row hover reveals nothing. The trash icon sits statically in the row. E4 should add hover actions.</li>
+<li><strong>Inbox:</strong> Row hover highlights. Good. But no hover actions.</li>
+</ul>
+One pattern for all four tables: hover → reveal action cluster (View, Edit, Delete) on the right. Standardize.</div></div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>6.5</span><h3>No loading progress for long operations</h3></div>
+
+<div class=item>
+<div class=section-body>
+<div class=rec><span class=rec-label gap>Gap</span><div>The CNR lookup (add-case-form) can take 3-8 seconds as it scrapes the eCourts API. The submit button shows a pending state but no progress indicator. A skeleton inside the modal would be better than a frozen button. Similarly, the onboarding data fetch can take 10+ seconds for a first-time user — the polling lifecycle handles it, but the initial wait is a black box.</div></div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>6.6</span><h3><code>useEffect</code> abuse for event wiring</h3></div>
+
+<div class=item>
+<div class=section-body>
+<div class=rec><span class=rec-label>Debt</span><div>The <code>mk:new-case</code> custom event pattern (A1) is fragile. It depends on the modal component being mounted, the event listener being registered, and no race conditions between the button click and React's render cycle. The correct Next.js pattern: <code>router.push('/dashboard/cases?add=1')</code> from the top bar, and the cases page reads <code>searchParams.add</code> to open the modal. URL-driven, not event-driven.</div></div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>6.7</span><h3>Z-index fragmentation</h3></div>
+
+<div class=item>
+<div class=section-body>
+<div class=rec><span class=rec-label>Debt</span><div>Z-index values across the app: <code>z-[60]</code> (doc viewer), <code>z-50</code> (top bar), <code>z-40</code> (mobile nav), <code>z-[9999]</code> (command palette — overkill). No z-index scale exists. If a toast system is added, where does it go? Define <code>--z-sidebar: 10</code>, <code>--z-topbar: 20</code>, <code>--z-drawer: 30</code>, <code>--z-modal: 40</code>, <code>--z-toast: 50</code>, <code>--z-command: 60</code> as CSS variables in <code>tokens.css</code>.</div></div>
+</div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ SECTION 7 ══════════════════════════════════════════════ -->
+
+<section class=group id=s7><div class=gh><span class=gn>07</span><h2 class=display>Feature-specific design specs</h2></div>
+<div class=gd>Detailed UI/UX specifications for the four E-group features. What the plan says, what's actually needed, and how to build it.</div>
+
+<div class=subgroup><div class=sh><span class=sn>7.1</span><h3>E1 — Add-columns control</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>UX Design</h5>
+<div class=rec><span class=rec-label>Spec</span><div>
+<ul>
+<li><strong>Trigger:</strong> A <code>+</code> (plus) icon button at the right edge of the table header row, same height as the column header cells. Label: "Columns".</li>
+<li><strong>Popover:</strong> Opens on click. 260px wide. Contains a checkbox list. Available columns: Advocate, Stage, Case type, CNR, Synced, Diary date, Filing date, Court, Client. Default columns (always visible): Title, Next hearing, Status, Actions.</li>
+<li><strong>Reorder:</strong> Drag handles on each row. Drag to reorder column position.</li>
+<li><strong>Persistence:</strong> <code>localStorage</code> key: <code>mukadma:cases:columns</code>. Array of visible column keys + order.</li>
+<li><strong>Reset:</strong> "Reset to default" link at the bottom of the popover.</li>
+<li><strong>States:</strong> Loading (fetching prefs), empty (all checked = default), error (if localStorage parse fails → fallback to default).</li>
+</ul></div></div>
+
+<h5>Implementation</h5>
+<div class=rec><span class=rec-label>Tech</span><div>
+<ul>
+<li>New component: <code>cases-column-picker.tsx</code> (~80 lines)</li>
+<li>Modify <code>cases-table.tsx</code>: column visibility driven by <code>visibleColumns</code> state from localStorage</li>
+<li>Extract <code>usePersistedState</code> hook from this feature (reusable for D4 sidebar width)</li>
+<li>Accessibility: <code>role="dialog"</code>, arrow-key navigation, Esc to close</li>
+</ul></div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>7.2</span><h3>E2 — Advocate filter</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>UX Design</h5>
+<div class=rec><span class=rec-label>Spec</span><div>
+<ul>
+<li><strong>Placement:</strong> Add an "Advocate" Combobox to the Filters drawer, between "Stage" and "Next hearing" filters.</li>
+<li><strong>Data:</strong> <code>advocate_names</code> is already in the cases query. Populate the combobox from the <code>advocate_names</code> array of the current tenant's cases.</li>
+<li><strong>Behavior:</strong> Single-select. On select, filter the cases list to matters where the selected advocate appears in <code>advocate_names</code>.</li>
+<li><strong>URL param:</strong> <code>?advocate=Adv.+Ramesh+Sharma</code> (URL-encoded, matching the pattern of other filters).</li>
+<li><strong>Clear:</strong> X button in the combobox, plus "Clear all filters" link at the bottom of the drawer.</li>
+</ul></div></div>
+
+<h5>Implementation</h5>
+<div class=rec><span class=rec-label>Tech</span><div>
+<ul>
+<li>Reuse existing <code>Combobox</code> from <code>src/components/combobox/</code></li>
+<li>Add <code>advocate</code> to <code>useCasesNav()</code> URL params</li>
+<li>Wire filter in the server query (<code>cases-query.ts</code>)</li>
+<li>~40 lines of new code, mostly wiring</li>
+</ul></div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>7.3</span><h3>E3 — Clients bulk/view/delete</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>UX Design</h5>
+<div class=rec><span class=rec-label>Spec</span><div>
+<ul>
+<li><strong>Word-wrap:</strong> Client name column: truncate to 220px with <code>title</code> attribute for native browser tooltip on hover. Use <code>truncate</code> + <code>max-w-[220px]</code>. No multi-line rows (preserves table scan pattern).</li>
+<li><strong>View:</strong> Click the client name → navigate to <code>/dashboard/clients/[id]</code>. Visual: bronze-colored link with underline-on-hover.</li>
+<li><strong>Delete (single):</strong> Hover row → trash icon appears on the right. Click → inline ConfirmAction expands below the row: "Delete [Client Name]? This cannot be undone." [Cancel] [Delete]. On success: toast "Client deleted" + row disappears + undo toast for 5s.</li>
+<li><strong>Bulk select:</strong> Checkbox column on the left. Select-all checkbox in the header. Floating BulkBar appears at bottom: "[N] selected" + [Delete selected] button.</li>
+<li><strong>Bulk delete:</strong> ConfirmAction modal: "Delete [N] clients? [X] clients have linked matters and cannot be deleted." For clients with linked matters, show them in a warning list and disable deletion. For deletable clients, proceed.</li>
+<li><strong>Empty state after delete:</strong> If last client is deleted, show the full-page empty state with Add Client CTA.</li>
+</ul></div></div>
+
+<h5>Implementation</h5>
+<div class=rec><span class=rec-label>Tech</span><div>
+<ul>
+<li>Reuse <code>useSelection</code> + <code>BulkBar</code> from <code>src/components/selection/</code></li>
+<li>New server action: <code>deleteClients(ids: string[])</code></li>
+<li>Check for linked matters before deletion (server-side, returns blocked_ids)</li>
+<li>New <code>ConfirmAction</code> component (generalized from <code>ConfirmDelete</code>)</li>
+<li>~120 lines of new code</li>
+</ul></div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>7.4</span><h3>E4 — Documents workspace</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>Split into sub-items (recommended)</h5>
+
+<div class=rec><span class=rec-label>E4a</span><div><strong>Fixes only</strong> (1 PR, ~S effort): CNR search fix (A4), word-wrap on long filenames, remove count pill (B5), remove storage note (B3). These are all one-liners or SQL tweaks.</div></div>
+
+<div class=rec><span class=rec-label>E4b</span><div><strong>Filter + sort + trash</strong> (1 PR, ~M effort): Trash icon moves to a prominent header button with slide-in animation. Filter by: document type (dropdown: PDF, DOCX, Image, Other), source (dropdown: Upload, Email, Court scrape), date range (from/to). Sort by: name, date added, size, case. Trash count badge on the button.</div></div>
+
+<div class=rec><span class=rec-label>E4c</span><div><strong>Bulk actions</strong> (1 PR, ~M effort): Checkbox column, select-all, BulkBar with: Download selected (ZIP), Move to trash, Delete permanently (from trash view). Undo for move-to-trash (5s).</div></div>
+
+<div class=rec><span class=rec-label>E4d</span><div><strong>Viewer fix</strong> (same PR as A3, ~M effort): Verify backdrop/z-index on live deployment. Fix focus trap. Add "Download" and "Open in new tab" buttons in the viewer header. Add keyboard shortcut: Esc to close.</div></div>
+
+<h5>Upload UX (not in plan, but needed for "elegant workspace")</h5>
+<div class=rec><span class=rec-label gap>New</span><div>
+<ul>
+<li>Drag-and-drop zone with visual feedback (border highlight + "Drop files here" overlay)</li>
+<li>Multi-file upload with progress bars per file</li>
+<li>Auto-detect document type from file extension</li>
+<li>Auto-link to case if CNR/filename pattern matches</li>
+<li>Success toast with "View document" link</li>
+<li>Error toast for unsupported formats or oversized files</li>
+</ul></div></div>
+
+</div>
+</div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ SECTION 8 ══════════════════════════════════════════════ -->
+
+<section class=group id=s8><div class=gh><span class=gn>08</span><h2 class=display>Accessibility audit</h2></div>
+<div class=gd>WCAG 2.1 AA baseline — keyboard, screen readers, color contrast, reduced motion.</div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>A11Y-1 — No focus trap in modals</h5>
+<div class=rec><span class=rec-label danger>A</span><div>The shared <code>Dialog</code> component locks body scroll but does NOT trap focus. A keyboard user can Tab out of the modal into background content, getting lost. Fix: add a focus trap (either a tiny custom hook or use the <code>&lt;dialog&gt;</code> HTML element with <code>showModal()</code> which provides native focus trapping).</div></div>
+
+<h5>A11Y-2 — Icon-only buttons lack labels</h5>
+<div class=rec><span class=rec-label danger>A</span><div>The trash icon (E4), column picker icon (E1), collapse sidebar icon (D4), close buttons on modals/drawers — none have <code>aria-label</code>. Screen readers announce "button" with no context. Fix: every icon-only button needs <code>aria-label="Delete document"</code> or equivalent.</div></div>
+
+<h5>A11Y-3 — No skip-to-content link</h5>
+<div class=rec><span class=rec-label danger>A</span><div>No skip link for keyboard users to bypass the sidebar and top bar. Add: <code>&lt;a href="#main-content" class="sr-only focus:not-sr-only"&gt;Skip to content&lt;/a&gt;</code> as the first focusable element in the layout.</div></div>
+
+<h5>A11Y-4 — Color contrast on muted text</h5>
+<div class=rec><span class=rec-label warn>AA</span><div><code>text-ec-ink-3</code> (#8B8578 on #FAF9F7) has a contrast ratio of ~3.2:1 — below the 4.5:1 AA minimum for body text. This is used for "no activity", "no results", and secondary information throughout the app. Either darken the muted ink to at least #6B6558 or reserve it for decorative/large text only.</div></div>
+
+<h5>A11Y-5 — Reduced motion honored but incomplete</h5>
+<div class=rec><span class=rec-label>Polish</span><div><code>globals.css</code> has a <code>@media (prefers-reduced-motion: reduce)</code> block that disables animations. Good. But JS-driven animations (slide-in drawers, document viewer entrance via <code>useEffect</code>) are NOT covered by this. Need to check <code>matchMedia('(prefers-reduced-motion: reduce)')</code> in JS to skip animation state transitions.</div></div>
+
+<h5>A11Y-6 — Table markup incomplete</h5>
+<div class=rec><span class=rec-label warn>AA</span><div>Cases table, Clients table, Documents list — none use <code>&lt;caption&gt;</code>, <code>&lt;thead&gt;</code>/<code>&lt;tbody&gt;</code> consistently, or <code>scope="col"</code>/<code>scope="row"</code>. Screen readers navigate tables better with proper semantics.</div></div>
+
+<h5>A11Y-7 — Combobox ARIA incomplete</h5>
+<div class=rec><span class=rec-label warn>AA</span><div>The <code>Combobox</code> component doesn't implement the full ARIA 1.2 combobox pattern (<code>aria-expanded</code>, <code>aria-activedescendant</code>, <code>role="listbox"</code> on options). Fix as part of E2.</div></div>
+
+</div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ SECTION 9 ══════════════════════════════════════════════ -->
+
+<section class=group id=s9><div class=gh><span class=gn>09</span><h2 class=display>Performance considerations</h2></div>
+<div class=gd>Areas where the current plan's features could degrade perceived performance.</div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>PERF-1 — Case detail page waterfall</h5>
+<div class=rec><span class=rec-label>Risk</span><div>The case detail page makes 15+ parallel queries on every request. Adding more sections (D1 reorder, D3 parties rework) doesn't increase the query count, but E-group features (E3 client bulk delete) will likely trigger a full page re-render. Use <code>router.refresh()</code> sparingly and consider <code>revalidatePath</code> for targeted cache invalidation.</div></div>
+
+<h5>PERF-2 — Documents page with 1000+ docs</h5>
+<div class=rec><span class=rec-label>Risk</span><div>The documents page currently uses server-side pagination. E4 adding filter + sort + bulk will increase query complexity. The bulk select for "all documents" is dangerous — selecting 500 documents and clicking "Download" would crash the browser. Add a cap (100 items per bulk action) and warn the user.</div></div>
+
+<h5>PERF-3 — localStorage for column config</h5>
+<div class=rec><span class=rec-label>Note</span><div>Using <code>localStorage</code> for column config is correct — it avoids the 4KB cookie limit and doesn't add request overhead. However, localStorage is synchronous and blocks the main thread on read. The <code>usePersistedState</code> hook should lazy-initialize with a default, then hydrate from localStorage in a <code>useEffect</code> to avoid blocking the first render.</div></div>
+
+<h5>PERF-4 — Sidebar resize during drag</h5>
+<div class=rec><span class=rec-label>Risk</span><div>A drag-to-resize sidebar fires <code>pointermove</code> events at 60fps+. Each event updates a CSS variable which triggers layout recalc. Use <code>requestAnimationFrame</code> throttling and set the width via <code>style={{ width }}</code> on the aside rather than a CSS variable to minimize recalc scope.</div></div>
+
+<h5>PERF-5 — No virtualization for large lists</h5>
+<div class=rec><span class=rec-label gap>Gap</span><div>The cases table could have 500+ rows for a busy lawyer. No virtualization (<code>react-window</code> or <code>@tanstack/react-virtual</code>) exists. Rendering 500 DOM rows is acceptable for now (Next.js server-side handles the initial render), but pagination with <code>per=100</code> can still cause jank. Cap <code>per</code> at 50 and add virtualization if customers report slowness.</div></div>
+
+</div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ SECTION 10 ══════════════════════════════════════════════ -->
+
+<section class=group id=s10><div class=gh><span class=gn>10</span><h2 class=display>Implementation architecture notes</h2></div>
+<div class=gd>How to sequence and ship this without breaking anything.</div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>Prerequisite work — what must ship BEFORE the plan items</h5>
+<div class=rec><span class=rec-label>PRE-1</span><div><strong>Unified Dialog component.</strong> Before building A3 (document viewer backdrop) or D4 (sidebar collapse), refactor the three modal implementations into one shared <code>Dialog</code> with <code>variant</code> prop. This prevents fixing the same bug (missing backdrop, missing focus trap) three times.</div></div>
+
+<div class=rec><span class=rec-label>PRE-2</span><div><strong>ToastProvider.</strong> Every mutation in the E-group needs feedback. Build the toast system first (~80 lines), then use it in A2 (add-by-CNR success), E3 (client delete), E4 (document actions). No feature touches a server action without calling <code>toast.success()</code> or <code>toast.error()</code>.</div></div>
+
+<div class=rec><span class=rec-label>PRE-3</span><div><strong>ConfirmAction component.</strong> Generalize the two-step <code>ConfirmDelete</code> into a reusable <code>ConfirmAction</code> with danger/warning/default variants. Use it for: case delete (F2), client delete (E3), document delete (E4), bulk delete (E3/E4).</div></div>
+
+<div class=rec><span class=rec-label>PRE-4</span><div><strong>usePersistedState hook.</strong> Extract the localStorage pattern from the density toggle into a reusable hook. Use it for: column config (E1), sidebar width (D4), sidebar collapsed state (D4).</div></div>
+
+<div class=rec><span class=rec-label>PRE-5</span><div><strong>Z-index scale.</strong> Define CSS variables for the z-index stack in <code>tokens.css</code> before adding the toast system or fixing the document viewer backdrop. Prevent future z-index wars.</div></div>
+
+<h5>Revised execution order</h5>
+<div class=rec><span class=rec-label>Plan</span><div>
+<ol style="margin:.3em 0;padding-left:1.2em">
+<li><strong>PRE-1..PRE-5:</strong> Shared infrastructure (Dialog refactor, ToastProvider, ConfirmAction, usePersistedState, z-index scale). One PR. ~250 lines.</li>
+<li><strong>Phase 1 — Quick wins + small bugs:</strong> All of B-group (B1-B8) + A1 + A2 + A4 + A5. Use the new ToastProvider for A2 feedback, the new Dialog for A1/A5. One PR.</li>
+<li><strong>Phase 2 — Case-file pass:</strong> C3/C4/C5 + D1/D2/D3. All in one file (<code>page.tsx</code>). One PR.</li>
+<li><strong>Phase 3 — Shell:</strong> D4/D5/D6. Use usePersistedState for D4. One PR.</li>
+<li><strong>Phase 4 — Features:</strong> E2 → E1 → E3 → E4 (split into E4a-E4d as above). One PR each, building on the new infrastructure.</li>
+</ol>
+</div></div>
+
+<h5>Deploy strategy</h5>
+<div class=rec><span class=rec-label>Ops</span><div>The plan says "batch the deploy at the end." This creates risk: 33 items in one deploy means 33 potential rollback triggers. Ship in phases (1 deploy per phase) so each phase is independently verifyable on the live console. The prototyped "Chambers" design was shipped this way — continue the pattern.</div></div>
+
+</div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ SECTION 11 ══════════════════════════════════════════════ -->
+
+<section class=group id=s11><div class=gh><span class=gn>11</span><h2 class=display>Prioritized action items</h2></div>
+<div class=gd>Every finding from this audit, ranked by urgency. Not just the 33 plan items — 32 new items discovered.</div>
+
+<div class=item>
+<div class=section-body>
+
+<div class=table-wrap>
+<table>
+<thead><tr><th style=width:50>#</th><th>Finding</th><th>Severity</th><th>Section</th></tr></thead>
+<tbody>
+
+<tr><td class=nowrap><span class=badge style=background:var(--danger);color:#fff;border-color:var(--danger)>C1</span></td><td>Recapture all 33 screenshots with correct page/state. Current images are duplicates.</td><td><span class=badge b-sev>Blocking</span></td><td>§2</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--danger);color:#fff;border-color:var(--danger)>C2</span></td><td>Build ToastProvider + useToast hook. Every mutation action in the plan needs it.</td><td><span class=badge b-sev>Blocking</span></td><td>§4.2, §10</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--danger);color:#fff;border-color:var(--danger)>C3</span></td><td>Build ConfirmAction component (generalize ConfirmDelete). Needed by E3, E4, F2.</td><td><span class=badge b-sev>Blocking</span></td><td>§4.3, §10</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--danger);color:#fff;border-color:var(--danger)>C4</span></td><td>Build usePersistedState hook. Needed by E1, D4. Fix existing cookie for density toggle to use localStorage.</td><td><span class=badge b-sev>Blocking</span></td><td>§4.4, §10</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--danger);color:#fff;border-color:var(--danger)>C5</span></td><td>Refactor modal/dialog/drawer into one shared Dialog component with variants. Before A3, D4, or any new overlay.</td><td><span class=badge b-sev>Blocking</span></td><td>§4.1, §10</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--danger);color:#fff;border-color:var(--danger)>C6</span></td><td>Define z-index CSS variable scale. Prevent z-index conflicts when adding ToastProvider + fixing doc viewer.</td><td><span class=badge b-sev>Blocking</span></td><td>§6.7, §10</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--warn);color:var(--paper);border-color:var(--warn)>H1</span></td><td>A11Y: Add focus trap to shared Dialog component.</td><td><span class=badge b-pos>High</span></td><td>§8</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--warn);color:var(--paper);border-color:var(--warn)>H2</span></td><td>A11Y: Add aria-labels to all icon-only buttons (trash, close, column picker, collapse).</td><td><span class=badge b-pos>High</span></td><td>§8</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--warn);color:var(--paper);border-color:var(--warn)>H3</span></td><td>A11Y: Add skip-to-content link in dashboard layout.</td><td><span class=badge b-pos>High</span></td><td>§8</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--warn);color:var(--paper);border-color:var(--warn)>H4</span></td><td>A11Y: Fix muted text contrast (text-ec-ink-3 = 3.2:1, needs 4.5:1).</td><td><span class=badge b-pos>High</span></td><td>§8</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--warn);color:var(--paper);border-color:var(--warn)>H5</span></td><td>Fix date locale: "3/8/2026" → "08/03/2026" (DD/MM/YYYY) for Indian lawyers.</td><td><span class=badge b-pos>High</span></td><td>§6.1</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--warn);color:var(--paper);border-color:var(--warn)>H6</span></td><td>Replace mk:new-case custom event with URL-driven pattern (router.push to ?add=1). Root cause fix for A1.</td><td><span class=badge b-pos>High</span></td><td>§6.6</td></tr>
+
+<tr><td class=nowrap><span class=badge style=background:var(--warn);color:var(--paper);border-color:var(--warn)>H7</span></td><td>Add undo pattern to case delete, client delete, document trash (5s undo toast).</td><td><span class=badge b-pos>High</span></td><td>§6.2</td></tr>
+
+<tr><td class=nowrap><span class=badge>M1</span></td><td>Standardize row hover/action pattern across Cases, Clients, Documents, Inbox tables.</td><td><span class=badge>Medium</span></td><td>§6.4</td></tr>
+
+<tr><td class=nowrap><span class=badge>M2</span></td><td>Migrate Settings pages from legacy tokens to ec-* tokens.</td><td><span class=badge>Medium</span></td><td>§3.2, §5.7</td></tr>
+
+<tr><td class=nowrap><span class=badge>M3</span></td><td>Add missing design tokens: text-success, text-warn, disabled states, overlay opacity, transition durations.</td><td><span class=badge>Medium</span></td><td>§3.2</td></tr>
+
+<tr><td class=nowrap><span class=badge>M4</span></td><td>Define dark mode tokens in tokens.css (track as separate WO).</td><td><span class=badge>Medium</span></td><td>§3.3</td></tr>
+
+<tr><td class=nowrap><span class=badge>M5</span></td><td>A11Y: Add proper table semantics (thead, tbody, scope) to all data tables.</td><td><span class=badge>Medium</span></td><td>§8</td></tr>
+
+<tr><td class=nowrap><span class=badge>M6</span></td><td>A11Y: Implement full ARIA combobox pattern in Combobox component (E2 prereq).</td><td><span class=badge>Medium</span></td><td>§8</td></tr>
+
+<tr><td class=nowrap><span class=badge>M7</span></td><td>A11Y: Honor prefers-reduced-motion in JS-driven animations.</td><td><span class=badge>Medium</span></td><td>§8</td></tr>
+
+<tr><td class=nowrap><span class=badge>M8</span></td><td>Standardize label treatment: pick .ec-label or .eyebrow, enforce everywhere.</td><td><span class=badge>Medium</span></td><td>§3.4</td></tr>
+
+<tr><td class=nowrap><span class=badge>M9</span></td><td>Add .stat class for bold display-serif tabular numbers (fixes C1 properly).</td><td><span class=badge>Medium</span></td><td>§3.4</td></tr>
+
+<tr><td class=nowrap><span class=badge>M10</span></td><td>Add optimistic UI updates for delete + stage change mutations.</td><td><span class=badge>Medium</span></td><td>§6.3</td></tr>
+
+<tr><td class=nowrap><span class=badge>M11</span></td><td>Fix E4 scope: split into E4a (fixes), E4b (filter+sort+trash), E4c (bulk), E4d (viewer).</td><td><span class=badge>Medium</span></td><td>§7.4</td></tr>
+
+<tr><td class=nowrap><span class=badge>M12</span></td><td>Standardize focus ring: use ec-honey everywhere, remove ec-indigo references.</td><td><span class=badge>Medium</span></td><td>§3.2</td></tr>
+
+<tr><td class=nowrap><span class=badge>M13</span></td><td>Rename "Judge & Advocate Search" nav label to "Directory" (fixes D5 truncation).</td><td><span class=badge>Medium</span></td><td>§5.5</td></tr>
+
+<tr><td class=nowrap><span class=badge>M14</span></td><td>Add client search by phone/email (not just name).</td><td><span class=badge>Medium</span></td><td>§5.4</td></tr>
+
+<tr><td class=nowrap><span class=badge>L1</span></td><td>Add upload progress + drag-and-drop to Documents page (E4 prerequisite for "elegant workspace").</td><td><span class=badge>Low</span></td><td>§5.3</td></tr>
+
+<tr><td class=nowrap><span class=badge>L2</span></td><td>Add loading progress for CNR lookup (skeleton inside modal).</td><td><span class=badge>Low</span></td><td>§6.5</td></tr>
+
+<tr><td class=nowrap><span class=badge>L3</span></td><td>Virtualization for cases table with >100 rows (defer until customer reports slowness).</td><td><span class=badge>Low</span></td><td>§9</td></tr>
+
+<tr><td class=nowrap><span class=badge>L4</span></td><td>Add inline hearing date editing in agenda view.</td><td><span class=badge>Low</span></td><td>§5.1</td></tr>
+
+<tr><td class=nowrap><span class=badge>L5</span></td><td>Extract SortableTableHeader from Cases table for reuse in Documents (E4).</td><td><span class=badge>Low</span></td><td>§5.1</td></tr>
+
+</tbody>
+</table>
+</div>
+
+</div>
+</div>
+
+<div class=verdict ok style=margin-top:24px>
+<strong>Summary:</strong> 6 blocking prerequisites + 7 high-priority fixes + 14 medium-priority improvements + 5 lower-priority enhancements = 32 new findings beyond the 33 plan items. The blocking items (C1-C6) must ship before ANY of the plan items to avoid compounding architectural debt. Total new code: ~600 lines for infrastructure, ~200 lines for accessibility fixes, ~150 lines for the plan's 33 items. Estimated 3-4 days for a careful pass.
+</div>
+
+</section>
+
+<!-- ═══════════════════════════════════════════════ SECTION 12 ══════════════════════════════════════════════ -->
+
+<section class=group id=s12><div class=gh><span class=gn>12</span><h2 class=display>Wireframing &amp; the Lovable → implement pipeline</h2></div>
+<div class=gd>Which items need Lovable mockups before a line of code is written, which don't, and how to run the design→code workflow without losing fidelity.</div>
+
+<div class=subgroup><div class=sh><span class=sn>12.1</span><h3>The current state of design assets</h3></div>
+
+<div class=item>
+<div class=section-body>
+<p>The plan references a Lovable "Chambers" prototype multiple times — image #4 (prototype drawer), image #7 (not required), image #10 (stat numbers). But the prototype isn't linked anywhere in the document and the screenshots are duplicated JPEGs that provide no visual reference. Before any E-group work, the prototype needs to be:</p>
+<ol style="margin:.3em 0;padding-left:1.2em">
+<li><b>Found and linked.</b> Where is the Lovable Chambers prototype? A URL in the plan doc or a README in the repo.</li>
+<li><b>Versioned.</b> Lovable projects mutate. Take a snapshot (screenshot or export) at the commit referenced by the plan and pin it in <code>plan/design/chambers-prototype/</code>.</li>
+<li><b>Extended.</b> The Chambers prototype covers the as-shipped console. None of the E-group features exist in it. New Lovable boards are needed for E1, E3, and E4.</li>
+</ol>
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>12.2</span><h3>Design-first vs code-first classification</h3></div>
+
+<div class=item>
+<div class=section-body>
+<p>Not every plan item benefits from a Lovable mockup. The split:</p>
+
+<div class=table-wrap>
+<table>
+<thead><tr><th>Class</th><th>Items</th><th>Why</th></tr></thead>
+<tbody>
+<tr>
+<td class=nowrap><span class=badge style=background:var(--danger);color:#fff;border-color:var(--danger)>Design-first</span></td>
+<td><b>D4</b> (collapsible + resizable sidebar), <b>E1</b> (column picker), <b>E3</b> (clients bulk actions), <b>E4</b> (documents workspace), <b>C5</b> (notification chips redesign)</td>
+<td>These introduce new UI surfaces, new interaction patterns, or subjective "elegance" that the founder needs to see before engineering effort is spent. Lovable mockup → founder approve → implement.</td>
+</tr>
+<tr>
+<td class=nowrap><span class=badge style=background:var(--honey);color:#4a3410;border-color:var(--honey)>Prototype-reference</span></td>
+<td><b>C1</b> (stat numbers), <b>C2</b> (list/agenda tabs), <b>C3</b> (court-record labels), <b>D2</b> (back link placement)</td>
+<td>The Chambers prototype already shows the correct appearance. The implementer works from the prototype reference images (#4, #10, etc.). No new mockup needed — just fidelity to what exists.</td>
+</tr>
+<tr>
+<td class=nowrap><span class=badge style=background:var(--ok);color:#fff;border-color:var(--ok)>Code-first</span></td>
+<td><b>A1-A5</b> (bugs), <b>B1-B8</b> (removals), <b>D1</b> (reorder right rail), <b>D3</b> (parties labeling), <b>D5</b> (nav order), <b>D6</b> (first-run redirect), <b>E2</b> (advocate filter), <b>F1-F5</b> (decisions)</td>
+<td>These are bug fixes, one-liner removals, reordering of existing elements, or reusing existing components with known patterns. The implementer can ship directly from the plan's text description.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>12.3</span><h3>What each design-first item needs in Lovable</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<h5>D4 — Collapsible + resizable sidebar</h5>
+<div class=rec><span class=rec-label>Lovable</span><div>
+<p><strong>Two screens in Lovable:</strong></p>
+<ol>
+<li><b>Expanded state</b> (224px): The full sidebar as it exists today, PLUS a collapse icon (chevron-left) at the bottom of the sidebar (above Settings) and a 4px drag handle on the right edge.</li>
+<li><b>Collapsed state</b> (56px icon-only rail): Only icons visible — the Mukadma "m" mark at top, nav icons stacked, the collapse icon becomes a chevron-right. Icons have tooltips on hover showing the label. The drag handle remains (so the user can pull it back open).</li>
+</ol>
+<p><strong>Key interaction to wireframe:</strong> The drag-to-resize. In Lovable, show the sidebar at mid-drag (say 300px) with a semi-transparent drag indicator line following the cursor. The content area should reflow to match.</p>
+<p><strong>States:</strong> Default (expanded) → dragging → settled at custom width → collapsed → re-expanded. Persistence is an implementation detail — Lovable just needs to show the visual.</p>
+</div></div>
+
+<h5>E1 — Column picker</h5>
+<div class=rec><span class=rec-label>Lovable</span><div>
+<p><strong>Two screens:</strong></p>
+<ol>
+<li><b>Popover open:</b> The "+" button at the right edge of the cases table header row, clicked. A 260px white popover (shadow-ec-3) drops down, aligned to the right. Inside: a list of checkbox rows ("Advocate ☑", "Stage ☑", "Case type ☐", etc.) with drag handles on the left. A "Reset to default" link at the bottom in muted ink-3.</li>
+<li><b>Table with custom columns:</b> The cases table re-rendered with Advocate and Stage columns now visible (previously hidden). The popover is closed. The columns the user unchecked are gone.</li>
+</ol>
+<p><strong>Key interaction to wireframe:</strong> Drag-to-reorder inside the popover. Show a row being dragged up/down with a visual drop indicator. This is the riskiest UX — Lovable needs to prove it feels natural.</p>
+<p><strong>Edge case:</strong> What happens when all columns except the defaults are unchecked? Show the popover with all checkboxes off — the "Reset to default" link is the only recovery path.</p>
+</div></div>
+
+<h5>E3 — Clients bulk actions</h5>
+<div class=rec><span class=rec-label>Lovable</span><div>
+<p><strong>Three screens:</strong></p>
+<ol>
+<li><b>Table with checkboxes:</b> A new checkbox column on the left of the clients table. One row checked (bronze highlight). A floating BulkBar appears at the bottom: "1 selected" + [Delete selected] button + [Clear selection] link.</li>
+<li><b>Bulk delete with cascade warning:</b> The ConfirmAction modal: "Delete 3 clients?" in the header. Below: a warning section with amber tint: "2 clients cannot be deleted — they have linked matters:" followed by a list of those client names (muted, not actionable). Below that: "1 client will be deleted. This cannot be undone." [Cancel] [Delete 1 client] (danger variant).</li>
+<li><b>After delete — undo toast:</b> The row is gone from the table. A dark toast at bottom-center: "1 client deleted. [Undo]" with a 5s countdown bar.</li>
+</ol>
+<p><strong>Key interaction:</strong> The inline single-delete (hover → trash icon → confirm row expansion). This is a new pattern for the clients table — show the row expanding downward to reveal the "Delete [name]? [Cancel] [Delete]" bar inside the same row.</p>
+</div></div>
+
+<h5>E4 — Documents workspace</h5>
+<div class=rec><span class=rec-label>Lovable</span><div>
+<p>This is the largest design surface. Five screens minimum:</p>
+<ol>
+<li><b>Documents page with new toolbar:</b> The dark masthead stays. Below it: a filter bar with [Document type ▾] [Source ▾] [Date from] [Date to] [Sort by ▾]. To the right: a prominent Trash icon button (only icon, no text) with a honey count badge if trash > 0. Below: the document list with fixed-width name column (word-wrap clean), proper spacing.</li>
+<li><b>Bulk select:</b> Checkboxes appear on row hover (like Gmail). Select-all in the header. BulkBar: "5 selected · [Download] [Move to trash]".</li>
+<li><b>Document viewer fixed:</b> Same viewer but WITH the backdrop-blur overlay properly visible, the deep shadow, and focus trapped inside. ESC key hint in the top-right corner.</li>
+<li><b>Upload flow:</b> A dashed drop zone at the top of the document list (or a button that reveals it). Files dragged in show a progress bar per file. Completion: toast "3 documents uploaded. [View]".</li>
+<li><b>Empty trash view:</b> Trash page with "Trash is empty" empty state. A "Back to documents" link.</li>
+</ol>
+<p><strong>Key interaction:</strong> The trash button hover animation from the plan — "animation on hover" for the trash icon. In Lovable, show a subtle bounce/scale effect on hover + the honey count badge.</p>
+</div></div>
+
+<h5>C5 — Notification chips</h5>
+<div class=rec><span class=rec-label>Lovable</span><div>
+<p><strong>One screen:</strong> The case detail right rail, Notifications card. Instead of "EM · CASE UPDATE" / "IN · HEARING REMINDER", show:</p>
+<ul>
+<li>A row with a small envelope icon + "Email" label + "Case update" description — all on one line, readable at a glance.</li>
+<li>A row with a bell icon + "In-app" label + "Hearing reminder" description.</li>
+<li>Optional: a third row with a phone icon + "SMS" for future channels.</li>
+</ul>
+<p>Compare with the current cryptic chips side-by-side in the same Lovable board so the founder can choose.</p>
+</div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>12.4</span><h3>The Lovable → implement workflow</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<p>The current process — "Lovable prototype → implementer eyeballs it → code" — has already caused fidelity drift. The C1 stat numbers and C2 tab headings are the evidence: the prototype showed one thing, the code shipped another. A structured handoff prevents this.</p>
+
+<div class=rec><span class=rec-label>Step 1</span><div><strong>Lovable board → DESIGN.md annotation.</strong> For each design-first item, the founder creates the Lovable board and approves it. Then (this is the new step) a 5-line annotation is written into <code>plan/design/DESIGN.md</code> (or per-item <code>plan/design/wo-XXX-design.md</code>):
+<pre style="background:var(--band);padding:8px 12px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;margin:8px 0;overflow-x:auto">## E1 — Column picker
+Prototype: https://lovable.dev/project/xxx/board/yyy
+Key rules:
+- Popover: 260px, shadow-ec-3, right-aligned to header
+- Drag handles on left of each checkbox row
+- "Reset to default" link at bottom, text-ec-ink-3
+- Persistence: localStorage, key: mukadma:cases:columns
+- Default columns (always visible): Title, Next hearing, Status, Actions
+- Available columns: Advocate, Stage, Case type, CNR, Synced, Diary date,...</pre>
+This is the contract. The implementer implements against DESIGN.md, not from memory of the Lovable board.</div></div>
+
+<div class=rec><span class=rec-label>Step 2</span><div><strong>Taste tokens, not pixel values.</strong> Design annotations should specify tokens (<code>shadow-ec-3</code>, <code>text-ec-ink-3</code>, <code>rounded-ec-m</code>) not raw CSS (<code>box-shadow: 0 8px 24px...</code>). This keeps the implementation aligned with the design system and makes future token changes propagate automatically.</div></div>
+
+<div class=rec><span class=rec-label>Step 3</span><div><strong>Before/after screenshot in the PR.</strong> Every design-first PR includes a side-by-side: left = the Lovable reference, right = the built implementation. The reviewer (founder) approves fidelity by comparing the two. No screenshot = no merge. This closes the loop that caused C1 and C2 to drift.</div></div>
+
+<div class=rec><span class=rec-label>Step 4</span><div><strong>Lovable link in the WO file.</strong> When a work order says "implement the E3 client bulk actions," the WO file includes the Lovable board URL and the DESIGN.md path. The implementer opens both before writing a single line. No hunting for visual reference.</div></div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>12.5</span><h3>What NOT to do in Lovable</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<div class=verdict danger>
+<strong>Anti-pattern:</strong> Using Lovable's "export to code" or "generate React" feature and pasting the output into the codebase. Lovable generates generic Tailwind classes and inline styles that don't use the <code>ec-*</code> token system. The result is a Frankenstein page where half the components use tokens and half use raw hex values. The Chambers prototype was used as a <em>visual reference</em>, not a code generator — keep that pattern.
+</div>
+
+<div class=verdict ok>
+<strong>Correct pattern:</strong> Lovable = visual spec. The implementer writes the code from scratch using the <code>ec-*</code> design system, with the Lovable board as the target to match. This ensures token consistency, accessibility, and the four-state pattern (loading/empty/error/success) that Lovable-generated code never handles.
+</div>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>12.6</span><h3>Wireframing priority order</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<p>The 5 design-first items ordered by founder review dependency:</p>
+
+<div class=table-wrap>
+<table>
+<thead><tr><th style=width:30>#</th><th>Item</th><th>Lovable screens needed</th><th>Depends on</th><th>Blocks</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><b>D4</b> — Collapsible sidebar</td><td>2 (expanded, collapsed)</td><td>Nothing</td><td>Shell pass (Phase 3)</td></tr>
+<tr><td>2</td><td><b>C5</b> — Notification chips</td><td>1 (before/after comparison)</td><td>Nothing</td><td>Case-file pass (Phase 2)</td></tr>
+<tr><td>3</td><td><b>E1</b> — Column picker</td><td>2 (popover, table result)</td><td>Nothing</td><td>Features (Phase 4)</td></tr>
+<tr><td>4</td><td><b>E3</b> — Clients bulk actions</td><td>3 (checkboxes, delete modal, undo toast)</td><td>ConfirmAction component (PRE-3)</td><td>Features (Phase 4)</td></tr>
+<tr><td>5</td><td><b>E4</b> — Documents workspace</td><td>5+ (toolbar, bulk, viewer, upload, empty)</td><td>D4 (sidebar width affects layout)</td><td>Features (Phase 4)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p style="margin-top:12px">D4 and C5 can be mocked in Lovable immediately — they don't depend on any new infrastructure. E3 and E4 should wait until PRE-1..PRE-5 (ToastProvider, ConfirmAction, Dialog refactor) are built, because the mockups should show those components in context (e.g., the E3 delete modal IS the ConfirmAction component, so the Lovable board should reflect its actual design).</p>
+
+</div>
+</div>
+</div>
+
+<div class=subgroup><div class=sh><span class=sn>12.7</span><h3>Lovable → DESIGN.md → token mapping reference</h3></div>
+
+<div class=item>
+<div class=section-body>
+<p>When the implementer reads a DESIGN.md annotation, they translate the design intent into tokens. Here's the cheat sheet:</p>
+
+<div class=table-wrap>
+<table>
+<thead><tr><th>Design intent</th><th>Token to use</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>"White card"</td><td><code>bg-ec-card</code> + <code>shadow-ec-1</code></td><td>Elevation 1, the standard card surface</td></tr>
+<tr><td>"Drop shadow / elevated"</td><td><code>shadow-ec-2</code></td><td>Dropdowns, popovers, drawers</td></tr>
+<tr><td>"Deep shadow / modal"</td><td><code>shadow-ec-3</code></td><td>New token needed — currently max is ec-2</td></tr>
+<tr><td>"Dark background panel"</td><td><code>mk-engraved bg-ec-ink</code></td><td>Case mastheads, page titles</td></tr>
+<tr><td>"Warm tint background"</td><td><code>bg-ec-bronze-tint</code></td><td>Selected rows, review banners, stamps</td></tr>
+<tr><td>"Amber/gold accent"</td><td><code>bg-ec-honey</code> / <code>text-ec-honey-ink</code></td><td>Active indicators, badges, unread dots</td></tr>
+<tr><td>"Muted secondary text"</td><td><code>text-ec-ink-2</code></td><td>Sub-labels, descriptions</td></tr>
+<tr><td>"Very muted / hint text"</td><td><code>text-ec-ink-3</code></td><td>Placeholders, footnotes, "no results"</td></tr>
+<tr><td>"Danger / destructive"</td><td><code>bg-ec-danger</code> / <code>text-ec-danger</code></td><td>Delete buttons, error states, overdue</td></tr>
+<tr><td>"Success / confirmation"</td><td><code>bg-ec-success</code></td><td>Synced indicators, success banners</td></tr>
+<tr><td>"Warning / caution"</td><td><code>bg-ec-warn</code></td><td>Stale data, review needed, cascade warnings</td></tr>
+<tr><td>"Border / divider"</td><td><code>border-ec-hair</code> (subtle) / <code>border-ec-line</code> (standard)</td><td>Hair = 0.5px-ish. Line = 1px.</td></tr>
+<tr><td>"Small radius"</td><td><code>rounded-ec-s</code></td><td>Buttons, chips, inputs (6px)</td></tr>
+<tr><td>"Medium radius"</td><td><code>rounded-ec-m</code></td><td>Cards, dropdowns (10px)</td></tr>
+<tr><td>"Large radius"</td><td><code>rounded-ec-l</code></td><td>Modals, dialogs (14px)</td></tr>
+<tr><td>"Mono / data text"</td><td><code>.num</code> or <code>.font-mono</code></td><td>CNRs, dates, amounts</td></tr>
+<tr><td>"Display / heading serif"</td><td><code>.font-display</code></td><td>Page titles, case names, section headings</td></tr>
+<tr><td>"Label / eyebrow mono"</td><td><code>.ec-label</code> or <code>.eyebrow</code></td><td>Form labels, section labels (pick one pattern)</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class=subgroup><div class=sh><span class=sn>12.8</span><h3>Collaborating without Lovable access — the screenshot-driven pipeline</h3></div>
+
+<div class=item>
+<div class=section-body>
+
+<p>Since I can't log into your Lovable account, the workflow flips from "I look at Lovable → I build" to a <strong>screenshot-driven contract</strong>. This is actually more robust — screenshots are immutable snapshots, unlike a live Lovable project that can change mid-build.</p>
+
+<div class=rec><span class=rec-label>Step 1</span><div><strong>You create in Lovable, then capture.</strong> For each design-first item (D4, C5, E1, E3, E4), create the Lovable board. Once approved, take full-page screenshots of every state. For E3 that's 4 screenshots: default table, checkbox-selected, cascade-warning modal, post-delete undo toast. Name them consistently: <code>E3-01-default.png</code>, <code>E3-02-selected.png</code>, etc.</div></div>
+
+<div class=rec><span class=rec-label>Step 2</span><div><strong>Drop them in the repo.</strong> Create a directory: <code>plan/design/wo-XXX/</code> where XXX is the WO number. Put the screenshots there plus a 10-line README:
+<pre style="background:var(--band);padding:8px 12px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;margin:8px 0;overflow-x:auto"># E3 — Clients bulk actions
+Lovable: https://lovable.dev/project/xxx/board/yyy  
+Screenshots:
+  E3-01-default.png — Table as it exists, no checkboxes
+  E3-02-selected.png — Checkbox column visible, 2 rows selected, BulkBar visible
+  E3-03-cascade-warn.png — Delete modal with cascade warning for linked matters
+  E3-04-undo-toast.png — Row removed, "1 client deleted. [Undo]" toast visible
+Notes:
+  - BulkBar reuses the existing Cases BulkBar component
+  - ConfirmAction modal uses the shared ConfirmAction component (PRE-3)
+  - Undo toast uses the shared ToastProvider (PRE-2)</pre>
+</div></div>
+
+<div class=rec><span class=rec-label>Step 3</span><div><strong>I write DESIGN.md, then build.</strong> I read the screenshots, write the token-level spec (like §12.3 but with exact values from the screenshots), then implement. The screenshots are the contract — if my implementation doesn't match the screenshot, it's a bug.</div></div>
+
+<div class=rec><span class=rec-label>Step 4</span><div><strong>PR review: side-by-side.</strong> The PR description includes a before/after table: left column = your Lovable screenshot, right column = the built page. You approve fidelity by visual comparison. No screenshot = no merge. This closes the C1/C2 drift loop permanently.</div></div>
+
+<h5 style="margin-top:20px">What makes a good Lovable screenshot for me</h5>
+<div class=rec><span class=rec-label>Do</span><div>
+<ul>
+<li>Capture the FULL page, not a cropped section — I need to see context (sidebar, top bar, surrounding content)</li>
+<li>Capture EVERY state: default, hover, active, focused, empty, error, loading</li>
+<li>Use real-looking data, not "Lorem ipsum" — I need to see how text wraps, truncates, and aligns</li>
+<li>Show the component at the ACTUAL viewport width (1440px desktop, 768px tablet if relevant)</li>
+</ul></div></div>
+
+<div class=rec><span class=rec-label>Don't</span><div>
+<ul>
+<li>Don't export Lovable's generated code — it won't use ec-* tokens and creates tech debt</li>
+<li>Don't send a Lovable link and expect me to find the right board — put the direct URL in the README</li>
+<li>Don't modify the Lovable board after I've started building — if you want changes, file them as a new WO</li>
+<li>Don't show only the happy path — the error/empty/loading states are where most implementation time goes</li>
+</ul></div></div>
+
+<h5 style="margin-top:20px">Minimal viable design intake for each E-group item</h5>
+<div class=table-wrap>
+<table>
+<thead><tr><th>Item</th><th>Minimum screenshots needed</th><th>Can start coding when</th></tr></thead>
+<tbody>
+<tr><td><b>E2</b> — Advocate filter</td><td>1 (Filters drawer with Advocate combobox added)</td><td>Immediately — reuses existing Combobox, no new design</td></tr>
+<tr><td><b>D4</b> — Collapsible sidebar</td><td>2 (expanded, collapsed icon-rail)</td><td>After Lovable screenshots in <code>plan/design/wo-d4/</code></td></tr>
+<tr><td><b>C5</b> — Notification chips</td><td>1 (before/after of the notification card)</td><td>After Lovable screenshot</td></tr>
+<tr><td><b>E1</b> — Column picker</td><td>2 (popover open, table with custom columns)</td><td>After PRE-2..PRE-5 + Lovable screenshots</td></tr>
+<tr><td><b>E3</b> — Clients bulk actions</td><td>4 (default, selected, cascade-warn, undo toast)</td><td>After PRE-2 + PRE-3 + Lovable screenshots</td></tr>
+<tr><td><b>E4</b> — Documents workspace</td><td>5 (toolbar, bulk, viewer, upload, empty trash)</td><td>After PRE-2..PRE-5 + Lovable screenshots (largest design surface)</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class=verdict ok style=margin-top:16px>
+<strong>Bottom line:</strong> You don't need to give me Lovable access. You need to give me <strong>screenshots of every state</strong> saved in <code>plan/design/</code> with a 10-line README linking the Lovable URL. I read the screenshots, write the token-level spec, and build. The PR review closes the loop with side-by-side comparison.
+</div>
+
+</div>
+</div>
+</div>
+</section>
+
+<div class=foot>Generated for founder review · Aug 11 2026 · Based on full legaldriver codebase read + Console Fix Plan cross-reference. All file paths and line numbers verified against main branch (979b514).</div>
+</div>
+</html>
