@@ -76,7 +76,11 @@ export type EmailHeaderContext = {
   tenantId: string;
   profileId?: string | null; // recipient profile id (notification_prefs.id) — token scope
   from: string; // sender email; its domain anchors the Message-ID
-  messageId?: string; // per-send unique id (the notification row id)
+  // REQUIRED (WO-416 review M4): a matter-linked caller that forgot this would give every message in
+  // that matter the SAME Message-ID and Gmail would dedupe them — silently dropping mail. Required so
+  // the compiler catches it instead of a constant papering over it. Only consumed when `matterId` is
+  // set; pass any unique per-send value (row id / uuid) for non-matter sends.
+  messageId: string;
 };
 
 // Build the headers to attach to one send. Pure and total: never throws. A signing-secret outage
@@ -89,10 +93,13 @@ export function buildEmailHeaders(ctx: EmailHeaderContext): Record<string, strin
 
   // Threading: matter-linked only. Stable per-matter root Message-ID + References to it; Gmail then
   // threads a case's reminders/orders/updates into one conversation. Non-matter mail stays unthreaded.
+  // In-Reply-To (M5): Apple Mail/Outlook/Thunderbird lean on it rather than References — point it at
+  // the same matter root so the thread survives across desktop clients too.
   const matterId = ctx.matterId ? ctx.matterId.toLowerCase() : undefined;
   if (matterId) {
-    headers["Message-ID"] = `<n.${(ctx.messageId ?? "0").toLowerCase()}@${domain}>`;
+    headers["Message-ID"] = `<n.${ctx.messageId.toLowerCase()}@${domain}>`;
     headers["References"] = `<matter.${matterId}@${domain}>`;
+    headers["In-Reply-To"] = `<matter.${matterId}@${domain}>`;
   }
 
   // List-Unsubscribe (+Post): non-transactional only, and only when we can scope the token to the

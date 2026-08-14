@@ -133,6 +133,7 @@ function ok(name: string, cond: boolean) {
   ok("matter-linked: carries a Message-ID", "Message-ID" in matterLinked);
   ok("matter-linked: Message-ID is <n.<id>@domain>, lowercased", matterLinked["Message-ID"] === "<n.row-abcd@mukadma.in>");
   ok("matter-linked: carries References to the stable matter root", matterLinked["References"] === "<matter.matter-9f86@mukadma.in>");
+  ok("matter-linked: carries In-Reply-To to the same matter root (desktop clients)", matterLinked["In-Reply-To"] === "<matter.matter-9f86@mukadma.in>");
   ok("matter-linked (non-transactional): carries List-Unsubscribe", "List-Unsubscribe" in matterLinked);
   ok("matter-linked: carries List-Unsubscribe-Post (RFC 8058)", matterLinked["List-Unsubscribe-Post"] === "List-Unsubscribe=One-Click");
   ok("matter-linked: List-Unsubscribe is https-only (NO mailto — no monitored inbox)", /^<https:\/\/[^>]+>$/.test(matterLinked["List-Unsubscribe"]) && !matterLinked["List-Unsubscribe"].includes("mailto"));
@@ -153,6 +154,7 @@ function ok(name: string, cond: boolean) {
   const remind = buildEmailHeaders({ kind: "hearing_reminder", matterId, tenantId: "t1", profileId: "u1", from, messageId: "row-remind" });
 
   ok("trackConfirm: threads to the SAME matter root as a later hearing_reminder", track["References"] === remind["References"] && track["References"] === `<matter.${matterId}@mukadma.in>`);
+  ok("trackConfirm: In-Reply-To points at the same root too", track["In-Reply-To"] === remind["In-Reply-To"] && track["In-Reply-To"] === `<matter.${matterId}@mukadma.in>`);
   ok("trackConfirm: carries its own distinct Message-ID (no cross-matter collision)", track["Message-ID"] !== remind["Message-ID"] && track["Message-ID"] === "<n.row-track@mukadma.in>");
   ok("trackConfirm: non-transactional → carries List-Unsubscribe", "List-Unsubscribe" in track && "List-Unsubscribe-Post" in track);
 }
@@ -161,9 +163,9 @@ function ok(name: string, cond: boolean) {
 {
   const from = "notify@mukadma.in";
   for (const k of ["security", "otp", "invoice", "receipt", "welcome"] as const) {
-    const h = buildEmailHeaders({ kind: k, matterId: null, tenantId: "t1", profileId: "u1", from });
+    const h = buildEmailHeaders({ kind: k, matterId: null, tenantId: "t1", profileId: "u1", from, messageId: "row-x" });
     ok(`transactional ${k}: NO List-Unsubscribe`, !("List-Unsubscribe" in h) && !("List-Unsubscribe-Post" in h));
-    ok(`transactional ${k}: unthreaded (no Message-ID/References)`, !("Message-ID" in h) && !("References" in h));
+    ok(`transactional ${k}: unthreaded (no Message-ID/References)`, !("Message-ID" in h) && !("References" in h) && !("In-Reply-To" in h));
   }
 }
 
@@ -203,18 +205,33 @@ class RecordingMailer implements Mailer {
   }
 }
 
-function makeAdmin(channelEmail: boolean | null) {
+// Stateful prefs fake (M7): HONOURS the `.eq("id", …)` filter and records the queried key, so a
+// regression to keying the lookup by tenant_id instead of profile id fails on DATA, not on an
+// inspected query string. prefsById maps profile id → channel_email (absent key ⇒ no row ⇒ default on).
+function makeAdmin(prefsById: Record<string, boolean>) {
   const notifUpdates: { id: string; status: string }[] = [];
   let pendingId = "";
   let pendingUpdate: Record<string, unknown> | null = null;
+  let prefsQueriedId: string | null = null;
   const from = (table: string) => {
     const node: any = {
       select: () => node,
-      eq: (c: string, v: unknown) => { if (c === "id" && table === "notification") pendingId = String(v); return node; },
+      eq: (c: string, v: unknown) => {
+        if (c === "id") {
+          if (table === "notification") pendingId = String(v);
+          if (table === "notification_prefs") prefsQueriedId = String(v);
+        }
+        return node;
+      },
       in: () => node,
       update: (vals: Record<string, unknown>) => { if (table === "notification") pendingUpdate = vals; return node; },
       maybeSingle: async () => {
-        if (table === "notification_prefs") return channelEmail === null ? { data: null, error: null } : { data: { channel_email: channelEmail }, error: null };
+        if (table === "notification_prefs") {
+          if (prefsQueriedId !== null && prefsQueriedId in prefsById) {
+            return { data: { channel_email: prefsById[prefsQueriedId] }, error: null };
+          }
+          return { data: null, error: null };
+        }
         return { data: null, error: null };
       },
       insert: async () => ({ error: null }),
@@ -230,6 +247,7 @@ function makeAdmin(channelEmail: boolean | null) {
   };
   return {
     notifUpdates,
+    prefsQueriedId: () => prefsQueriedId,
     supabase: {
       from,
       auth: { admin: { getUserById: async () => ({ data: { user: { email: "adv@example.com" } }, error: null }) } },
@@ -246,11 +264,14 @@ const depsFor = () => ({
 
 async function behavioural() {
   {
-    // channel_email=false → skipped, never sent, terminal-flipped.
+    // channel_email=false → skipped, never sent, terminal-flipped. The recipient's profile id is
+    // "u1" (row.user_id); a regression that keyed the prefs lookup by tenant_id ("t1") would miss
+    // the row and fail the mailer-not-called assertion.
     const mailer = new RecordingMailer();
-    const { supabase, notifUpdates } = makeAdmin(false);
+    const { supabase, notifUpdates, prefsQueriedId } = makeAdmin({ u1: false });
     const row: NotifyRow = { id: "r1", tenant_id: "t1", user_id: "u1", channel: "email", kind: "case_update", payload: { matterId: "00000000-0000-4000-8000-000000000001", title: "A v. B", change: "New order", court: "HC", cnr: "CNR1" } };
     const r = await deliverEmail(supabase, mailer, row, depsFor());
+    ok("behaviour: prefs lookup is keyed by PROFILE id, not tenant id", prefsQueriedId() === "u1" && prefsQueriedId() !== "t1");
     ok("behaviour: suppressed recipient → mailer NOT called", mailer.sends.length === 0);
     ok("behaviour: suppressed recipient → result.suppressed is true", r.suppressed === true);
     ok("behaviour: suppressed recipient → row terminal-flipped to 'dead'", notifUpdates.length === 1 && notifUpdates[0].id === "r1" && notifUpdates[0].status === "dead");
@@ -259,7 +280,7 @@ async function behavioural() {
   {
     // channel_email=true (or no prefs row) → sent, and headers are attached.
     const mailer = new RecordingMailer();
-    const { supabase } = makeAdmin(true);
+    const { supabase } = makeAdmin({ u1: true });
     const row: NotifyRow = { id: "r2", tenant_id: "t1", user_id: "u1", channel: "email", kind: "case_update", payload: { matterId: "00000000-0000-4000-8000-000000000002", title: "C v. D", change: "Bench changed", court: "HC", cnr: "CNR2" } };
     const r = await deliverEmail(supabase, mailer, row, depsFor());
     ok("behaviour: enabled recipient → mailer called", mailer.sends.length === 1);
@@ -268,9 +289,9 @@ async function behavioural() {
   }
 
   {
-    // No prefs row (channelEmail null) → default on → still sent (never falsely suppressed).
+    // No prefs row → default on → still sent (never falsely suppressed).
     const mailer = new RecordingMailer();
-    const { supabase } = makeAdmin(null);
+    const { supabase } = makeAdmin({});
     const row: NotifyRow = { id: "r3", tenant_id: "t1", user_id: "u1", channel: "email", kind: "case_update", payload: { matterId: "00000000-0000-4000-8000-000000000003", title: "E v. F", change: "New order", court: "HC", cnr: "CNR3" } };
     const r = await deliverEmail(supabase, mailer, row, depsFor());
     ok("behaviour: no prefs row → default on → sent", mailer.sends.length === 1 && r.suppressed === false);

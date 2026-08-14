@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { adminFor } from "@/lib/supabase/admin";
 import { verifyUnsubscribeToken } from "@/lib/notify/unsubscribe-token";
+import { appUrl } from "@/lib/notify/email-render";
 import { brand } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +41,7 @@ const page = (opts: { title: string; body: string; formToken?: string }) => `
     <h1>${opts.title}</h1>
     <p>${opts.body}</p>
     ${opts.formToken ? `<form method="POST"><button class="btn" type="submit">Unsubscribe from email</button></form>` : ""}
-    <p class="muted">${brand.name} — you can re-enable email notifications anytime from Settings.</p>
+    <p class="muted">${brand.name} — <a href="${appUrl("/dashboard/settings")}" style="color:#78582B;">manage email notifications in Settings</a>.</p>
   </div>
 </body>
 </html>
@@ -74,15 +75,16 @@ export async function POST(_req: NextRequest, { params }: { params: { token: str
   }
 
   // Service-role (RLS-bypassing) write, scoped to EXACTLY the profile + tenant the signed token
-  // names. Upsert-on-id: an existing row keeps its other columns (WhatsApp/SMS/quiet-hours), a
-  // brand-new row gets the DB defaults — a user who never opened Settings still unsubscribes.
-  const admin = createAdminClient();
-  const { error } = await admin.from("notification_prefs").upsert({
-    id: result.profileId,
-    tenant_id: result.tenantId,
-    channel_email: false,
-    updated_at: new Date().toISOString(),
-  });
+  // names via adminFor(tenantId) (WO-364). Upsert-on-id: an existing row keeps its other columns
+  // (WhatsApp/SMS/quiet-hours), a brand-new row gets the DB defaults — a user who never opened
+  // Settings still unsubscribes.
+  const { error } = await adminFor(result.tenantId)
+    .from("notification_prefs")
+    .upsert({
+      id: result.profileId,
+      channel_email: false,
+      updated_at: new Date().toISOString(),
+    });
   if (error) {
     console.error(`[unsubscribe] prefs upsert failed: ${error.message}`);
     return NextResponse.json({ ok: false }, { status: 500 });

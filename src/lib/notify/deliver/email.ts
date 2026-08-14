@@ -156,11 +156,13 @@ async function deliverEmailInner(
   // Transactional kinds (OTP/security/invoice/receipt/welcome) are NEVER suppressed: a user must
   // not be able to lock themselves out of sign-in. `shouldSuppressEmail` is the pure gate.
   {
-    const { data: prefs } = await supabase
+    const { data: prefs, error: prefsErr } = await supabase
       .from("notification_prefs")
       .select("channel_email")
       .eq("id", rec.profileId)
       .maybeSingle();
+    // Fail OPEN (send) on a read error — but loud, not silent (WO-126 / convention #4).
+    if (prefsErr) console.warn(`[notify] notification_prefs read failed (${prefsErr.message}) — treating email as on`);
     const channelEmail = prefs ? prefs.channel_email : true; // no prefs row ⇒ default on
     if (shouldSuppressEmail(row.kind, channelEmail)) {
       // Terminal (never retried). `notification.status` is check-constrained to

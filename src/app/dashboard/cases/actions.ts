@@ -263,11 +263,13 @@ export async function trackCaseByCnr(cnr: string): Promise<{ ok: boolean; messag
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.email) {
       // Honour channel_email suppression: an opted-out user gets no confirmation mail either.
-      const { data: prefs } = await supabase
+      // Fail OPEN (send) on a read error — but loud, not silent (WO-126 / convention #4).
+      const { data: prefs, error: prefsErr } = await supabase
         .from("notification_prefs")
         .select("channel_email")
         .eq("id", user.id)
         .maybeSingle();
+      if (prefsErr) console.warn(`[notify] trackConfirm: notification_prefs read failed (${prefsErr.message}) — treating email as on`);
       const suppressed = shouldSuppressEmail("trackConfirm", prefs ? prefs.channel_email : true);
 
       if (!suppressed) {

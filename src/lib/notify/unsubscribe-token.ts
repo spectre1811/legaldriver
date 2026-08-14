@@ -23,8 +23,11 @@ function signingSecret(): string {
   return s;
 }
 
-function sign(payloadB64: string): string {
-  return createHmac("sha256", signingSecret()).update(payloadB64).digest("base64url");
+// The family prefix is folded INTO the signed bytes (M6): a `uo-` and an `ec-` token over identical
+// payload bytes therefore carry different signatures — the separation is structural, not an
+// incidental prefix check the share verifier could be made to skip.
+function sign(message: string): string {
+  return createHmac("sha256", signingSecret()).update(message).digest("base64url");
 }
 
 interface UnsubscribePayload { t: string; u: string; k: string }
@@ -34,7 +37,7 @@ export function signUnsubscribeToken(tenantId: string, profileId: string, channe
     JSON.stringify({ t: tenantId, u: profileId, k: channel } satisfies UnsubscribePayload),
     "utf8",
   ).toString("base64url");
-  return `${TOKEN_PREFIX}${payloadB64}.${sign(payloadB64)}`;
+  return `${TOKEN_PREFIX}${payloadB64}.${sign(TOKEN_PREFIX + payloadB64)}`;
 }
 
 export type UnsubscribeTokenResult =
@@ -52,7 +55,7 @@ export function verifyUnsubscribeToken(token: string): UnsubscribeTokenResult {
 
   let expected: string;
   try {
-    expected = sign(payloadB64);
+    expected = sign(TOKEN_PREFIX + payloadB64);
   } catch {
     return { ok: false, reason: "unconfigured" };
   }
