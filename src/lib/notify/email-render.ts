@@ -4,9 +4,18 @@
 
 import { caseDetailHref } from "@/lib/court/case-links";
 
-/** Absolute app URL for email CTAs (emails can't use relative hrefs). */
+/** Absolute app URL for email CTAs (emails can't use relative hrefs).
+ *
+ * WO-416: the default is the APEX, not `app.` — `app.mukadma.in` 301s to the apex
+ * (verified live 2026-08-14), and `NEXT_PUBLIC_APP_URL` is NOT set in prod SSM, so the
+ * default is what actually ships. A 301 is harmless for a CTA (the browser follows it) but
+ * BREAKS the RFC 8058 one-click unsubscribe: Gmail's POST is not re-issued across the
+ * redirect, and the GET landing deliberately does not mutate — so unsubscribe would
+ * silently no-op and the reader's next move is the spam button. Point at the origin that
+ * answers POST directly. Setting `NEXT_PUBLIC_APP_URL` still overrides this.
+ */
 export function appUrl(path = ""): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.mukadma.in";
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://mukadma.in";
   return base.replace(/\/$/, "") + path;
 }
 

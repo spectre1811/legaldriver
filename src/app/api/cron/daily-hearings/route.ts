@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient, adminFor } from "@/lib/supabase/admin";
-import { getMailer } from "@/lib/notify/mailer";
+import { getMailer, senderEmail } from "@/lib/notify/mailer";
 import { logOutboundEmail } from "@/lib/notify/log";
 import { resolveRecipientEmail } from "@/lib/notify/recipients";
+import { buildEmailHeaders, shouldSuppressEmail } from "@/lib/notify/email-headers";
 import { renderDailyHearings } from "@/lib/email/templates";
 import { appUrl, istDate, istFriendlyDate } from "@/lib/notify/email-render";
 import { maskTitle } from "@/lib/court/mask";
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
     let skippedEmpty = 0;
     let already = 0;
     let failed = 0;
+    let suppressed = 0;
     let fenced = false;
     for (const [tenantId, list] of byTenant) {
       // WO-364 W1: writes below (the idempotency row + the sent notification) are scoped
@@ -109,11 +111,42 @@ export async function GET(request: NextRequest) {
       const rendered = renderDailyHearings(rows, { date: istFriendlyDate(date), count: list.length }, appUrl("/dashboard/calendar"));
       if (!rendered) { skippedEmpty++; continue; } // no honest row survived → no email
 
-      const email = await resolveRecipientEmail(supabase, tenantId);
-      if (!email) { failed++; continue; }
+      const rec = await resolveRecipientEmail(supabase, tenantId);
+      if (!rec) { failed++; continue; }
 
-      const res = await mailer.send(email, rendered.subject, rendered.html, rendered.text);
-      await logOutboundEmail(supabase, { tenantId, to: email, subject: rendered.subject, kind: "reminder", ok: res.ok, providerId: res.id, error: res.error });
+      // WO-416 amendment #1: honour the recipient's channel_email pref (the daily board is bulk,
+      // non-transactional — it carries List-Unsubscribe and must skip an opted-out recipient).
+      {
+        const { data: prefs, error: prefsErr } = await scoped
+          .from("notification_prefs")
+          .select("channel_email")
+          .eq("id", rec.profileId)
+          .maybeSingle();
+        // Fail OPEN (send) on a read error — but loud, not silent (WO-126 / convention #4).
+        if (prefsErr) console.warn(`[notify] daily-hearings: notification_prefs read failed (${prefsErr.message}) — treating email as on`);
+        if (shouldSuppressEmail("daily_hearings", prefs ? prefs.channel_email : true)) {
+          // Terminal idempotency row (status 'dead' — check-constrained, no new status) so the
+          // next run doesn't re-resolve and re-skip forever.
+          await scoped.from("notification").insert({
+            channel: "email", kind: "daily_hearings", status: "dead",
+            scheduled_for: new Date().toISOString(),
+            payload: { ref: `dailyhearings:${tenantId}:${date}`, eventDate: date, count: list.length, title: `Tomorrow: ${list.length} hearings` } as Database["public"]["Tables"]["notification"]["Insert"]["payload"],
+          });
+          suppressed++;
+          continue;
+        }
+      }
+
+      const headers = buildEmailHeaders({
+        kind: "daily_hearings",
+        matterId: null, // a multi-matter digest has no single matter id — unthreaded by design
+        tenantId,
+        profileId: rec.profileId,
+        from: senderEmail(),
+        messageId: `${tenantId}:${date}`, // unused (no matter id), but messageId is required by the builder
+      });
+      const res = await mailer.send(rec.email, rendered.subject, rendered.html, rendered.text, { headers });
+      await logOutboundEmail(supabase, { tenantId, to: rec.email, subject: rendered.subject, kind: "reminder", ok: res.ok, providerId: res.id, error: res.error });
       if (!res.ok) { failed++; continue; }
 
       await scoped.from("notification").insert({
@@ -124,6 +157,6 @@ export async function GET(request: NextRequest) {
       sent++;
     }
 
-    return NextResponse.json({ ok: true, date, tenants: byTenant.size, sent, skippedEmpty, already, failed, fenced });
+    return NextResponse.json({ ok: true, date, tenants: byTenant.size, sent, skippedEmpty, already, failed, suppressed, fenced });
   });
 }

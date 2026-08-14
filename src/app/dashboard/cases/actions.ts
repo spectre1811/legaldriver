@@ -13,13 +13,15 @@ import { logActivity } from "@/lib/activity";
 import { track } from "@/lib/analytics/track";
 import { fileUploadedDocument } from "@/lib/docs/file-upload";
 import { scheduleReminders } from "@/lib/notify/schedule";
-import { getMailer } from "@/lib/notify/mailer";
+import { getMailer, senderEmail } from "@/lib/notify/mailer";
 import { logOutboundEmail } from "@/lib/notify/log";
+import { buildEmailHeaders, shouldSuppressEmail } from "@/lib/notify/email-headers";
 import { renderEmail } from "@/lib/email/templates";
 import { appUrl, istFriendlyDate } from "@/lib/notify/email-render";
 import { caseDetailHref } from "@/lib/court/case-links";
 import { maskTitle } from "@/lib/court/mask";
 import { signShareToken } from "@/lib/court/share-token";
+import { randomUUID } from "node:crypto";
 import type { Database } from "@/lib/db/database.types";
 
 // Set (or clear) the advocate's diary next-hearing date — overrides a stale/wrong
@@ -254,26 +256,49 @@ export async function trackCaseByCnr(cnr: string): Promise<{ ok: boolean; messag
   // never fail the tracking the user just did (EMAIL_META: "Now tracking {case}").
   // WO-314: the whole freshly-fetched NormalizedCase is already in hand here — surface
   // stage/status/next hearing/coram instead of just title + court.
+  // WO-416: trackConfirm is matter-linked (usually the FIRST email about a matter — the natural
+  // thread root), non-transactional, so it threads to the same root as later reminders and carries
+  // the unsubscribe headers — routed through the SAME pure builder as the cron path.
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (user?.email) {
-      const fc = fetched.case;
-      const coramNames = fc.judges?.length ? fc.judges : fc.judge ? fc.judge.split(",").map((j) => j.trim()).filter(Boolean) : [];
-      const rendered = renderEmail(
-        "trackConfirm",
-        {
-          case: maskTitle(fc.title),
-          ...(fc.court ? { court: fc.court } : {}),
-          ...(fc.stage ? { stage: fc.stage } : {}),
-          ...(fc.status ? { status: fc.status } : {}),
-          ...(fc.nextHearingDate ? { nextHearingDate: istFriendlyDate(fc.nextHearingDate) } : {}),
-          ...(coramNames.length ? { coram: coramNames.join(", ") } : {}),
-        },
-        appUrl(caseDetailHref(clean, matterId)),
-      );
-      if (rendered) {
-        const res = await getMailer().send(user.email, rendered.subject, rendered.html, rendered.text);
-        await logOutboundEmail(supabase, { tenantId, to: user.email, subject: rendered.subject, kind: "notice", matterId, ok: res.ok, providerId: res.id, error: res.error });
+      // Honour channel_email suppression: an opted-out user gets no confirmation mail either.
+      // Fail OPEN (send) on a read error — but loud, not silent (WO-126 / convention #4).
+      const { data: prefs, error: prefsErr } = await supabase
+        .from("notification_prefs")
+        .select("channel_email")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (prefsErr) console.warn(`[notify] trackConfirm: notification_prefs read failed (${prefsErr.message}) — treating email as on`);
+      const suppressed = shouldSuppressEmail("trackConfirm", prefs ? prefs.channel_email : true);
+
+      if (!suppressed) {
+        const fc = fetched.case;
+        const coramNames = fc.judges?.length ? fc.judges : fc.judge ? fc.judge.split(",").map((j) => j.trim()).filter(Boolean) : [];
+        const rendered = renderEmail(
+          "trackConfirm",
+          {
+            case: maskTitle(fc.title),
+            ...(fc.court ? { court: fc.court } : {}),
+            ...(fc.stage ? { stage: fc.stage } : {}),
+            ...(fc.status ? { status: fc.status } : {}),
+            ...(fc.nextHearingDate ? { nextHearingDate: istFriendlyDate(fc.nextHearingDate) } : {}),
+            ...(coramNames.length ? { coram: coramNames.join(", ") } : {}),
+          },
+          appUrl(caseDetailHref(clean, matterId)),
+        );
+        if (rendered) {
+          const headers = buildEmailHeaders({
+            kind: "trackConfirm",
+            matterId,
+            tenantId,
+            profileId: user.id,
+            from: senderEmail(),
+            messageId: randomUUID(),
+          });
+          const res = await getMailer().send(user.email, rendered.subject, rendered.html, rendered.text, { headers });
+          await logOutboundEmail(supabase, { tenantId, to: user.email, subject: rendered.subject, kind: "notice", matterId, ok: res.ok, providerId: res.id, error: res.error });
+        }
       }
     }
   } catch { /* confirmation is best-effort — tracking already succeeded */ }
