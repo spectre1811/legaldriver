@@ -3,8 +3,22 @@ import { renderNotice, type RenderedEmail } from "@/lib/email/templates";
 import { matterIdOf, appUrl, type CaseUpdatePayload } from "@/lib/notify/email-render";
 import { caseDetailHref } from "@/lib/court/case-links";
 import { brand } from "@/lib/brand";
+import en from "@/i18n/messages/en.json";
 
 type DigestCase = { title?: string; cnr?: string; itemNo?: string; type?: string; judge?: string };
+
+// Per-kind masthead category + "why you got this" line (EN-only catalog copy). A fallback notice
+// must label itself by what it IS — a notice_escalation is not a "Deadline" and must not promise a
+// deadline subscription. Unknown kinds fall to the neutral default, never another kind's label.
+const NOTICE_CAT = en.emailNotice.category as Record<string, string>;
+const NOTICE_WHY = en.emailNotice.why as Record<string, string>;
+
+export function noticeCopyForKind(kind: string): { category: string; why: string } {
+  return {
+    category: NOTICE_CAT[kind] ?? NOTICE_CAT.default,
+    why: NOTICE_WHY[kind] ?? NOTICE_WHY.default,
+  };
+}
 
 // Fallback: generic branded notice from the real payload (deadline_reminder,
 // notice_escalation, legacy in-flight cause_list_digest rows, legacy case_update).
@@ -27,17 +41,32 @@ export function composeFallbackNotice(
     lines.push({ text: `Open ${brand.name} to view details.`, role: "lead" });
   }
   const ctaPath = kind === "cause_list_digest" ? "/dashboard/calendar" : matterId || p.cnr ? caseDetailHref(p.cnr ?? "", matterId) : "/dashboard";
-  return renderNotice(subjectForKind(kind, p), lines, appUrl(ctaPath), "Open " + brand.name);
+  const { category, why } = noticeCopyForKind(kind);
+  return renderNotice(subjectForKind(kind, p), lines, appUrl(ctaPath), "Open " + brand.name, category, why);
 }
 
+// The fallback subject, per kind. A missing slot falls back to an honest SHORTER subject — never an
+// empty-slot sentence ("Deadline:  due ") and never a faked value ("case"/"your case"/"tomorrow").
 export function subjectForKind(kind: string, p: { title?: string; eventDate?: string; count?: number }) {
-  if (kind === "hearing_reminder") return `Hearing reminder: ${p.title ?? "case"} on ${p.eventDate ?? ""}`;
-  if (kind === "deadline_reminder") return `Deadline: ${p.title ?? ""} due ${p.eventDate ?? ""}`;
-  if (kind === "notice_escalation") return `Notice escalated: ${p.title ?? ""}`;
-  if (kind === "case_update") return `Case update: ${p.title ?? "your case"}`;
+  if (kind === "hearing_reminder") {
+    if (p.title && p.eventDate) return `Hearing reminder: ${p.title} on ${p.eventDate}`;
+    if (p.title) return `Hearing reminder: ${p.title}`;
+    if (p.eventDate) return `Hearing reminder on ${p.eventDate}`;
+    return "Hearing reminder";
+  }
+  if (kind === "deadline_reminder") {
+    // §04: "Deadline {eventDate}: {title}" — e.g. "Deadline 18 Aug: Written submissions — Sharma v. State".
+    if (p.eventDate && p.title) return `Deadline ${p.eventDate}: ${p.title}`;
+    if (p.eventDate) return `Deadline ${p.eventDate}`;
+    if (p.title) return `Deadline: ${p.title}`;
+    return "Deadline";
+  }
+  if (kind === "notice_escalation") return p.title ? `Notice escalated: ${p.title}` : "Notice escalated";
+  if (kind === "case_update") return p.title ? `Case update: ${p.title}` : "Case update";
   if (kind === "cause_list_digest") {
     const n = p.count ?? 0;
-    return `Cause list: ${n} case${n === 1 ? "" : "s"} listed ${p.eventDate ?? "tomorrow"}`;
+    const noun = n === 1 ? "case" : "cases";
+    return p.eventDate ? `Cause list: ${n} ${noun} listed ${p.eventDate}` : `Cause list: ${n} ${noun}`;
   }
   return `${brand.name} notification`;
 }

@@ -6,6 +6,7 @@
 // renderNotice fallback shell (escaping, disclaimer, text part, single CTA link).
 import { hearingWhenLabel, istDate, istFriendlyDate, composeCaseUpdate, appUrl, matterIdOf } from "@/lib/notify/email-render";
 import { renderNotice, renderDailyHearings, renderEmail } from "@/lib/email/templates";
+import { noticeCopyForKind, subjectForKind } from "@/lib/notify/compose/fallback";
 import { maskTitle } from "@/lib/court/mask";
 
 let ok = true;
@@ -31,12 +32,12 @@ check("event tomorrow → 'tomorrow'", hearingWhenLabel(tomorrow) === "tomorrow"
 check("event in 3 days → 'in 3 days'", hearingWhenLabel(istDate(3)) === "in 3 days");
 check("past event → null (stale reminders are skipped, never sent late)", hearingWhenLabel(istDate(-1)) === null);
 check("garbage date → null", hearingWhenLabel("not-a-date") === null);
-// worst-case label keeps the subject ≤ 6 words
+// worst-case label keeps the subject ≤ 78 chars (v3.1 subjects carry the case title by design)
 const worst = renderEmail("hearingReminder", { when: hearingWhenLabel(istDate(365)) ?? "", case: "X v. Y", court: "C", cnr: "Z" });
-check("hearingReminder worst-case subject ≤ 6 words", !!worst && worst.subject.trim().split(/\s+/).length <= 6);
-// missing purpose → detail line drops, email still sends
+check("hearingReminder worst-case subject ≤ 78 chars", !!worst && worst.subject.length <= 78);
+// missing purpose → purpose fact drops, email still sends
 const noPurpose = renderEmail("hearingReminder", { when: "tomorrow", case: "X v. Y", court: "C", cnr: "Z" });
-check("hearingReminder without purpose still sends, detail dropped", !!noPurpose && !/Purpose on the record/.test(noPurpose.text));
+check("hearingReminder without purpose still sends, purpose fact dropped", !!noPurpose && !/Purpose:/.test(noPurpose.text));
 
 // --- caseUpdate roundup: one email, real titles folded into the detail slot ---
 const single = composeCaseUpdate([{ change: "New order", title: "A v. B", cnr: "CNR1", matterId: "m1", court: "HC", body: "1 new order (latest 2026-07-20)" }]);
@@ -88,17 +89,17 @@ check(
   !!maskedRow && maskedRow.data.case === "name withheld v. State" && !/XXXXXXX/i.test(maskedRow.data.case),
 );
 
-// --- listingNoTime: a time-less row renders; a timed row still prefers the timed line ---
+// --- boardRow: a time-less row renders (the record carries item numbers, not clock times) ---
 const board = renderDailyHearings(
   [
-    { court: "Gujarat HC · Court 7", time: "11:00", parties: "A v. B" },
-    { court: "City Civil · Court 3", parties: "C v. D" },
+    { court: "Gujarat HC", courtNo: "7", parties: "A v. B" },
+    { court: "City Civil", parties: "C v. D" },
   ],
   { date: "24 Jul", count: 2 },
 );
-check("board with one time-less row renders BOTH rows", !!board && /A v. B/.test(board.text) && /C v. D/.test(board.text));
-check("timed row keeps its time", !!board && /11:00/.test(board.text));
-check("time-less row uses the no-time line (no dangling separator)", !!board && !/Court 3 · +—/.test(board.text));
+check("board with one court-no-less row renders BOTH rows", !!board && /A v. B/.test(board.text) && /C v. D/.test(board.text));
+check("row with a court no. keeps it", !!board && /Court 7/.test(board.text));
+check("court-no-less row renders without a dangling separator", !!board && !/· ·/.test(board.text));
 // court+parties still required — a row with parties only never fakes a court
 const bare = renderDailyHearings([{ parties: "Only parties" }], { date: "24 Jul", count: 1 });
 check("row without court is dropped (board empty → null)", bare === null);
@@ -113,10 +114,27 @@ const notice = renderNotice(
 check("renderNotice escapes html in lines", notice.html.includes("&lt;A v. B&gt;"));
 check("renderNotice carries the disclaimer", /verify against the official record/.test(notice.html));
 check("renderNotice text part carries subject + cta url", /Deadline: reply due/.test(notice.text) && /https:\/\/app\.mukadma\.in\/dashboard/.test(notice.text));
-check("renderNotice has exactly one link", (notice.html.match(/<a /g) ?? []).length === 1);
+check("renderNotice has one CTA link + one footer settings link", (notice.html.match(/<a /g) ?? []).length === 2);
 check("no leftover {ctaUrl}", !notice.html.includes("{ctaUrl}"));
 const noCta = renderNotice("Just a note", [{ text: "Body." }]);
-check("renderNotice without ctaUrl has zero links", !/<a /.test(noCta.html));
+check("renderNotice without ctaUrl carries the footer settings link only", (noCta.html.match(/<a /g) ?? []).length === 1);
+
+// --- WO-414: renderNotice defaults to a neutral category/why — never "Deadline" ---
+check("renderNotice default category is the neutral 'Notice', not 'Deadline'", noCta.html.includes(">Notice<") && !noCta.html.includes(">Deadline<"));
+check("renderNotice default why-line is the neutral notices line", noCta.html.includes("You receive notices about matters you track on Mukadma."));
+
+// --- WO-414: per-kind fallback category/why mapping (a fallback labels itself by what it IS) ---
+check("deadline_reminder → Deadline + deadline why", noticeCopyForKind("deadline_reminder").category === "Deadline" && noticeCopyForKind("deadline_reminder").why === "You receive deadline reminders for matters you track on Mukadma.");
+check("notice_escalation → Notice Escalation + escalation why", noticeCopyForKind("notice_escalation").category === "Notice Escalation" && noticeCopyForKind("notice_escalation").why === "You receive notices when a matter you track is escalated.");
+check("cause_list_digest → Cause List + cause-list why", noticeCopyForKind("cause_list_digest").category === "Cause List" && noticeCopyForKind("cause_list_digest").why === "You receive the cause list for matters you track.");
+check("case_update → Case Update + case-update why", noticeCopyForKind("case_update").category === "Case Update" && noticeCopyForKind("case_update").why === "You receive updates when a case you track changes on the record.");
+check("unknown kind → neutral default (never Deadline)", noticeCopyForKind("bogus_kind").category === "Notice" && noticeCopyForKind("bogus_kind").why === "You receive notices about matters you track on Mukadma.");
+
+// --- WO-414 (D4): the fallback subject uses the v3 §04 form and never fakes an empty slot ---
+check("deadline subject uses the v3 form", subjectForKind("deadline_reminder", { title: "Written submissions — Sharma v. State", eventDate: "18 Aug" }) === "Deadline 18 Aug: Written submissions — Sharma v. State");
+check("deadline subject drops missing date (no empty slot)", subjectForKind("deadline_reminder", { title: "Written submissions" }) === "Deadline: Written submissions");
+check("deadline subject drops missing title (no empty slot)", subjectForKind("deadline_reminder", { eventDate: "18 Aug" }) === "Deadline 18 Aug");
+check("deadline subject with neither slot → bare 'Deadline'", subjectForKind("deadline_reminder", {}) === "Deadline");
 
 // --- matterIdOf: the dead-ref guard's parser (a row must be verifiable to be guarded) ---
 const U = "9cd1b8e6-4e2b-444c-ad93-9686eb23ef91";

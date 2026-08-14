@@ -14,11 +14,11 @@ function keys(obj: unknown, prefix = ""): string[] {
   return [prefix];
 }
 
-// `emails.*` is deliberately English-only (founder directive 2026-07-18, WO-148 W2 rework):
-// transactional emails ship in English only, so the HI catalog has NO email keys by design.
-// Excluded from parity here so "English-only emails" is an enforced rule, not English strings
-// hiding in the HI file that a translator might later "correct".
-const EN_ONLY = (k: string) => k.startsWith("emails.");
+// `emails.*` and `emailNotice.*` are deliberately English-only (founder directive 2026-07-18,
+// WO-148 W2 rework): transactional emails ship in English only, so the HI catalog has NO email keys
+// by design. Excluded from parity here so "English-only emails" is an enforced rule, not English
+// strings hiding in the HI file that a translator might later "correct".
+const EN_ONLY = (k: string) => k.startsWith("emails.") || k.startsWith("emailNotice.");
 
 const enKeys = new Set(keys(en));
 const hiKeys = new Set(keys(hi));
