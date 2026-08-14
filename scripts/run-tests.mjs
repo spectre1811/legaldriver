@@ -124,6 +124,7 @@ const OFFLINE = [
   "wo408_clients_bulk",
   "wo409_documents_filters",
   "wo411_share_export",
+  "wo416_email_headers",
 ];
 
 // Need a live Supabase (service-role) + .env — runs in the db-tests CI job once the
