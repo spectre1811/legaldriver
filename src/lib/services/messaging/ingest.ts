@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/db/database.types";
+import { adminFor } from "@/lib/supabase/admin";
 import type { InboundMessage } from "./types";
 import { aiGateway } from "@/lib/ai/gateway";
 import {
@@ -40,22 +41,30 @@ export async function ingestInbound(
 
   if (!messages.length) return { received: 0, inserted, duplicates, filed };
 
+  // WO-364 W1: every direct table read/write in this function goes through
+  // adminFor(tenantId) — structural tenant scoping instead of the hand-repeated
+  // .eq("tenant_id", tenantId) this function used to carry on every query (still true
+  // of the nested helpers below — recordOptOut/resolveFiling/logActivity — which keep
+  // taking the raw `admin` client; not touched in this wave).
+  const scoped = adminFor(tenantId, admin);
+
   // Bounded tenant shortlist for classification (same shape as mail ingest).
   const [{ data: clients }, { data: matters }] = await Promise.all([
-    admin.from("client").select("id, name").eq("tenant_id", tenantId).limit(100),
-    admin.from("matter").select("id, title, cnr").eq("tenant_id", tenantId).is("deleted_at", null).limit(100), // skip trashed (WO-43-W2)
+    scoped.from("client").select("id, name").limit(100),
+    scoped.from("matter").select("id, title, cnr").is("deleted_at", null).limit(100), // skip trashed (WO-43-W2)
   ]);
-  const clientList = clients ?? [];
-  const matterList = matters ?? [];
+  // adminFor()'s select() types every result as the full Row shape (see admin.ts) —
+  // narrow explicitly to what this function actually asked for and uses below.
+  const clientList = (clients ?? []) as { id: string; name: string }[];
+  const matterList = (matters ?? []) as { id: string; title: string; cnr: string | null }[];
 
   for (const msg of messages) {
     // Idempotency: dedupe on (tenant, channel, external_id). Skip when we have an
     // external id and a row already exists; messages without an id can't be deduped.
     if (msg.externalId) {
-      const { data: existing } = await admin
+      const { data: existing } = await scoped
         .from("msg_message")
         .select("id")
-        .eq("tenant_id", tenantId)
         .eq("channel", msg.channel)
         .eq("external_id", msg.externalId)
         .maybeSingle();
@@ -70,8 +79,7 @@ export async function ingestInbound(
     // client/matter routing), log WITHOUT the number or body, move on.
     if (isStopMessage(msg.body)) {
       await recordOptOut(admin, msg.from);
-      const { error: stopErr } = await admin.from("msg_message").insert({
-        tenant_id: tenantId,
+      const { error: stopErr } = await scoped.from("msg_message").insert({
         channel: msg.channel,
         direction: "in",
         provider: process.env.MESSAGING_PROVIDER ?? "mock",
@@ -125,10 +133,9 @@ export async function ingestInbound(
     if (filing.createdClient && cls.suggested_client_name) clientList.push({ id: filing.clientId!, name: cls.suggested_client_name });
     if (filing.createdMatter) matterList.push({ id: filing.matterId!, title: cls.suggested_matter_title ?? "Case", cnr: cls.extracted.cnrs?.[0] ?? null });
 
-    const { data: row, error } = await admin
+    const { data: row, error } = await scoped
       .from("msg_message")
       .insert({
-        tenant_id: tenantId,
         channel: msg.channel,
         direction: "in",
         provider: process.env.MESSAGING_PROVIDER ?? "mock",

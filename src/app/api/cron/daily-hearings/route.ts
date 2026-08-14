@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, adminFor } from "@/lib/supabase/admin";
 import { getMailer, senderEmail } from "@/lib/notify/mailer";
 import { logOutboundEmail } from "@/lib/notify/log";
 import { resolveRecipientEmail } from "@/lib/notify/recipients";
@@ -33,6 +33,10 @@ export async function GET(request: NextRequest) {
 
     // WO-314: + stage (matter-level) — cnr was already SELECTed here but never carried past
     // this query into the rendered rows.
+    // Genuinely cross-tenant — this is the fan-out that DISCOVERS which tenant each row
+    // belongs to (grouped below); it can't run through adminFor() (needs a tenantId up
+    // front). Every per-tenant write below does.
+    // eslint-disable-next-line local-rules/no-bare-admin-from -- fan-out across all tenants, scoped per-tenant below
     const { data: matters, error } = await supabase
       .from("matter")
       .select("id, tenant_id, title, court, cnr, stage")
@@ -41,10 +45,12 @@ export async function GET(request: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     // WO-314: purpose + court number ("item number where held") live on the per-matter hearing
-    // row for tomorrow's date, not on `matter` — one batched lookup for every matched matter.
+    // row for tomorrow's date, not on `matter` — one batched lookup for every matched matter,
+    // keyed on matter_id across ALL tenants at once (also cross-tenant by construction).
     const matterIds = (matters ?? []).map((m) => m.id);
     const hearingByMatter = new Map<string, { purpose: string | null; court_no: string | null }>();
     if (matterIds.length) {
+      // eslint-disable-next-line local-rules/no-bare-admin-from -- batched across every matched tenant's matter_ids
       const { data: hearingRows } = await supabase
         .from("hearing")
         .select("matter_id, purpose, court_no")
@@ -67,15 +73,20 @@ export async function GET(request: NextRequest) {
     let suppressed = 0;
     let fenced = false;
     for (const [tenantId, list] of byTenant) {
+      // WO-364 W1: writes below (the idempotency row + the sent notification) are scoped
+      // to exactly this tenantId via adminFor(tenantId). resolveRecipientEmail/
+      // logOutboundEmail still take the raw `supabase` client — they live in src/lib/notify/*
+      // (owned by WO-358 W2; not touched here).
+      const scoped = adminFor(tenantId, supabase);
+
       // WO-378: same lease fence as the notify pipeline — this loop also sends BEFORE it writes
       // its idempotency row, so an overrun run racing its successor would double-send a board.
       if (!(await lease.ok())) { fenced = true; break; }
 
       // Idempotency: one board per tenant per date, even across re-runs.
-      const { data: prior } = await supabase
+      const { data: prior } = await scoped
         .from("notification")
         .select("id")
-        .eq("tenant_id", tenantId)
         .eq("kind", "daily_hearings")
         .eq("payload->>eventDate", date)
         .limit(1)
@@ -106,16 +117,18 @@ export async function GET(request: NextRequest) {
       // WO-416 amendment #1: honour the recipient's channel_email pref (the daily board is bulk,
       // non-transactional — it carries List-Unsubscribe and must skip an opted-out recipient).
       {
-        const { data: prefs } = await supabase
+        const { data: prefs, error: prefsErr } = await scoped
           .from("notification_prefs")
           .select("channel_email")
           .eq("id", rec.profileId)
           .maybeSingle();
+        // Fail OPEN (send) on a read error — but loud, not silent (WO-126 / convention #4).
+        if (prefsErr) console.warn(`[notify] daily-hearings: notification_prefs read failed (${prefsErr.message}) — treating email as on`);
         if (shouldSuppressEmail("daily_hearings", prefs ? prefs.channel_email : true)) {
           // Terminal idempotency row (status 'dead' — check-constrained, no new status) so the
           // next run doesn't re-resolve and re-skip forever.
-          await supabase.from("notification").insert({
-            tenant_id: tenantId, channel: "email", kind: "daily_hearings", status: "dead",
+          await scoped.from("notification").insert({
+            channel: "email", kind: "daily_hearings", status: "dead",
             scheduled_for: new Date().toISOString(),
             payload: { ref: `dailyhearings:${tenantId}:${date}`, eventDate: date, count: list.length, title: `Tomorrow: ${list.length} hearings` } as Database["public"]["Tables"]["notification"]["Insert"]["payload"],
           });
@@ -130,13 +143,14 @@ export async function GET(request: NextRequest) {
         tenantId,
         profileId: rec.profileId,
         from: senderEmail(),
+        messageId: `${tenantId}:${date}`, // unused (no matter id), but messageId is required by the builder
       });
       const res = await mailer.send(rec.email, rendered.subject, rendered.html, rendered.text, { headers });
       await logOutboundEmail(supabase, { tenantId, to: rec.email, subject: rendered.subject, kind: "reminder", ok: res.ok, providerId: res.id, error: res.error });
       if (!res.ok) { failed++; continue; }
 
-      await supabase.from("notification").insert({
-        tenant_id: tenantId, channel: "email", kind: "daily_hearings", status: "sent",
+      await scoped.from("notification").insert({
+        channel: "email", kind: "daily_hearings", status: "sent",
         scheduled_for: new Date().toISOString(), sent_at: new Date().toISOString(),
         payload: { ref: `dailyhearings:${tenantId}:${date}`, eventDate: date, count: list.length, title: `Tomorrow: ${list.length} hearings` } as Database["public"]["Tables"]["notification"]["Insert"]["payload"],
       });

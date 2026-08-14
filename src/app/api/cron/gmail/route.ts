@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, adminFor } from "@/lib/supabase/admin";
 import { getGmailClient } from "@/lib/mail/client";
 import { readSecret } from "@/lib/mail/vault";
 import { refreshAccessToken, googleConfigured } from "@/lib/mail/oauth";
@@ -22,6 +22,10 @@ export async function GET(request: NextRequest) {
 
   return withCronLock("gmail", async () => {
     const admin = createAdminClient();
+    // Genuinely cross-tenant — every active connection, across every tenant. The one
+    // write below (gmail_last_history_id) is per-connection and goes through
+    // adminFor(c.tenant_id).
+    // eslint-disable-next-line local-rules/no-bare-admin-from -- fan-out across all tenants, scoped per-connection below
     const { data: conns, error } = await admin
       .from("oauth_connection")
       .select("id, tenant_id, user_id, refresh_token_ref, gmail_last_history_id, gmail_query")
@@ -49,7 +53,7 @@ export async function GET(request: NextRequest) {
         needsReview += summary.needsReview;
         processed++;
         if (summary.newHistoryId) {
-          await admin
+          await adminFor(c.tenant_id, admin)
             .from("oauth_connection")
             .update({ gmail_last_history_id: summary.newHistoryId })
             .eq("id", c.id);
