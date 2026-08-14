@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, adminFor } from "@/lib/supabase/admin";
 import {
   parseTelephonyBody,
   readTelephonySignature,
@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
     console.error("[telephony] TELEPHONY_PROVIDER is set but TELEPHONY_WEBHOOK_SECRET is not — refusing every call.");
     try {
       const admin = createAdminClient();
+      // eslint-disable-next-line local-rules/no-bare-admin-from -- court_provider_health has no tenant_id column
       await admin.from("court_provider_health").upsert(
         {
           provider: UNROUTED_PROVIDER.telephony,
@@ -107,14 +108,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, stored: false, reason: "no_tenant_mapping" });
   }
   const tenantId = resolution.tenantId;
+  const scoped = adminFor(tenantId, admin);
 
   // Resolve client by caller number within the tenant (best-effort auto-tag).
   let clientId: string | null = null;
   if (fromNumber) {
-    const { data: client } = await admin
+    const { data: client } = await scoped
       .from("client")
       .select("id")
-      .eq("tenant_id", tenantId)
       .contains("phones", [fromNumber])
       .limit(1)
       .maybeSingle();
@@ -124,8 +125,7 @@ export async function POST(request: NextRequest) {
   // Note: recordingUrl is the provider's URL. A follow-up job should download the
   // audio into our private 'documents' bucket under voice/ and set storage_path.
   // For now we record external_id + provider so the recording is tracked.
-  const { error } = await admin.from("voice_recording").insert({
-    tenant_id: tenantId,
+  const { error } = await scoped.from("voice_recording").insert({
     source: "telephony",
     provider,
     external_id: externalId,
