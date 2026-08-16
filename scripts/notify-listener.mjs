@@ -84,7 +84,14 @@ const DIRECT_HOST_RE = /^db\.[^.]+\.supabase\.co$/;
 // IPv4 add-on — recurring cost for the same outcome. Neither is warranted while (b-of-the-two,
 // i.e. this exception) exists and is machine-checked. Don't reopen this without a reason IPv6
 // egress or the add-on is now cheaper or otherwise necessary.
-const POOLER_SESSION_HOST_RE = /^aws-0-[^.]+\.pooler\.supabase\.com$/;
+// The `aws-<N>-<region>` prefix is NOT fixed, and hardcoding `aws-0-` was a real bug: this project's
+// pooler is `aws-1-ap-southeast-2.pooler.supabase.com` (read from the Management API's
+// `/config/database/pooler`, 2026-08-15), so the allowlist REFUSED the only host the listener can
+// actually use — it would have parked on every start. The earlier `aws-0-ap-south-1` in this file's
+// history was assumed from a DNS lookup that resolved because Supabase runs a pooler in every region;
+// resolving is not the same as being THIS project's. Match the shape, not one instance of it —
+// `aws-<digits>-<region>` — and keep the port check as the thing that distinguishes session mode.
+const POOLER_SESSION_HOST_RE = /^aws-\d+-[a-z0-9-]+\.pooler\.supabase\.com$/;
 const POOLER_SESSION_PORT = "5432";
 
 /**

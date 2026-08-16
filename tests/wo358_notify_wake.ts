@@ -111,6 +111,25 @@ function A() {
   // are read), so this must pass exactly like the plain-username case above.
   check("A: the pooler-style username form (postgres.<ref>) doesn't trip anything — preflight never reads it",
     preflight({ ...base, NOTIFY_PG_URL: "postgres://postgres.abcxyz:p@aws-0-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require" }).ok === true);
+
+  // Round 3.3 — THE REAL HOST. Every case above uses `aws-0-ap-south-1`, which was assumed from a
+  // DNS lookup that resolved (Supabase runs a pooler in every region) rather than read from this
+  // project. The Management API's /config/database/pooler says the actual host is
+  // `aws-1-ap-southeast-2.pooler.supabase.com` — different prefix AND different region — so the
+  // old `^aws-0-` allowlist refused the one host the listener can use, and would have parked on
+  // every start. Pin the real value so this cannot regress to a lookalike again.
+  check("A: THIS PROJECT'S real pooler host (aws-1-ap-southeast-2) on 5432 is ACCEPTED",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://postgres.johvrsvaspivmxqvpxcg:p@aws-1-ap-southeast-2.pooler.supabase.com:5432/postgres?sslmode=require" }).ok === true);
+  check("A: the real pooler host on 6543 (transaction mode) is still refused",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://postgres.johvrsvaspivmxqvpxcg:p@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?sslmode=require" }).ok === false);
+  // The generalisation must widen the PREFIX/REGION only — not the domain. A lookalike that merely
+  // starts with `aws-N-` must still be refused, or the fix trades one hole for a bigger one.
+  check("A: a non-Supabase lookalike (aws-1-x.pooler.supabase.com.evil.com) is still refused",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@aws-1-ap-southeast-2.pooler.supabase.com.evil.com:5432/postgres?sslmode=require" }).ok === false);
+  check("A: a subdomain under the real pooler host is still refused",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@evil.aws-1-ap-southeast-2.pooler.supabase.com:5432/postgres?sslmode=require" }).ok === false);
+  check("A: a trailing-dot FQDN of the real pooler host is still refused",
+    preflight({ ...base, NOTIFY_PG_URL: "postgres://u:p@aws-1-ap-southeast-2.pooler.supabase.com.:5432/postgres?sslmode=require" }).ok === false);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────
