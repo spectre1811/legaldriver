@@ -88,7 +88,17 @@ export async function GET(request: NextRequest) {
       // WO-376 W3: terminal, but honest about what actually happened — we tried repeatedly and could
       // not retrieve it. Unlike "unavailable" above, this is NOT a claim that the document doesn't
       // exist, so it must never say "no document on the court record".
-      return page("Couldn’t retrieve this document", "We tried several times to fetch this order’s copy from the court portal and weren’t able to. This doesn’t mean the document doesn’t exist — we just couldn’t retrieve it. Please check back later.", order.matter_id, 200);
+      //
+      // It also must not say "check back later". That sentence was here until 2026-08-16 and is a
+      // promise nothing fulfils: NOTHING auto-requeues an exhausted task. Verified across every
+      // `_enqueue_order_pdf_fetch` call site — the two reachable from a user's own click/poll are
+      // both gated on `dead_marked` being false, and the third is the S3-object-lost self-heal,
+      // unreachable here because an exhausted order never has a stored `object_key`. Even the
+      // "Get this order" button cannot revive one. Trading a false claim about the DOCUMENT for a
+      // false promise about US is the same defect one register quieter — this WO exists to stop
+      // saying things we cannot back. Matches peshi's wording exactly (messages/{en,hi}.json
+      // `orderFetch.exhausted`); the two surfaces must not drift apart on the same state.
+      return page("Couldn’t retrieve this document", "We tried several times to fetch this order’s copy from the court portal and weren’t able to. This doesn’t mean the document doesn’t exist — we just couldn’t retrieve it.", order.matter_id, 200);
     case "retrieving":
       return page("Fetching the order…", "This district order’s copy is being retrieved from the court portal — it usually lands within a minute.", order.matter_id, 202);
     case "notFound":
